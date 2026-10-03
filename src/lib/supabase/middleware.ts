@@ -28,13 +28,13 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
 
   // Without Supabase configuration the app can still boot (tenant routing
   // applies); session handling is skipped until credentials are provided.
-  if (!publicEnv.supabaseUrl || !publicEnv.supabaseAnonKey) {
+  if (!publicEnv.supabaseUrl || !publicEnv.supabaseKey) {
     return response;
   }
 
   const supabase = createServerClient(
     publicEnv.supabaseUrl,
-    publicEnv.supabaseAnonKey,
+    publicEnv.supabaseKey,
     {
       cookies: {
         getAll() {
