@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Fides">
+  <rect width="64" height="64" rx="14" fill="#4f46e5" />
+  <path
+    d="M24 18h18a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H30v6h11a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H30v12a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V20a2 2 0 0 1 2-2z"
+    fill="#ffffff"
+  />
+</svg>

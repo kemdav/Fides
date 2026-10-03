@@ -1,0 +1,5 @@
+-- ============================================================================
+-- Fides — Seed data
+-- ============================================================================
+-- Intentionally empty. No tenants, users, or business data are generated at
+-- scaffold time; seed fixtures are added per feature during development.

@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+/*
+ * Fides — global stylesheet (structural baseline only).
+ *
+ * Tailwind's Preflight reset ships with the import above. Visual design tokens
+ * (color palette, typography scale, spacing, radii, shadows) are finalized in
+ * Figma and will be mapped into the `@theme` block below.
+ *
+ * Example of how tokens will be registered later:
+ *
+ * @theme {
+ *   --color-brand-500: #4f46e5;
+ *   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+ *   --radius-card: 0.75rem;
+ * }
+ */
+
