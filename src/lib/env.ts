@@ -1,18 +1,85 @@
 import { z } from "zod";
 
 /**
+ * Normalizes a single raw environment value:
+ *
+ * - trims surrounding whitespace
+ * - treats empty strings as unset
+ * - treats unfilled `.env.example` placeholders (e.g. `<gemini-api-key>`) as unset
+ * - treats RFC 2606 reserved example hosts (e.g. `smtp.example.com`) as unset
+ *   for `*_HOST` variables
+ *
+ * This keeps integrations in their development/fallback mode until real
+ * credentials are supplied, rather than attempting live network calls with
+ * template values copied from `.env.example`.
+ */
+function normalizeEnvValue(
+  key: string,
+  value: string | undefined
+): string | undefined {
+  if (value === undefined) return undefined;
+
+  const trimmed = value.trim();
+  if (trimmed === "") return undefined;
+
+  // Unfilled placeholder, e.g. "<gemini-api-key>" or "<smtp-password>".
+  if (/^<.+>$/.test(trimmed)) return undefined;
+
+  // Reserved example domains, e.g. "smtp.example.com".
+  if (key.endsWith("_HOST") && /(^|\.)example\.(com|org|net)$/i.test(trimmed)) {
+    return undefined;
+  }
+
+  return trimmed;
+}
+
+/** Applies {@link normalizeEnvValue} across an entire environment object. */
+function normalizeEnv(
+  source: Record<string, string | undefined>
+): Record<string, string | undefined> {
+  const normalized: Record<string, string | undefined> = {};
+  for (const [key, value] of Object.entries(source)) {
+    normalized[key] = normalizeEnvValue(key, value);
+  }
+  return normalized;
+}
+
+/**
  * Public environment variables.
  *
- * These are read from `process.env` using static `NEXT_PUBLIC_*` references so
- * Next.js can inline them into the client bundle. Missing values fall back to
- * development defaults, so `next build` and `tsc` never fail on an unpopulated
- * `.env` (the app simply reports misconfiguration at request time).
+ * Each `NEXT_PUBLIC_*` value is referenced literally so Next.js can inline it
+ * into the client bundle, then normalized so unfilled placeholders behave as if
+ * unset. Missing values fall back to development defaults, so `next build` and
+ * `tsc` never fail on an unpopulated `.env` (misconfiguration surfaces at
+ * request time instead).
  */
 export const publicEnv = {
-  supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
-  supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
-  siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
-  platformDomain: process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "localhost:3000",
+  supabaseUrl:
+    normalizeEnvValue(
+      "NEXT_PUBLIC_SUPABASE_URL",
+      process.env.NEXT_PUBLIC_SUPABASE_URL
+    ) ?? "",
+  // Supabase's current public credential is the "publishable key"
+  // (sb_publishable_...). The legacy "anon key" name is accepted as a fallback
+  // so either convention works with this scaffold.
+  supabaseKey:
+    normalizeEnvValue(
+      "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+    ) ??
+    normalizeEnvValue(
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    ) ??
+    "",
+  siteUrl:
+    normalizeEnvValue("NEXT_PUBLIC_SITE_URL", process.env.NEXT_PUBLIC_SITE_URL) ??
+    "http://localhost:3000",
+  platformDomain:
+    normalizeEnvValue(
+      "NEXT_PUBLIC_PLATFORM_DOMAIN",
+      process.env.NEXT_PUBLIC_PLATFORM_DOMAIN
+    ) ?? "localhost:3000",
 } as const;
 
 /** Coerces `undefined` / `""` / numeric strings into a positive integer. */
@@ -63,7 +130,7 @@ let cachedServerEnv: ServerEnv | null = null;
  * client bundle or a plain type-check.
  */
 export function getServerEnv(): ServerEnv {
-  cachedServerEnv ??= serverEnvSchema.parse(process.env);
+  cachedServerEnv ??= serverEnvSchema.parse(normalizeEnv(process.env));
   return cachedServerEnv;
 }
 
