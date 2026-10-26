@@ -1,101 +1,174 @@
--- Fides module: tenant public branding and public-site settings
--- Suggested filename: supabase/migrations/20261024000000_tenant_public_settings.sql
--- Assumptions:
---   * public.tenants and public.set_updated_at() already exist in the baseline.
---   * The baseline uses public.tenant_memberships (role owner/manager/...) and
---     public.platform_admins for platform administrators.
---   * This migration intentionally does not alter existing tenants RLS policies.
---
--- IMPORTANT: The ticket's requested current_profile_role() helper is not present
--- in the baseline described above. This migration uses explicit membership/admin
--- checks instead of inventing a dependency on an undefined helper.
+-- ============================================================================
+-- Fides — Tenant branding and public-site settings
+-- Migration: 00002_tenant_branding.sql
+-- Purpose: Add public branding/contact fields and per-tenant site settings.
+-- Depends on the baseline migration defining:
+--   public.tenants, public.set_updated_at(), public.get_my_tenant_id(),
+--   public.current_profile_role()
+-- ============================================================================
 
-begin;
+-- ----------------------------------------------------------------------------
+-- 1. Public tenant branding and contact fields
+-- ----------------------------------------------------------------------------
 
-alter table public.tenants
-  add column if not exists logo_url text,
-  add column if not exists brand_color text,
-  add column if not exists address text,
-  add column if not exists phone text,
-  add column if not exists timezone text;
+ALTER TABLE public.tenants
+    ADD COLUMN IF NOT EXISTS logo_url TEXT,
+    ADD COLUMN IF NOT EXISTS brand_color TEXT,
+    ADD COLUMN IF NOT EXISTS accent_color TEXT,
+    ADD COLUMN IF NOT EXISTS secondary_color TEXT,
+    ADD COLUMN IF NOT EXISTS address TEXT,
+    ADD COLUMN IF NOT EXISTS phone TEXT,
+    ADD COLUMN IF NOT EXISTS timezone TEXT;
 
-do $$
-begin
-  if not exists (
-    select 1 from pg_constraint
-    where conrelid = 'public.tenants'::regclass
-      and conname = 'tenants_brand_color_hex_check'
-  ) then
-    alter table public.tenants
-      add constraint tenants_brand_color_hex_check
-      check (brand_color is null or brand_color ~ '^#[0-9A-Fa-f]{6}$');
-  end if;
-end
+-- Add the color validation constraints idempotently.
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'tenants_brand_color_format'
+          AND conrelid = 'public.tenants'::regclass
+    ) THEN
+        ALTER TABLE public.tenants
+            ADD CONSTRAINT tenants_brand_color_format
+            CHECK (brand_color IS NULL OR brand_color ~ '^#[0-9A-Fa-f]{6}$');
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'tenants_accent_color_format'
+          AND conrelid = 'public.tenants'::regclass
+    ) THEN
+        ALTER TABLE public.tenants
+            ADD CONSTRAINT tenants_accent_color_format
+            CHECK (accent_color IS NULL OR accent_color ~ '^#[0-9A-Fa-f]{6}$');
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'tenants_secondary_color_format'
+          AND conrelid = 'public.tenants'::regclass
+    ) THEN
+        ALTER TABLE public.tenants
+            ADD CONSTRAINT tenants_secondary_color_format
+            CHECK (secondary_color IS NULL OR secondary_color ~ '^#[0-9A-Fa-f]{6}$');
+    END IF;
+END
 $$;
 
-create table if not exists public.tenant_settings (
-  tenant_id uuid primary key references public.tenants(id) on delete cascade,
-  display_name text,
-  tagline text,
-  about text,
-  currency char(3) not null default 'PHP',
-  locale text not null default 'en-PH',
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+COMMENT ON COLUMN public.tenants.logo_url IS
+    'Public logo URL for the tenant website.';
+COMMENT ON COLUMN public.tenants.brand_color IS
+    'Primary tenant brand color in #RRGGBB format.';
+COMMENT ON COLUMN public.tenants.accent_color IS
+    'Accent tenant brand color in #RRGGBB format.';
+COMMENT ON COLUMN public.tenants.secondary_color IS
+    'Secondary tenant brand color in #RRGGBB format.';
+
+-- ----------------------------------------------------------------------------
+-- 2. One settings row per tenant
+-- ----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS public.tenant_settings (
+    tenant_id UUID PRIMARY KEY
+        REFERENCES public.tenants(id) ON DELETE CASCADE,
+    display_name TEXT,
+    tagline TEXT,
+    about TEXT,
+    currency CHAR(3) NOT NULL DEFAULT 'PHP',
+    locale TEXT NOT NULL DEFAULT 'en-PH',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-drop trigger if exists tenant_settings_set_updated_at on public.tenant_settings;
-create trigger tenant_settings_set_updated_at
-  before update on public.tenant_settings
-  for each row execute function public.set_updated_at();
+COMMENT ON TABLE public.tenant_settings IS
+    'One row per tenant for public-site display and localization settings.';
 
-alter table public.tenant_settings enable row level security;
+-- ----------------------------------------------------------------------------
+-- 3. updated_at trigger
+-- ----------------------------------------------------------------------------
 
--- Preserve the existing public.tenants policies unchanged.
-drop policy if exists tenant_settings_authenticated_read on public.tenant_settings;
-create policy tenant_settings_authenticated_read
-  on public.tenant_settings for select to authenticated
-  using (private.is_tenant_member(tenant_id) or private.is_platform_admin());
+DROP TRIGGER IF EXISTS set_updated_at ON public.tenant_settings;
+CREATE TRIGGER set_updated_at
+    BEFORE UPDATE ON public.tenant_settings
+    FOR EACH ROW
+    EXECUTE FUNCTION public.set_updated_at();
 
-drop policy if exists tenant_settings_owner_admin_insert on public.tenant_settings;
-create policy tenant_settings_owner_admin_insert
-  on public.tenant_settings for insert to authenticated
-  with check (
-    private.has_tenant_role(tenant_id, array['owner'])
-    or private.is_platform_admin()
-  );
+-- ----------------------------------------------------------------------------
+-- 4. Row Level Security
+-- ----------------------------------------------------------------------------
 
-drop policy if exists tenant_settings_owner_admin_update on public.tenant_settings;
-create policy tenant_settings_owner_admin_update
-  on public.tenant_settings for update to authenticated
-  using (
-    private.has_tenant_role(tenant_id, array['owner'])
-    or private.is_platform_admin()
-  )
-  with check (
-    private.has_tenant_role(tenant_id, array['owner'])
-    or private.is_platform_admin()
-  );
+ALTER TABLE public.tenant_settings ENABLE ROW LEVEL SECURITY;
 
-drop policy if exists tenant_settings_anon_active_read on public.tenant_settings;
-create policy tenant_settings_anon_active_read
-  on public.tenant_settings for select to anon
-  using (
-    exists (
-      select 1 from public.tenants t
-      where t.id = tenant_settings.tenant_id
-        and t.status = 'active'
+DROP POLICY IF EXISTS tenant_settings_select_own_tenant
+    ON public.tenant_settings;
+CREATE POLICY tenant_settings_select_own_tenant
+    ON public.tenant_settings
+    FOR SELECT
+    TO authenticated
+    USING (tenant_id = public.get_my_tenant_id());
+
+DROP POLICY IF EXISTS tenant_settings_select_public_active
+    ON public.tenant_settings;
+CREATE POLICY tenant_settings_select_public_active
+    ON public.tenant_settings
+    FOR SELECT
+    TO anon
+    USING (
+        EXISTS (
+            SELECT 1
+            FROM public.tenants AS t
+            WHERE t.id = tenant_settings.tenant_id
+              AND t.status = 'active'
+        )
+    );
+
+DROP POLICY IF EXISTS tenant_settings_insert_owner_admin
+    ON public.tenant_settings;
+CREATE POLICY tenant_settings_insert_owner_admin
+    ON public.tenant_settings
+    FOR INSERT
+    TO authenticated
+    WITH CHECK (
+        tenant_id = public.get_my_tenant_id()
+        AND public.current_profile_role() IN ('owner', 'admin')
+    );
+
+DROP POLICY IF EXISTS tenant_settings_update_owner_admin
+    ON public.tenant_settings;
+CREATE POLICY tenant_settings_update_owner_admin
+    ON public.tenant_settings
+    FOR UPDATE
+    TO authenticated
+    USING (
+        tenant_id = public.get_my_tenant_id()
+        AND public.current_profile_role() IN ('owner', 'admin')
     )
-  );
+    WITH CHECK (
+        tenant_id = public.get_my_tenant_id()
+        AND public.current_profile_role() IN ('owner', 'admin')
+    );
 
-revoke all on public.tenant_settings from anon, authenticated;
-grant select on public.tenant_settings to anon, authenticated;
-grant insert, update on public.tenant_settings to authenticated;
+DROP POLICY IF EXISTS tenant_settings_delete_owner_admin
+    ON public.tenant_settings;
+CREATE POLICY tenant_settings_delete_owner_admin
+    ON public.tenant_settings
+    FOR DELETE
+    TO authenticated
+    USING (
+        tenant_id = public.get_my_tenant_id()
+        AND public.current_profile_role() IN ('owner', 'admin')
+    );
 
-commit;
+-- ----------------------------------------------------------------------------
+-- 5. Grants
+-- RLS controls which rows can be read or changed.
+-- Service-role registration flows can create the tenant and its settings row.
+-- ----------------------------------------------------------------------------
 
--- Registration must create the settings row after the tenant row, ideally in
--- the same server-side transaction/RPC:
--- insert into public.tenant_settings (tenant_id, display_name)
--- values (new_tenant_id, new_business_name);
--- Never expose the Supabase service-role key in the browser.
+GRANT SELECT ON public.tenant_settings TO anon, authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.tenant_settings TO authenticated;
+
+-- No Realtime publication changes are made by this migration.
