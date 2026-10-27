@@ -43,3 +43,7 @@ next-env.d.ts
 
 # Documents
 /Documents
+
+supabase/.branches/
+
+supabase/.temp/
