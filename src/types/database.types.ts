@@ -201,6 +201,13 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
+            foreignKeyName: "appointments_customer_id_fkey";
+            columns: ["customer_id"];
+            isOneToOne: false;
+            referencedRelation: "customers";
+            referencedColumns: ["id"];
+          },
+          {
             foreignKeyName: "appointments_tenant_id_fkey";
             columns: ["tenant_id"];
             isOneToOne: false;
@@ -318,6 +325,111 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "business_hours_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      customer_notes: {
+        Row: {
+          author_id: string;
+          body: string;
+          created_at: string;
+          customer_id: string;
+          id: string;
+          tenant_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          author_id: string;
+          body: string;
+          created_at?: string;
+          customer_id: string;
+          id?: string;
+          tenant_id: string;
+        };
+        Update: {
+          author_id?: string;
+          body?: string;
+          created_at?: string;
+          customer_id?: string;
+          id?: string;
+          tenant_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "customer_notes_author_id_fkey";
+            columns: ["author_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "customer_notes_customer_fkey";
+            columns: ["tenant_id", "customer_id"];
+            isOneToOne: false;
+            referencedRelation: "customers";
+            referencedColumns: ["tenant_id", "id"];
+          },
+          {
+            foreignKeyName: "customer_notes_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      customers: {
+        Row: {
+          birthday: string | null;
+          created_at: string;
+          email: string | null;
+          full_name: string;
+          id: string;
+          marketing_opt_in: boolean;
+          phone: string | null;
+          profile_id: string | null;
+          tenant_id: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          birthday?: string | null;
+          created_at?: string;
+          email?: string | null;
+          full_name: string;
+          id?: string;
+          marketing_opt_in?: boolean;
+          phone?: string | null;
+          profile_id?: string | null;
+          tenant_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          birthday?: string | null;
+          created_at?: string;
+          email?: string | null;
+          full_name?: string;
+          id?: string;
+          marketing_opt_in?: boolean;
+          phone?: string | null;
+          profile_id?: string | null;
+          tenant_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "customers_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "customers_tenant_id_fkey";
             columns: ["tenant_id"];
             isOneToOne: false;
             referencedRelation: "tenants";
@@ -699,6 +811,78 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "resources_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      reviews: {
+        Row: {
+          appointment_id: string | null;
+          comment: string | null;
+          created_at: string;
+          customer_id: string;
+          id: string;
+          published_at: string | null;
+          rating: number;
+          staff_id: string | null;
+          status: Database["public"]["Enums"]["review_status"];
+          tenant_id: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          appointment_id?: string | null;
+          comment?: string | null;
+          created_at?: string;
+          customer_id: string;
+          id?: string;
+          published_at?: string | null;
+          rating: number;
+          staff_id?: string | null;
+          status?: Database["public"]["Enums"]["review_status"];
+          tenant_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          appointment_id?: string | null;
+          comment?: string | null;
+          created_at?: string;
+          customer_id?: string;
+          id?: string;
+          published_at?: string | null;
+          rating?: number;
+          staff_id?: string | null;
+          status?: Database["public"]["Enums"]["review_status"];
+          tenant_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "reviews_appointment_fkey";
+            columns: ["tenant_id", "appointment_id"];
+            isOneToOne: false;
+            referencedRelation: "appointments";
+            referencedColumns: ["tenant_id", "id"];
+          },
+          {
+            foreignKeyName: "reviews_customer_fkey";
+            columns: ["tenant_id", "customer_id"];
+            isOneToOne: false;
+            referencedRelation: "customers";
+            referencedColumns: ["tenant_id", "id"];
+          },
+          {
+            foreignKeyName: "reviews_staff_fkey";
+            columns: ["tenant_id", "staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff_members";
+            referencedColumns: ["tenant_id", "id"];
+          },
+          {
+            foreignKeyName: "reviews_tenant_id_fkey";
             columns: ["tenant_id"];
             isOneToOne: false;
             referencedRelation: "tenants";
@@ -1248,6 +1432,7 @@ export type Database = {
       commission_type: "fixed" | "percentage";
       notification_channel: "in_app" | "email" | "sms";
       resource_type: "room" | "chair" | "equipment" | "vehicle" | "other";
+      review_status: "pending" | "published" | "hidden";
       tenant_status: "pending" | "active" | "suspended" | "archived";
     };
     CompositeTypes: {
@@ -1383,6 +1568,7 @@ export const Constants = {
       commission_type: ["fixed", "percentage"],
       notification_channel: ["in_app", "email", "sms"],
       resource_type: ["room", "chair", "equipment", "vehicle", "other"],
+      review_status: ["pending", "published", "hidden"],
       tenant_status: ["pending", "active", "suspended", "archived"],
     },
   },
