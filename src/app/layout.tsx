@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
+import { ToastListener } from "@/components/ui/toast";
 import { siteConfig } from "@/lib/site";
 import "./globals.css";
 
@@ -39,9 +40,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en">
       <body className="min-h-dvh bg-white text-neutral-900 antialiased">
         {children}
+        <Suspense fallback={null}>
+          <ToastListener />
+        </Suspense>
         <ServiceWorkerRegister />
       </body>
     </html>
   );
 }
-
