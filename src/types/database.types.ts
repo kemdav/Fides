@@ -154,6 +154,7 @@ export type Database = {
           timezone: string | null;
           total_cents: number;
           updated_at: string;
+          waitlist_entry_id: string | null;
         };
         ComputedFields: never;
         Insert: {
@@ -173,6 +174,7 @@ export type Database = {
           timezone?: string | null;
           total_cents?: number;
           updated_at?: string;
+          waitlist_entry_id?: string | null;
         };
         Update: {
           cancellation_reason?: string | null;
@@ -191,6 +193,7 @@ export type Database = {
           timezone?: string | null;
           total_cents?: number;
           updated_at?: string;
+          waitlist_entry_id?: string | null;
         };
         Relationships: [
           {
@@ -219,6 +222,13 @@ export type Database = {
             columns: ["tenant_id", "staff_id"];
             isOneToOne: false;
             referencedRelation: "staff_members";
+            referencedColumns: ["tenant_id", "id"];
+          },
+          {
+            foreignKeyName: "appointments_waitlist_entry_fkey";
+            columns: ["tenant_id", "waitlist_entry_id"];
+            isOneToOne: false;
+            referencedRelation: "waitlist_entries";
             referencedColumns: ["tenant_id", "id"];
           },
         ];
@@ -1393,6 +1403,94 @@ export type Database = {
         };
         Relationships: [];
       };
+      waitlist_entries: {
+        Row: {
+          converted_appointment_id: string | null;
+          created_at: string;
+          customer_id: string | null;
+          guest_name: string | null;
+          guest_phone: string | null;
+          id: string;
+          joined_at: string;
+          notes: string | null;
+          notified_at: string | null;
+          service_id: string | null;
+          staff_id: string | null;
+          status: Database["public"]["Enums"]["waitlist_status"];
+          tenant_id: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          converted_appointment_id?: string | null;
+          created_at?: string;
+          customer_id?: string | null;
+          guest_name?: string | null;
+          guest_phone?: string | null;
+          id?: string;
+          joined_at?: string;
+          notes?: string | null;
+          notified_at?: string | null;
+          service_id?: string | null;
+          staff_id?: string | null;
+          status?: Database["public"]["Enums"]["waitlist_status"];
+          tenant_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          converted_appointment_id?: string | null;
+          created_at?: string;
+          customer_id?: string | null;
+          guest_name?: string | null;
+          guest_phone?: string | null;
+          id?: string;
+          joined_at?: string;
+          notes?: string | null;
+          notified_at?: string | null;
+          service_id?: string | null;
+          staff_id?: string | null;
+          status?: Database["public"]["Enums"]["waitlist_status"];
+          tenant_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "waitlist_entries_converted_appointment_fkey";
+            columns: ["tenant_id", "converted_appointment_id"];
+            isOneToOne: false;
+            referencedRelation: "appointments";
+            referencedColumns: ["tenant_id", "id"];
+          },
+          {
+            foreignKeyName: "waitlist_entries_customer_fkey";
+            columns: ["tenant_id", "customer_id"];
+            isOneToOne: false;
+            referencedRelation: "customers";
+            referencedColumns: ["tenant_id", "id"];
+          },
+          {
+            foreignKeyName: "waitlist_entries_service_fkey";
+            columns: ["tenant_id", "service_id"];
+            isOneToOne: false;
+            referencedRelation: "services";
+            referencedColumns: ["tenant_id", "id"];
+          },
+          {
+            foreignKeyName: "waitlist_entries_staff_fkey";
+            columns: ["tenant_id", "staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff_members";
+            referencedColumns: ["tenant_id", "id"];
+          },
+          {
+            foreignKeyName: "waitlist_entries_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -1434,6 +1532,7 @@ export type Database = {
       resource_type: "room" | "chair" | "equipment" | "vehicle" | "other";
       review_status: "pending" | "published" | "hidden";
       tenant_status: "pending" | "active" | "suspended" | "archived";
+      waitlist_status: "waiting" | "notified" | "converted" | "expired" | "cancelled";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -1570,6 +1669,7 @@ export const Constants = {
       resource_type: ["room", "chair", "equipment", "vehicle", "other"],
       review_status: ["pending", "published", "hidden"],
       tenant_status: ["pending", "active", "suspended", "archived"],
+      waitlist_status: ["waiting", "notified", "converted", "expired", "cancelled"],
     },
   },
 } as const;
