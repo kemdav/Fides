@@ -281,4 +281,3 @@ TO authenticated;
 COMMIT;
 
 -- No Realtime publication changes are required for this migration.
-```
