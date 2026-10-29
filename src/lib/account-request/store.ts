@@ -1,7 +1,7 @@
 import { getMailer } from "@/lib/mail/mailer";
 import { publicEnv } from "@/lib/env";
 import { RESERVED_SUBDOMAINS } from "@/lib/tenant/constants";
-import type { TenantStatus } from "@/types/database.types";
+
 import {
   type AccountRequestInput,
   type AccountRequestRecord,
@@ -10,6 +10,7 @@ import {
   type DispatchedEmailRecord,
   type PlatformAccount,
   type SlugValidationResult,
+  type TenantStatus,
   SLUG_REGEX,
   normalizeSlugInput,
   getCategoryLabel,

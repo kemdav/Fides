@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { RESERVED_SUBDOMAINS } from "@/lib/tenant/constants";
-import type { AppRole, TenantStatus } from "@/types/database.types";
+import type { Enums } from "@/types/database.types";
+
+export type AppRole = Enums<"app_role">;
+export type TenantStatus = Enums<"tenant_status">;
 
 /**
  * Matches the PostgreSQL constraint `tenants_slug_format` in `00001_baseline.sql`:

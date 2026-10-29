@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { accountRequestSchema } from "@/lib/account-request/schema";
+import {
+  accountRequestSchema,
+  type TenantStatus,
+} from "@/lib/account-request/schema";
 import {
   createAccountRequest,
   getActiveTenants,
   listAccountRequests,
   listPlatformAccounts,
 } from "@/lib/account-request/store";
-import type { TenantStatus } from "@/types/database.types";
+
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
