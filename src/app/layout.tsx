@@ -1,9 +1,23 @@
 import type { Metadata, Viewport } from "next";
+import { Mulish, Ovo } from "next/font/google";
 import { Suspense, type ReactNode } from "react";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
 import { ToastListener } from "@/components/ui/toast";
 import { siteConfig } from "@/lib/site";
 import "./globals.css";
+
+const mulish = Mulish({
+  subsets: ["latin", "latin-ext"],
+  variable: "--font-mulish",
+  display: "swap",
+});
+
+const ovo = Ovo({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-ovo",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
@@ -37,8 +51,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
-      <body className="min-h-dvh bg-white text-neutral-900 antialiased">
+    <html lang="en" className={`${mulish.variable} ${ovo.variable} scroll-smooth`}>
+      <body className="min-h-dvh bg-white font-sans text-neutral-900 antialiased">
         {children}
         <Suspense fallback={null}>
           <ToastListener />
