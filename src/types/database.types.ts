@@ -205,10 +205,10 @@ export type Database = {
           },
           {
             foreignKeyName: "appointments_customer_id_fkey";
-            columns: ["customer_id"];
+            columns: ["tenant_id", "customer_id"];
             isOneToOne: false;
             referencedRelation: "customers";
-            referencedColumns: ["id"];
+            referencedColumns: ["tenant_id", "id"];
           },
           {
             foreignKeyName: "appointments_tenant_id_fkey";
@@ -1353,6 +1353,92 @@ export type Database = {
           },
         ];
       };
+      subscription_tiers: {
+        Row: {
+          active: boolean;
+          billing_interval: string;
+          code: string;
+          created_at: string;
+          id: string;
+          name: string;
+          price_cents: number;
+          sort_order: number;
+        };
+        ComputedFields: never;
+        Insert: {
+          active?: boolean;
+          billing_interval?: string;
+          code: string;
+          created_at?: string;
+          id?: string;
+          name: string;
+          price_cents?: number;
+          sort_order?: number;
+        };
+        Update: {
+          active?: boolean;
+          billing_interval?: string;
+          code?: string;
+          created_at?: string;
+          id?: string;
+          name?: string;
+          price_cents?: number;
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
+      subscriptions: {
+        Row: {
+          created_at: string;
+          current_period_end: string | null;
+          current_period_start: string | null;
+          id: string;
+          status: Database["public"]["Enums"]["subscription_status"];
+          tenant_id: string;
+          tier_id: string;
+          trial_ends_at: string | null;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          current_period_end?: string | null;
+          current_period_start?: string | null;
+          id?: string;
+          status?: Database["public"]["Enums"]["subscription_status"];
+          tenant_id: string;
+          tier_id: string;
+          trial_ends_at?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          current_period_end?: string | null;
+          current_period_start?: string | null;
+          id?: string;
+          status?: Database["public"]["Enums"]["subscription_status"];
+          tenant_id?: string;
+          tier_id?: string;
+          trial_ends_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "subscriptions_tier_id_fkey";
+            columns: ["tier_id"];
+            isOneToOne: false;
+            referencedRelation: "subscription_tiers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       tenant_memberships: {
         Row: {
           created_at: string;
@@ -1508,6 +1594,94 @@ export type Database = {
         };
         Relationships: [];
       };
+      tier_features: {
+        Row: {
+          enabled: boolean;
+          feature_key: string;
+          id: string;
+          limit_value: number | null;
+          tier_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          enabled?: boolean;
+          feature_key: string;
+          id?: string;
+          limit_value?: number | null;
+          tier_id: string;
+        };
+        Update: {
+          enabled?: boolean;
+          feature_key?: string;
+          id?: string;
+          limit_value?: number | null;
+          tier_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "tier_features_tier_id_fkey";
+            columns: ["tier_id"];
+            isOneToOne: false;
+            referencedRelation: "subscription_tiers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      verification_documents: {
+        Row: {
+          created_at: string;
+          doc_type: string;
+          id: string;
+          rejection_reason: string | null;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          status: Database["public"]["Enums"]["verification_status"];
+          storage_path: string;
+          tenant_id: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          doc_type: string;
+          id?: string;
+          rejection_reason?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: Database["public"]["Enums"]["verification_status"];
+          storage_path: string;
+          tenant_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          doc_type?: string;
+          id?: string;
+          rejection_reason?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: Database["public"]["Enums"]["verification_status"];
+          storage_path?: string;
+          tenant_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "verification_documents_reviewed_by_fkey";
+            columns: ["reviewed_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "verification_documents_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       waitlist_entries: {
         Row: {
           converted_appointment_id: string | null;
@@ -1638,7 +1812,9 @@ export type Database = {
       payment_status: "pending" | "paid" | "refunded" | "voided" | "failed";
       resource_type: "room" | "chair" | "equipment" | "vehicle" | "other";
       review_status: "pending" | "published" | "hidden";
+      subscription_status: "trialing" | "active" | "past_due" | "cancelled" | "expired";
       tenant_status: "pending" | "active" | "suspended" | "archived";
+      verification_status: "pending" | "approved" | "rejected";
       waitlist_status: "waiting" | "notified" | "converted" | "expired" | "cancelled";
     };
     CompositeTypes: {
@@ -1777,7 +1953,9 @@ export const Constants = {
       payment_status: ["pending", "paid", "refunded", "voided", "failed"],
       resource_type: ["room", "chair", "equipment", "vehicle", "other"],
       review_status: ["pending", "published", "hidden"],
+      subscription_status: ["trialing", "active", "past_due", "cancelled", "expired"],
       tenant_status: ["pending", "active", "suspended", "archived"],
+      verification_status: ["pending", "approved", "rejected"],
       waitlist_status: ["waiting", "notified", "converted", "expired", "cancelled"],
     },
   },
