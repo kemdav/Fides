@@ -33,3 +33,48 @@
 
   --shadow-pill: 0 2px 7px rgb(0 0 0 / 0.24);
 }
+
+/* scroll reveal + hero grid motion (skipped when reduced motion is requested) */
+@media (prefers-reduced-motion: no-preference) {
+  [data-reveal] {
+    opacity: 0;
+    transition:
+      opacity 0.9s ease-out,
+      transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  [data-reveal="left"] {
+    transform: translateX(-56px);
+  }
+
+  [data-reveal="rise"] {
+    transform: translateY(160px);
+    transition-duration: 1.1s, 1.8s;
+  }
+
+  [data-reveal][data-shown="true"] {
+    opacity: 1;
+    transform: none;
+  }
+
+  @keyframes grid-inward {
+    0% {
+      transform: scale(1.3);
+      opacity: 0;
+    }
+    18% {
+      opacity: 1;
+    }
+    82% {
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 0;
+    }
+  }
+
+  .grid-inward {
+    animation: grid-inward 18s linear infinite;
+  }
+}
