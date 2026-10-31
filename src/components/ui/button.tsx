@@ -20,7 +20,9 @@ const variantClasses: Record<ButtonVariant, string> = {
   outline: "border border-neutral-300 bg-transparent text-neutral-900 hover:bg-neutral-50",
   ghost: "bg-transparent text-neutral-900 hover:bg-neutral-100",
   brand: "bg-burnt text-white hover:bg-burnt-dark",
-  "brand-outline": "border-2 border-burnt bg-transparent text-burnt hover:bg-burnt/10",
+  // inset shadow instead of a border so the outline doesn't add height over the solid variant
+  "brand-outline":
+    "bg-transparent text-burnt shadow-[inset_0_0_0_2px_var(--color-burnt)] hover:bg-burnt/10",
   accent: "bg-sky text-ink shadow-pill hover:brightness-95",
 };
 
