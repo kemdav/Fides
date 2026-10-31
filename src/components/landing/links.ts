@@ -16,9 +16,10 @@ export const landingLinks = {
   help: "#contact",
 } as const;
 
+/** id matches the section element so the header can highlight the one in view */
 export const navLinks = [
-  { label: "Home", href: landingLinks.home },
-  { label: "About", href: landingLinks.about },
-  { label: "Features", href: landingLinks.features },
-  { label: "Pricing", href: landingLinks.pricing },
+  { id: "home", label: "Home", href: "#home" },
+  { id: "about", label: "About", href: landingLinks.about },
+  { id: "features", label: "Features", href: landingLinks.features },
+  { id: "pricing", label: "Pricing", href: landingLinks.pricing },
 ] as const;
