@@ -1,4 +1,5 @@
-import Image from "next/image";
+import { LaptopScene, SideSpheres } from "./laptop-scene";
+import { Reveal } from "./reveal";
 
 const pillars = [
   {
@@ -19,46 +20,44 @@ const pillars = [
 
 export function Operations() {
   return (
-    <section id="about" className="bg-burnt/10 pt-12 lg:pt-[100px]">
-      <div className="relative mx-auto max-w-[1440px] text-ink">
+    <section id="about" className="relative scroll-mt-16 lg:scroll-mt-[88px] overflow-hidden bg-burnt/10 pt-12 lg:pt-[100px]">
+      <div className="mx-auto max-w-[1440px] text-ink">
         <div className="relative z-10 flex flex-col items-center gap-4 px-4 text-center sm:px-8">
-          <h2 className="font-display text-4xl leading-[normal] sm:text-5xl lg:text-[56px]">
-            Streamlining Service Business Operations
-          </h2>
-          <p className="max-w-[789px] text-xl/7 font-light">
-            Give your customers an easy way to discover your services and book
-            appointments, while you keep track of your schedules, customers,
-            staff, and daily operations.
-          </p>
+          <Reveal from="left">
+            <h2 className="font-display text-4xl leading-[normal] sm:text-5xl lg:text-[56px]">
+              Streamlining Service Business Operations
+            </h2>
+          </Reveal>
+          <Reveal from="left" delay={150}>
+            <p className="max-w-[789px] text-xl/7 font-light">
+              Give your customers an easy way to discover your services and book
+              appointments, while you keep track of your schedules, customers,
+              staff, and daily operations.
+            </p>
+          </Reveal>
         </div>
+      </div>
 
-        <div className="relative lg:-mt-[74px]">
-          <div className="relative w-full overflow-hidden lg:aspect-[1440/1500]">
-            <Image
-              src="/images/landing/mockup.png"
-              alt="A branded booking website for Luke Beauty Studio shown on a laptop"
-              width={1200}
-              height={896}
-              sizes="(min-width: 1440px) 1702px, (min-width: 1024px) 118vw, 100vw"
-              className="h-auto w-full lg:absolute lg:-left-[9.1%] lg:top-[2%] lg:w-[118.2%] lg:max-w-none"
-            />
-          </div>
+      {/* laptop and spheres rise together as one piece */}
+      <Reveal from="rise" className="relative mt-4 h-[430px] min-[480px]:h-[540px] sm:h-[760px] lg:h-[1410px]">
+        <LaptopScene />
+        <SideSpheres />
+      </Reveal>
 
-          <div className="bg-gradient-to-b from-burnt/40 via-burnt/80 to-burnt px-4 py-10 sm:px-8 lg:absolute lg:inset-x-0 lg:bottom-0 lg:h-[485px] lg:px-0 lg:py-0">
-            <div className="mx-auto grid max-w-[1002px] gap-8 text-white lg:h-full lg:grid-cols-3 lg:items-end lg:gap-0 lg:pb-[0px]">
-              {pillars.map((pillar) => (
-                <div
-                  key={pillar.title}
-                  className="border-l border-white pl-5 lg:h-[300px] lg:pt-[82px]"
-                >
-                  <h3 className="text-[32px]/9 font-semibold">{pillar.title}</h3>
-                  <p className="mt-4 max-w-[271px] text-lg/5 font-light lg:mt-[40px]">
-                    {pillar.description}
-                  </p>
-                </div>
-              ))}
+      {/* full-bleed fade so the band never shows hard edges on wide screens */}
+      <div className="bg-gradient-to-b from-burnt/0 via-burnt/60 via-45% to-burnt to-80% px-4 py-10 sm:px-8 lg:absolute lg:inset-x-0 lg:bottom-0 lg:h-[485px] lg:px-0 lg:py-0">
+        <div className="mx-auto grid max-w-[1002px] gap-8 text-white lg:grid-cols-3 lg:items-start lg:gap-0 lg:pt-[139px]">
+          {pillars.map((pillar) => (
+            <div
+              key={pillar.title}
+              className="border-l border-white pl-5 lg:h-[300px] lg:pt-[82px]"
+            >
+              <h3 className="text-[32px]/9 font-semibold">{pillar.title}</h3>
+              <p className="mt-4 max-w-[271px] text-lg/5 font-light lg:mt-[40px]">
+                {pillar.description}
+              </p>
             </div>
-          </div>
+          ))}
         </div>
       </div>
     </section>
