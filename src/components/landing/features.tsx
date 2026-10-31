@@ -15,7 +15,7 @@ const tuckedLayers = [
 
 export function Features() {
   return (
-    <section id="features" className="bg-powder px-4 py-12 sm:px-8 lg:pb-[122px] lg:pt-[50px]">
+    <section id="features" className="scroll-mt-16 lg:scroll-mt-[88px] bg-powder px-4 py-12 sm:px-8 lg:pb-[122px] lg:pt-[50px]">
       <div className="mx-auto max-w-[1280px] text-center text-ink">
         <h2 className="font-display text-4xl leading-[normal] sm:text-5xl lg:text-[56px]">
           Everything You Need to Run Your Business

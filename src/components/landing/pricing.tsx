@@ -189,7 +189,7 @@ export function Pricing() {
   const [starter, professional, business] = plans;
 
   return (
-    <section id="pricing" className="bg-burnt/10 px-4 pb-12 pt-12 sm:px-8 lg:px-[78px] lg:pb-10 lg:pt-[42px]">
+    <section id="pricing" className="scroll-mt-16 lg:scroll-mt-[88px] bg-burnt/10 px-4 pb-12 pt-12 sm:px-8 lg:px-[78px] lg:pb-10 lg:pt-[42px]">
       <div className="mx-auto max-w-[1286px] text-center text-ink">
         <h2 className="font-display text-4xl leading-[normal] sm:text-5xl lg:text-[56px]">
           Find the Right Plan for Your Business
