@@ -119,9 +119,24 @@ export function Header() {
           onClick={() => setOpen((value) => !value)}
           className="flex size-11 flex-col items-center justify-center gap-1.5 rounded-lg text-burnt lg:hidden"
         >
-          <span className="h-0.5 w-6 rounded bg-current" />
-          <span className="h-0.5 w-6 rounded bg-current" />
-          <span className="h-0.5 w-6 rounded bg-current" />
+          <span
+            className={cn(
+              "h-0.5 w-6 rounded bg-current transition-[translate,rotate,opacity] duration-300 ease-out motion-reduce:transition-none",
+              open && "translate-y-2 rotate-45"
+            )}
+          />
+          <span
+            className={cn(
+              "h-0.5 w-6 rounded bg-current transition-[translate,rotate,opacity] duration-300 ease-out motion-reduce:transition-none",
+              open && "opacity-0"
+            )}
+          />
+          <span
+            className={cn(
+              "h-0.5 w-6 rounded bg-current transition-[translate,rotate,opacity] duration-300 ease-out motion-reduce:transition-none",
+              open && "-translate-y-2 -rotate-45"
+            )}
+          />
         </button>
       </div>
 
