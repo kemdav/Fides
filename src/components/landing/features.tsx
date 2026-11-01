@@ -1,7 +1,7 @@
 import { FeatureStack, type FeatureItem } from "./feature-stack";
 import { SectionHeading } from "./section-heading";
 
-const features: FeatureItem[] = [
+export const features: FeatureItem[] = [
   {
     title: "Branded Business Website",
     description:

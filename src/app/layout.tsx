@@ -40,10 +40,30 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
+  category: "business",
+  openGraph: {
+    type: "website",
+    siteName: siteConfig.name,
+    locale: "en_PH",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#4f46e5",
+  themeColor: "#c35000",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",

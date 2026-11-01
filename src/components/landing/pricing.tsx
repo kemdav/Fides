@@ -3,7 +3,7 @@ import { landingLinks } from "./links";
 import { Reveal } from "./reveal";
 import { SectionHeading } from "./section-heading";
 
-const plans: Plan[] = [
+export const plans: Plan[] = [
   {
     name: "Starter",
     price: "₱499",
