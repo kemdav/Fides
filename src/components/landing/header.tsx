@@ -126,7 +126,7 @@ export function Header() {
       </div>
 
       {open && (
-        <div id="mobile-menu" className="border-t border-line px-4 pb-6 pt-2 sm:px-8 lg:hidden">
+        <div id="mobile-menu" className="absolute inset-x-0 top-full border-t border-line bg-powder px-4 pb-6 pt-2 shadow-[0_8px_16px_-8px_rgb(0_0_0/0.15)] sm:px-8 lg:hidden">
           <nav aria-label="Mobile" className="flex flex-col">
             {navLinks.map((link) => (
               <Link
