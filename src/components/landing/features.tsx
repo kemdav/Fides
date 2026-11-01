@@ -1,59 +1,77 @@
-import Image from "next/image";
+import { FeatureStack, type FeatureItem } from "./feature-stack";
+import { SectionHeading } from "./section-heading";
 
-/*
- * the figma "features stack" tucks five more feature cards behind the featured
- * one (online booking, appointment, staff and customer management). their
- * content is hidden in the static design, so only the stacked layers render.
- */
-const tuckedLayers = [
-  "inset-x-[10%] top-0",
-  "inset-x-[8%] top-3 lg:top-6",
-  "inset-x-[6%] top-6 lg:top-12",
-  "inset-x-[4%] top-9 lg:top-[72px]",
-  "inset-x-[2%] top-12 lg:top-24",
+const features: FeatureItem[] = [
+  {
+    title: "Branded Business Website",
+    description:
+      "Give your business a professional online presence where customers can discover and book your services.",
+    icon: {
+      src: "/images/landing/icon-website.svg",
+      inset: "7.81% 6.25% 20.31% 10.94%",
+      bleed: "-2.17% -1.89% -2.93% -2.55%",
+    },
+  },
+  {
+    title: "Online Booking & AI Chatbot",
+    description:
+      "Let customers book anytime with 24/7 AI assistance to answer questions and guide them through the booking process.",
+    icon: {
+      src: "/images/landing/feature-booking.svg",
+      inset: "10.94% 7.81% 12.5% 9.38%",
+      bleed: "-2.76% -2.55%",
+    },
+  },
+  {
+    title: "Appointment Management",
+    description: "Manage online bookings, walk-ins, and other appointments from one calendar.",
+    icon: {
+      src: "/images/landing/feature-appointments.svg",
+      inset: "10.94% 7.81% 9.38% 10.94%",
+      bleed: "-2.65% -2.6%",
+    },
+  },
+  {
+    title: "Staff Management",
+    description: "Keep track of staff schedules, availability, assignments, and permissions.",
+    icon: {
+      src: "/images/landing/feature-staff.svg",
+      inset: "21.88% 4.69% 7.81% 4.69%",
+      bleed: "0 -2.33% -3% -2.33%",
+    },
+  },
+  {
+    title: "Secure Customer Management",
+    description:
+      "Protect customer information while keeping profiles and appointment history organized and accessible.",
+    icon: {
+      src: "/images/landing/feature-customers.svg",
+      inset: "14.06% 7.81% 6.25% 9.38%",
+      bleed: "-2.65% -2.55%",
+    },
+  },
+  {
+    title: "BIR-Ready Reports",
+    description:
+      "Generate organized business reports to simplify recordkeeping and support tax preparation.",
+    icon: {
+      src: "/images/landing/feature-reports.svg",
+      inset: "7.81% 6.25% 7.81% 12.5%",
+      bleed: "-2.5% -2.6%",
+    },
+    solid: "#c55200",
+  },
 ];
 
 export function Features() {
   return (
-    <section id="features" className="scroll-mt-16 lg:scroll-mt-[88px] bg-powder px-4 py-12 sm:px-8 lg:pb-[122px] lg:pt-[50px]">
-      <div className="mx-auto max-w-[1280px] text-center text-ink">
-        <h2 className="font-display text-4xl leading-[normal] sm:text-5xl lg:text-[56px]">
-          Everything You Need to Run Your Business
-        </h2>
-        <p className="mx-auto mt-4 max-w-[789px] text-xl/7 font-light">
+    <section id="features" className="scroll-mt-16 bg-powder lg:scroll-mt-[88px]">
+      <FeatureStack items={features}>
+        <SectionHeading title="Everything You Need to Run Your Business">
           From accepting bookings to managing your daily operations, Fides keeps
           your business organized in one place.
-        </p>
-
-        <div className="relative mx-auto mt-10 max-w-[1000px] pt-[60px] text-left lg:mt-[83px] lg:pt-[120px]">
-          {tuckedLayers.map((position) => (
-            <div
-              key={position}
-              aria-hidden
-              className={`absolute h-[216px] rounded-3xl bg-burnt/10 ${position}`}
-            />
-          ))}
-
-          <article className="relative flex flex-col gap-6 rounded-3xl bg-burnt p-6 text-white sm:flex-row sm:gap-12 sm:p-12">
-            <div className="flex size-20 shrink-0 items-center justify-center rounded-full bg-powder lg:size-[120px]">
-              <Image
-                src="/images/landing/icon-website.svg"
-                alt=""
-                width={55.35}
-                height={48.35}
-                aria-hidden
-              />
-            </div>
-            <div className="flex flex-1 flex-col gap-4">
-              <h3 className="text-[32px]/9 font-semibold">Branded Business Website</h3>
-              <p className="text-lg/5 font-light">
-                Give your business a professional online presence where customers
-                can discover and book your services.
-              </p>
-            </div>
-          </article>
-        </div>
-      </div>
+        </SectionHeading>
+      </FeatureStack>
     </section>
   );
 }
