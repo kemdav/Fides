@@ -20,17 +20,15 @@ const variantClasses: Record<ButtonVariant, string> = {
   outline: "border border-neutral-300 bg-transparent text-neutral-900 hover:bg-neutral-50",
   ghost: "bg-transparent text-neutral-900 hover:bg-neutral-100",
   brand: "bg-burnt text-white hover:bg-burnt-dark",
-  // inset shadow instead of a border so the outline doesn't add height over the solid variant
   "brand-outline":
     "bg-transparent text-burnt shadow-[inset_0_0_0_2px_var(--color-burnt)] hover:bg-burnt/10",
-  accent: "bg-sky text-ink shadow-pill hover:brightness-95",
+  accent: "bg-sky text-ink shadow-[0_2px_3px_rgb(9_16_29/0.22)] hover:brightness-95",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
   sm: "h-8 rounded-md px-3 text-sm font-medium",
   md: "h-10 rounded-md px-4 text-sm font-medium",
   lg: "h-12 rounded-md px-6 text-base font-medium",
-  // marketing sizes from the figma button family (18/28 label, 18x14 padding)
   cta: "rounded-lg px-[18px] py-[14px] text-lg/7 font-semibold",
   pill: "rounded-[32px] px-[18px] py-[14px] text-lg/7 font-semibold",
 };
@@ -41,14 +39,14 @@ type ButtonClassOptions = {
   className?: string;
 };
 
-/** Shared class builder so links can render with button styling. */
 export function buttonClasses({
   variant = "solid",
   size = "md",
   className,
 }: ButtonClassOptions = {}) {
   return cn(
-    "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors",
+    "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-[color,background-color,box-shadow,scale,filter] duration-300 ease-out",
+    "active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2",
     "disabled:pointer-events-none disabled:opacity-50",
     variantClasses[variant],
