@@ -1,15 +1,12 @@
 /*
- * laptop drawn as a real 3d model (millimetres, 16" class laptop) and projected through one pinhole camera,
- * so every edge obeys perspective. the camera pose was fitted to the figma mockup (1200x896 space).
- *
- * lid frame: X right, Y down, Z into the screen. the base is hinged on the lid's outer bottom edge and
- * opened to `OPEN_ANGLE`. the branded screen (html) is laid over the projected glass in laptop-scene.
+ * 3d laptop model (mm, 16" class) projected through one pinhole camera fitted to the figma mockup (1200x896 space).
+ * lid frame: X right, Y down, Z into the screen; the base hinges on the lid's bottom edge at OPEN_ANGLE.
  */
+
 
 type V = readonly [number, number, number];
 type P2 = readonly [number, number];
 
-// ---- dimensions (mm) --------------------------------------------------------------------------
 const DW = 344; // display active area
 const DH = 223;
 const BEZEL = { l: 6, r: 6, t: 7.5, b: 18 };
@@ -20,7 +17,6 @@ const BASE_DEPTH = 248.1;
 const BASE_THICK = 16.8;
 const OPEN_ANGLE = 102.97; // degrees between lid and base deck
 
-// ---- camera (fitted to the mockup) -------------------------------------------------------------
 const CAM = { yaw: -22.3676, pitch: -4.794, roll: 2.8287, t: [-2.785, -44.163, 2684.81] as V, f: 5000, cx: 600, cy: 448 };
 
 const rad = (d: number) => (d * Math.PI) / 180;
@@ -51,10 +47,8 @@ const project = (m: V): P2 => {
   return [CAM.cx + (CAM.f * c[0]) / c[2], CAM.cy + (CAM.f * c[1]) / c[2]];
 };
 const pts = (list: V[]) => list.map((m) => project(m).map((n) => n.toFixed(1)).join(",")).join(" ");
-// a face is visible when its outward normal points toward the camera
 const facing = (point: V, normal: V) => dot(apply(ROT, normal), toCam(point)) < 0;
 
-// ---- base frame --------------------------------------------------------------------------------
 const cb = Math.cos(rad(OPEN_ANGLE));
 const sb = Math.sin(rad(OPEN_ANGLE));
 const FRONT: V = [0, -cb, -sb]; // from the hinge toward the user along the deck
@@ -65,7 +59,6 @@ const UP: V = (() => {
 const top = (x: number, d: number): V => [x, HINGE_Y + d * FRONT[1], d * FRONT[2]];
 const bottom = (x: number, d: number): V => add(top(x, d), scl(UP, -BASE_THICK));
 
-// rounded rectangle outline in plane coordinates (a right, b down), clockwise
 type P = readonly [number, number];
 function outline2d(a0: number, b0: number, a1: number, b1: number, r: number, corners = [true, true, true, true]): P[] {
   const out: P[] = [];
@@ -89,7 +82,6 @@ const roundedRect = (at: (a: number, b: number) => V, a0: number, b0: number, a1
   outline2d(a0, b0, a1, b1, r, corners).map(([x, y]) => at(x, y));
 const lid = (a: number, b: number): V => [a, b, 0];
 
-// ---- keyboard ----------------------------------------------------------------------------------
 const KB = { x0: 22, x1: 322, d0: 24, d1: 140 };
 const keyRows = (): { x0: number; x1: number; d0: number; d1: number }[] => {
   const out: { x0: number; x1: number; d0: number; d1: number }[] = [];
@@ -119,7 +111,6 @@ export function LaptopSvg() {
   const baseTop = roundedRect(top, LEFT, 0, RIGHT, BASE_DEPTH, 10, baseCorners);
   const showLeft = facing(top(LEFT, 120), [-1, 0, 0]);
 
-  // wall segments of the slab that face the camera, shaded by orientation
   const outline = outline2d(LEFT, 0, RIGHT, BASE_DEPTH, 10, baseCorners);
   const wall: { points: string; fill: string }[] = [];
   const rim: V[][] = [];
@@ -145,7 +136,6 @@ export function LaptopSvg() {
     rim.push([top(p[0], p[1]), top(q[0], q[1])]);
   });
 
-  // projected extents, for gradients and the shadow
   const topPts = baseTop.map(project);
   const minX = Math.min(...topPts.map((p) => p[0]));
   const maxX = Math.max(...topPts.map((p) => p[0]));
@@ -177,31 +167,24 @@ export function LaptopSvg() {
         </filter>
       </defs>
 
-      {/* contact shadow */}
       <ellipse cx={shadowC[0] + 20} cy={Math.max(frontBottom[0][1], frontBottom[1][1]) + 18} rx={(maxX - minX) * 0.42} ry="18" fill="#0a1033" opacity="0.3" filter="url(#lap-blur)" />
 
-      {/* slab wall: one quad per outline segment, so the rounded corners stay continuous */}
       {wall.map((w, i) => (
         <polygon key={i} points={w.points} fill={w.fill} stroke={w.fill} strokeWidth="0.6" strokeLinejoin="round" />
       ))}
 
-      {/* top deck */}
       <polygon points={pts(baseTop)} fill="url(#lap-top)" strokeLinejoin="round" />
-      {/* bright rolled edge along the visible wall */}
       {rim.map((seg, i) => (
         <polyline key={i} points={pts(seg)} fill="none" stroke="#f1f3f6" strokeWidth="1.3" opacity="0.8" strokeLinecap="round" />
       ))}
 
-      {/* keyboard recess + keys */}
       <polygon points={pts(roundedRect(top, KB.x0, KB.d0, KB.x1, KB.d1, 3))} fill="#0e0e10" strokeLinejoin="round" />
       {keyRows().map((k, i) => (
         <polygon key={i} points={pts([top(k.x0, k.d0), top(k.x1, k.d0), top(k.x1, k.d1), top(k.x0, k.d1)])} fill="#1c1c20" stroke="#050506" strokeWidth="0.5" strokeLinejoin="round" />
       ))}
 
-      {/* trackpad */}
       <polygon points={pts(roundedRect(top, 92, 148, 252, 240, 4))} fill="#d3d4d4" stroke="#b0b3b8" strokeWidth="0.9" strokeLinejoin="round" />
 
-      {/* ports on the left face */}
       {showLeft && (
         <g stroke="#4c5362" strokeLinecap="round" strokeWidth="2" opacity="0.6">
           {[[62, 72], [86, 96], [112, 118]].map(([d0, d1]) => (
@@ -210,14 +193,11 @@ export function LaptopSvg() {
         </g>
       )}
 
-      {/* shadow the lid casts on the deck near the hinge */}
       <polygon points={pts([top(LEFT, 0), top(RIGHT, 0), top(RIGHT, 14), top(LEFT, 14)])} fill="url(#lap-hinge)" />
 
-      {/* lid: silver rim, black bezel */}
       <polygon points={pts(lidOuter)} fill="#0b0d0c" stroke="#9aa0aa" strokeWidth="1.8" strokeLinejoin="round" />
     </svg>
   );
 }
 
-/** glass corners (display active area) in the 1200x896 space, for mapping the html screen onto the lid */
 export const glassQuad: P2[] = [project([0, 0, 0]), project([DW, 0, 0]), project([DW, DH, 0]), project([0, DH, 0])];

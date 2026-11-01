@@ -2,12 +2,6 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { LaptopSvg } from "./laptop-svg";
 
-/*
- * laptop mockup: the real laptop render from the figma mockup (spheres removed) with our
- * own crisp, brand-matched screen mapped onto it, plus css spheres.
- * everything is laid out on a fixed 1440px-wide stage that the parent scales down on
- * smaller screens.
- */
 
 // maps the screen's 880x570 layout box (the 344x223mm display) onto the projected glass in laptop-svg (1200x896 space)
 const screenTransform =
@@ -167,10 +161,8 @@ export function LaptopScene() {
       aria-label="A branded booking website for a beauty studio shown on a laptop"
       className="absolute left-1/2 top-0 h-[1410px] w-[1440px] origin-top -translate-x-1/2 scale-[0.4] min-[480px]:scale-[0.5] sm:scale-[0.7] lg:scale-100"
     >
-      {/* the big dome under the laptop */}
-      <Sphere className="-left-[402px] top-[918px] size-[2224px] bg-[radial-gradient(circle_at_50%_6%,#7f96ef_0%,#4a64d6_30%,#2c3fae_60%,#1d2b86_100%)]" />
+      <Sphere className="-left-[30px] top-[860px] size-[1500px] lg:-left-[402px] lg:top-[918px] lg:size-[2224px] bg-[radial-gradient(circle_at_50%_6%,#7f96ef_0%,#4a64d6_30%,#2c3fae_60%,#1d2b86_100%)]" />
 
-      {/* the 1200x896 laptop drawing is shown at 1.418x, where it sits in the figma frame */}
       <div className="absolute -left-[131px] -top-[60px] h-[896px] w-[1200px] origin-top-left scale-[1.418]">
         <LaptopSvg />
         <div
@@ -182,13 +174,11 @@ export function LaptopScene() {
         </div>
       </div>
 
-      {/* sphere resting on the lid corner */}
       <Sphere className="left-[929px] top-[36px] size-[176px]" />
     </div>
   );
 }
 
-/** the two side spheres hug the screen edges and are partly cut off, like in the figma mockup */
 export function SideSpheres() {
   return (
     <>
