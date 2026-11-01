@@ -4,14 +4,11 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 type RevealProps = {
   children: ReactNode;
-  /** direction the content travels from; styles live in globals.css */
-  from: "left" | "rise";
-  /** delay in ms before the transition starts */
+  from: "left" | "right" | "up" | "rise";
   delay?: number;
   className?: string;
 };
 
-/** Fades/slides its children in once, the first time they scroll into view. */
 export function Reveal({ children, from, delay = 0, className }: RevealProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [shown, setShown] = useState(false);
