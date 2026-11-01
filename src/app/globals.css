@@ -1,6 +1,24 @@
 @import "tailwindcss";
 
 
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  select,
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="submit"],
+  label[for] {
+    cursor: pointer;
+  }
+
+  :disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+}
+
 @theme inline {
   --font-sans: var(--font-mulish), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-ovo), ui-serif, Georgia, serif;
