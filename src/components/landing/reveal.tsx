@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 type RevealProps = {
   children: ReactNode;
-  from: "left" | "right" | "up" | "rise";
+  from: "left" | "right" | "up" | "rise" | "bounce";
   delay?: number;
   className?: string;
 };
@@ -34,7 +34,7 @@ export function Reveal({ children, from, delay = 0, className }: RevealProps) {
       ref={ref}
       data-reveal={from}
       data-shown={shown}
-      style={delay ? { transitionDelay: `${delay}ms` } : undefined}
+      style={delay ? { transitionDelay: `${delay}ms`, animationDelay: `${delay}ms` } : undefined}
       className={className}
     >
       {children}
