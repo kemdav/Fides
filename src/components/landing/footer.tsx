@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { landingLinks } from "./links";
+import { Reveal } from "./reveal";
 
 const columns = [
   {
@@ -30,7 +31,7 @@ const columns = [
 export function Footer() {
   return (
     <footer id="contact" className="bg-burnt px-4 py-12 text-white sm:px-8 lg:px-20 lg:py-[50px]">
-      <div className="mx-auto max-w-[1280px]">
+      <Reveal from="up" className="mx-auto max-w-[1280px]">
         <div className="flex flex-col gap-10 border-b border-white pb-12 lg:flex-row lg:items-center lg:gap-[182px] lg:pb-[50px]">
           <p className="font-display text-[72px] leading-[normal] lg:w-[435px]">Fides</p>
 
@@ -53,7 +54,7 @@ export function Footer() {
         </div>
 
         <p className="mt-4 text-xl/6">© 2026 Fides. All rights reserved.</p>
-      </div>
+      </Reveal>
     </footer>
   );
 }

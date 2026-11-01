@@ -1,8 +1,4 @@
-/*
- * routes for the global landing page.
- * sign-up goes to the request-account page; contact, demo and help routes don't exist yet, so those point at
- * on-page anchors / login until the pages are built.
- */
+// contact, demo and help pages don't exist yet, so those links point at on-page anchors
 export const landingLinks = {
   home: "/",
   about: "#about",
@@ -16,7 +12,6 @@ export const landingLinks = {
   help: "#contact",
 } as const;
 
-/** id matches the section element so the header can highlight the one in view */
 export const navLinks = [
   { id: "home", label: "Home", href: "#home" },
   { id: "about", label: "About", href: landingLinks.about },

@@ -1,11 +1,5 @@
 @import "tailwindcss";
 
-/*
- * Fides — global stylesheet.
- *
- * Tailwind's Preflight reset ships with the import above. Brand tokens below
- * come from the Figma design system (fides / UI Design).
- */
 
 @theme inline {
   --font-sans: var(--font-mulish), ui-sans-serif, system-ui, sans-serif;
@@ -13,28 +7,24 @@
 }
 
 @theme {
-  /* brand */
   --color-powder: #ffffeb;
-  --color-burnt: #cc5500;
+  /* figma brand orange is #cc5500; nudged to #c35000 so white text and orange text both pass wcag aa (4.7:1) */
+  --color-burnt: #c35000;
   --color-burnt-dark: #994000;
   --color-sky: #add8e6;
 
-  /* neutrals */
   --color-ink: #09101d;
   --color-muted: #545d69;
   --color-line: #dadee3;
   --color-mist: #f4f6f9;
 
-  /* status */
   --color-success: #15803d;
   --color-success-deep: #166534;
   --color-mint: #13f467;
   --color-info: #3730a3;
 
-  --shadow-pill: 0 2px 7px rgb(0 0 0 / 0.24);
 }
 
-/* scroll reveal + hero grid motion (skipped when reduced motion is requested) */
 @media (prefers-reduced-motion: no-preference) {
   [data-reveal] {
     opacity: 0;
@@ -45,6 +35,14 @@
 
   [data-reveal="left"] {
     transform: translateX(-56px);
+  }
+
+  [data-reveal="up"] {
+    transform: translateY(36px);
+  }
+
+  [data-reveal="right"] {
+    transform: translateX(56px);
   }
 
   [data-reveal="rise"] {
@@ -76,5 +74,33 @@
 
   .grid-inward {
     animation: grid-inward 18s linear infinite;
+  }
+
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+      transform: translateY(28px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .rise-in {
+    animation: rise-in 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes float-slow {
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(-10px);
+    }
+  }
+
+  .float-slow {
+    animation: float-slow 4.5s ease-in-out infinite alternate;
   }
 }
