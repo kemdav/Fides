@@ -1,18 +1,11 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { LaptopSvg } from "./laptop-svg";
-
+import { Sphere } from "./sphere";
 
 // maps the screen's 880x570 layout box (the 344x223mm display) onto the projected glass in laptop-svg (1200x896 space)
 const screenTransform =
   "matrix3d(0.719373782,0.0828095073,0,0.0000563884516,-0.0440140166,0.734369422,0,-0.0000124224816,0,0,1,0,303.494,127.618,0,1)";
-
-const sphereTone =
-  "bg-[radial-gradient(circle_at_30%_26%,#9bb0f5_0%,#5a74e0_34%,#3249bd_70%,#202f93_100%)] shadow-[inset_-14px_-22px_44px_rgb(18_28_110/0.5),0_30px_50px_-24px_rgb(9_16_29/0.4)]";
-
-function Sphere({ className }: { className?: string }) {
-  return <div aria-hidden className={cn("absolute rounded-full", sphereTone, className)} />;
-}
 
 function Icon({ children }: { children: ReactNode }) {
   return (
