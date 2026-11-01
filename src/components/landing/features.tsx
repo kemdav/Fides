@@ -67,7 +67,7 @@ export function Features() {
   return (
     <section id="features" className="scroll-mt-16 bg-powder lg:scroll-mt-[88px]">
       <FeatureStack items={features}>
-        <SectionHeading title="Everything You Need to Run Your Business">
+        <SectionHeading reveal title="Everything You Need to Run Your Business">
           From accepting bookings to managing your daily operations, Fides keeps
           your business organized in one place.
         </SectionHeading>
