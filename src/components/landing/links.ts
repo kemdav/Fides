@@ -1,6 +1,6 @@
 /*
  * routes for the global landing page.
- * sign-up, contact, demo and help routes don't exist yet, so those point at
+ * sign-up goes to the request-account page; contact, demo and help routes don't exist yet, so those point at
  * on-page anchors / login until the pages are built.
  */
 export const landingLinks = {
@@ -9,7 +9,7 @@ export const landingLinks = {
   features: "#features",
   pricing: "#pricing",
   login: "/login",
-  signup: "/login",
+  signup: "/request-account",
   getStarted: "#pricing",
   bookDemo: "#contact",
   contact: "#contact",
