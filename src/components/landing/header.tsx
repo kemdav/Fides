@@ -15,7 +15,6 @@ export function Header() {
     const onScroll = () => {
       setScrolled(window.scrollY > 8);
 
-      // the active tab is the last section whose top has passed just under the header
       const offset = window.innerHeight * 0.35;
       let current: string = navLinks[0].id;
       for (const { id } of navLinks) {
@@ -28,6 +27,28 @@ export function Header() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const root = document.documentElement;
+    const previousBody = document.body.style.overflow;
+    const previousRoot = root.style.overflow;
+    document.body.style.overflow = "hidden";
+    root.style.overflow = "hidden";
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const onChange = () => desktop.matches && setOpen(false);
+    window.addEventListener("keydown", onKey);
+    desktop.addEventListener("change", onChange);
+    return () => {
+      document.body.style.overflow = previousBody;
+      root.style.overflow = previousRoot;
+      window.removeEventListener("keydown", onKey);
+      desktop.removeEventListener("change", onChange);
+    };
+  }, [open]);
 
   return (
     <header
@@ -62,7 +83,6 @@ export function Header() {
                 )}
               >
                 {link.label}
-                {/* fixed-height track: only the bar scales, so nothing shifts when the tab changes */}
                 <span aria-hidden className="relative mt-2 h-[3px] w-full">
                   <span className="absolute inset-x-0 bottom-0 h-px bg-line" />
                   <span
@@ -132,6 +152,7 @@ export function Header() {
             </Link>
             <Link
               href={landingLinks.signup}
+              onClick={() => setOpen(false)}
               className={buttonClasses({ variant: "brand", size: "cta" })}
             >
               Sign up
