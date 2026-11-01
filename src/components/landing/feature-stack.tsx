@@ -85,7 +85,7 @@ export function FeatureStack({ items, children }: { items: FeatureItem[]; childr
               }}
               className="absolute inset-x-0 top-[calc(var(--i)_*_14px)] flex origin-top flex-col gap-5 rounded-3xl bg-burnt p-6 text-white shadow-[0_-12px_32px_-12px_rgb(9_16_29/0.35)] will-change-transform sm:flex-row sm:gap-12 sm:p-12 lg:top-[calc(var(--i)_*_24px)]"
             >
-              <div className="flex size-20 shrink-0 items-center justify-center rounded-full bg-powder lg:size-[120px]">
+              <div className="flex size-20 shrink-0 items-center justify-center rounded-full bg-powder ring-[5px] ring-sky lg:size-[120px]">
                 <div className="relative size-10 lg:size-16">
                   <div className="absolute" style={{ inset: item.icon.inset }}>
                     <div className="absolute" style={{ inset: item.icon.bleed }}>
@@ -94,6 +94,9 @@ export function FeatureStack({ items, children }: { items: FeatureItem[]; childr
                   </div>
                 </div>
               </div>
+              <span className="absolute right-5 top-5 rounded-full bg-sky px-3 py-1 text-sm/5 font-semibold text-ink sm:right-8 sm:top-8">
+                {String(i + 1).padStart(2, "0")}
+              </span>
               <div className="flex flex-1 flex-col gap-4">
                 <h3 className="text-2xl/8 font-semibold lg:text-[32px]/9">{item.title}</h3>
                 <p className="text-base/6 font-light lg:text-lg/5">{item.description}</p>
