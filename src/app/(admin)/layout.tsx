@@ -1,10 +1,8 @@
 import type { ReactNode } from "react";
+import { AdminShell } from "@/components/admin/admin-shell";
 
-/**
- * Fides admin portal surface (platform administrators).
- *
- * Reserved for internal platform operations only; access is gated server-side.
- */
+const sampleAdmin = { name: "Alex Laurent", role: "Platform administrator" };
+
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  return <div className="flex min-h-dvh flex-col bg-neutral-950 text-neutral-50">{children}</div>;
+  return <AdminShell identity={sampleAdmin}>{children}</AdminShell>;
 }
