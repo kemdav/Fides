@@ -1,59 +1,70 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { logout } from "@/app/actions/auth";
+import type { Metadata } from "next";
+import { AdminLinkButton } from "@/components/admin/admin-button";
+import { MetricCard, OverdueBadge } from "@/components/admin/metric-card";
+import { AccountFollowUp } from "@/components/admin/overview/account-follow-up";
+import { ActivityChart } from "@/components/admin/overview/activity-chart";
+import { TenantMetricCards } from "@/components/admin/overview/tenant-metric-cards";
+import { TenantsProvider } from "@/components/admin/overview/tenant-provider";
+import { OverviewQueue } from "@/components/admin/overview/overview-queue";
+import { RecentDecisions } from "@/components/admin/overview/recent-decisions";
+import { UserDistribution } from "@/components/admin/overview/user-distribution";
+import { PageContent, PageHeading } from "@/components/admin/primitives";
+import { isOverdue, sampleSubmissions } from "@/lib/admin/verification";
+
+export const metadata: Metadata = {
+  title: "Platform overview",
+};
 
 /**
  * Platform Administrator Portal (`/admin`).
  *
  * Gated by middleware / proxy for users with role === 'admin'.
  */
-export default async function AdminPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login?redirect=/admin");
-  }
+export default function AdminPage() {
+  const pending = sampleSubmissions.filter((item) => item.status === "pending");
+  const overdue = pending.filter(isOverdue).length;
 
   return (
-    <main className="min-h-screen bg-neutral-950 text-neutral-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-lg bg-neutral-900 border border-neutral-800 rounded-xl p-8 space-y-6">
-        <header className="space-y-1">
-          <div className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400 mb-2">
-            Platform Admin
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            Fides Platform Admin Console
-          </h1>
-          <p className="text-sm text-neutral-400">
-            Internal operations and multi-tenant management
-          </p>
-        </header>
+    <TenantsProvider>
+    <PageContent>
+      <PageHeading
+        eyebrow="ADMINISTRATION"
+        title="Platform Overview"
+        description="Review merchant submissions and keep provider account on track."
+        actions={
+          <AdminLinkButton variant="outline" size="md" href="/admin/subscription-tiers">
+            Subscription tiers
+          </AdminLinkButton>
+        }
+      />
 
-        <div className="rounded-lg bg-neutral-800/60 p-4 text-sm space-y-2 border border-neutral-800">
-          <div>
-            <span className="font-medium text-neutral-400">Admin Email:</span>{" "}
-            <span>{user.email}</span>
-          </div>
-          <div>
-            <span className="font-medium text-neutral-400">Admin ID:</span>{" "}
-            <code className="text-xs bg-neutral-950 px-1.5 py-0.5 rounded font-mono text-neutral-300">
-              {user.id}
-            </code>
-          </div>
-        </div>
-
-        <form action={logout}>
-          <button
-            type="submit"
-            className="w-full rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-semibold py-2.5 transition cursor-pointer"
-          >
-            Sign Out
-          </button>
-        </form>
+      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          featured
+          href="/admin/verification"
+          label="Awaiting verification"
+          value={pending.length}
+          caption="Open verification →"
+          icon="mask-verified"
+          progress={65}
+          badge={overdue > 0 ? <OverdueBadge count={overdue} /> : undefined}
+        />
+        <TenantMetricCards />
       </div>
-    </main>
+
+      <div className="grid gap-5 xl:grid-cols-[1010fr_578fr]">
+        <ActivityChart />
+        <UserDistribution />
+      </div>
+
+      <div className="grid items-start gap-6 xl:grid-cols-[1016fr_568fr]">
+        <OverviewQueue />
+        <div className="flex flex-col gap-5">
+          <RecentDecisions />
+          <AccountFollowUp />
+        </div>
+      </div>
+    </PageContent>
+    </TenantsProvider>
   );
 }
