@@ -43,6 +43,23 @@
 
 }
 
+/* admin portal */
+@theme {
+  --color-body: #2c3a4b;
+  --color-subtle: #6d7580;
+  --color-hairline: #ebeef2;
+  --color-glyph: #858c94;
+  --color-outline: #9098a1;
+  --color-danger: #dc2626;
+  --color-danger-dark: #b91c1c;
+  --color-danger-bg: #fef2f2;
+  --color-warn-bg: #fef9c3;
+  --color-warn-fg: #715a00;
+  --color-info-bg: #eef2ff;
+  --color-wash: #f0fdf4;
+  --color-selected: #f0f7fa;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   [data-reveal] {
     opacity: 0;
