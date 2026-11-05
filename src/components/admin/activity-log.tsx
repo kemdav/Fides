@@ -70,7 +70,7 @@ export function ActivityLog() {
           <div className="relative">
             <AssetIcon
               name="mask-search"
-              className="pointer-events-none absolute left-4 top-1/2 size-6 -translate-y-1/2 text-glyph"
+              className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-glyph"
             />
             <input
               id={searchId}
@@ -78,7 +78,7 @@ export function ActivityLog() {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search business or action"
-              className="h-[46px] w-full rounded-lg border border-transparent bg-mist pl-12 pr-4 focus-visible:border-burnt text-base font-semibold leading-6 placeholder:text-ink/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
+              className="h-11 w-full rounded-lg border border-hairline bg-white pl-11 pr-4 text-sm text-body transition-colors placeholder:text-subtle hover:border-outline focus-visible:border-burnt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
             />
           </div>
         </div>

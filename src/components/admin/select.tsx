@@ -84,7 +84,7 @@ export function Select<T extends string>({
           onClick={() => (open ? setOpen(false) : openMenu())}
           onKeyDown={onKeyDown}
           className={cn(
-            "flex h-[42px] w-full items-center justify-between rounded-md border bg-white px-[14px] text-left text-sm text-body transition-colors",
+            "flex h-11 w-full items-center justify-between rounded-lg border bg-white px-[14px] text-left text-sm text-body transition-colors",
             "focus-visible:border-burnt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40",
             open ? "border-burnt" : "border-hairline hover:border-outline"
           )}
