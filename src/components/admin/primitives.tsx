@@ -7,7 +7,7 @@ export const interactiveRing =
 
 export function Surface({ className, children }: { className?: string; children: ReactNode }) {
   return (
-    <section className={cn("rounded-[10px] bg-white p-6 shadow-[0_3px_14px_rgb(44_58_75/0.04)]", className)}>
+    <section className={cn("rounded-[10px] bg-white p-4 shadow-[0_3px_14px_rgb(44_58_75/0.04)] sm:p-6", className)}>
       {children}
     </section>
   );
@@ -32,7 +32,7 @@ export function PageHeading({
     <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-3">
       <div className="flex min-w-0 flex-col gap-1">
         <p className="text-xs leading-[18px] tracking-[1.2px] text-muted">{eyebrow}</p>
-        <h1 className="font-display text-[32px] leading-[42px]">{title}</h1>
+        <h1 className="font-display text-[28px] leading-[38px] sm:text-[32px] sm:leading-[42px]">{title}</h1>
         <p className="max-w-[780px] text-sm leading-[21px] text-muted">{description}</p>
       </div>
       {actions}
@@ -50,12 +50,21 @@ const pillTones: Record<PillTone, string> = {
   danger: "bg-danger-bg text-danger-dark",
 };
 
-export function StatusPill({ tone = "neutral", children }: { tone?: PillTone; children: ReactNode }) {
+export function StatusPill({
+  tone = "neutral",
+  className,
+  children,
+}: {
+  tone?: PillTone;
+  className?: string;
+  children: ReactNode;
+}) {
   return (
     <span
       className={cn(
         "inline-flex items-center whitespace-nowrap rounded-md px-2 py-1 text-xs font-semibold leading-[18px]",
-        pillTones[tone]
+        pillTones[tone],
+        className
       )}
     >
       {children}

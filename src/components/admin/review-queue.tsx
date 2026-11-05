@@ -65,7 +65,7 @@ function QueueRow({
         <span className="truncate text-sm font-semibold leading-[21px]">{submission.business}</span>
         <span className="truncate text-xs leading-[18px] text-muted">{submission.category}</span>
       </span>
-      <span className="flex w-[100px] shrink-0 flex-col items-center gap-1">
+      <span className="flex shrink-0 flex-col items-center gap-1 sm:min-w-[100px]">
         {submission.status === "pending" ? (
           <>
             <StatusPill tone="warning">
@@ -74,7 +74,12 @@ function QueueRow({
             <span className="text-xs leading-[18px] text-muted">Pending</span>
           </>
         ) : (
-          <StatusPill tone={statusTones[submission.status]}>{statusLabels[submission.status]}</StatusPill>
+          <StatusPill
+            tone={statusTones[submission.status]}
+            className="max-w-[100px] whitespace-normal text-center sm:max-w-[130px]"
+          >
+            {statusLabels[submission.status]}
+          </StatusPill>
         )}
       </span>
     </>
@@ -115,7 +120,7 @@ export function ReviewQueue({ title, submissions, selectedId, onSelect, hrefFor,
         <StatusPill>{pendingCount} pending</StatusPill>
       </div>
 
-      <div role="tablist" aria-label="Submission status" className="flex flex-wrap items-center gap-x-5 py-2 text-xs">
+      <div role="tablist" aria-label="Submission status" className="flex flex-wrap items-center gap-x-5 gap-y-1 py-1 text-xs">
         {tabs.map((item) => {
           const active = item.status === tab;
           return (
@@ -127,7 +132,7 @@ export function ReviewQueue({ title, submissions, selectedId, onSelect, hrefFor,
               aria-controls={panelId}
               onClick={() => setTab(item.status)}
               className={cn(
-                "leading-[18px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40",
+                "py-1.5 leading-[18px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40",
                 active ? "font-semibold text-burnt" : "text-muted hover:text-ink"
               )}
             >
@@ -145,7 +150,7 @@ export function ReviewQueue({ title, submissions, selectedId, onSelect, hrefFor,
           <div className="relative">
             <AssetIcon
               name="mask-search"
-              className="pointer-events-none absolute left-4 top-1/2 size-6 -translate-y-1/2 text-glyph"
+              className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-glyph"
             />
             <input
               id={searchId}
@@ -153,7 +158,7 @@ export function ReviewQueue({ title, submissions, selectedId, onSelect, hrefFor,
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Business name or merchant ID"
-              className="h-11 w-full rounded-lg border border-transparent bg-mist pl-12 pr-4 focus-visible:border-burnt text-[13px] font-semibold leading-5 placeholder:text-ink/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
+              className="h-11 w-full rounded-lg border border-hairline bg-white pl-11 pr-4 text-sm text-body transition-colors placeholder:text-subtle hover:border-outline focus-visible:border-burnt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
             />
           </div>
         </div>
@@ -165,7 +170,7 @@ export function ReviewQueue({ title, submissions, selectedId, onSelect, hrefFor,
             { value: "oldest", label: "Oldest first" },
             { value: "newest", label: "Newest first" },
           ]}
-          className="w-[163px]"
+          className="w-full sm:w-[163px]"
         />
       </div>
 

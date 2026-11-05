@@ -29,7 +29,7 @@ export function ConfirmationCard({
   children: ReactNode;
 }) {
   return (
-    <div className={cn(dialogSurface, "flex flex-col items-center gap-4 px-6 py-8")}>
+    <div className={cn(dialogSurface, "flex flex-col items-center gap-4 px-4 py-6 sm:px-6 sm:py-8")}>
       <AssetImage name={icon} width={56} height={56} />
       <div className="flex w-full flex-col gap-4">
         <h2 id={DIALOG_TITLE_ID} className="text-center text-xl font-semibold leading-6">
@@ -51,7 +51,7 @@ export function FormCard({
   children: ReactNode;
 }) {
   return (
-    <div className={cn(dialogSurface, "flex flex-col gap-4 p-6")}>
+    <div className={cn(dialogSurface, "flex flex-col gap-4 p-4 sm:p-6")}>
       <div className="flex items-center justify-between gap-3">
         <h2 id={DIALOG_TITLE_ID} className="text-lg font-semibold leading-[27px]">
           {title}
@@ -84,7 +84,7 @@ export function ApproveDialog({
       <p className="text-center text-sm leading-[21px] text-muted">
         Approving {business} activates their Business account. This decision will be recorded.
       </p>
-      <div className="flex items-center justify-center gap-3">
+      <div className="flex flex-wrap items-center justify-center gap-3">
         <AdminButton variant="outline" className="min-w-[100px]" onClick={onCancel}>
           Cancel
         </AdminButton>
@@ -155,7 +155,7 @@ export function RejectDialog({
             ? `Enter a clear reason between ${REASON_MIN} and ${REASON_MAX} characters before recording the decision.`
             : "Reason required · Stored with the decision"}
         </p>
-        <div className="flex items-center justify-center gap-3">
+        <div className="flex flex-wrap items-center justify-center gap-3">
           <AdminButton variant="outline" className="min-w-[100px]" onClick={onCancel}>
             Cancel
           </AdminButton>
@@ -240,7 +240,7 @@ export function RequestChangesDialog({
             {message}
           </div>
         </div>
-        <div className="flex items-center justify-end gap-[10px]">
+        <div className="flex flex-wrap items-center justify-end gap-[10px]">
           <AdminButton variant="outline" className="min-w-[100px]" onClick={onClose}>
             Cancel
           </AdminButton>
@@ -270,7 +270,7 @@ export function DocumentDialog({
       <div className="flex h-[180px] items-center justify-center rounded-[10px] border border-dashed border-line bg-[#fafafa] p-5 text-sm">
         Sample {document.label}
       </div>
-      <div className="flex items-center justify-end gap-[10px]">
+      <div className="flex flex-wrap items-center justify-end gap-[10px]">
         <AdminButton variant="outline" className="min-w-[100px]" onClick={onClose}>
           Cancel
         </AdminButton>

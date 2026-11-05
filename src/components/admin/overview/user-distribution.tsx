@@ -23,7 +23,7 @@ export function UserDistribution() {
         <span className="rounded-md bg-mist px-2 py-[3px] text-[10px] leading-4 text-subtle">Sample data</span>
       </div>
 
-      <div className="flex flex-wrap items-center gap-6 py-0 sm:h-[168px] sm:flex-nowrap">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
         <div
           role="img"
           aria-label={`${customers.name} make up ${share(customers.count)}% of ${total} users`}
@@ -42,7 +42,7 @@ export function UserDistribution() {
           </div>
         </div>
 
-        <ul className="flex min-w-[200px] flex-1 flex-col justify-center gap-3">
+        <ul className="flex min-w-[160px] flex-1 flex-col justify-center gap-3">
           {roles.map((role) => (
             <li key={role.name} className="flex h-11 items-center gap-[10px]">
               <AssetImage name={role.marker} width={8} height={8} />

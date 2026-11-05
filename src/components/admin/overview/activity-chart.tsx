@@ -16,9 +16,9 @@ const PX_PER_UNIT = 7;
 
 function Bar({ value, className }: { value: number; className: string }) {
   return (
-    <div className="flex h-[192px] w-[30px] flex-col items-center justify-end gap-1">
-      <span className="text-[11px] leading-4 text-subtle">{value}</span>
-      <div className={`w-[30px] rounded-[3px] ${className}`} style={{ height: value * PX_PER_UNIT }} />
+    <div className="flex h-[192px] w-full min-w-0 max-w-[30px] flex-col items-center justify-end gap-1">
+      <span className="hidden text-[11px] leading-4 text-subtle sm:block">{value}</span>
+      <div className={`w-full rounded-[3px] ${className}`} style={{ height: value * PX_PER_UNIT }} />
     </div>
   );
 }
@@ -45,7 +45,7 @@ export function ActivityChart() {
 
       <figure
         aria-label="Submitted and reviewed verifications for a sample week"
-        className="flex h-[220px] gap-5 overflow-x-auto"
+        className="flex h-[220px] gap-2 sm:gap-5"
       >
         <div
           aria-hidden
@@ -55,10 +55,10 @@ export function ActivityChart() {
             <span key={tick}>{tick}</span>
           ))}
         </div>
-        <div className="flex min-w-[560px] flex-1 justify-between">
+        <div className="grid min-w-0 flex-1 grid-cols-7">
           {week.map((entry) => (
-            <div key={entry.day} className="flex flex-col items-center gap-2">
-              <div className="flex items-end gap-2">
+            <div key={entry.day} className="flex min-w-0 flex-col items-center gap-2">
+              <div className="flex w-full items-end justify-center gap-0.5 sm:gap-2">
                 <Bar value={entry.submitted} className="bg-burnt" />
                 <Bar value={entry.reviewed} className="bg-sky" />
               </div>

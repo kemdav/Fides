@@ -38,7 +38,7 @@ export default function AdminPage() {
         }
       />
 
-      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-5 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           featured
           href="/admin/verification"
@@ -52,12 +52,12 @@ export default function AdminPage() {
         <TenantMetricCards />
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1010fr_578fr]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-5 xl:grid-cols-[minmax(0,1010fr)_minmax(0,578fr)]">
         <ActivityChart />
         <UserDistribution />
       </div>
 
-      <div className="grid items-start gap-6 xl:grid-cols-[1016fr_568fr]">
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 xl:grid-cols-[minmax(0,1016fr)_minmax(0,568fr)]">
         <OverviewQueue />
         <div className="flex flex-col gap-5">
           <RecentDecisions />

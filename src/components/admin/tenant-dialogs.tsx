@@ -134,7 +134,7 @@ export function TenantDialog({
             <ReasonField value={reason} onChange={setReason} showError={showError} />
           </>
         ) : null}
-        <div className={cn("flex items-center gap-[10px]", reviewing ? "justify-end" : "justify-between")}>
+        <div className={cn("flex flex-wrap items-center gap-[10px]", reviewing ? "justify-end" : "justify-between")}>
           {reviewing ? (
             <AdminButton variant="outline" className="min-w-[100px]" onClick={onClose}>
               Cancel
@@ -181,7 +181,7 @@ export function SuspendDialog({
           Suspending {tenant.name} blocks their account access immediately. This decision will be recorded.
         </p>
         <ReasonField value={reason} onChange={setReason} showError={showError} autoFocus />
-        <div className="flex items-center justify-center gap-3">
+        <div className="flex flex-wrap items-center justify-center gap-3">
           <AdminButton variant="outline" className="min-w-[100px]" onClick={onCancel}>
             Cancel
           </AdminButton>
@@ -233,7 +233,7 @@ export function SchedulePlanDialog({
         />
         <ReasonField value={reason} onChange={setReason} showError={showError} autoFocus />
         <Notice>New pricing starts at the next renewal. There is no immediate charge.</Notice>
-        <div className="flex items-center justify-center gap-3">
+        <div className="flex flex-wrap items-center justify-center gap-3">
           <AdminButton variant="outline" className="min-w-[100px]" onClick={onCancel}>
             Cancel
           </AdminButton>

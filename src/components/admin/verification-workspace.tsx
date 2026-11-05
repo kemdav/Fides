@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   changeRequirements,
   daysWaiting,
@@ -58,6 +58,7 @@ export function VerificationWorkspace({ initialSelectedId }: { initialSelectedId
   const [checks, setChecks] = useState<boolean[]>(noChecks);
   const [decidedThisSession, setDecidedThisSession] = useState(0);
   const [dialog, setDialog] = useState<DialogState | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const selected = submissions.find((item) => item.id === selectedId) ?? null;
   const pending = submissions.filter((item) => item.status === "pending");
@@ -77,6 +78,9 @@ export function VerificationWorkspace({ initialSelectedId }: { initialSelectedId
   function select(submission: Submission) {
     setSelectedId(submission.id);
     setChecks(noChecks);
+    if (window.matchMedia("(max-width: 1279px)").matches) {
+      requestAnimationFrame(() => panelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    }
   }
 
   function record(status: SubmissionStatus, note: string[], result: { title: string; message: string }) {
@@ -97,7 +101,7 @@ export function VerificationWorkspace({ initialSelectedId }: { initialSelectedId
         description="Review evidence, complete checks, and make a clear decision."
       />
 
-      <div className="grid gap-5 md:grid-cols-3">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-5 md:grid-cols-3">
         <MetricCard
           featured
           label="Pending submissions"
@@ -122,9 +126,10 @@ export function VerificationWorkspace({ initialSelectedId }: { initialSelectedId
         />
       </div>
 
-      <div className="grid items-start gap-6 xl:grid-cols-2">
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 xl:grid-cols-2">
         <ReviewQueue title="Review queue" submissions={submissions} selectedId={selectedId} onSelect={select} />
 
+        <div ref={panelRef} className="scroll-mt-20">
         {selected ? (
           <EvidencePanel
             submission={selected}
@@ -143,6 +148,7 @@ export function VerificationWorkspace({ initialSelectedId }: { initialSelectedId
             <p className="text-sm leading-[21px] text-muted">There are no submissions waiting for review.</p>
           </Surface>
         )}
+        </div>
       </div>
 
       <AdminModal open={dialog !== null} onClose={close}>
