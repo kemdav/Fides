@@ -1,18 +1,302 @@
 @import "tailwindcss";
 
-/*
- * Fides — global stylesheet (structural baseline only).
- *
- * Tailwind's Preflight reset ships with the import above. Visual design tokens
- * (color palette, typography scale, spacing, radii, shadows) are finalized in
- * Figma and will be mapped into the `@theme` block below.
- *
- * Example of how tokens will be registered later:
- *
- * @theme {
- *   --color-brand-500: #4f46e5;
- *   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
- *   --radius-card: 0.75rem;
- * }
- */
 
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  select,
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="submit"],
+  label[for] {
+    cursor: pointer;
+  }
+
+  :disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+}
+
+@theme inline {
+  --font-sans: var(--font-mulish), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-ovo), ui-serif, Georgia, serif;
+}
+
+@theme {
+  --color-powder: #ffffeb;
+  /* figma brand orange is #cc5500; nudged to #c35000 so white text and orange text both pass wcag aa (4.7:1) */
+  --color-burnt: #c35000;
+  --color-burnt-dark: #994000;
+  --color-sky: #add8e6;
+
+  --color-ink: #09101d;
+  --color-muted: #545d69;
+  --color-line: #dadee3;
+  --color-mist: #f4f6f9;
+
+  --color-success: #15803d;
+  --color-success-deep: #166534;
+  --color-mint: #13f467;
+  --color-info: #3730a3;
+
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-reveal] {
+    opacity: 0;
+    transition:
+      opacity 0.9s ease-out,
+      transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  [data-reveal="left"] {
+    transform: translateX(-56px);
+  }
+
+  [data-reveal="up"] {
+    transform: translateY(36px);
+  }
+
+  [data-reveal="right"] {
+    transform: translateX(56px);
+  }
+
+  [data-reveal="bounce"] {
+    transform: translateX(180px);
+    transition: none;
+  }
+
+  [data-reveal="bounce"][data-shown="true"] {
+    animation: mascot-in 1.5s both;
+  }
+
+  [data-reveal="rise"] {
+    transform: translateY(160px);
+    transition-duration: 1.1s, 1.8s;
+  }
+
+  [data-reveal][data-shown="true"] {
+    opacity: 1;
+    transform: none;
+  }
+
+  @keyframes grid-inward {
+    0% {
+      transform: scale(1.3);
+      opacity: 0;
+    }
+    3% {
+      opacity: 1;
+    }
+    82% {
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 0;
+    }
+  }
+
+  .grid-inward {
+    animation: grid-inward 18s linear infinite;
+  }
+
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+      transform: translateY(28px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .rise-in {
+    animation: rise-in 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes float-slow {
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(-10px);
+    }
+  }
+
+  @keyframes mascot-in {
+    0% {
+      opacity: 0;
+      transform: translateX(180px);
+      animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    42% {
+      opacity: 1;
+      transform: translateX(-16px);
+      animation-timing-function: ease-in-out;
+    }
+    56% {
+      transform: translateX(0);
+      animation-timing-function: cubic-bezier(0.2, 0.6, 0.4, 1);
+    }
+    72% {
+      transform: translateY(-26px);
+      animation-timing-function: cubic-bezier(0.6, 0, 0.9, 0.4);
+    }
+    86% {
+      transform: translateY(0);
+      animation-timing-function: cubic-bezier(0.2, 0.6, 0.4, 1);
+    }
+    93% {
+      transform: translateY(-7px);
+      animation-timing-function: cubic-bezier(0.6, 0, 0.9, 0.4);
+    }
+    100% {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .fox-dance,
+  .fox-tail,
+  .fox-head,
+  .fox-point {
+    transform-box: view-box;
+  }
+
+  .fox-eyes {
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  .fox-dance {
+    transform-origin: 230px 505px;
+  }
+
+  .fox-tail {
+    transform-origin: 218px 425px;
+  }
+
+  .fox-head {
+    transform-origin: 160px 292px;
+  }
+
+  .fox-point {
+    transform-origin: 228px 328px;
+  }
+
+  [data-reveal="bounce"][data-shown="true"] .fox-dance {
+    animation: fox-dance 3.6s ease-in-out 1.7s infinite;
+  }
+
+  [data-reveal="bounce"][data-shown="true"] .fox-tail {
+    animation: fox-wag 0.9s ease-in-out 1.7s infinite alternate;
+  }
+
+  [data-reveal="bounce"][data-shown="true"] .fox-head {
+    animation: fox-head 3.6s ease-in-out 1.7s infinite;
+  }
+
+  [data-reveal="bounce"][data-shown="true"] .fox-point {
+    animation: fox-point 3.6s ease-in-out 1.7s infinite;
+  }
+
+  [data-reveal="bounce"][data-shown="true"] .fox-eyes {
+    animation: fox-blink 4s ease-in-out 1.7s infinite;
+  }
+
+  @keyframes fox-dance {
+    0%,
+    66%,
+    100% {
+      transform: translateY(0) rotate(0deg);
+    }
+    8%,
+    24% {
+      transform: translateY(-10px) rotate(-1.8deg);
+    }
+    16%,
+    32%,
+    48%,
+    64% {
+      transform: translateY(0) rotate(0deg);
+    }
+    28% {
+      transform: translateY(-10px) rotate(1.8deg);
+    }
+    40% {
+      transform: translateY(-14px) rotate(-2.5deg);
+    }
+    56% {
+      transform: translateY(-14px) rotate(2.5deg);
+    }
+  }
+
+  @keyframes fox-head {
+    0%,
+    70%,
+    100% {
+      transform: rotate(0deg);
+    }
+    10%,
+    50% {
+      transform: rotate(-4deg);
+    }
+    20% {
+      transform: rotate(3.5deg);
+    }
+    30% {
+      transform: rotate(-3deg);
+    }
+    40% {
+      transform: rotate(3deg);
+    }
+    60% {
+      transform: rotate(2deg);
+    }
+  }
+
+  @keyframes fox-point {
+    0%,
+    38%,
+    100% {
+      transform: rotate(0deg) scaleX(1);
+    }
+    6%,
+    18%,
+    30% {
+      transform: rotate(-3deg) scaleX(1.05);
+    }
+    12%,
+    24% {
+      transform: rotate(1.5deg) scaleX(1);
+    }
+  }
+
+  @keyframes fox-wag {
+    from {
+      transform: rotate(-7deg);
+    }
+    to {
+      transform: rotate(8deg);
+    }
+  }
+
+  @keyframes fox-blink {
+    0%,
+    90%,
+    100% {
+      transform: scaleY(1);
+    }
+    94% {
+      transform: scaleY(0.08);
+    }
+  }
+
+  .float-slow {
+    animation: float-slow 4.5s ease-in-out infinite alternate;
+  }
+}
