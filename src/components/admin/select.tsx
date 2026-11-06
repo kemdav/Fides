@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { AssetIcon } from "./asset-icon";
+import { Icon } from "./icon";
 
 export type SelectOption<T extends string> = { value: T; label: string; detail?: string };
 
@@ -94,8 +94,8 @@ export function Select<T extends string>({
             {options[selectedIndex].detail ? (
               <span className="text-xs text-muted">{options[selectedIndex].detail}</span>
             ) : null}
-            <AssetIcon
-              name="icon-angle-down"
+            <Icon
+              name="chevron-down"
               className={cn("size-[14px] shrink-0 transition-transform", open && "rotate-180")}
             />
           </span>
@@ -123,9 +123,9 @@ export function Select<T extends string>({
                 <span className="truncate">{option.label}</span>
                 <span className="flex shrink-0 items-center gap-3">
                   {option.detail ? <span className="text-xs font-normal text-muted">{option.detail}</span> : null}
-                  <span className="flex w-[11px] justify-center">
+                  <span className="flex w-3.5 justify-center">
                     {option.value === value ? (
-                      <AssetIcon name="check" className="h-[8.38px] w-[11.17px] text-burnt" />
+                      <Icon name="check" weight="bold" className="size-3.5 text-burnt" />
                     ) : null}
                   </span>
                 </span>

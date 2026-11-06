@@ -5,7 +5,7 @@ import { useState } from "react";
 import { activityEvents, formatEventTime, type ActivityEvent } from "@/lib/admin/activity";
 import { ActivityDetailsDialog } from "../activity-details-dialog";
 import { AdminModal } from "../admin-modal";
-import { AssetIcon } from "../asset-icon";
+import { Icon } from "../icon";
 import { Surface } from "../primitives";
 
 export function RecentDecisions() {
@@ -30,7 +30,7 @@ export function RecentDecisions() {
               onClick={() => setSelected(event)}
               className="flex w-full gap-[14px] rounded-lg px-[22px] py-4 text-left transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
             >
-              <AssetIcon name="icon-activity" className="size-5 text-ink" />
+              <Icon name="clock" className="size-5 text-ink" />
               <span className="flex min-w-0 flex-1 flex-col gap-[5px]">
                 <span className="truncate text-sm font-bold leading-[21px]">{event.title}</span>
                 <span className="truncate text-sm leading-[21px] text-muted">

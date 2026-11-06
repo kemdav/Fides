@@ -1,4 +1,5 @@
 import { AssetImage } from "../asset-icon";
+import { InView } from "../in-view";
 import { Surface } from "../primitives";
 
 const roles = [
@@ -29,13 +30,15 @@ export function UserDistribution() {
           aria-label={`${customers.name} make up ${share(customers.count)}% of ${total} users`}
           className="relative size-[168px] shrink-0 overflow-hidden"
         >
-          <AssetImage name="donut-customers" width={168} height={168} className="absolute inset-0 size-full" />
-          <div className="absolute inset-[0.15%_52.89%_73.61%_11.16%]">
-            <AssetImage name="donut-merchants" width={61} height={45} className="block size-full" />
-          </div>
-          <div className="absolute inset-[0_50.3%_87.43%_46.95%]">
-            <AssetImage name="donut-admins" width={5} height={22} className="block size-full" />
-          </div>
+          <InView className="donut-reveal absolute inset-0">
+            <AssetImage name="donut-customers" width={168} height={168} className="absolute inset-0 size-full" />
+            <div className="absolute inset-[0.15%_52.89%_73.61%_11.16%]">
+              <AssetImage name="donut-merchants" width={61} height={45} className="block size-full" />
+            </div>
+            <div className="absolute inset-[0_50.3%_87.43%_46.95%]">
+              <AssetImage name="donut-admins" width={5} height={22} className="block size-full" />
+            </div>
+          </InView>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <p className="text-[30px] font-bold leading-9 text-body">{total}</p>
             <p className="text-[11px] leading-[17px] text-subtle">Total users</p>

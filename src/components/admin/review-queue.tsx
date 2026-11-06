@@ -13,7 +13,7 @@ import {
   statusLabels,
 } from "@/lib/admin/verification";
 import { cn } from "@/lib/utils";
-import { AssetIcon } from "./asset-icon";
+import { Icon } from "./icon";
 import { StatusPill, Surface, type PillTone } from "./primitives";
 import { Select } from "./select";
 
@@ -148,8 +148,8 @@ export function ReviewQueue({ title, submissions, selectedId, onSelect, hrefFor,
             Search submissions
           </label>
           <div className="relative">
-            <AssetIcon
-              name="mask-search"
+            <Icon
+              name="search"
               className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-glyph"
             />
             <input

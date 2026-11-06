@@ -19,7 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { AdminButton } from "./admin-button";
 import { AdminModal } from "./admin-modal";
-import { AssetIcon } from "./asset-icon";
+import { Icon } from "./icon";
 import { MetricCard } from "./metric-card";
 import { Checkbox, PageContent, PageHeading, StatusPill, Surface } from "./primitives";
 import { ReviewQueue, statusTones } from "./review-queue";
@@ -107,21 +107,21 @@ export function VerificationWorkspace({ initialSelectedId }: { initialSelectedId
           label="Pending submissions"
           value={metrics.pending}
           caption="Ready for review"
-          icon="mask-verified"
+          icon="verified"
           progress={46}
         />
         <MetricCard
           label="Past review target"
           value={metrics.overdue}
           caption={`Waiting longer than ${REVIEW_TARGET_DAYS} days`}
-          icon="mask-schedule"
+          icon="clock"
           progress={46}
         />
         <MetricCard
           label="Reviewed today"
           value={metrics.reviewed}
           caption="Verification completed"
-          icon="mask-verified"
+          icon="verified"
           progress={46}
         />
       </div>
@@ -274,7 +274,7 @@ function EvidencePanel({
             className="flex w-[261px] max-w-full flex-col items-start gap-1.5 rounded-[14px] border border-line bg-white p-3 text-left shadow-[0_8px_12px_rgb(31_46_33/0.04)] transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
           >
             <span className="flex items-center gap-[10px] text-xs font-semibold leading-[18px]">
-              <AssetIcon name="icon-file" className="size-5" />
+              <Icon name="file" className="size-5" />
               {document.label}
             </span>
             <span className="text-xs leading-[18px] text-muted">{document.meta}</span>
@@ -333,7 +333,7 @@ function DecisionBanner({ submission }: { submission: Submission }) {
 
   return (
     <div className={cn("flex items-start gap-[10px] rounded-lg p-3 text-xs leading-[18px]", bannerTones[tone])}>
-      <AssetIcon name="icon-alert" className="mt-px size-[18px]" />
+      <Icon name="alert" className="mt-px size-[18px]" />
       {status === "pending" ? (
         <p>
           {isOverdue(submission)

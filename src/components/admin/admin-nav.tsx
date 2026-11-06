@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { AssetIcon } from "./asset-icon";
+import { Icon, type IconName } from "./icon";
 
-const navItems = [
-  { label: "Overview", href: "/admin", icon: "icon-grid" },
-  { label: "Verification", href: "/admin/verification", icon: "icon-shield" },
-  { label: "Tenants", href: "/admin/tenants", icon: "icon-users" },
-  { label: "Subscription tiers", href: "/admin/subscription-tiers", icon: "icon-layers" },
-  { label: "Activity log", href: "/admin/activity", icon: "icon-clock" },
+const navItems: { label: string; href: string; icon: IconName }[] = [
+  { label: "Overview", href: "/admin", icon: "grid" },
+  { label: "Verification", href: "/admin/verification", icon: "shield" },
+  { label: "Tenants", href: "/admin/tenants", icon: "users" },
+  { label: "Subscription tiers", href: "/admin/subscription-tiers", icon: "layers" },
+  { label: "Activity log", href: "/admin/activity", icon: "clock" },
 ];
 
 export function AdminNav({
@@ -43,7 +43,7 @@ export function AdminNav({
               vertical ? "w-full" : "px-3"
             )}
           >
-            <AssetIcon name={item.icon} className="size-5" />
+            <Icon name={item.icon} weight={active ? "fill" : "regular"} className="size-5" />
             {item.label}
           </Link>
         );

@@ -43,7 +43,6 @@
 
 }
 
-/* admin portal */
 @theme {
   --color-body: #2c3a4b;
   --color-subtle: #6d7580;
@@ -58,6 +57,44 @@
   --color-info-bg: #eef2ff;
   --color-wash: #f0fdf4;
   --color-selected: #f0f7fa;
+}
+
+@property --reveal {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.chart-bar {
+  height: 0;
+  transition: height 0.9s cubic-bezier(0.16, 1, 0.3, 1) var(--delay, 0ms);
+}
+
+[data-inview="true"] .chart-bar {
+  height: var(--h);
+}
+
+.donut-reveal {
+  --reveal: 0deg;
+  mask-image: conic-gradient(#000 var(--reveal), transparent var(--reveal));
+  transition: --reveal 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-inview="true"] .donut-reveal,
+.donut-reveal[data-inview="true"] {
+  --reveal: 360deg;
+}
+
+@media (prefers-reduced-motion: reduce), (scripting: none) {
+  .chart-bar {
+    height: var(--h);
+    transition: none;
+  }
+
+  .donut-reveal {
+    --reveal: 360deg;
+    transition: none;
+  }
 }
 
 @media (prefers-reduced-motion: no-preference) {

@@ -15,7 +15,7 @@ import {
 import { AdminButton } from "./admin-button";
 import { ActivityDetailsDialog } from "./activity-details-dialog";
 import { AdminModal } from "./admin-modal";
-import { AssetIcon } from "./asset-icon";
+import { Icon } from "./icon";
 import { PageContent, PageHeading, StatusPill, Surface } from "./primitives";
 import { Select } from "./select";
 import { ResultDialog } from "./verification-dialogs";
@@ -68,8 +68,8 @@ export function ActivityLog() {
             Search activity
           </label>
           <div className="relative">
-            <AssetIcon
-              name="mask-search"
+            <Icon
+              name="search"
               className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-glyph"
             />
             <input
@@ -120,7 +120,7 @@ export function ActivityLog() {
                   onClick={() => setDialog({ type: "event", event })}
                   className="flex w-full items-center gap-4 rounded-lg p-[18px] text-left transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
                 >
-                  <AssetIcon name="icon-clock-lg" className="size-6 text-ink" />
+                  <Icon name="clock" className="size-6 text-ink" />
                   <span className="flex min-w-0 flex-col gap-1.5">
                     <span className="text-sm font-semibold leading-[21px]">{event.title}</span>
                     <span className="text-sm leading-[21px] text-muted">

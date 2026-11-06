@@ -11,7 +11,8 @@ import {
 } from "@/lib/admin/verification";
 import { cn } from "@/lib/utils";
 import { AdminButton } from "./admin-button";
-import { AssetIcon, AssetImage } from "./asset-icon";
+import { Icon } from "./icon";
+import { AssetImage } from "./asset-icon";
 import { Checkbox } from "./primitives";
 
 export const DIALOG_TITLE_ID = "admin-dialog-title";
@@ -62,7 +63,7 @@ export function FormCard({
           aria-label="Close"
           className="flex size-5 items-center justify-center rounded text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
         >
-          <AssetIcon name="icon-close" className="size-5" />
+          <Icon name="close" className="size-5" />
         </button>
       </div>
       {children}

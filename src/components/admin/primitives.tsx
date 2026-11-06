@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { AssetIcon } from "./asset-icon";
+import { Icon } from "./icon";
 
 export const interactiveRing =
   "ring-2 ring-transparent transition-shadow hover:ring-burnt/40 focus-visible:outline-none focus-visible:ring-burnt/40";
@@ -98,9 +98,10 @@ export function Checkbox({
             tone === "brand" ? "border-burnt" : "border-subtle"
           )}
         />
-        <AssetIcon
+        <Icon
           name="check"
-          className="pointer-events-none absolute inset-0 m-auto hidden h-[8.38px] w-[11.17px] text-white peer-checked:block"
+          weight="bold"
+          className="pointer-events-none absolute inset-0 m-auto hidden size-3 text-white peer-checked:block"
         />
       </span>
       {label}
