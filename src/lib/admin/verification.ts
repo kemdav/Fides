@@ -26,8 +26,8 @@ export type SubmissionSort = "oldest" | "newest";
 export const REVIEW_TARGET_DAYS = 3;
 
 /** the prototype pretends today is oct 9 so waiting times stay stable */
-const SAMPLE_TODAY = new Date("2026-10-09T00:00:00");
-const DAY_MS = 24 * 60 * 60 * 1000;
+export const SAMPLE_TODAY = new Date("2026-10-09T00:00:00");
+export const DAY_MS = 24 * 60 * 60 * 1000;
 
 const documents = (permit: string, identification: string): SubmissionDocument[] => [
   { key: "permit", label: "Business permit", meta: `PDF · ${permit} · View` },

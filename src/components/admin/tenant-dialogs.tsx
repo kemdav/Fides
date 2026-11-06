@@ -10,9 +10,10 @@ import {
   type Tenant,
   type TenantAccess,
 } from "@/lib/admin/tenants";
+import { pluralize } from "@/lib/admin/tiers";
 import { cn } from "@/lib/utils";
 import { AdminButton } from "./admin-button";
-import { AssetIcon } from "./asset-icon";
+import { Icon } from "./icon";
 import { Select } from "./select";
 import { ConfirmationCard, FormCard } from "./verification-dialogs";
 
@@ -21,7 +22,7 @@ const selectLabel = "text-sm";
 function Notice({ children }: { children: string }) {
   return (
     <div className="flex items-center gap-[10px] rounded-lg bg-mist p-3 text-xs leading-[18px]">
-      <AssetIcon name="icon-alert" className="size-[18px]" />
+      <Icon name="alert" className="size-[18px]" />
       <p>{children}</p>
     </div>
   );
@@ -187,6 +188,59 @@ export function SuspendDialog({
           </AdminButton>
           <AdminButton variant="danger" type="submit" className="min-w-[147px]">
             Suspend Tenant
+          </AdminButton>
+        </div>
+      </ConfirmationCard>
+    </form>
+  );
+}
+
+export type BulkAccessMode = "suspend" | "reactivate";
+
+export function BulkAccessDialog({
+  mode,
+  tenants,
+  onCancel,
+  onConfirm,
+}: {
+  mode: BulkAccessMode;
+  tenants: Tenant[];
+  onCancel: () => void;
+  onConfirm: (reason: string) => void;
+}) {
+  const [reason, setReason] = useState("");
+  const [showError, setShowError] = useState(false);
+  const suspending = mode === "suspend";
+  const count = tenants.length;
+  const who = count <= 2 ? tenants.map((tenant) => tenant.name).join(" and ") : pluralize(count, "tenant");
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!validReason(reason)) {
+      setShowError(true);
+      return;
+    }
+    onConfirm(reason.trim());
+  }
+
+  return (
+    <form onSubmit={submit} noValidate>
+      <ConfirmationCard
+        icon={suspending ? "status-danger" : "status-info"}
+        title={`${suspending ? "Suspend" : "Reactivate"} ${pluralize(count, "tenant")}?`}
+      >
+        <p className="text-center text-sm leading-[21px] text-muted">
+          {suspending
+            ? `Suspending ${who} blocks account access immediately. This decision will be recorded.`
+            : `Reactivating ${who} restores account access immediately. This decision will be recorded.`}
+        </p>
+        <ReasonField value={reason} onChange={setReason} showError={showError} autoFocus />
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <AdminButton variant="outline" className="min-w-[100px]" onClick={onCancel}>
+            Cancel
+          </AdminButton>
+          <AdminButton variant={suspending ? "danger" : "primary"} type="submit" className="min-w-[147px]">
+            {suspending ? "Suspend" : "Reactivate"} {pluralize(count, "tenant")}
           </AdminButton>
         </div>
       </ConfirmationCard>

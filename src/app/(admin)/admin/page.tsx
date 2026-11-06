@@ -4,7 +4,7 @@ import { MetricCard, OverdueBadge } from "@/components/admin/metric-card";
 import { AccountFollowUp } from "@/components/admin/overview/account-follow-up";
 import { ActivityChart } from "@/components/admin/overview/activity-chart";
 import { TenantMetricCards } from "@/components/admin/overview/tenant-metric-cards";
-import { TenantsProvider } from "@/components/admin/overview/tenant-provider";
+import { TenantsProvider } from "@/components/admin/tenant-provider";
 import { OverviewQueue } from "@/components/admin/overview/overview-queue";
 import { RecentDecisions } from "@/components/admin/overview/recent-decisions";
 import { UserDistribution } from "@/components/admin/overview/user-distribution";
@@ -45,7 +45,7 @@ export default function AdminPage() {
           label="Awaiting verification"
           value={pending.length}
           caption="Open verification →"
-          icon="mask-verified"
+          icon="verified"
           progress={65}
           badge={overdue > 0 ? <OverdueBadge count={overdue} /> : undefined}
         />
