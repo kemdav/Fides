@@ -7,15 +7,23 @@ export function FoxCtaMascot({ className }: { className?: string }) {
       aria-hidden
       className={className}
     >
-        <g className="fox-dance">
+        <defs>
+        <mask id="fox-outside-torso" maskUnits="userSpaceOnUse" x="0" y="0" width="441.75" height="516.723">
+          <rect width="441.75" height="516.723" fill="#fff" />
+          <path d="M117 271.723C91 295.723 80 338.723 88 390.723L93 448.723C89 465.723 83 479.723 75 488.723H127C137 472.723 143 450.723 146 430.723L180 431.723C182 454.723 190 475.723 202 489.723H256C242 471.723 237 457.723 238 439.723L248 379.723C254 334.723 226 289.723 201 272.723L117 271.723Z" fill="#000" stroke="#000" strokeWidth="8" strokeLinejoin="round" />
+        </mask>
+      </defs>
+      <g className="fox-dance">
         <path className="fox-tail" d="M216 410.723C271 419.723 310 392.723 323 349.723C337 305.723 324 241.723 362 192.723C372 179.723 387 170.723 401 164.723C395 196.723 414 225.723 426 258.723C458 346.723 400 453.723 295 470.723C257 476.723 227 462.723 206 441.723L216 410.723Z" fill="#CC5500" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" stroke="#394452" />
         <path className="fox-tail" d="M362 192.723C372 179.723 387 170.723 401 164.723C395 196.723 414 225.723 426 258.723C432 275.723 435 291.723 433 305.723C409 296.723 393 281.723 385 265.723L370 281.723C362 259.723 356 230.723 362 192.723Z" fill="#FFFFEB" />
         <path d="M117 271.723C91 295.723 80 338.723 88 390.723L93 448.723C89 465.723 83 479.723 75 488.723H127C137 472.723 143 450.723 146 430.723L180 431.723C182 454.723 190 475.723 202 489.723H256C242 471.723 237 457.723 238 439.723L248 379.723C254 334.723 226 289.723 201 272.723L117 271.723Z" fill="#CC5500" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" stroke="#394452" />
         <path d="M133 313.723C110 330.723 110 378.723 123 406.723C136 431.723 181 435.723 204 411.723C225 387.723 217 336.723 190 316.723L133 313.723Z" fill="#FFFFEB" />
         <path d="M77 475.723C59 474.723 42 485.723 44 497.723C45 507.723 55 512.723 72 512.723H122C136 512.723 139 500.723 134 490.723C127 477.723 101 471.723 77 475.723ZM202 483.723C195 493.723 193 505.723 207 511.723H258C279 511.723 282 501.723 273 490.723C259 474.723 220 472.723 202 483.723Z" fill="#394452" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" stroke="#394452" />
         <path d="M102 312.723C67 328.723 55 359.723 61 391.723C64 405.723 81 409.723 90 398.723C98 387.723 89 379.723 92 369.723L116 353.723" fill="#CC5500" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" stroke="#394452" />
-        <polygon points="222,306 252,308 258,343 238,343 226,343" fill="#CC5500" />
-        <path className="fox-point" d="M228 310.723C275 295.723 325 281.723 367 280.723L370 311.723C323 318.723 276 339.723 234 347.723" fill="#CC5500" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" stroke="#394452" />
+        <polygon className="fox-joint" points="222,306 252,308 258,343 238,343 226,343" fill="#CC5500" />
+        <g className="fox-arm-wrap">
+          <path className="fox-point fox-arm" d="M228 310.723C275 295.723 325 281.723 367 280.723L370 311.723C323 318.723 276 339.723 234 347.723" fill="#CC5500" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" stroke="#394452" />
+        </g>
         <g className="fox-head">
         <path d="M34 141.723C22 104.723 14 51.7225 20 15.7225C22 3.72253 31 0.722532 42 7.72253C70 22.7225 98 53.7225 116 86.7225L34 141.723ZM200 85.7225C218 50.7225 246 23.7225 272 8.72253C283 2.72253 292 5.72253 295 18.7225C301 56.7225 292 105.723 278 142.723L200 85.7225Z" fill="#CC5500" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" stroke="#394452" />
         <path d="M43 44.7225C40 66.7225 44 93.7225 51 112.723L88 85.7225C75 68.7225 59 53.7225 43 44.7225ZM271 45.7225C257 53.7225 238 69.7225 228 85.7225L264 112.723C272 90.7225 275 66.7225 271 45.7225Z" fill="#FFFFEB" />

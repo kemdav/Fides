@@ -43,6 +43,80 @@
 
 }
 
+@theme {
+  --color-body: #2c3a4b;
+  --color-subtle: #6d7580;
+  --color-hairline: #ebeef2;
+  --color-glyph: #858c94;
+  --color-outline: #9098a1;
+  --color-danger: #dc2626;
+  --color-danger-dark: #b91c1c;
+  --color-danger-bg: #fef2f2;
+  --color-warn-bg: #fef9c3;
+  --color-warn-fg: #715a00;
+  --color-info-bg: #eef2ff;
+  --color-wash: #f0fdf4;
+  --color-selected: #f0f7fa;
+}
+
+.fox-point {
+  transform-box: view-box;
+  transform-origin: 228px 328px;
+  transform: rotate(var(--point-angle, 0deg));
+}
+
+@media (max-width: 1023px) {
+  .fox-point {
+    --point-angle: -42deg;
+  }
+
+  .fox-arm-wrap {
+    mask: url(#fox-outside-torso);
+  }
+
+  .fox-joint {
+    display: none;
+  }
+}
+
+@property --reveal {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.chart-bar {
+  height: 0;
+  transition: height 0.9s cubic-bezier(0.16, 1, 0.3, 1) var(--delay, 0ms);
+}
+
+[data-inview="true"] .chart-bar {
+  height: var(--h);
+}
+
+.donut-reveal {
+  --reveal: 0deg;
+  mask-image: conic-gradient(#000 var(--reveal), transparent var(--reveal));
+  transition: --reveal 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-inview="true"] .donut-reveal,
+.donut-reveal[data-inview="true"] {
+  --reveal: 360deg;
+}
+
+@media (prefers-reduced-motion: reduce), (scripting: none) {
+  .chart-bar {
+    height: var(--h);
+    transition: none;
+  }
+
+  .donut-reveal {
+    --reveal: 360deg;
+    transition: none;
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   [data-reveal] {
     opacity: 0;
@@ -83,24 +157,16 @@
   }
 
   @keyframes grid-inward {
-    0% {
+    from {
       transform: scale(1.3);
-      opacity: 0;
     }
-    3% {
-      opacity: 1;
-    }
-    82% {
-      opacity: 1;
-    }
-    100% {
+    to {
       transform: scale(1);
-      opacity: 0;
     }
   }
 
   .grid-inward {
-    animation: grid-inward 18s linear infinite;
+    animation: grid-inward 14s ease-in-out infinite alternate;
   }
 
   @keyframes rise-in {
@@ -263,16 +329,16 @@
     0%,
     38%,
     100% {
-      transform: rotate(0deg) scaleX(1);
+      transform: rotate(var(--point-angle, 0deg)) scaleX(1);
     }
     6%,
     18%,
     30% {
-      transform: rotate(-3deg) scaleX(1.05);
+      transform: rotate(calc(var(--point-angle, 0deg) - 3deg)) scaleX(1.05);
     }
     12%,
     24% {
-      transform: rotate(1.5deg) scaleX(1);
+      transform: rotate(calc(var(--point-angle, 0deg) + 1.5deg)) scaleX(1);
     }
   }
 
