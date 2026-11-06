@@ -59,6 +59,26 @@
   --color-selected: #f0f7fa;
 }
 
+.fox-point {
+  transform-box: view-box;
+  transform-origin: 228px 328px;
+  transform: rotate(var(--point-angle, 0deg));
+}
+
+@media (max-width: 1023px) {
+  .fox-point {
+    --point-angle: -42deg;
+  }
+
+  .fox-arm-wrap {
+    mask: url(#fox-outside-torso);
+  }
+
+  .fox-joint {
+    display: none;
+  }
+}
+
 @property --reveal {
   syntax: "<angle>";
   inherits: false;
@@ -309,16 +329,16 @@
     0%,
     38%,
     100% {
-      transform: rotate(0deg) scaleX(1);
+      transform: rotate(var(--point-angle, 0deg)) scaleX(1);
     }
     6%,
     18%,
     30% {
-      transform: rotate(-3deg) scaleX(1.05);
+      transform: rotate(calc(var(--point-angle, 0deg) - 3deg)) scaleX(1.05);
     }
     12%,
     24% {
-      transform: rotate(1.5deg) scaleX(1);
+      transform: rotate(calc(var(--point-angle, 0deg) + 1.5deg)) scaleX(1);
     }
   }
 
