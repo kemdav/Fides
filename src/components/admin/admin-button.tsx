@@ -3,7 +3,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 export type AdminButtonVariant = "primary" | "outline" | "danger";
-export type AdminButtonSize = "sm" | "md";
+export type AdminButtonSize = "xs" | "sm" | "md";
 
 const variantClasses: Record<AdminButtonVariant, string> = {
   primary: "bg-burnt text-white hover:bg-burnt-dark",
@@ -12,8 +12,9 @@ const variantClasses: Record<AdminButtonVariant, string> = {
 };
 
 const sizeClasses: Record<AdminButtonSize, string> = {
-  sm: "text-sm",
-  md: "text-base",
+  xs: "h-9 rounded-md px-3 py-2 text-sm leading-5",
+  sm: "h-12 rounded-lg px-4 py-3 text-sm leading-6",
+  md: "h-12 rounded-lg px-4 py-3 text-base leading-6",
 };
 
 export function adminButtonClasses({
@@ -22,7 +23,7 @@ export function adminButtonClasses({
   className,
 }: { variant?: AdminButtonVariant; size?: AdminButtonSize; className?: string } = {}) {
   return cn(
-    "inline-flex h-12 items-center justify-center whitespace-nowrap rounded-lg px-4 py-3 font-semibold leading-6 transition-colors",
+    "inline-flex items-center justify-center whitespace-nowrap font-semibold transition-colors",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40",
     "disabled:opacity-[0.42] disabled:hover:bg-burnt",
     variantClasses[variant],
