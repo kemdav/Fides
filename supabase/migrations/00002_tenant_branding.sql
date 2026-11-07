@@ -1,7 +1,8 @@
 -- ============================================================================
 -- Fides — Tenant branding and public-site settings
--- Migration: 00002_tenant_branding.sql
--- Purpose: Add public branding/contact fields and per-tenant site settings.
+-- Migration: 00002_tenant_branding.sql (Combined with membership policy update)
+-- Purpose: Add public branding/contact fields, per-tenant site settings, and 
+--          update tenant selection RLS.
 -- Depends on the baseline migration defining:
 --   public.tenants, public.set_updated_at(), public.get_my_tenant_id(),
 --   public.current_profile_role()
@@ -97,7 +98,7 @@ CREATE TRIGGER set_updated_at
     EXECUTE FUNCTION public.set_updated_at();
 
 -- ----------------------------------------------------------------------------
--- 4. Row Level Security
+-- 4. Row Level Security for tenant_settings
 -- ----------------------------------------------------------------------------
 
 ALTER TABLE public.tenant_settings ENABLE ROW LEVEL SECURITY;
@@ -163,12 +164,32 @@ CREATE POLICY tenant_settings_delete_owner_admin
     );
 
 -- ----------------------------------------------------------------------------
--- 5. Grants
--- RLS controls which rows can be read or changed.
--- Service-role registration flows can create the tenant and its settings row.
+-- 5. Update tenant select RLS (Membership Policy)
+-- ----------------------------------------------------------------------------
+
+drop policy if exists tenants_select_member_or_admin on public.tenants;
+
+create policy tenants_select_member_or_admin
+  on public.tenants for select
+  to authenticated
+  using (
+    public.is_platform_admin()
+    or id = public.get_my_tenant_id()
+    or exists (
+      select 1 from public.tenant_memberships
+      where tenant_memberships.tenant_id = tenants.id
+        and tenant_memberships.profile_id = auth.uid()
+    )
+    or exists (
+      select 1 from public.profiles
+      where profiles.tenant_id = tenants.id
+        and profiles.id = auth.uid()
+    )
+  );
+
+-- ----------------------------------------------------------------------------
+-- 6. Grants
 -- ----------------------------------------------------------------------------
 
 GRANT SELECT ON public.tenant_settings TO anon, authenticated;
 GRANT INSERT, UPDATE, DELETE ON public.tenant_settings TO authenticated;
-
--- No Realtime publication changes are made by this migration.
