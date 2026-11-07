@@ -14,6 +14,18 @@ export const RESERVED_SUBDOMAINS: ReadonlySet<string> = new Set([
   "static",
   "assets",
   "cdn",
+  "login",
+  "signup",
+  "register",
+  "request-account",
+  "reset-password",
+  "reset-request",
+  "help",
+  "billing",
+  "mail",
+  "docs",
+  "portal",
+  "status",
 ]);
 
 /** Root domain tenant subdomains are served from, e.g. `fides.app`. */
