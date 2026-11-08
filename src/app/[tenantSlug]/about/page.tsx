@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { SectionHeading } from "@/components/landing/section-heading";
 import { Container } from "@/components/layout/container";
 import { Button } from "@/components/ui/button";
+import { getTenantBySlug } from "@/lib/supabase/queries";
 
 type PageProps = {
   params: Promise<{ tenantSlug: string }>;
@@ -11,7 +13,10 @@ type PageProps = {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { tenantSlug } = await params;
-  const tenantName = "Bella Vita";
+  const tenant = await getTenantBySlug(tenantSlug);
+  if (!tenant) notFound();
+  const tenantName = tenant.display_name || tenant.name;
+
   return {
     title: `About | ${tenantName}`,
     description: `Welcome to ${tenantName}. A little time to slow down, feel cared for, and reconnect with yourself.`,
@@ -41,7 +46,9 @@ const expectations = [
 
 export default async function AboutPage({ params }: PageProps) {
   const { tenantSlug } = await params;
-  const tenantName = "Bella Vita";
+  const tenant = await getTenantBySlug(tenantSlug);
+  if (!tenant) notFound();
+  const tenantName = tenant.display_name || tenant.name;
 
   return (
     <>

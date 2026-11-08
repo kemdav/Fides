@@ -2,14 +2,19 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { use, useState, type FormEvent } from "react";
+import { use, useActionState } from "react";
 import { SectionHeading } from "@/components/landing/section-heading";
 import { Container } from "@/components/layout/container";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { submitContactForm, type ContactFormState } from "./actions";
 
 type PageProps = {
   params: Promise<{ tenantSlug: string }>;
+};
+
+const initialState: ContactFormState = {
+  success: false,
 };
 
 const guidanceItems = [
@@ -34,12 +39,10 @@ export default function ContactPage({ params }: PageProps) {
   const { tenantSlug } = use(params);
   const tenantName = "Bella Vita";
 
-  const [submitted, setSubmitted] = useState(false);
-
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setSubmitted(true);
-  };
+  const [state, formAction, isPending] = useActionState(
+    submitContactForm,
+    initialState,
+  );
 
   return (
     <>
@@ -57,8 +60,7 @@ export default function ContactPage({ params }: PageProps) {
                     </span>
                     <span>
                       A little conversation.
-                      <br />
-                      A little more care.
+                      <br />A little more care.
                     </span>
                   </span>
                 }
@@ -99,26 +101,34 @@ export default function ContactPage({ params }: PageProps) {
                 All fields are required unless marked optional.
               </p>
 
-              {submitted ? (
+              {state.success ? (
                 <div className="mt-8 rounded-xl border border-burnt/20 bg-[#FFFFEB] p-6 text-left sm:p-8">
                   <h3 className="font-display text-2xl text-burnt">
                     Message Sent
                   </h3>
                   <p className="mt-2 text-base text-muted">
-                    Thank you for reaching out to {tenantName}. We have received
-                    your message and will get back to you shortly.
+                    {state.message ||
+                      `Thank you for reaching out to ${tenantName}. We have received your message and will get back to you shortly.`}
                   </p>
                   <Button
                     variant="brand"
                     size="cta"
                     className="mt-6"
-                    onClick={() => setSubmitted(false)}
+                    onClick={() => window.location.reload()}
                   >
                     Send Another Message
                   </Button>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+                <form action={formAction} className="mt-8 space-y-6">
+                  <input type="hidden" name="tenantSlug" value={tenantSlug} />
+
+                  {state.error && (
+                    <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                      {state.error}
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                     <div>
                       <label
@@ -224,22 +234,22 @@ export default function ContactPage({ params }: PageProps) {
                     </div>
                   </div>
 
-                    <div>
-                      <label
-                        htmlFor="message"
-                        className="mb-1.5 block text-sm font-medium text-ink"
-                      >
-                        Message<span className="text-burnt">*</span>
-                      </label>
-                      <textarea
-                        id="message"
-                        name="message"
-                        rows={5}
-                        required
-                        placeholder="How can we help you?"
-                        className="flex w-full rounded-md border border-neutral-300 bg-white px-3 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2"
-                      />
-                    </div>
+                  <div>
+                    <label
+                      htmlFor="message"
+                      className="mb-1.5 block text-sm font-medium text-ink"
+                    >
+                      Message<span className="text-burnt">*</span>
+                    </label>
+                    <textarea
+                      id="message"
+                      name="message"
+                      rows={5}
+                      required
+                      placeholder="How can we help you?"
+                      className="flex w-full rounded-md border border-neutral-300 bg-white px-3 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2"
+                    />
+                  </div>
 
                   <p className="text-xs text-muted">
                     Please share only what&apos;s needed for your enquiry. Avoid
@@ -247,8 +257,13 @@ export default function ContactPage({ params }: PageProps) {
                   </p>
 
                   <div>
-                    <Button type="submit" variant="brand" size="cta">
-                      Send Message
+                    <Button
+                      type="submit"
+                      variant="brand"
+                      size="cta"
+                      disabled={isPending}
+                    >
+                      {isPending ? "Sending..." : "Send Message"}
                     </Button>
                   </div>
                 </form>
