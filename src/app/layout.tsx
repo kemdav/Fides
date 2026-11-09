@@ -34,7 +34,10 @@ export const metadata: Metadata = {
     title: siteConfig.name,
   },
   icons: {
-    icon: "/icons/icon.svg",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icons/icon.svg", type: "image/svg+xml" },
+    ],
     apple: "/icons/apple-icon.png",
   },
   formatDetection: {
@@ -71,7 +74,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={`${mulish.variable} ${ovo.variable} scroll-smooth`}>
+    <html lang="en" data-scroll-behavior="smooth"
+      className={`${mulish.variable} ${ovo.variable} scroll-smooth`}>
       <body className="min-h-dvh bg-white font-sans text-neutral-900 antialiased">
         {children}
         <Suspense fallback={null}>

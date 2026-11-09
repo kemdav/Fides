@@ -1,35 +1,25 @@
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { getAccountAccess } from "@/lib/applications/service";
+import { createClient } from "@/lib/supabase/server";
 import { LoginForm } from "./login-form";
 
-/**
- * Sign In & Registration Page.
- *
- * In Next.js 15+ / 16, `searchParams` is an async Promise.
- * Captures query parameters for:
- * - `error`: Error messages from redirects (e.g. rate-limit, suspended business, invalid credentials, tenant mismatch)
- * - `message`: Informational notices (e.g. email verification prompt)
- * - `tab`: Initial active tab ('login' | 'signup' | 'forgot')
- * - `redirect`: Original target destination after authenticating
- */
-export default async function LoginPage({
-  searchParams,
-}: {
-  searchParams: Promise<{
-    error?: string;
-    message?: string;
-    tab?: "login" | "signup" | "forgot";
-    redirect?: string;
-  }>;
-}) {
-  const { error, message, tab, redirect } = await searchParams;
+export const metadata: Metadata = {
+  title: "Log in",
+  robots: { index: false, follow: false },
+};
 
-  return (
-    <main className="min-h-screen bg-neutral-50 flex items-center justify-center p-4">
-      <LoginForm
-        initialTab={tab || "login"}
-        errorMessage={error}
-        infoMessage={message}
-        redirectUrl={redirect}
-      />
-    </main>
-  );
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ registered?: string }> }) {
+  const { registered } = await searchParams;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    const access = await getAccountAccess(user.id);
+    if (access.ok) redirect("/dashboard");
+  }
+
+  return <LoginForm submitted={registered === "1"} />;
 }

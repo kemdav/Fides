@@ -1,81 +1,56 @@
+import "server-only";
 import nodemailer, { type Transporter } from "nodemailer";
 import { getServerEnv } from "@/lib/env";
 import type { MailMessage, MailResult } from "./types";
 
-/** Transport-agnostic contract for sending transactional email. */
-export interface Mailer {
-  send(message: MailMessage): Promise<MailResult>;
-}
-
-function toAddressList(value: MailMessage["to"]): string[] {
-  const entries = Array.isArray(value) ? value : [value];
-  return entries.map((entry) => (typeof entry === "string" ? entry : entry.address));
-}
-
-/** SMTP-backed mailer (SendGrid / Resend / Brevo / any relay). */
-class SmtpMailer implements Mailer {
-  constructor(
-    private readonly transporter: Transporter,
-    private readonly from: string
-  ) {}
-
-  async send(message: MailMessage): Promise<MailResult> {
-    const info = await this.transporter.sendMail({
-      from: this.from,
-      to: message.to,
-      subject: message.subject,
-      html: message.html,
-      text: message.text,
-      replyTo: message.replyTo,
-    });
-
-    return {
-      id: info.messageId ?? null,
-      accepted: (info.accepted ?? []).map((entry) => String(entry)),
-      rejected: (info.rejected ?? []).map((entry) => String(entry)),
-    };
+export class MailNotConfiguredError extends Error {
+  constructor() {
+    super("Email delivery is not configured. Set the SMTP_* and MAIL_FROM_EMAIL values in .env.local.");
+    this.name = "MailNotConfiguredError";
   }
 }
 
-/** Development mailer that logs to the server console instead of sending. */
-class ConsoleMailer implements Mailer {
-  async send(message: MailMessage): Promise<MailResult> {
-    const accepted = toAddressList(message.to);
-    console.info("[mail] console transport", {
-      to: accepted,
-      subject: message.subject,
-    });
-    return { id: null, accepted, rejected: [] };
-  }
-}
+let cachedTransporter: Transporter | null = null;
 
-let cachedMailer: Mailer | null = null;
-
-/**
- * Returns the configured transactional mailer. Falls back to a console
- * transport when SMTP credentials are absent (local development / build).
- *
- * Feature modules should call `getMailer().send(...)` rather than talking to
- * nodemailer directly, so the transport can be swapped without code changes.
- */
-export function getMailer(): Mailer {
-  if (cachedMailer) return cachedMailer;
-
+export function isMailConfigured(): boolean {
   const env = getServerEnv();
+  return Boolean(env.SMTP_HOST && env.MAIL_FROM_EMAIL);
+}
 
-  if (!env.SMTP_HOST || !env.MAIL_FROM_EMAIL) {
-    cachedMailer = new ConsoleMailer();
-    return cachedMailer;
-  }
+function getTransporter(): Transporter {
+  if (cachedTransporter) return cachedTransporter;
+  const env = getServerEnv();
+  if (!env.SMTP_HOST || !env.MAIL_FROM_EMAIL) throw new MailNotConfiguredError();
 
-  const transporter = nodemailer.createTransport({
+  cachedTransporter = nodemailer.createTransport({
     host: env.SMTP_HOST,
     port: env.SMTP_PORT,
     secure: env.SMTP_SECURE,
     auth: env.SMTP_USER ? { user: env.SMTP_USER, pass: env.SMTP_PASS } : undefined,
   });
+  return cachedTransporter;
+}
 
-  const from = `${env.MAIL_FROM_NAME} <${env.MAIL_FROM_EMAIL}>`;
-  cachedMailer = new SmtpMailer(transporter, from);
-  return cachedMailer;
+export async function sendMail(message: MailMessage): Promise<MailResult> {
+  const transporter = getTransporter();
+  const env = getServerEnv();
+
+  const info = await transporter.sendMail({
+    from: `${env.MAIL_FROM_NAME} <${env.MAIL_FROM_EMAIL}>`,
+    to: message.to,
+    subject: message.subject,
+    html: message.html,
+    text: message.text,
+    replyTo: message.replyTo,
+    attachments: message.attachments,
+  });
+
+  const accepted = (info.accepted ?? []).map((entry) => String(entry));
+  const rejected = (info.rejected ?? []).map((entry) => String(entry));
+
+  if (accepted.length === 0) {
+    throw new Error("The mail server did not accept the recipient address.");
+  }
+
+  return { id: info.messageId ?? null, accepted, rejected };
 }

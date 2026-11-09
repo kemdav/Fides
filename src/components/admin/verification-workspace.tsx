@@ -1,19 +1,17 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useMemo, useRef, useState, useTransition } from "react";
+import { approveAction, deleteAction, rejectAction } from "@/app/(admin)/admin/actions";
 import {
-  changeRequirements,
   daysWaiting,
-  decidedTodayBaseline,
   formatSubmittedOn,
   isOverdue,
+  isReviewedToday,
   REVIEW_TARGET_DAYS,
   reviewChecks,
-  sampleSubmissions,
   sortSubmissions,
   type Submission,
-  type SubmissionDocument,
-  type SubmissionStatus,
   statusLabels,
 } from "@/lib/admin/verification";
 import { cn } from "@/lib/utils";
@@ -23,20 +21,13 @@ import { Icon } from "./icon";
 import { MetricCard } from "./metric-card";
 import { Checkbox, PageContent, PageHeading, StatusPill, Surface } from "./primitives";
 import { ReviewQueue, statusTones } from "./review-queue";
-import {
-  ApproveDialog,
-  DocumentDialog,
-  RejectDialog,
-  RequestChangesDialog,
-  ResultDialog,
-} from "./verification-dialogs";
+import { ApproveDialog, DeleteApplicationDialog, RejectDialog, ResultDialog } from "./verification-dialogs";
 
 type DialogState =
   | { type: "approve" }
-  | { type: "request" }
   | { type: "reject" }
-  | { type: "document"; document: SubmissionDocument }
-  | { type: "result"; title: string; message: string };
+  | { type: "delete" }
+  | { type: "result"; title: string; message: string; failed?: boolean };
 
 const noChecks = reviewChecks.map(() => false);
 
@@ -47,22 +38,28 @@ function firstPending(items: Submission[]) {
   )[0];
 }
 
-export function VerificationWorkspace({ initialSelectedId }: { initialSelectedId?: string }) {
-  const [submissions, setSubmissions] = useState(sampleSubmissions);
+export function VerificationWorkspace({
+  submissions,
+  now,
+  initialSelectedId,
+}: {
+  submissions: Submission[];
+  now: number;
+  initialSelectedId?: string;
+}) {
+  const router = useRouter();
+  const [busy, startTransition] = useTransition();
   const [selectedId, setSelectedId] = useState<string | null>(() => {
-    const requested = sampleSubmissions.find(
-      (item) => item.id === initialSelectedId && item.status === "pending"
-    );
-    return (requested ?? firstPending(sampleSubmissions))?.id ?? null;
+    const requested = submissions.find((item) => item.id === initialSelectedId);
+    return (requested ?? firstPending(submissions))?.id ?? null;
   });
   const [checks, setChecks] = useState<boolean[]>(noChecks);
-  const [decidedThisSession, setDecidedThisSession] = useState(0);
   const [dialog, setDialog] = useState<DialogState | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
   const selected = submissions.find((item) => item.id === selectedId) ?? null;
   const pending = submissions.filter((item) => item.status === "pending");
-  const overdue = pending.filter(isOverdue);
+  const overdue = pending.filter((item) => isOverdue(item, now));
   const completed = checks.filter(Boolean).length;
   const allChecked = completed === reviewChecks.length;
 
@@ -70,9 +67,9 @@ export function VerificationWorkspace({ initialSelectedId }: { initialSelectedId
     () => ({
       pending: pending.length,
       overdue: overdue.length,
-      reviewed: decidedTodayBaseline + decidedThisSession,
+      reviewed: submissions.filter((item) => isReviewedToday(item, now)).length,
     }),
-    [pending.length, overdue.length, decidedThisSession]
+    [pending.length, overdue.length, submissions, now]
   );
 
   function select(submission: Submission) {
@@ -83,12 +80,24 @@ export function VerificationWorkspace({ initialSelectedId }: { initialSelectedId
     }
   }
 
-  function record(status: SubmissionStatus, note: string[], result: { title: string; message: string }) {
-    if (!selected) return;
-    setSubmissions((current) => current.map((item) => (item.id === selected.id ? { ...item, status, note } : item)));
-    setDecidedThisSession((count) => count + 1);
-    setChecks(noChecks);
-    setDialog({ type: "result", ...result });
+  function perform(
+    title: string,
+    task: () => Promise<{ ok: true; message: string; warning?: string } | { ok: false; error: string }>
+  ) {
+    startTransition(async () => {
+      const result = await task();
+      if (result.ok) {
+        setChecks(noChecks);
+        setDialog({
+          type: "result",
+          title,
+          message: [result.message, result.warning].filter(Boolean).join(" "),
+        });
+        router.refresh();
+      } else {
+        setDialog({ type: "result", title: "Action failed", message: result.error, failed: true });
+      }
+    });
   }
 
   const close = () => setDialog(null);
@@ -98,7 +107,7 @@ export function VerificationWorkspace({ initialSelectedId }: { initialSelectedId
       <PageHeading
         eyebrow="TRUST & SAFETY"
         title="Merchant verification"
-        description="Review evidence, complete checks, and make a clear decision."
+        description="Review applications, complete checks, and make a clear decision."
       />
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-5 md:grid-cols-3">
@@ -127,27 +136,33 @@ export function VerificationWorkspace({ initialSelectedId }: { initialSelectedId
       </div>
 
       <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 xl:grid-cols-2">
-        <ReviewQueue title="Review queue" submissions={submissions} selectedId={selectedId} onSelect={select} />
+        <ReviewQueue title="Review queue" submissions={submissions} selectedId={selectedId} onSelect={select} now={now} />
 
         <div ref={panelRef} className="scroll-mt-20">
-        {selected ? (
-          <EvidencePanel
-            submission={selected}
-            checks={checks}
-            onCheck={(index, value) => setChecks((current) => current.map((item, i) => (i === index ? value : item)))}
-            allChecked={allChecked}
-            completed={completed}
-            onOpenDocument={(document) => setDialog({ type: "document", document })}
-            onApprove={() => setDialog({ type: "approve" })}
-            onRequest={() => setDialog({ type: "request" })}
-            onReject={() => setDialog({ type: "reject" })}
-          />
-        ) : (
-          <Surface className="flex flex-col gap-2 py-10 text-center">
-            <h2 className="text-lg font-semibold leading-[27px]">You are all caught up</h2>
-            <p className="text-sm leading-[21px] text-muted">There are no submissions waiting for review.</p>
-          </Surface>
-        )}
+          {selected ? (
+            <EvidencePanel
+              submission={selected}
+              now={now}
+              checks={checks}
+              onCheck={(index, value) => setChecks((current) => current.map((item, i) => (i === index ? value : item)))}
+              allChecked={allChecked}
+              completed={completed}
+              onApprove={() => setDialog({ type: "approve" })}
+              onReject={() => setDialog({ type: "reject" })}
+              onDelete={() => setDialog({ type: "delete" })}
+            />
+          ) : (
+            <Surface className="flex flex-col gap-2 py-10 text-center">
+              <h2 className="text-lg font-semibold leading-[27px]">
+                {submissions.length === 0 ? "No applications yet" : "You are all caught up"}
+              </h2>
+              <p className="text-sm leading-[21px] text-muted">
+                {submissions.length === 0
+                  ? "New account applications will appear here as soon as they are submitted."
+                  : "There are no submissions waiting for review."}
+              </p>
+            </Surface>
+          )}
         </div>
       </div>
 
@@ -157,50 +172,31 @@ export function VerificationWorkspace({ initialSelectedId }: { initialSelectedId
             {dialog.type === "approve" && (
               <ApproveDialog
                 business={selected.business}
+                busy={busy}
                 onCancel={close}
-                onConfirm={() =>
-                  record("approved", ["All verification checks were completed."], {
-                    title: "Merchant approved",
-                    message: `${selected.business} has been approved.`,
-                  })
-                }
-              />
-            )}
-            {dialog.type === "request" && (
-              <RequestChangesDialog
-                submission={selected}
-                onClose={close}
-                onSend={(ids) =>
-                  record(
-                    "changes_requested",
-                    changeRequirements.filter((item) => ids.includes(item.id)).map((item) => item.message),
-                    {
-                    title: "Update request sent",
-                    message: "The selected requirements have been sent to the tenant for updating.",
-                    }
-                  )
-                }
+                onConfirm={() => perform("Merchant approved", () => approveAction(selected.id))}
               />
             )}
             {dialog.type === "reject" && (
               <RejectDialog
                 business={selected.business}
+                busy={busy}
                 onCancel={close}
-                onConfirm={(reason) =>
-                  record("rejected", [reason], {
-                    title: "Submission rejected",
-                    message: `${selected.business} has been rejected.`,
-                  })
-                }
+                onConfirm={(reason) => perform("Submission rejected", () => rejectAction(selected.id, reason))}
               />
             )}
-            {dialog.type === "document" && (
-              <DocumentDialog submission={selected} document={dialog.document} onClose={close} />
+            {dialog.type === "delete" && (
+              <DeleteApplicationDialog
+                business={selected.business}
+                busy={busy}
+                onCancel={close}
+                onConfirm={() => perform("Record deleted", () => deleteAction(selected.id))}
+              />
             )}
           </>
         ) : null}
         {dialog?.type === "result" && (
-          <ResultDialog title={dialog.title} message={dialog.message} onDone={close} />
+          <ResultDialog title={dialog.title} message={dialog.message} failed={dialog.failed} onDone={close} />
         )}
       </AdminModal>
     </PageContent>
@@ -209,24 +205,24 @@ export function VerificationWorkspace({ initialSelectedId }: { initialSelectedId
 
 function EvidencePanel({
   submission,
+  now,
   checks,
   onCheck,
   allChecked,
   completed,
-  onOpenDocument,
   onApprove,
-  onRequest,
   onReject,
+  onDelete,
 }: {
   submission: Submission;
+  now: number;
   checks: boolean[];
   onCheck: (index: number, value: boolean) => void;
   allChecked: boolean;
   completed: number;
-  onOpenDocument: (document: SubmissionDocument) => void;
   onApprove: () => void;
-  onRequest: () => void;
   onReject: () => void;
+  onDelete: () => void;
 }) {
   return (
     <Surface className="flex flex-col gap-3">
@@ -238,9 +234,7 @@ function EvidencePanel({
       </div>
 
       <div className="flex items-center gap-3">
-        <span className="rounded-md bg-sky px-2 py-1 text-xs font-semibold leading-[18px]">
-          {submission.initials}
-        </span>
+        <span className="rounded-md bg-sky px-2 py-1 text-xs font-semibold leading-[18px]">{submission.initials}</span>
         <div className="flex min-w-0 flex-col gap-[3px]">
           <h2 className="text-lg font-semibold leading-[27px]">{submission.business}</h2>
           <p className="text-sm leading-[21px] text-muted">{submission.category}</p>
@@ -256,64 +250,63 @@ function EvidencePanel({
           <dt className="text-xs leading-[18px] text-muted">Location</dt>
           <dd className="text-sm leading-[21px]">{submission.location}</dd>
         </div>
+        <div className="flex flex-col gap-[3px]">
+          <dt className="text-xs leading-[18px] text-muted">Phone</dt>
+          <dd className="text-sm leading-[21px]">{submission.phone}</dd>
+        </div>
+        <div className="flex flex-col gap-[3px]">
+          <dt className="text-xs leading-[18px] text-muted">Selected plan</dt>
+          <dd className="text-sm leading-[21px]">{submission.plan}</dd>
+        </div>
         <div className="col-span-2 flex flex-col gap-[3px]">
           <dt className="text-xs leading-[18px] text-muted">Contact email</dt>
           <dd className="break-all text-sm font-semibold leading-[21px]">{submission.email}</dd>
         </div>
       </dl>
 
-      <DecisionBanner submission={submission} />
+      <DecisionBanner submission={submission} now={now} />
 
       <h3 className="text-base font-semibold leading-6">Submitted documents</h3>
-      <div className="flex flex-wrap gap-[10px]">
-        {submission.documents.map((document) => (
-          <button
-            key={document.key}
-            type="button"
-            onClick={() => onOpenDocument(document)}
-            className="flex w-[261px] max-w-full flex-col items-start gap-1.5 rounded-[14px] border border-line bg-white p-3 text-left shadow-[0_8px_12px_rgb(31_46_33/0.04)] transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
-          >
-            <span className="flex items-center gap-[10px] text-xs font-semibold leading-[18px]">
-              <Icon name="file" className="size-5" />
-              {document.label}
-            </span>
-            <span className="text-xs leading-[18px] text-muted">{document.meta}</span>
-          </button>
-        ))}
-      </div>
+      {submission.documents.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-line px-3 py-4 text-sm text-muted">
+          No documents were uploaded with this application.
+        </p>
+      ) : null}
 
       {submission.status === "pending" ? (
         <>
-      <div className="flex items-center gap-3">
-        <h3 className="text-base font-semibold leading-6">Review checklist</h3>
-        <p className="text-xs leading-[18px] text-muted">{completed}/3 complete</p>
-      </div>
-      <div className="flex flex-col gap-3">
-        {reviewChecks.map((label, index) => (
-          <Checkbox
-            key={label}
-            checked={checks[index]}
-            onChange={(value) => onCheck(index, value)}
-            label={label}
-          />
-        ))}
-      </div>
-      <p id="approval-hint" className="text-xs leading-[18px] text-muted">
-        Complete all three checks to approve this merchant.
-      </p>
-      <div className="flex flex-wrap items-center gap-2">
-        <AdminButton disabled={!allChecked} aria-describedby="approval-hint" onClick={onApprove}>
-          Approve merchant
-        </AdminButton>
-        <AdminButton variant="outline" onClick={onRequest}>
-          Request changes
-        </AdminButton>
-        <AdminButton variant="danger" onClick={onReject}>
-          Reject
-        </AdminButton>
-      </div>
+          <div className="flex items-center gap-3">
+            <h3 className="text-base font-semibold leading-6">Review checklist</h3>
+            <p className="text-xs leading-[18px] text-muted">
+              {completed}/{reviewChecks.length} complete
+            </p>
+          </div>
+          <div className="flex flex-col gap-3">
+            {reviewChecks.map((label, index) => (
+              <Checkbox key={label} checked={checks[index]} onChange={(value) => onCheck(index, value)} label={label} />
+            ))}
+          </div>
+          <p id="approval-hint" className="text-xs leading-[18px] text-muted">
+            Complete all checks to approve this merchant.
+          </p>
         </>
       ) : null}
+
+      <div className="flex flex-wrap items-center gap-2">
+        {submission.status === "pending" ? (
+          <>
+            <AdminButton disabled={!allChecked} aria-describedby="approval-hint" onClick={onApprove}>
+              Approve merchant
+            </AdminButton>
+            <AdminButton variant="outline" onClick={onReject}>
+              Reject
+            </AdminButton>
+          </>
+        ) : null}
+        <AdminButton variant="danger" onClick={onDelete}>
+          Delete
+        </AdminButton>
+      </div>
     </Surface>
   );
 }
@@ -322,33 +315,25 @@ const bannerTones = {
   pending: "bg-mist text-muted",
   overdue: "bg-warn-bg text-warn-fg",
   approved: "bg-wash text-success",
-  changes_requested: "bg-info-bg text-info",
+  suspended: "bg-danger-bg text-danger-dark",
   rejected: "bg-danger-bg text-danger-dark",
 } as const;
 
-function DecisionBanner({ submission }: { submission: Submission }) {
+function DecisionBanner({ submission, now }: { submission: Submission; now: number }) {
   const { status, note = [] } = submission;
-  const tone = status === "pending" ? (isOverdue(submission) ? "overdue" : "pending") : status;
-  const waiting = daysWaiting(submission);
+  const overdue = isOverdue(submission, now);
+  const tone = status === "pending" ? (overdue ? "overdue" : "pending") : status;
+  const waiting = daysWaiting(submission, now);
 
   return (
     <div className={cn("flex items-start gap-[10px] rounded-lg p-3 text-xs leading-[18px]", bannerTones[tone])}>
       <Icon name="alert" className="mt-px size-[18px]" />
       {status === "pending" ? (
         <p>
-          {isOverdue(submission)
+          {overdue
             ? `Waiting ${waiting} days. Past the ${REVIEW_TARGET_DAYS}-day review target.`
-            : `Waiting ${waiting} days. Within the ${REVIEW_TARGET_DAYS}-day review target.`}
+            : `Waiting ${waiting} ${waiting === 1 ? "day" : "days"}. Within the ${REVIEW_TARGET_DAYS}-day review target.`}
         </p>
-      ) : status === "changes_requested" ? (
-        <div className="flex flex-col gap-0.5">
-          <p>Changes requested</p>
-          <ul className="flex flex-col gap-0.5">
-            {note.map((line) => (
-              <li key={line}>• {line}</li>
-            ))}
-          </ul>
-        </div>
       ) : (
         <p>
           {statusLabels[status]} — {note.join(" ") || "Decision recorded."}

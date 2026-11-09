@@ -20,14 +20,13 @@ import { Select } from "./select";
 export const statusTones: Record<SubmissionStatus, PillTone> = {
   pending: "warning",
   approved: "success",
-  changes_requested: "info",
   rejected: "danger",
+  suspended: "danger",
 };
 
 const tabs: { status: SubmissionStatus; label: string }[] = [
   { status: "pending", label: "Pending" },
   { status: "approved", label: "Approved" },
-  { status: "changes_requested", label: "Changes requested" },
   { status: "rejected", label: "Rejected" },
 ];
 
@@ -38,6 +37,7 @@ type ReviewQueueProps = {
   onSelect?: (submission: Submission) => void;
   hrefFor?: (submission: Submission) => string;
   className?: string;
+  now: number;
 };
 
 function QueueRow({
@@ -45,7 +45,9 @@ function QueueRow({
   selected,
   onSelect,
   href,
+  now,
 }: {
+  now: number;
   submission: Submission;
   selected: boolean;
   onSelect?: (submission: Submission) => void;
@@ -69,7 +71,7 @@ function QueueRow({
         {submission.status === "pending" ? (
           <>
             <StatusPill tone="warning">
-              {formatWaiting(daysWaiting(submission))}
+              {formatWaiting(daysWaiting(submission, now))}
             </StatusPill>
             <span className="text-xs leading-[18px] text-muted">Pending</span>
           </>
@@ -96,7 +98,7 @@ function QueueRow({
   );
 }
 
-export function ReviewQueue({ title, submissions, selectedId, onSelect, hrefFor, className }: ReviewQueueProps) {
+export function ReviewQueue({ title, submissions, selectedId, onSelect, hrefFor, className, now }: ReviewQueueProps) {
   const [tab, setTab] = useState<SubmissionStatus>("pending");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SubmissionSort>("oldest");
@@ -107,7 +109,7 @@ export function ReviewQueue({ title, submissions, selectedId, onSelect, hrefFor,
   const rows = useMemo(
     () =>
       sortSubmissions(
-        submissions.filter((item) => item.status === tab && matchesQuery(item, query)),
+        submissions.filter((item) => (tab === "approved" ? item.status === "approved" || item.status === "suspended" : item.status === tab) && matchesQuery(item, query)),
         sort
       ),
     [submissions, tab, query, sort]
@@ -157,7 +159,7 @@ export function ReviewQueue({ title, submissions, selectedId, onSelect, hrefFor,
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Business name or merchant ID"
+              placeholder="Business, owner, or reference"
               className="h-11 w-full rounded-lg border border-hairline bg-white pl-11 pr-4 text-sm text-body transition-colors placeholder:text-subtle hover:border-outline focus-visible:border-burnt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
             />
           </div>
@@ -177,7 +179,7 @@ export function ReviewQueue({ title, submissions, selectedId, onSelect, hrefFor,
       <div id={panelId} role="tabpanel" className="flex flex-col gap-2">
         {rows.length === 0 ? (
           <p role="status" className="px-3 py-6 text-sm text-muted">
-            {query.trim() ? "No submissions match your search." : "No submissions in this view."}
+            {query.trim() ? "No submissions match your search." : "No submissions in this view yet."}
           </p>
         ) : (
           rows.map((submission) => (
@@ -187,6 +189,7 @@ export function ReviewQueue({ title, submissions, selectedId, onSelect, hrefFor,
               selected={submission.id === selectedId}
               onSelect={onSelect}
               href={hrefFor?.(submission)}
+              now={now}
             />
           ))
         )}

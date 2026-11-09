@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { activityEvents, formatEventTime, type ActivityEvent } from "@/lib/admin/activity";
+import { formatEventTime, type ActivityEvent } from "@/lib/admin/activity";
 import { ActivityDetailsDialog } from "../activity-details-dialog";
 import { AdminModal } from "../admin-modal";
 import { Icon } from "../icon";
 import { Surface } from "../primitives";
 
-export function RecentDecisions() {
+export function RecentDecisions({ events, now }: { events: ActivityEvent[]; now: number }) {
   const [selected, setSelected] = useState<ActivityEvent | null>(null);
 
   return (
@@ -22,8 +22,9 @@ export function RecentDecisions() {
           View log →
         </Link>
       </div>
+      {events.length === 0 ? <p className="px-[22px] pb-6 text-sm text-muted">No decisions recorded yet.</p> : null}
       <ul className="flex flex-col">
-        {activityEvents.map((event) => (
+        {events.map((event) => (
           <li key={event.id} className="border-b border-line py-1.5 last:border-b-0">
             <button
               type="button"
@@ -36,7 +37,7 @@ export function RecentDecisions() {
                 <span className="truncate text-sm leading-[21px] text-muted">
                   {event.actor} · {event.action}
                 </span>
-                <span className="truncate text-xs leading-[18px] text-muted">{formatEventTime(event)}</span>
+                <span className="truncate text-xs leading-[18px] text-muted">{formatEventTime(event, now)}</span>
               </span>
             </button>
           </li>
@@ -44,7 +45,7 @@ export function RecentDecisions() {
       </ul>
 
       <AdminModal open={selected !== null} onClose={() => setSelected(null)}>
-        {selected ? <ActivityDetailsDialog event={selected} onClose={() => setSelected(null)} /> : null}
+        {selected ? <ActivityDetailsDialog event={selected} now={now} onClose={() => setSelected(null)} /> : null}
       </AdminModal>
     </Surface>
   );

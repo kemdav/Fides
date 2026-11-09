@@ -5,7 +5,7 @@ export const landingLinks = {
   features: "#features",
   pricing: "#pricing",
   login: "/login",
-  signup: "/request-account",
+  signup: "/register",
   getStarted: "#pricing",
   bookDemo: "#contact",
   contact: "#contact",

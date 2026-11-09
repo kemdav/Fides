@@ -1,5 +1,6 @@
 import { getMailer } from "@/lib/mail/mailer";
-import { publicEnv } from "@/lib/env";
+import { publicEnv, requireServerEnv } from "@/lib/env";
+import { getAdminClient } from "@/lib/supabase/admin";
 import { RESERVED_SUBDOMAINS } from "@/lib/tenant/constants";
 
 import {
@@ -37,18 +38,8 @@ function sanitizeAccount(
   };
 }
 
-interface GlobalFidesStore {
-  requests: AccountRequestRecord[];
-  accounts: PlatformAccount[];
-  emails: DispatchedEmailRecord[];
-}
-
-const globalForFides = globalThis as unknown as {
-  __fidesOnboardingStore?: GlobalFidesStore;
-};
-
-function generateReferenceCode(num?: number): string {
-  const digits = num ?? Math.floor(1000 + Math.random() * 9000);
+function generateReferenceCode(): string {
+  const digits = Math.floor(1000 + Math.random() * 9000);
   return `REQ-2026-${digits}`;
 }
 
@@ -61,240 +52,10 @@ function generateShortToken(prefix = "RST"): string {
   return `${prefix}-${code}`;
 }
 
-function createInitialStore(): GlobalFidesStore {
-  const requests: AccountRequestRecord[] = [
-    {
-      id: "b19f3d21-6c40-4c9a-9f88-100000000001",
-      referenceCode: "REQ-2026-1042",
-      businessName: "Apex Dental Clinic",
-      category: "dental",
-      slug: "apexdental",
-      status: "active",
-      ownerName: "Dr. Elena Rostova",
-      ownerEmail: "elena@apexdental.ph",
-      phone: "+63 2 8812 4400",
-      address: "Unit 402, One Ayala Medical Tower, Makati City",
-      estimatedStaff: "6-15",
-      licenseOrTaxId: "DOH-2026-DNT-4410",
-      notes: "Full-service general dentistry, prosthodontics, and pediatric dental chairs.",
-      reviewerNotes: "Verified PRC clinic registration and business permit. Subdomain active.",
-      reviewedBy: "admin@fides.app",
-      resetToken: null,
-      resetRequestedAt: null,
-      revisionCount: 0,
-      createdAt: "2026-10-14T08:30:00.000Z",
-      updatedAt: "2026-10-15T10:15:00.000Z",
-    },
-    {
-      id: "b19f3d21-6c40-4c9a-9f88-100000000002",
-      referenceCode: "REQ-2026-1089",
-      businessName: "Lumina Orthodontics & Oral Surgery",
-      category: "dental",
-      slug: "luminaortho",
-      status: "active",
-      ownerName: "Dr. Marco Santos",
-      ownerEmail: "marco@luminaortho.ph",
-      phone: "+63 2 8705 1190",
-      address: "High Street South Corporate Plaza, BGC, Taguig",
-      estimatedStaff: "16-50",
-      licenseOrTaxId: "DOH-2026-ORT-8821",
-      notes: "Multi-chair orthodontic studio requiring 3D scan booking slots and walk-in triage.",
-      reviewerNotes: "Approved after credential review. Active on luminaortho.fides.app.",
-      reviewedBy: "admin@fides.app",
-      resetToken: null,
-      resetRequestedAt: null,
-      revisionCount: 0,
-      createdAt: "2026-10-16T09:10:00.000Z",
-      updatedAt: "2026-10-17T14:20:00.000Z",
-    },
-    {
-      id: "b19f3d21-6c40-4c9a-9f88-100000000003",
-      referenceCode: "REQ-2026-4821",
-      businessName: "BrightSmiles Family Dental",
-      category: "dental",
-      slug: "brightsmiles",
-      status: "pending",
-      ownerName: "Dr. Camille Reyes",
-      ownerEmail: "camille@brightsmiles.ph",
-      phone: "+63 917 550 2310",
-      address: "312 Katipunan Ave, Loyola Heights, Quezon City",
-      estimatedStaff: "6-15",
-      licenseOrTaxId: "DOH-2026-DNT-7719",
-      notes: "Requesting onboarding for 4 dental chairs and automated SMS/email patient reminders.",
-      reviewerNotes: null,
-      reviewedBy: null,
-      resetToken: "ACT-7K9P2M",
-      resetRequestedAt: null,
-      revisionCount: 0,
-      createdAt: "2026-10-21T11:45:00.000Z",
-      updatedAt: "2026-10-21T11:45:00.000Z",
-    },
-    {
-      id: "b19f3d21-6c40-4c9a-9f88-100000000004",
-      referenceCode: "REQ-2026-5104",
-      businessName: "Veritas Diagnostic & Medical Clinic",
-      category: "medical",
-      slug: "veritasmedical",
-      status: "pending",
-      ownerName: "Dr. Julian Chua",
-      ownerEmail: "julian@veritasmedical.ph",
-      phone: "+63 918 402 9912",
-      address: "Cebu IT Park, Lahug, Cebu City",
-      estimatedStaff: "16-50",
-      licenseOrTaxId: "DOH-2026-MED-3012",
-      notes: "Outpatient consultations and laboratory diagnostics scheduling.",
-      reviewerNotes: null,
-      reviewedBy: null,
-      resetToken: "ACT-4M8Q1X",
-      resetRequestedAt: null,
-      revisionCount: 0,
-      createdAt: "2026-10-22T01:15:00.000Z",
-      updatedAt: "2026-10-22T01:15:00.000Z",
-    },
-    {
-      id: "b19f3d21-6c40-4c9a-9f88-100000000005",
-      referenceCode: "REQ-2026-3910",
-      businessName: "Metro Care Dental Center",
-      category: "dental",
-      slug: "metrocaredental",
-      status: "suspended",
-      ownerName: "Dr. Ramon Bautista",
-      ownerEmail: "ramon@metrocaredental.ph",
-      phone: "+63 917 889 0011",
-      address: "Emerald Ave, Ortigas Center, Pasig City",
-      estimatedStaff: "1-5",
-      licenseOrTaxId: "PENDING-VERIFICATION",
-      notes: "Dental prophylaxis, root canal therapy, and cosmetic veneers.",
-      reviewerNotes:
-        "Clinic license number was incomplete. Use Reset Account Request (CPG-62) to update your registration details and resubmit.",
-      reviewedBy: "admin@fides.app",
-      resetToken: "RST-9N2V5K",
-      resetRequestedAt: "2026-10-20T16:00:00.000Z",
-      revisionCount: 1,
-      createdAt: "2026-10-19T13:20:00.000Z",
-      updatedAt: "2026-10-20T16:00:00.000Z",
-    },
-  ];
-
-  const accounts: PlatformAccount[] = [
-    {
-      id: "acc-owner-apexdental",
-      email: "elena@apexdental.ph",
-      fullName: "Dr. Elena Rostova",
-      passwordHash: "ClinicOwner2026!",
-      role: "owner",
-      scope: "client_owner",
-      tenantId: "b19f3d21-6c40-4c9a-9f88-100000000001",
-      tenantSlug: "apexdental",
-      tenantName: "Apex Dental Clinic",
-      status: "active",
-      resetToken: null,
-      createdAt: "2026-10-15T10:15:00.000Z",
-    },
-    {
-      id: "acc-owner-luminaortho",
-      email: "marco@luminaortho.ph",
-      fullName: "Dr. Marco Santos",
-      passwordHash: "ClinicOwner2026!",
-      role: "owner",
-      scope: "client_owner",
-      tenantId: "b19f3d21-6c40-4c9a-9f88-100000000002",
-      tenantSlug: "luminaortho",
-      tenantName: "Lumina Orthodontics & Oral Surgery",
-      status: "active",
-      resetToken: null,
-      createdAt: "2026-10-17T14:20:00.000Z",
-    },
-    {
-      id: "acc-user-sofia",
-      email: "sofia.cruz@apexdental.ph",
-      fullName: "Sofia Cruz (Lead Receptionist)",
-      passwordHash: "ClinicStaff2026!",
-      role: "receptionist",
-      scope: "client_user",
-      clientSubrole: "receptionist",
-      tenantId: "b19f3d21-6c40-4c9a-9f88-100000000001",
-      tenantSlug: "apexdental",
-      tenantName: "Apex Dental Clinic",
-      status: "active",
-      resetToken: null,
-      createdAt: "2026-10-16T08:00:00.000Z",
-    },
-    {
-      id: "acc-user-dr-lim",
-      email: "dr.miguel@apexdental.ph",
-      fullName: "Dr. Miguel Lim (Associate Dentist)",
-      passwordHash: "ClinicStaff2026!",
-      role: "staff",
-      scope: "client_user",
-      clientSubrole: "staff",
-      tenantId: "b19f3d21-6c40-4c9a-9f88-100000000001",
-      tenantSlug: "apexdental",
-      tenantName: "Apex Dental Clinic",
-      status: "active",
-      resetToken: null,
-      createdAt: "2026-10-16T09:30:00.000Z",
-    },
-    {
-      id: "acc-user-patient-juan",
-      email: "juan.delacruz@patient.ph",
-      fullName: "Juan Dela Cruz (Dental Patient)",
-      passwordHash: "PatientPass2026!",
-      role: "staff",
-      scope: "client_user",
-      clientSubrole: "patient",
-      tenantId: "b19f3d21-6c40-4c9a-9f88-100000000001",
-      tenantSlug: "apexdental",
-      tenantName: "Apex Dental Clinic",
-      status: "active",
-      resetToken: null,
-      createdAt: "2026-10-18T11:00:00.000Z",
-    },
-    {
-      id: "acc-fides-admin",
-      email: "admin@fides.app",
-      fullName: "Fides Platform Administrator",
-      passwordHash: "FidesAdmin2026!",
-      role: "admin",
-      scope: "fides_admin",
-      tenantId: null,
-      tenantSlug: null,
-      tenantName: "Fides Platform Operations",
-      status: "active",
-      resetToken: null,
-      createdAt: "2026-10-01T00:00:00.000Z",
-    },
-  ];
-
-  const emails: DispatchedEmailRecord[] = [
-    {
-      id: "mail-1",
-      to: "camille@brightsmiles.ph",
-      subject: "[Fides] Account Request Received — REQ-2026-4821",
-      summary:
-        "Your onboarding request for BrightSmiles Family Dental (brightsmiles.fides.app) has been received and queued for Fides Admin verification.",
-      actionUrl: "/reset-request?ref=REQ-2026-4821",
-      referenceCode: "REQ-2026-4821",
-      token: "ACT-7K9P2M",
-      sentAt: "2026-10-21T11:45:02.000Z",
-    },
-  ];
-
-  return { requests, accounts, emails };
-}
-
-function getStore(): GlobalFidesStore {
-  if (!globalForFides.__fidesOnboardingStore) {
-    globalForFides.__fidesOnboardingStore = createInitialStore();
-  }
-  return globalForFides.__fidesOnboardingStore;
-}
-
 export function validateSlugAvailability(
   rawSlug: string,
   excludeRequestId?: string
 ): SlugValidationResult {
-  const store = getStore();
   const normalized = normalizeSlugInput(rawSlug);
   const domain = publicEnv.platformDomain || "fides.app";
   const previewHost = `${normalized || "yourclinic"}.${domain}`;
@@ -333,36 +94,10 @@ export function validateSlugAvailability(
     };
   }
 
-  const collision = store.requests.find(
-    (req) =>
-      req.slug === normalized &&
-      req.id !== excludeRequestId &&
-      req.status !== "archived"
-  );
-
-  if (collision) {
-    const suggestions = [
-      `${normalized}ph`,
-      `${normalized}clinic`,
-      `${normalized}-care`,
-    ].filter(
-      (candidate) =>
-        !store.requests.some((r) => r.slug === candidate) &&
-        !RESERVED_SUBDOMAINS.has(candidate)
-    );
-
-    return {
-      slug: rawSlug,
-      normalizedSlug: normalized,
-      available: false,
-      reason:
-        collision.status === "active"
-          ? `Already claimed by active tenant "${collision.businessName}".`
-          : `Currently reserved by a pending request (${collision.referenceCode}).`,
-      previewHost,
-      suggestions,
-    };
-  }
+  // Note: For client-side validation, we don't check database here.
+  // The actual availability check happens server-side on submit.
+  // We could add an API call here, but for now we return available=true
+  // and let the server validate on actual submission.
 
   return {
     slug: rawSlug,
@@ -374,10 +109,10 @@ export function validateSlugAvailability(
   };
 }
 
-export function listAccountRequests(filters?: {
+export async function listAccountRequests(filters?: {
   status?: TenantStatus | "all";
   search?: string;
-}): {
+}): Promise<{
   requests: AccountRequestRecord[];
   counts: {
     total: number;
@@ -387,12 +122,43 @@ export function listAccountRequests(filters?: {
     archived: number;
   };
   recentEmails: DispatchedEmailRecord[];
-} {
-  const store = getStore();
-  const all = [...store.requests].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+}> {
+  const admin = getAdminClient();
+  if (!admin) {
+    // Fallback to empty data if no admin client
+    return {
+      requests: [],
+      counts: { total: 0, pending: 0, active: 0, suspended: 0, archived: 0 },
+      recentEmails: [],
+    };
+  }
 
+  let query = admin
+    .from("account_requests")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (filters?.status && filters.status !== "all") {
+    query = query.eq("status", filters.status);
+  }
+
+  if (filters?.search && filters.search.trim() !== "") {
+    const q = filters.search.trim();
+    query = query.or(`business_name.ilike.%${q}%,slug.ilike.%${q}%,owner_name.ilike.%${q}%,owner_email.ilike.%${q}%,reference_code.ilike.%${q}%`);
+  }
+
+  const { data: requests, error } = await query;
+
+  if (error) {
+    console.error("Error fetching account requests:", error);
+    return {
+      requests: [],
+      counts: { total: 0, pending: 0, active: 0, suspended: 0, archived: 0 },
+      recentEmails: [],
+    };
+  }
+
+  const all = requests || [];
   const counts = {
     total: all.length,
     pending: all.filter((r) => r.status === "pending").length,
@@ -410,24 +176,62 @@ export function listAccountRequests(filters?: {
     const q = filters.search.trim().toLowerCase();
     filtered = filtered.filter(
       (r) =>
-        r.businessName.toLowerCase().includes(q) ||
+        r.business_name.toLowerCase().includes(q) ||
         r.slug.toLowerCase().includes(q) ||
-        r.ownerName.toLowerCase().includes(q) ||
-        r.ownerEmail.toLowerCase().includes(q) ||
-        r.referenceCode.toLowerCase().includes(q)
+        r.owner_name.toLowerCase().includes(q) ||
+        r.owner_email.toLowerCase().includes(q) ||
+        r.reference_code.toLowerCase().includes(q)
     );
   }
 
   return {
-    requests: filtered,
+    requests: filtered.map(mapAccountRequest),
     counts,
-    recentEmails: store.emails.slice(0, 8),
+    recentEmails: [], // Emails not stored in DB for now
   };
 }
 
-export function getActiveTenants(): AccountRequestRecord[] {
-  const store = getStore();
-  return store.requests.filter((r) => r.status === "active");
+function mapAccountRequest(r: any): AccountRequestRecord {
+  return {
+    id: r.id,
+    referenceCode: r.reference_code,
+    businessName: r.business_name,
+    category: r.category,
+    slug: r.slug,
+    status: r.status,
+    ownerName: r.owner_name,
+    ownerEmail: r.owner_email,
+    phone: r.phone,
+    address: r.address,
+    estimatedStaff: r.estimated_staff,
+    licenseOrTaxId: r.license_or_tax_id || "",
+    notes: r.notes || "",
+    reviewerNotes: r.reviewer_notes,
+    reviewedBy: r.reviewed_by,
+    resetToken: r.reset_token,
+    resetRequestedAt: r.reset_requested_at,
+    revisionCount: r.revision_count || 0,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  };
+}
+
+export async function getActiveTenants(): Promise<AccountRequestRecord[]> {
+  const admin = getAdminClient();
+  if (!admin) return [];
+
+  const { data, error } = await admin
+    .from("account_requests")
+    .select("*")
+    .eq("status", "active")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching active tenants:", error);
+    return [];
+  }
+
+  return (data || []).map(mapAccountRequest);
 }
 
 export async function createAccountRequest(
@@ -436,53 +240,78 @@ export async function createAccountRequest(
   record: AccountRequestRecord;
   emailDispatched: DispatchedEmailRecord;
 }> {
-  const store = getStore();
+  const admin = getAdminClient();
+  if (!admin) {
+    throw new Error("Database connection not available.");
+  }
+
+  // Validate slug on server side
   const slugCheck = validateSlugAvailability(input.slug);
   if (!slugCheck.available) {
     throw new Error(slugCheck.reason);
+  }
+
+  // Double-check against database
+  const { data: existingSlug } = await admin
+    .from("account_requests")
+    .select("id")
+    .eq("slug", slugCheck.normalizedSlug)
+    .neq("status", "archived")
+    .maybeSingle();
+
+  if (existingSlug) {
+    throw new Error(`Subdomain "${slugCheck.normalizedSlug}" is already taken.`);
   }
 
   const now = new Date().toISOString();
   const referenceCode = generateReferenceCode();
   const activationToken = generateShortToken("ACT");
 
-  const record: AccountRequestRecord = {
-    id: crypto.randomUUID(),
-    referenceCode,
-    businessName: input.businessName,
-    category: input.category,
-    slug: slugCheck.normalizedSlug,
-    status: "pending",
-    ownerName: input.ownerName,
-    ownerEmail: input.ownerEmail.toLowerCase(),
-    phone: input.phone,
-    address: input.address,
-    estimatedStaff: input.estimatedStaff,
-    licenseOrTaxId: input.licenseOrTaxId || "PENDING-REVIEW",
-    notes: input.notes || "",
-    reviewerNotes: null,
-    reviewedBy: null,
-    resetToken: activationToken,
-    resetRequestedAt: null,
-    revisionCount: 0,
-    createdAt: now,
-    updatedAt: now,
-  };
+  const { data: record, error } = await admin
+    .from("account_requests")
+    .insert({
+      reference_code: referenceCode,
+      business_name: input.businessName,
+      category: input.category,
+      slug: slugCheck.normalizedSlug,
+      status: "pending",
+      owner_name: input.ownerName,
+      owner_email: input.ownerEmail.toLowerCase(),
+      phone: input.phone,
+      address: input.address,
+      estimated_staff: input.estimatedStaff,
+      license_or_tax_id: input.licenseOrTaxId || "PENDING-REVIEW",
+      notes: input.notes || "",
+      reviewer_notes: null,
+      reviewed_by: null,
+      reset_token: activationToken,
+      reset_requested_at: null,
+      revision_count: 0,
+      created_at: now,
+      updated_at: now,
+    })
+    .select()
+    .single();
 
-  store.requests.unshift(record);
+  if (error) {
+    console.error("Error creating account request:", error);
+    throw new Error("Failed to create account request.");
+  }
+
+  const mappedRecord = mapAccountRequest(record);
 
   const subject = `[Fides] Account Request Received — ${referenceCode}`;
-  const summary = `Thank you, ${record.ownerName}. Your request for ${record.businessName} (${record.slug}.${publicEnv.platformDomain || "fides.app"}) is queued for Fides Admin review. Reference: ${referenceCode}.`;
+  const summary = `Thank you, ${mappedRecord.ownerName}. Your request for ${mappedRecord.businessName} (${mappedRecord.slug}.${publicEnv.platformDomain || "fides.app"}) is queued for Fides Admin review. Reference: ${referenceCode}.`;
 
   await getMailer().send({
-    to: { name: record.ownerName, address: record.ownerEmail },
+    to: { name: mappedRecord.ownerName, address: mappedRecord.ownerEmail },
     subject,
     text: `${summary}\nActivation/Tracking Token: ${activationToken}`,
   });
 
   const emailLog: DispatchedEmailRecord = {
     id: crypto.randomUUID(),
-    to: record.ownerEmail,
+    to: mappedRecord.ownerEmail,
     subject,
     summary,
     actionUrl: `/reset-request?ref=${encodeURIComponent(referenceCode)}`,
@@ -490,9 +319,8 @@ export async function createAccountRequest(
     token: activationToken,
     sentAt: now,
   };
-  store.emails.unshift(emailLog);
 
-  return { record, emailDispatched: emailLog };
+  return { record: mappedRecord, emailDispatched: emailLog };
 }
 
 export async function updateAccountRequestStatus(
@@ -504,110 +332,224 @@ export async function updateAccountRequestStatus(
   record: AccountRequestRecord;
   emailDispatched: DispatchedEmailRecord;
 }> {
-  const store = getStore();
-  const target = store.requests.find((r) => r.id === id);
-  if (!target) {
+  const admin = getAdminClient();
+  if (!admin) {
+    throw new Error("Database connection not available.");
+  }
+
+  const { data: existing } = await admin
+    .from("account_requests")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (!existing) {
     throw new Error("Account request not found.");
   }
 
   const now = new Date().toISOString();
-  target.status = status;
-  target.reviewerNotes =
-    reviewerNotes.trim() ||
-    (status === "active"
-      ? "Verified and approved by Fides Platform Administration."
-      : status === "suspended"
-        ? "Additional verification required. Please review notes and reset your request."
-        : "Updated by platform administrator.");
-  target.reviewedBy = reviewedBy;
-  target.updatedAt = now;
+  const mappedStatus = status === "active" ? "active" : status === "suspended" ? "suspended" : "archived";
+
+  const { data: record, error } = await admin
+    .from("account_requests")
+    .update({
+      status: mappedStatus,
+      reviewer_notes:
+        reviewerNotes.trim() ||
+        (mappedStatus === "active"
+          ? "Verified and approved by Fides Platform Administration."
+          : mappedStatus === "suspended"
+            ? "Additional verification required. Please review notes and reset your request."
+            : "Updated by platform administrator."),
+      reviewed_by: reviewedBy,
+      updated_at: now,
+    })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error updating account request:", error);
+    throw new Error("Failed to update account request.");
+  }
+
+  const mappedRecord = mapAccountRequest(record);
+
+  // If approved, create tenant and user account
+  if (mappedStatus === "active") {
+    await createTenantAndUser(mappedRecord);
+  }
 
   const subject =
-    status === "active"
-      ? `[Fides] Approved — ${target.businessName} (${target.slug}.fides.app) is Active`
-      : status === "suspended"
-        ? `[Fides] Action Required on Account Request ${target.referenceCode}`
-        : `[Fides] Status Update for ${target.referenceCode} (${status})`;
+    mappedStatus === "active"
+      ? `[Fides] Approved — ${mappedRecord.businessName} (${mappedRecord.slug}.fides.app) is Active`
+      : mappedStatus === "suspended"
+        ? `[Fides] Action Required on Account Request ${mappedRecord.referenceCode}`
+        : `[Fides] Status Update for ${mappedRecord.referenceCode} (${mappedStatus})`;
 
   const summary =
-    status === "active"
-      ? `Congratulations ${target.ownerName}! ${target.businessName} is now active on ${target.slug}.${publicEnv.platformDomain || "fides.app"}.`
-      : `Your account request ${target.referenceCode} for ${target.businessName} was marked as "${status}". Reviewer note: ${target.reviewerNotes}`;
+    mappedStatus === "active"
+      ? `Congratulations ${mappedRecord.ownerName}! ${mappedRecord.businessName} is now active on ${mappedRecord.slug}.${publicEnv.platformDomain || "fides.app"}.`
+      : `Your account request ${mappedRecord.referenceCode} for ${mappedRecord.businessName} was marked as "${mappedStatus}". Reviewer note: ${mappedRecord.reviewer_notes}`;
 
   await getMailer().send({
-    to: { name: target.ownerName, address: target.ownerEmail },
+    to: { name: mappedRecord.ownerName, address: mappedRecord.ownerEmail },
     subject,
     text: summary,
   });
 
   const emailLog: DispatchedEmailRecord = {
     id: crypto.randomUUID(),
-    to: target.ownerEmail,
+    to: mappedRecord.ownerEmail,
     subject,
     summary,
-    actionUrl: `/reset-request?ref=${encodeURIComponent(target.referenceCode)}`,
-    referenceCode: target.referenceCode,
-    token: target.resetToken ?? undefined,
+    actionUrl: `/reset-request?ref=${encodeURIComponent(mappedRecord.referenceCode)}`,
+    referenceCode: mappedRecord.referenceCode,
+    token: mappedRecord.resetToken ?? undefined,
     sentAt: now,
   };
-  store.emails.unshift(emailLog);
 
-  return { record: target, emailDispatched: emailLog };
+  return { record: mappedRecord, emailDispatched: emailLog };
+}
+
+async function createTenantAndUser(record: AccountRequestRecord) {
+  const admin = getAdminClient();
+  if (!admin) return;
+
+  // Create tenant
+  const { data: tenant, error: tenantError } = await admin
+    .from("tenants")
+    .insert({
+      name: record.businessName,
+      slug: record.slug,
+      status: "active",
+      address: record.address,
+      phone: record.phone,
+      timezone: "Asia/Manila",
+    })
+    .select()
+    .single();
+
+  if (tenantError) {
+    console.error("Error creating tenant:", tenantError);
+    return;
+  }
+
+  // Create auth user
+  const { data: authData, error: authError } = await admin.auth.admin.createUser({
+    email: record.ownerEmail,
+    password: record.resetToken || "TempPass123!", // Use reset token as temp password
+    email_confirm: true,
+    user_metadata: {
+      full_name: record.ownerName,
+      role: "owner",
+      tenant_id: tenant.id,
+    },
+  });
+
+  if (authError) {
+    console.error("Error creating auth user:", authError);
+    return;
+  }
+
+  // Create profile
+  const { error: profileError } = await admin
+    .from("profiles")
+    .insert({
+      id: authData.user.id,
+      email: record.ownerEmail,
+      full_name: record.ownerName,
+      role: "owner",
+      tenant_id: tenant.id,
+    });
+
+  if (profileError) {
+    console.error("Error creating profile:", profileError);
+  }
+
+  // Create tenant membership
+  const { error: membershipError } = await admin
+    .from("tenant_memberships")
+    .insert({
+      tenant_id: tenant.id,
+      profile_id: authData.user.id,
+      role: "owner",
+    });
+
+  if (membershipError) {
+    console.error("Error creating tenant membership:", membershipError);
+  }
 }
 
 export function lookupApplicationByIdentifier(
   identifier: string
 ): AccountRequestRecord | null {
-  const store = getStore();
-  const normalized = identifier.trim().toLowerCase();
-  return (
-    store.requests.find(
-      (r) =>
-        r.referenceCode.toLowerCase() === normalized ||
-        r.ownerEmail.toLowerCase() === normalized ||
-        r.slug.toLowerCase() === normalized
-    ) ?? null
-  );
+  // This is a synchronous function used by client components
+  // For server-side lookups, use the API route
+  return null;
 }
 
 export async function resendApplicationActivation(requestId: string): Promise<{
   record: AccountRequestRecord;
   emailDispatched: DispatchedEmailRecord;
 }> {
-  const store = getStore();
-  const target = store.requests.find((r) => r.id === requestId);
-  if (!target) {
+  const admin = getAdminClient();
+  if (!admin) {
+    throw new Error("Database connection not available.");
+  }
+
+  const { data: existing } = await admin
+    .from("account_requests")
+    .select("*")
+    .eq("id", requestId)
+    .single();
+
+  if (!existing) {
     throw new Error("Account request record not found.");
   }
 
   const now = new Date().toISOString();
   const newToken = generateShortToken("ACT");
-  target.resetToken = newToken;
-  target.resetRequestedAt = now;
-  target.updatedAt = now;
 
-  const subject = `[Fides] Resent Activation & Verification Link — ${target.referenceCode}`;
-  const summary = `A fresh verification/activation token (${newToken}) was issued for ${target.businessName} (${target.slug}.fides.app).`;
+  const { data: record, error } = await admin
+    .from("account_requests")
+    .update({
+      reset_token: newToken,
+      reset_requested_at: now,
+      updated_at: now,
+    })
+    .eq("id", requestId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error resending activation:", error);
+    throw new Error("Failed to resend activation.");
+  }
+
+  const mappedRecord = mapAccountRequest(record);
+
+  const subject = `[Fides] Resent Activation & Verification Link — ${mappedRecord.referenceCode}`;
+  const summary = `A fresh verification/activation token (${newToken}) was issued for ${mappedRecord.businessName} (${mappedRecord.slug}.fides.app).`;
 
   await getMailer().send({
-    to: { name: target.ownerName, address: target.ownerEmail },
+    to: { name: mappedRecord.ownerName, address: mappedRecord.ownerEmail },
     subject,
     text: summary,
   });
 
   const emailLog: DispatchedEmailRecord = {
     id: crypto.randomUUID(),
-    to: target.ownerEmail,
+    to: mappedRecord.ownerEmail,
     subject,
     summary,
-    actionUrl: `/reset-request?ref=${encodeURIComponent(target.referenceCode)}`,
-    referenceCode: target.referenceCode,
+    actionUrl: `/reset-request?ref=${encodeURIComponent(mappedRecord.referenceCode)}`,
+    referenceCode: mappedRecord.referenceCode,
     token: newToken,
     sentAt: now,
   };
-  store.emails.unshift(emailLog);
 
-  return { record: target, emailDispatched: emailLog };
+  return { record: mappedRecord, emailDispatched: emailLog };
 }
 
 export async function resetAndReviseApplication(
@@ -627,60 +569,93 @@ export async function resetAndReviseApplication(
   record: AccountRequestRecord;
   emailDispatched: DispatchedEmailRecord;
 }> {
-  const store = getStore();
-  const target = store.requests.find((r) => r.id === requestId);
-  if (!target) {
+  const admin = getAdminClient();
+  if (!admin) {
+    throw new Error("Database connection not available.");
+  }
+
+  const { data: existing } = await admin
+    .from("account_requests")
+    .select("*")
+    .eq("id", requestId)
+    .single();
+
+  if (!existing) {
     throw new Error("Account request not found.");
   }
 
-  const slugValidation = validateSlugAvailability(updates.slug, target.id);
+  const slugValidation = validateSlugAvailability(updates.slug, requestId);
   if (!slugValidation.available) {
     throw new Error(slugValidation.reason);
+  }
+
+  // Double-check against database
+  const { data: existingSlug } = await admin
+    .from("account_requests")
+    .select("id")
+    .eq("slug", slugValidation.normalizedSlug)
+    .neq("id", requestId)
+    .neq("status", "archived")
+    .maybeSingle();
+
+  if (existingSlug) {
+    throw new Error(`Subdomain "${slugValidation.normalizedSlug}" is already taken.`);
   }
 
   const now = new Date().toISOString();
   const newToken = generateShortToken("RST");
 
-  target.businessName = updates.businessName;
-  target.category = updates.category;
-  target.slug = slugValidation.normalizedSlug;
-  target.ownerName = updates.ownerName;
-  target.ownerEmail = updates.ownerEmail.toLowerCase();
-  target.phone = updates.phone;
-  target.address = updates.address;
-  target.estimatedStaff = updates.estimatedStaff;
-  if (updates.notes !== undefined) {
-    target.notes = updates.notes;
-  }
-  target.status = "pending";
-  target.reviewerNotes = `Application reset and revised by applicant (Revision #${target.revisionCount + 1}). Ready for re-verification.`;
-  target.resetToken = newToken;
-  target.resetRequestedAt = now;
-  target.revisionCount += 1;
-  target.updatedAt = now;
+  const { data: record, error } = await admin
+    .from("account_requests")
+    .update({
+      business_name: updates.businessName,
+      category: updates.category,
+      slug: slugValidation.normalizedSlug,
+      owner_name: updates.ownerName,
+      owner_email: updates.ownerEmail.toLowerCase(),
+      phone: updates.phone,
+      address: updates.address,
+      estimated_staff: updates.estimatedStaff,
+      notes: updates.notes || "",
+      status: "pending",
+      reviewer_notes: `Application reset and revised by applicant (Revision #${(existing.revision_count || 0) + 1}). Ready for re-verification.`,
+      reset_token: newToken,
+      reset_requested_at: now,
+      revision_count: (existing.revision_count || 0) + 1,
+      updated_at: now,
+    })
+    .eq("id", requestId)
+    .select()
+    .single();
 
-  const subject = `[Fides] Account Request Reset & Revised — ${target.referenceCode}`;
-  const summary = `Your revised application for ${target.businessName} (${target.slug}.fides.app) has been reset to Pending Review (Revision #${target.revisionCount}).`;
+  if (error) {
+    console.error("Error resetting application:", error);
+    throw new Error("Failed to reset application.");
+  }
+
+  const mappedRecord = mapAccountRequest(record);
+
+  const subject = `[Fides] Account Request Reset & Revised — ${mappedRecord.referenceCode}`;
+  const summary = `Your revised application for ${mappedRecord.businessName} (${mappedRecord.slug}.fides.app) has been reset to Pending Review (Revision #${mappedRecord.revisionCount}).`;
 
   await getMailer().send({
-    to: { name: target.ownerName, address: target.ownerEmail },
+    to: { name: mappedRecord.ownerName, address: mappedRecord.ownerEmail },
     subject,
     text: summary,
   });
 
   const emailLog: DispatchedEmailRecord = {
     id: crypto.randomUUID(),
-    to: target.ownerEmail,
+    to: mappedRecord.ownerEmail,
     subject,
     summary,
-    actionUrl: `/reset-request?ref=${encodeURIComponent(target.referenceCode)}`,
-    referenceCode: target.referenceCode,
+    actionUrl: `/reset-request?ref=${encodeURIComponent(mappedRecord.referenceCode)}`,
+    referenceCode: mappedRecord.referenceCode,
     token: newToken,
     sentAt: now,
   };
-  store.emails.unshift(emailLog);
 
-  return { record: target, emailDispatched: emailLog };
+  return { record: mappedRecord, emailDispatched: emailLog };
 }
 
 export async function requestAccountPasswordReset(params: {
@@ -692,61 +667,9 @@ export async function requestAccountPasswordReset(params: {
   resetToken: string;
   emailDispatched: DispatchedEmailRecord;
 }> {
-  const store = getStore();
-  const normalizedEmail = params.email.trim().toLowerCase();
-
-  const account = store.accounts.find((acc) => {
-    const emailMatch = acc.email.toLowerCase() === normalizedEmail;
-    const scopeMatch = acc.scope === params.scope;
-    const tenantMatch =
-      params.scope === "fides_admin" ||
-      !params.tenantSlug ||
-      acc.tenantSlug === params.tenantSlug;
-    return emailMatch && scopeMatch && tenantMatch;
-  });
-
-  if (!account) {
-    throw new Error(
-      `No matching ${
-        params.scope === "client_owner"
-          ? "Client Business Owner"
-          : params.scope === "client_user"
-            ? "Clinic Staff / Client User"
-            : "Fides Platform Admin"
-      } account found for "${params.email}".`
-    );
-  }
-
-  const now = new Date().toISOString();
-  const resetToken = generateShortToken("PWD");
-  account.resetToken = resetToken;
-  account.status = "pending_reset";
-
-  const subject = `[Fides] Reset Account Credentials — Token ${resetToken}`;
-  const summary = `Password reset requested for ${account.fullName} (${account.email}) under ${account.tenantName ?? "Fides Platform"}. Use recovery token: ${resetToken}`;
-
-  await getMailer().send({
-    to: { name: account.fullName, address: account.email },
-    subject,
-    text: summary,
-  });
-
-  const emailLog: DispatchedEmailRecord = {
-    id: crypto.randomUUID(),
-    to: account.email,
-    subject,
-    summary,
-    actionUrl: `/reset-request?mode=password&email=${encodeURIComponent(account.email)}&token=${encodeURIComponent(resetToken)}`,
-    token: resetToken,
-    sentAt: now,
-  };
-  store.emails.unshift(emailLog);
-
-  return {
-    account: sanitizeAccount(account),
-    resetToken,
-    emailDispatched: emailLog,
-  };
+  // This is a complex function that would need to query auth.users and profiles
+  // For now, throw an error indicating it needs implementation
+  throw new Error("Password reset not yet implemented for Supabase Auth.");
 }
 
 export async function completeAccountPasswordReset(params: {
@@ -754,40 +677,44 @@ export async function completeAccountPasswordReset(params: {
   resetToken: string;
   newPassword: string;
 }): Promise<Omit<PlatformAccount, "passwordHash">> {
-  const store = getStore();
-  const normalizedEmail = params.email.trim().toLowerCase();
-  const normalizedToken = params.resetToken.trim().toUpperCase();
-
-  const account = store.accounts.find(
-    (acc) => acc.email.toLowerCase() === normalizedEmail
-  );
-
-  if (!account) {
-    throw new Error(`No account found for ${params.email}.`);
-  }
-
-  if (
-    account.resetToken &&
-    account.resetToken.toUpperCase() !== normalizedToken
-  ) {
-    throw new Error(
-      `Invalid recovery token "${params.resetToken}". Expected "${account.resetToken}".`
-    );
-  }
-
-  account.passwordHash = params.newPassword;
-  account.status = "active";
-  account.resetToken = null;
-
-  return sanitizeAccount(account);
+  throw new Error("Password reset not yet implemented for Supabase Auth.");
 }
 
-export function listPlatformAccounts(tenantSlug?: string): Array<
-  Omit<PlatformAccount, "passwordHash">
+export async function listPlatformAccounts(tenantSlug?: string): Promise<
+  Array<Omit<PlatformAccount, "passwordHash">>
 > {
-  const store = getStore();
-  const filtered = tenantSlug
-    ? store.accounts.filter((a) => a.tenantSlug === tenantSlug)
-    : store.accounts;
-  return filtered.map(sanitizeAccount);
+  const admin = getAdminClient();
+  if (!admin) return [];
+
+  let query = admin.from("profiles").select(`
+    *,
+    tenant:tenants(name, slug)
+  `);
+
+  if (tenantSlug) {
+    const { data: tenant } = await admin.from("tenants").select("id").eq("slug", tenantSlug).single();
+    if (tenant) {
+      query = query.eq("tenant_id", tenant.id);
+    }
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Error fetching platform accounts:", error);
+    return [];
+  }
+
+  return (data || []).map((p) => ({
+    id: p.id,
+    email: p.email || "",
+    fullName: p.full_name || "",
+    role: p.role,
+    scope: p.tenant_id ? "client_owner" : "fides_admin",
+    tenantId: p.tenant_id,
+    tenantSlug: p.tenant?.slug || null,
+    tenantName: p.tenant?.name || null,
+    status: "active",
+    createdAt: p.created_at,
+  }));
 }

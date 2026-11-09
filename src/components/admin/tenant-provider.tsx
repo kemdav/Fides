@@ -1,11 +1,13 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
-import { isRenewingSoon, sampleTenants, type Tenant, type TenantAccess } from "@/lib/admin/tenants";
-import { pluralize } from "@/lib/admin/tiers";
+import { useRouter } from "next/navigation";
+import { createContext, useContext, useState, useTransition, type ReactNode } from "react";
+import { accessAction, deleteAction, planAction, remindAction, resendAction } from "@/app/(admin)/admin/actions";
+import { isRenewingSoon, type PlanSummary, type Tenant, type TenantAccess } from "@/lib/admin/tenants";
 import { AdminModal } from "./admin-modal";
 import {
   BulkAccessDialog,
+  DeleteTenantDialog,
   SchedulePlanDialog,
   SuspendDialog,
   TenantDialog,
@@ -17,12 +19,17 @@ import { ResultDialog } from "./verification-dialogs";
 type DialogState =
   | { type: "tenant"; id: string }
   | { type: "suspend"; id: string }
+  | { type: "delete"; id: string }
   | { type: "schedule"; id: string; plan: string; access: TenantAccess }
   | { type: "bulk"; mode: BulkAccessMode; ids: string[]; onApplied?: () => void }
   | { type: "result"; title: string; message: string };
 
 type TenantsContextValue = {
   tenants: Tenant[];
+  plans: PlanSummary[];
+  now: number;
+  mailConfigured: boolean;
+  busy: boolean;
   openTenant: (id: string) => void;
   openBulkAccess: (mode: BulkAccessMode, ids: string[], onApplied?: () => void) => void;
   sendReminders: (ids: string[]) => void;
@@ -37,46 +44,81 @@ export function useTenants() {
   return value;
 }
 
-export function TenantsProvider({ children }: { children: ReactNode }) {
-  const [tenants, setTenants] = useState(sampleTenants);
+export function TenantsProvider({
+  tenants,
+  plans,
+  now,
+  mailConfigured,
+  children,
+}: {
+  tenants: Tenant[];
+  plans: PlanSummary[];
+  now: number;
+  mailConfigured: boolean;
+  children: ReactNode;
+}) {
+  const router = useRouter();
+  const [busy, startTransition] = useTransition();
   const [dialog, setDialog] = useState<DialogState | null>(null);
 
   const close = () => setDialog(null);
   const tenantFor = (id: string) => tenants.find((tenant) => tenant.id === id);
-  const current = dialog && (dialog.type === "tenant" || dialog.type === "suspend" || dialog.type === "schedule")
+  const current = dialog && (dialog.type === "tenant" || dialog.type === "suspend" || dialog.type === "schedule" || dialog.type === "delete")
     ? tenantFor(dialog.id)
     : undefined;
 
-  function setAccess(ids: string[], access: TenantAccess) {
-    setTenants((list) => list.map((tenant) => (ids.includes(tenant.id) ? { ...tenant, access } : tenant)));
+  function report(result: { ok: boolean; message?: string; warning?: string; error?: string }, title: string) {
+    if (result.ok) {
+      setDialog({ type: "result", title, message: [result.message, result.warning].filter(Boolean).join(" ") });
+      router.refresh();
+    } else {
+      setDialog({ type: "result", title: "Action failed", message: result.error ?? "Something went wrong." });
+    }
+  }
+
+  function setAccess(ids: string[], access: TenantAccess, reason: string, title: string, onApplied?: () => void) {
+    startTransition(async () => {
+      const result = await accessAction(ids, access, reason);
+      if (result.ok) onApplied?.();
+      report(result, title);
+    });
   }
 
   function save(tenant: Tenant, change: TenantChange) {
-    if (change.plan !== tenant.plan) {
+    if (change.plan !== tenant.planCode) {
       setDialog({ type: "schedule", id: tenant.id, plan: change.plan, access: change.access });
       return;
     }
-    setAccess([tenant.id], change.access);
-    setDialog({ type: "result", title: "Tenant changes saved", message: `${tenant.name} has been updated.` });
+    setAccess([tenant.id], change.access, change.reason, "Tenant changes saved");
   }
 
   function showResult(title: string, message: string) {
     setDialog({ type: "result", title, message });
   }
 
+  function remind(ids: string[]) {
+    startTransition(async () => {
+      report(await remindAction(ids), "Reminders sent");
+    });
+  }
+
   return (
     <TenantsContext.Provider
       value={{
         tenants,
+        plans,
+        now,
+        mailConfigured,
+        busy,
         openTenant: (id) => setDialog({ type: "tenant", id }),
         openBulkAccess: (mode, ids, onApplied) => setDialog({ type: "bulk", mode, ids, onApplied }),
         sendReminders: (ids) => {
-          const due = tenants.filter((tenant) => ids.includes(tenant.id) && isRenewingSoon(tenant));
-          const skipped = ids.length - due.length;
-          showResult(
-            "Reminders sent",
-            `Billing reminders were sent to ${pluralize(due.length, "tenant")}.${skipped ? ` ${skipped} skipped: no renewal due within 7 days.` : ""}`
-          );
+          const due = tenants.filter((tenant) => ids.includes(tenant.id) && isRenewingSoon(tenant, now));
+          if (due.length === 0) {
+            showResult("Reminders not sent", "No selected tenant has a renewal due within 7 days.");
+            return;
+          }
+          remind(due.map((tenant) => tenant.id));
         },
         showResult,
       }}
@@ -89,6 +131,8 @@ export function TenantsProvider({ children }: { children: ReactNode }) {
             tenant={current}
             onClose={close}
             onSuspend={() => setDialog({ type: "suspend", id: current.id })}
+            onResend={() => startTransition(async () => report(await resendAction(current.id), "Approval email"))}
+            onDelete={() => setDialog({ type: "delete", id: current.id })}
             onSave={(change) => save(current, change)}
           />
         ) : null}
@@ -96,10 +140,14 @@ export function TenantsProvider({ children }: { children: ReactNode }) {
           <SuspendDialog
             tenant={current}
             onCancel={close}
-            onConfirm={() => {
-              setAccess([current.id], "suspended");
-              showResult("Tenant changes saved", `${current.name} has been suspended.`);
-            }}
+            onConfirm={(reason) => setAccess([current.id], "suspended", reason, "Tenant changes saved")}
+          />
+        ) : null}
+        {dialog?.type === "delete" && current ? (
+          <DeleteTenantDialog
+            tenant={current}
+            onCancel={close}
+            onConfirm={() => startTransition(async () => report(await deleteAction(current.id), "Account deleted"))}
           />
         ) : null}
         {dialog?.type === "schedule" && current ? (
@@ -107,10 +155,15 @@ export function TenantsProvider({ children }: { children: ReactNode }) {
             tenant={current}
             plan={dialog.plan}
             onCancel={close}
-            onConfirm={(plan) => {
-              setAccess([current.id], dialog.access);
-              showResult("Plan change scheduled", `${current.name} moves to ${plan} at the next renewal.`);
-            }}
+            onConfirm={(plan, reason) =>
+              startTransition(async () => {
+                const result = await planAction(current.id, plan, reason);
+                if (result.ok && dialog.access !== current.access) {
+                  await accessAction([current.id], dialog.access, reason);
+                }
+                report(result, "Plan changed");
+              })
+            }
           />
         ) : null}
         {dialog?.type === "bulk" ? (
@@ -118,18 +171,13 @@ export function TenantsProvider({ children }: { children: ReactNode }) {
             mode={dialog.mode}
             tenants={dialog.ids.map(tenantFor).filter((tenant): tenant is Tenant => Boolean(tenant))}
             onCancel={close}
-            onConfirm={() => {
-              setAccess(dialog.ids, dialog.mode === "suspend" ? "suspended" : "active");
-              dialog.onApplied?.();
-              showResult(
-                "Tenant changes saved",
-                `${pluralize(dialog.ids.length, "tenant")} ${dialog.mode === "suspend" ? "suspended" : "reactivated"}.`
-              );
-            }}
+            onConfirm={(reason) =>
+              setAccess(dialog.ids, dialog.mode === "suspend" ? "suspended" : "active", reason, "Tenant changes saved", dialog.onApplied)
+            }
           />
         ) : null}
         {dialog?.type === "result" ? (
-          <ResultDialog title={dialog.title} message={dialog.message} onDone={close} />
+          <ResultDialog title={dialog.title} message={dialog.message} failed={dialog.title === "Action failed"} onDone={close} />
         ) : null}
       </AdminModal>
     </TenantsContext.Provider>
