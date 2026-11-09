@@ -28,7 +28,7 @@ export default async function DashboardPage() {
   // Fetch profile and memberships to display user context
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, tenant_id, full_name")
+    .select("id, role, tenant_id, full_name")
     .eq("id", user.id)
     .single();
 
@@ -70,7 +70,7 @@ export default async function DashboardPage() {
 
   return (
     <DashboardClient
-      user={user}
+      user={{ id: user.id, email: user.email ?? "" }}
       profile={profile}
       memberships={memberships || []}
       tenantDetails={tenantDetails}

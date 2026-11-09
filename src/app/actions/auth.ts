@@ -44,3 +44,20 @@ export async function logout(): Promise<void> {
   revalidatePath("/", "layout");
   redirect("/login");
 }
+
+export async function updatePassword(formData: FormData): Promise<void> {
+  const password = String(formData.get("password") ?? "");
+  const confirmPassword = String(formData.get("confirmPassword") ?? "");
+  const fail = (message: string): never => redirect(`/reset-password?error=${encodeURIComponent(message)}`);
+
+  if (password.length < 8) fail("Password must be at least 8 characters.");
+  if (password !== confirmPassword) fail("Passwords do not match.");
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) fail(mapAuthError(error));
+
+  await supabase.auth.signOut();
+  revalidatePath("/", "layout");
+  redirect("/login");
+}

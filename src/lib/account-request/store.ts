@@ -1,6 +1,15 @@
-import { getMailer } from "@/lib/mail/mailer";
+import { isMailConfigured, sendMail } from "@/lib/mail/mailer";
+import type { MailMessage } from "@/lib/mail/types";
 import { publicEnv, requireServerEnv } from "@/lib/env";
-import { getAdminClient } from "@/lib/supabase/admin";
+import { getAdminClient as getTypedAdminClient } from "@/lib/supabase/admin";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+// `account_requests` is not part of database.types.ts, so use an untyped client here.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type LooseClient = SupabaseClient<any, "public", any>;
+function getAdminClient(): LooseClient | null {
+  return getTypedAdminClient() as unknown as LooseClient | null;
+}
 import { RESERVED_SUBDOMAINS } from "@/lib/tenant/constants";
 
 import {
@@ -16,6 +25,15 @@ import {
   normalizeSlugInput,
   getCategoryLabel,
 } from "./schema";
+
+/** Sends an email, or skips quietly when SMTP is not configured (e.g. on Vercel without SMTP_* vars). */
+async function sendNotice(message: MailMessage): Promise<void> {
+  if (!isMailConfigured()) {
+    console.warn("Mail is not configured; skipping email:", message.subject);
+    return;
+  }
+  await sendMail(message);
+}
 
 export { getCategoryLabel, type SlugValidationResult };
 
@@ -303,7 +321,7 @@ export async function createAccountRequest(
   const subject = `[Fides] Account Request Received — ${referenceCode}`;
   const summary = `Thank you, ${mappedRecord.ownerName}. Your request for ${mappedRecord.businessName} (${mappedRecord.slug}.${publicEnv.platformDomain || "fides.app"}) is queued for Fides Admin review. Reference: ${referenceCode}.`;
 
-  await getMailer().send({
+  await sendNotice({
     to: { name: mappedRecord.ownerName, address: mappedRecord.ownerEmail },
     subject,
     text: `${summary}\nActivation/Tracking Token: ${activationToken}`,
@@ -390,9 +408,9 @@ export async function updateAccountRequestStatus(
   const summary =
     mappedStatus === "active"
       ? `Congratulations ${mappedRecord.ownerName}! ${mappedRecord.businessName} is now active on ${mappedRecord.slug}.${publicEnv.platformDomain || "fides.app"}.`
-      : `Your account request ${mappedRecord.referenceCode} for ${mappedRecord.businessName} was marked as "${mappedStatus}". Reviewer note: ${mappedRecord.reviewer_notes}`;
+      : `Your account request ${mappedRecord.referenceCode} for ${mappedRecord.businessName} was marked as "${mappedStatus}". Reviewer note: ${mappedRecord.reviewerNotes}`;
 
-  await getMailer().send({
+  await sendNotice({
     to: { name: mappedRecord.ownerName, address: mappedRecord.ownerEmail },
     subject,
     text: summary,
@@ -532,7 +550,7 @@ export async function resendApplicationActivation(requestId: string): Promise<{
   const subject = `[Fides] Resent Activation & Verification Link — ${mappedRecord.referenceCode}`;
   const summary = `A fresh verification/activation token (${newToken}) was issued for ${mappedRecord.businessName} (${mappedRecord.slug}.fides.app).`;
 
-  await getMailer().send({
+  await sendNotice({
     to: { name: mappedRecord.ownerName, address: mappedRecord.ownerEmail },
     subject,
     text: summary,
@@ -638,7 +656,7 @@ export async function resetAndReviseApplication(
   const subject = `[Fides] Account Request Reset & Revised — ${mappedRecord.referenceCode}`;
   const summary = `Your revised application for ${mappedRecord.businessName} (${mappedRecord.slug}.fides.app) has been reset to Pending Review (Revision #${mappedRecord.revisionCount}).`;
 
-  await getMailer().send({
+  await sendNotice({
     to: { name: mappedRecord.ownerName, address: mappedRecord.ownerEmail },
     subject,
     text: summary,
@@ -714,7 +732,8 @@ export async function listPlatformAccounts(tenantSlug?: string): Promise<
     tenantId: p.tenant_id,
     tenantSlug: p.tenant?.slug || null,
     tenantName: p.tenant?.name || null,
-    status: "active",
+    status: "active" as const,
+    resetToken: null,
     createdAt: p.created_at,
   }));
 }

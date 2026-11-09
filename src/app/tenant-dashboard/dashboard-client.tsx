@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { logout } from "@/app/actions/auth";
 
@@ -639,7 +640,7 @@ function OverviewTab({
                       className="w-12 h-12 rounded-xl flex items-center justify-center"
                       style={{ backgroundColor: `${brandColor}15` }}
                     >
-                      <UserGroupIcon className="w-6 h-6" style={{ color: brandColor }} />
+                      <span style={{ color: brandColor }}><UserGroupIcon className="w-6 h-6" /></span>
                     </div>
                     <div>
                       <p className="font-medium text-neutral-900">{apt.customer}</p>
@@ -1372,7 +1373,7 @@ function IntegrationSettings({ brandColor }: { brandColor: string }) {
                 className="w-12 h-12 rounded-xl flex items-center justify-center"
                 style={{ backgroundColor: `${brandColor}15` }}
               >
-                <integration.icon className="w-6 h-6" style={{ color: brandColor }} />
+                <span style={{ color: brandColor }}><integration.icon className="w-6 h-6" /></span>
               </div>
               <div>
                 <p className="font-medium text-neutral-900">{integration.name}</p>
