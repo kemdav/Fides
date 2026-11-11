@@ -45,7 +45,7 @@ export function SearchInput({
   return (
     <div
       className={cn(
-        "flex items-center gap-2 rounded-lg border border-transparent bg-mist px-3 py-2.5 transition-colors focus-within:border-burnt/50 focus-within:ring-2 focus-within:ring-burnt/20",
+        "flex items-center gap-3 rounded-lg border border-transparent bg-mist px-4 py-3 transition-colors focus-within:border-burnt/50 focus-within:ring-2 focus-within:ring-burnt/20",
         className
       )}
     >
@@ -55,7 +55,7 @@ export function SearchInput({
         value={value}
         onChange={handleChange}
         placeholder={placeholder}
-        className="w-full bg-transparent text-sm text-ink placeholder:text-muted focus:outline-none"
+        className="w-full bg-transparent text-base text-ink placeholder:text-muted focus:outline-none"
       />
     </div>
   );

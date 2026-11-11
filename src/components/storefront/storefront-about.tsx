@@ -24,13 +24,13 @@ export function StorefrontAbout({
 }: StorefrontAboutProps) {
   return (
     <section id="about" className="bg-mist">
-      <div className="mx-auto flex max-w-[1440px] flex-col-reverse items-center gap-8 px-4 py-16 sm:px-8 md:py-20 lg:flex-row lg:gap-16 lg:px-20 lg:py-28">
+      <div className="mx-auto flex max-w-[1440px] flex-col-reverse items-center gap-8 px-5 py-10 sm:px-8 md:py-14 lg:flex-row lg:gap-16 lg:px-[90px] lg:py-20">
         {/* Text */}
         <div className="flex w-full flex-col gap-4 lg:w-1/2">
-          <h2 className="font-display text-2xl leading-[1.15] text-ink sm:text-3xl lg:text-[36px]">
+          <h2 className="font-display text-3xl leading-[1.1] text-ink sm:text-[32px]">
             About {businessName}
           </h2>
-          <p className="max-w-[440px] text-sm/6 text-muted sm:text-base/7">
+          <p className="max-w-[560px] text-sm/6 text-muted sm:text-base/7">
             {description}
           </p>
           <div className="pt-2">
@@ -38,7 +38,7 @@ export function StorefrontAbout({
               href={ctaHref}
               className={buttonClasses({
                 variant: "brand-outline",
-                size: "md",
+                size: "lg",
               })}
             >
               Learn more
@@ -47,7 +47,7 @@ export function StorefrontAbout({
         </div>
 
         {/* Image */}
-        <div className="relative aspect-[4/3] w-full max-w-[520px] overflow-hidden rounded-2xl lg:w-1/2">
+        <div className="relative aspect-[1.55/1] w-full max-w-[560px] overflow-hidden rounded-lg lg:w-1/2">
           <Image
             src={imageSrc}
             alt={imageAlt}

@@ -23,7 +23,6 @@ export interface ServiceCardData {
 
 export function ServiceCard({
   category,
-  categoryColor = "text-burnt",
   name,
   duration,
   price,
@@ -45,23 +44,22 @@ export function ServiceCard({
       </div>
 
       {/* Content */}
-      <div className="flex flex-1 flex-col gap-1.5 p-3">
+      <div className="flex flex-1 flex-col gap-2 p-4">
         <p
-          className={`text-[9px] font-bold uppercase tracking-wider ${categoryColor}`}
+          className="text-xs font-bold uppercase tracking-wider text-burnt"
         >
           {category}
         </p>
-        <h3 className="text-xs font-semibold text-ink">{name}</h3>
+        <h3 className="text-base font-semibold text-ink">{name}</h3>
         <div className="mt-auto flex items-center justify-between gap-2 pt-2">
-          <p className="text-[10px] text-muted">
+          <p className="text-sm text-muted">
             {duration} · {price}
           </p>
           <Link
             href={href}
             className={buttonClasses({
               variant: "brand",
-              size: "sm",
-              className: "h-7 rounded-md px-2 text-[10px]",
+              size: "md",
             })}
           >
             Select service

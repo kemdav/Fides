@@ -60,7 +60,7 @@ export default async function StorefrontPage({ params }: StorefrontPageProps) {
           heading="A little time for yourself."
           subtitle="Thoughtful care, experienced specialists, and easy online booking. Choose a service and find a time that works for you."
           ctaLabel="Book An Appointment"
-          ctaHref="#book"
+          ctaHref={`/${slug}/services`}
           imageSrc="/images/storefront/hero Image.png"
           imageAlt={`${BUSINESS_NAME} booking on a mobile phone`}
         />

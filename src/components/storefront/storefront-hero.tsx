@@ -27,19 +27,19 @@ export function StorefrontHero({
 }: StorefrontHeroProps) {
   return (
     <section id="home" className="bg-powder">
-      <div className="mx-auto flex max-w-[1440px] flex-col-reverse items-center gap-8 px-4 py-12 sm:px-8 md:py-16 lg:flex-row lg:gap-16 lg:px-20 lg:py-24">
+      <div className="mx-auto flex max-w-[1440px] flex-col-reverse items-center gap-8 px-5 py-10 sm:px-8 md:py-14 lg:flex-row lg:gap-16 lg:px-[90px] lg:py-20">
         {/* Text content */}
         <div className="flex w-full flex-col gap-4 lg:w-1/2">
-          <h1 className="font-display text-3xl leading-[1.15] text-ink sm:text-4xl lg:text-[48px]">
+          <h1 className="font-display text-3xl leading-[1.1] text-ink sm:text-4xl lg:text-[40px]">
             {heading}
           </h1>
-          <p className="max-w-[440px] text-sm/6 text-muted sm:text-base/7">
+          <p className="max-w-[560px] text-sm/6 text-muted sm:text-base/7">
             {subtitle}
           </p>
           <div className="pt-4">
             <Link
               href={ctaHref}
-              className={buttonClasses({ variant: "brand", size: "cta" })}
+              className={buttonClasses({ variant: "brand", size: "lg" })}
             >
               {ctaLabel}
             </Link>
@@ -47,7 +47,7 @@ export function StorefrontHero({
         </div>
 
         {/* Hero image */}
-        <div className="relative aspect-[4/3] w-full max-w-[520px] overflow-hidden rounded-2xl lg:w-1/2">
+        <div className="relative aspect-[1.55/1] w-full max-w-[560px] overflow-hidden rounded-lg lg:w-1/2">
           <Image
             src={imageSrc}
             alt={imageAlt}

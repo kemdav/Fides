@@ -47,7 +47,7 @@ export default async function ServicesPage({ params }: ServicesPageProps) {
         bookHref={`/${slug}/services`}
       />
 
-      <main className="flex-1 bg-powder">
+      <main className="flex flex-1 bg-powder">
         <ServicesList
           services={ALL_SERVICES}
           contactHref={`/${slug}/contact`}

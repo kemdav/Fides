@@ -68,21 +68,24 @@ export function StorefrontHeader({
     >
       <div
         className={cn(
-          "mx-auto flex max-w-[1440px] items-center justify-between px-5 transition-[height] duration-300 sm:px-8 lg:px-14",
-          scrolled ? "h-14 lg:h-16" : "h-16 lg:h-20"
+          "relative mx-auto flex max-w-[1440px] items-center justify-between px-5 transition-[height] duration-300 sm:px-8 lg:px-14",
+          scrolled ? "h-15 lg:h-[68px]" : "h-[68px] lg:h-[84px]"
         )}
       >
         {/* Logo */}
         <Link
           href={homeHref}
-          className="font-display text-2xl leading-[normal] text-burnt lg:text-3xl"
+          className="font-display text-2xl leading-[normal] text-burnt lg:text-4xl"
         >
           {businessName}
         </Link>
 
         {/* Desktop nav */}
         <div className="hidden items-center gap-10 lg:flex">
-          <nav aria-label="Primary" className="flex items-center gap-2">
+          <nav
+            aria-label="Primary"
+            className="absolute left-1/2 flex -translate-x-1/2 items-center gap-1"
+          >
             {navLinks.map((link) => {
               const isActive = activeHref === link.href;
               return (
@@ -91,18 +94,21 @@ export function StorefrontHeader({
                   href={link.href}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "flex flex-col items-center px-4 pb-1 pt-2 text-sm font-semibold transition-colors",
+                    "flex flex-col items-center px-5 pb-1 pt-2 text-sm2 font-semibold transition-colors",
                     isActive
                       ? "text-burnt-dark"
                       : "text-muted hover:text-burnt-dark"
                   )}
                 >
                   {link.label}
-                  <span aria-hidden className="relative mt-1.5 h-[3px] w-full">
+                  <span
+                    aria-hidden
+                    className="relative mx-[-6px] mt-1.5 h-[3px] w-[calc(100%+12px)]"
+                  >
                     <span className="absolute inset-x-0 bottom-0 h-px bg-line" />
                     <span
                       className={cn(
-                        "absolute inset-x-0 bottom-0 h-[3px] origin-center rounded-sm bg-burnt-dark transition-transform duration-300 ease-out",
+                        "absolute inset-x-0 bottom-0 h-0.5 origin-center rounded-sm bg-burnt-dark transition-transform duration-300 ease-out",
                         isActive ? "scale-x-100" : "scale-x-0"
                       )}
                     />
