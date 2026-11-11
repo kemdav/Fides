@@ -44,7 +44,7 @@ export default async function ServicesPage({ params }: ServicesPageProps) {
         activeHref={`/${slug}/services`}
       />
 
-      <main className="flex-1">
+      <main className="flex-1 bg-powder">
         <ServicesList services={ALL_SERVICES} />
       </main>
 

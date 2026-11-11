@@ -13,6 +13,8 @@ export type { FeaturedServicesProps } from "./featured-services";
 export { StorefrontAbout } from "./storefront-about";
 export type { StorefrontAboutProps } from "./storefront-about";
 
+export { StorefrontAboutPage } from "./storefront-about-page";
+
 export { StorefrontFooter } from "./storefront-footer";
 export type { StorefrontFooterProps } from "./storefront-footer";
 

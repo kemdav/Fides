@@ -24,7 +24,7 @@ export function ServicesList({ services }: ServicesListProps) {
   }, [services, query]);
 
   return (
-    <section className="bg-powder">
+    <section className="min-h-full bg-powder">
       <div className="mx-auto max-w-[1200px] px-5 py-8 sm:px-8 sm:py-12 lg:px-0 lg:py-16">
         {/* Header: title + search */}
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">

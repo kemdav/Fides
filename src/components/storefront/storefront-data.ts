@@ -18,7 +18,7 @@ export function getStorefrontNav(slug: string) {
   return [
     { label: "Home", href: base },
     { label: "Services", href: `${base}/services` },
-    { label: "About", href: `${base}#about` },
+    { label: "About", href: `${base}/about` },
   ];
 }
 
@@ -88,4 +88,3 @@ export const ALL_SERVICES: ServiceCardData[] = [
     href: "#book",
   },
 ];
-
