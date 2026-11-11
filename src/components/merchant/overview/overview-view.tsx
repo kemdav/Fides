@@ -2,67 +2,69 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { MerchantSidebar } from "../merchant-sidebar";
+import {
+  updateAppointmentStatusAction,
+  createAppointmentBookingAction,
+} from "@/app/actions/appointments";
 
-interface AppointmentRow {
+export interface AppointmentRow {
   id: string;
   time: string;
   customer: string;
   service: string;
   staff: string;
   source: "Online" | "Walk-In";
-  status: "Confirmed" | "Pending approval" | "Check In";
+  status: "Confirmed" | "Pending approval" | "Check In" | "In service" | "Completed" | "Cancelled";
+  startsAt?: string;
+  rawStatus?: string;
 }
 
-const DEFAULT_ROWS: AppointmentRow[] = [
-  {
-    id: "1",
-    time: "09:00",
-    customer: "Ana Reyes",
-    service: "Signature haircut",
-    staff: "Sofia Cruz",
-    source: "Online",
-    status: "Confirmed",
-  },
-  {
-    id: "2",
-    time: "09:45",
-    customer: "Carlo Dela Cruz",
-    service: "Hair color",
-    staff: "Miguel Tan",
-    source: "Walk-In",
-    status: "Confirmed",
-  },
-  {
-    id: "3",
-    time: "10:30",
-    customer: "Bea Flores",
-    service: "Wellness massage",
-    staff: "Lia Ramos",
-    source: "Online",
-    status: "Pending approval",
-  },
-];
+export interface DayChartStat {
+  day: string;
+  booked: number;
+  completed: number;
+}
 
-interface OverviewViewProps {
+export interface OverviewViewProps {
   businessName?: string;
   userEmail?: string;
+  tenantId?: string;
   todayCount?: number;
+  confirmedCount?: number;
   pendingCount?: number;
+  checkedInCount?: number;
+  completedVisitsCount?: number;
   revenueTotal?: number;
+  chartStats?: DayChartStat[];
+  todayActivity?: { time: string; customer: string; service: string }[];
   initialRows?: AppointmentRow[];
 }
 
 export function OverviewView({
   businessName = "Bella Vita",
   userEmail = "Maria Santos",
-  todayCount = 18,
-  pendingCount = 3,
-  revenueTotal = 8450,
-  initialRows = DEFAULT_ROWS,
+  tenantId,
+  todayCount = 0,
+  confirmedCount = 0,
+  pendingCount = 0,
+  checkedInCount = 0,
+  completedVisitsCount = 0,
+  revenueTotal = 0,
+  chartStats = [],
+  todayActivity = [],
+  initialRows = [],
 }: OverviewViewProps) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = React.useState("");
   const [appointments, setAppointments] = React.useState<AppointmentRow[]>(initialRows);
+  const [prevInitialRows, setPrevInitialRows] = React.useState<AppointmentRow[]>(initialRows);
+  if (initialRows !== prevInitialRows) {
+    setPrevInitialRows(initialRows);
+    setAppointments(initialRows);
+  }
+
   const [filterStatus, setFilterStatus] = React.useState<string>("All");
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [period, setPeriod] = React.useState<string>("This Week");
@@ -71,6 +73,8 @@ export function OverviewView({
   const [cancelTarget, setCancelTarget] = React.useState<AppointmentRow | null>(null);
   const [isNewBookingOpen, setIsNewBookingOpen] = React.useState(false);
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
+  const [isBookingSubmitting, setIsBookingSubmitting] = React.useState(false);
+  const [bookingError, setBookingError] = React.useState<string | null>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -90,20 +94,135 @@ export function OverviewView({
     return matchesSearch && matchesStatus;
   });
 
-  const handleStatusChange = (id: string, newStatus: AppointmentRow["status"]) => {
+  // QA #3: Row action persists status changes to Supabase
+  const handleStatusChange = async (id: string, newStatus: AppointmentRow["status"]) => {
+    setActiveMenuId(null);
+    const prevRows = appointments;
     setAppointments((prev) =>
       prev.map((row) => (row.id === id ? { ...row, status: newStatus } : row))
     );
-    showToast(`Appointment status updated to ${newStatus}`);
-    setActiveMenuId(null);
+
+    try {
+      const res = await updateAppointmentStatusAction({
+        appointmentId: id,
+        newStatus,
+        tenantIdParam: tenantId,
+      });
+
+      if (!res.success) {
+        setAppointments(prevRows);
+        showToast(res.error || "Failed to update appointment status.");
+        return;
+      }
+      showToast(`Appointment status updated to ${newStatus}`);
+      router.refresh();
+    } catch (err: unknown) {
+      setAppointments(prevRows);
+      showToast(err instanceof Error ? err.message : "Failed to update appointment status.");
+    }
   };
 
-  const handleConfirmCancel = () => {
+  // QA #3: Cancel row action persists cancellation to Supabase
+  const handleConfirmCancel = async () => {
     if (!cancelTarget) return;
-    setAppointments((prev) => prev.filter((row) => row.id !== cancelTarget.id));
-    showToast(`Appointment for ${cancelTarget.customer} cancelled.`);
+    const target = cancelTarget;
     setCancelTarget(null);
+    const prevRows = appointments;
+    setAppointments((prev) => prev.filter((row) => row.id !== target.id));
+
+    try {
+      const res = await updateAppointmentStatusAction({
+        appointmentId: target.id,
+        newStatus: "Cancelled",
+        tenantIdParam: tenantId,
+      });
+
+      if (!res.success) {
+        setAppointments(prevRows);
+        showToast(res.error || "Failed to cancel appointment.");
+        return;
+      }
+      showToast(`Appointment for ${target.customer} cancelled.`);
+      router.refresh();
+    } catch (err: unknown) {
+      setAppointments(prevRows);
+      showToast(err instanceof Error ? err.message : "Failed to cancel appointment.");
+    }
   };
+
+  // QA #4: Persist new booking to Supabase
+  const handleNewBookingSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const customer = (formData.get("customer") as string)?.trim();
+    const service = (formData.get("service") as string)?.trim();
+    const staff = (formData.get("staff") as string)?.trim();
+    const time = (formData.get("time") as string)?.trim();
+
+    if (!customer) {
+      setBookingError("Customer name is required.");
+      return;
+    }
+
+    setIsBookingSubmitting(true);
+    setBookingError(null);
+
+    try {
+      const res = await createAppointmentBookingAction({
+        customerName: customer,
+        serviceName: service,
+        staffName: staff,
+        time,
+        tenantIdParam: tenantId,
+      });
+
+      if (!res.success) {
+        setBookingError(res.error || "Failed to create booking.");
+        return;
+      }
+      if (!res.data) {
+        setBookingError("Failed to create booking.");
+        return;
+      }
+
+      const created = res.data;
+      const newRow: AppointmentRow = {
+        id: created.id,
+        time: time || "10:00 AM",
+        customer: created.customerName,
+        service: created.serviceName,
+        staff: created.staffName,
+        source: "Online",
+        status: "Confirmed",
+        startsAt: created.starts_at,
+        rawStatus: created.status,
+      };
+
+      setAppointments((prev) => [newRow, ...prev]);
+      setIsNewBookingOpen(false);
+      showToast(`New appointment booked for ${customer}`);
+      router.refresh();
+    } catch (err: unknown) {
+      setBookingError(err instanceof Error ? err.message : "Failed to create booking.");
+    } finally {
+      setIsBookingSubmitting(false);
+    }
+  };
+
+  // Chart statistics data (QA #1: dynamic chart bars from loaded records)
+  const stats =
+    chartStats && chartStats.length > 0
+      ? chartStats
+      : [
+          { day: "Mon", booked: 0, completed: 0 },
+          { day: "Tue", booked: 0, completed: 0 },
+          { day: "Wed", booked: 0, completed: 0 },
+          { day: "Thu", booked: 0, completed: 0 },
+          { day: "Fri", booked: 0, completed: 0 },
+          { day: "Sat", booked: 0, completed: 0 },
+          { day: "Sun", booked: 0, completed: 0 },
+        ];
+  const maxVal = Math.max(1, ...stats.map((s) => Math.max(s.booked, s.completed)));
 
   return (
     <div className="min-h-screen bg-[#FFFDF6] text-neutral-900 flex flex-col md:flex-row antialiased font-sans">
@@ -165,7 +284,7 @@ export function OverviewView({
           </div>
         </header>
 
-        {/* 4 Stat Cards */}
+        {/* 4 Stat Cards (QA #1: Real loaded counts and amounts) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* 1. Today's appointments (Burnt orange card) */}
           <div className="rounded-2xl bg-[#C35000] text-white p-5 shadow-xs flex flex-col justify-between">
@@ -182,13 +301,16 @@ export function OverviewView({
             <div className="my-4 flex items-baseline gap-3">
               <span className="text-3xl font-bold font-serif">{todayCount}</span>
               <span className="text-[11px] font-medium bg-white/20 px-2 py-0.5 rounded-full">
-                12 confirmed
+                {confirmedCount} confirmed
               </span>
             </div>
 
             <div>
               <div className="w-full h-1 bg-white/25 rounded-full overflow-hidden mb-1.5">
-                <div className="w-2/3 h-full bg-white rounded-full" />
+                <div
+                  className="h-full bg-white rounded-full transition-all duration-300"
+                  style={{ width: `${todayCount > 0 ? Math.min(100, (confirmedCount / todayCount) * 100) : 0}%` }}
+                />
               </div>
               <span className="text-[11px] text-white/80">Your schedule at a glance</span>
             </div>
@@ -212,7 +334,6 @@ export function OverviewView({
             </div>
 
             <div className="flex items-center gap-3">
-              {/* Mini bar graphic */}
               <div className="flex items-end gap-1 h-5">
                 <div className="w-1.5 h-3 bg-[#ADD8E6] rounded-xs" />
                 <div className="w-1.5 h-5 bg-[#C35000] rounded-xs" />
@@ -221,7 +342,7 @@ export function OverviewView({
                 <div className="w-1.5 h-3 bg-[#ADD8E6] rounded-xs" />
               </div>
               <span className="text-[11px] text-neutral-500">
-                3 requests are waiting for your approval
+                {pendingCount} {pendingCount === 1 ? "request is" : "requests are"} waiting for your approval
               </span>
             </div>
           </div>
@@ -237,7 +358,7 @@ export function OverviewView({
             </div>
 
             <div className="my-4 flex items-baseline gap-3">
-              <span className="text-3xl font-bold font-serif text-neutral-900">4</span>
+              <span className="text-3xl font-bold font-serif text-neutral-900">{checkedInCount}</span>
               <span className="text-[11px] font-medium text-amber-800 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-full">
                 Ready for service
               </span>
@@ -245,9 +366,14 @@ export function OverviewView({
 
             <div>
               <div className="w-full h-1 bg-neutral-100 rounded-full overflow-hidden mb-1.5">
-                <div className="w-2/5 h-full bg-[#ADD8E6] rounded-full" />
+                <div
+                  className="h-full bg-[#ADD8E6] rounded-full transition-all duration-300"
+                  style={{ width: `${todayCount > 0 ? Math.min(100, (checkedInCount / todayCount) * 100) : 0}%` }}
+                />
               </div>
-              <span className="text-[11px] text-neutral-500">Customers ready for their appointments</span>
+              <span className="text-[11px] text-neutral-500">
+                {checkedInCount} {checkedInCount === 1 ? "customer" : "customers"} ready for their appointments
+              </span>
             </div>
           </div>
 
@@ -266,7 +392,7 @@ export function OverviewView({
                 ₱{revenueTotal.toLocaleString()}
               </span>
               <span className="text-[11px] font-medium text-[#C35000] bg-[#FDF3EB] border border-[#FADCD9] px-2 py-0.5 rounded-full">
-                7 visits
+                {completedVisitsCount} visits
               </span>
             </div>
 
@@ -307,24 +433,16 @@ export function OverviewView({
               </div>
             </div>
 
-            {/* Custom SVG Bar Chart */}
+            {/* Custom SVG Bar Chart (QA #1: dynamic chart heights) */}
             <div className="pt-4">
               <div className="h-52 w-full flex items-end justify-between gap-3 px-2 border-b border-[#EDECE8]">
-                {[
-                  { day: "Mon", booked: 12, completed: 9 },
-                  { day: "Tue", booked: 16, completed: 12 },
-                  { day: "Wed", booked: 14, completed: 10 },
-                  { day: "Thu", booked: 18, completed: 14 },
-                  { day: "Fri", booked: 20, completed: 16 },
-                  { day: "Sat", booked: 15, completed: 11 },
-                  { day: "Sun", booked: 10, completed: 7 },
-                ].map((item) => (
+                {stats.map((item) => (
                   <div key={item.day} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end group">
                     <div className="w-full flex items-end justify-center gap-1 h-44">
                       {/* Booked bar */}
                       <div
-                        className="w-4 bg-[#C35000] rounded-t-sm transition-all duration-300 relative group-hover:opacity-90"
-                        style={{ height: `${(item.booked / 24) * 100}%` }}
+                        className="w-4 bg-[#C35000] rounded-t-sm transition-all duration-300 relative group-hover:opacity-90 min-h-[4px]"
+                        style={{ height: `${item.booked > 0 ? (item.booked / maxVal) * 100 : 4}%` }}
                       >
                         <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[9px] font-bold text-neutral-600 opacity-0 group-hover:opacity-100">
                           {item.booked}
@@ -332,8 +450,8 @@ export function OverviewView({
                       </div>
                       {/* Completed bar */}
                       <div
-                        className="w-4 bg-[#ADD8E6] rounded-t-sm transition-all duration-300 relative group-hover:opacity-90"
-                        style={{ height: `${(item.completed / 24) * 100}%` }}
+                        className="w-4 bg-[#ADD8E6] rounded-t-sm transition-all duration-300 relative group-hover:opacity-90 min-h-[4px]"
+                        style={{ height: `${item.completed > 0 ? (item.completed / maxVal) * 100 : 4}%` }}
                       >
                         <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[9px] font-bold text-neutral-600 opacity-0 group-hover:opacity-100">
                           {item.completed}
@@ -369,11 +487,11 @@ export function OverviewView({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start pt-1">
-              {/* Mini October 2026 Calendar */}
+              {/* Mini Calendar */}
               <div>
                 <div className="flex items-center justify-between text-xs font-medium text-neutral-800 mb-2">
                   <span className="cursor-pointer text-neutral-400 hover:text-neutral-700">‹</span>
-                  <span className="font-semibold">October 2026</span>
+                  <span className="font-semibold">Current Month</span>
                   <span className="cursor-pointer text-neutral-400 hover:text-neutral-700">›</span>
                 </div>
                 <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-neutral-400 mb-1">
@@ -394,47 +512,32 @@ export function OverviewView({
                 </div>
               </div>
 
-              {/* Today's Activity */}
+              {/* Today's Activity (QA #1: dynamic items from appointments) */}
               <div className="space-y-2.5 border-t sm:border-t-0 sm:border-l border-[#EDECE8] sm:pl-4 pt-3 sm:pt-0">
                 <span className="text-xs font-semibold text-neutral-900 block">
                   Today&apos;s activity
                 </span>
                 <div className="space-y-2 text-[11px]">
-                  <div className="flex items-start gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#C35000] mt-1 shrink-0" />
-                    <div>
-                      <span className="font-medium text-neutral-800">09:00 · Ana Reyes</span>
-                      <span className="text-neutral-400 block text-[10px]">Signature haircut</span>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#C35000] mt-1 shrink-0" />
-                    <div>
-                      <span className="font-medium text-neutral-800">09:45 · Carlo Dela Cruz</span>
-                      <span className="text-neutral-400 block text-[10px]">Hair color</span>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#C35000] mt-1 shrink-0" />
-                    <div>
-                      <span className="font-medium text-neutral-800">10:30 · Bea Flores</span>
-                      <span className="text-neutral-400 block text-[10px]">Wellness massage</span>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#C35000] mt-1 shrink-0" />
-                    <div>
-                      <span className="font-medium text-neutral-800">09:45 · Carlo Dela Cruz</span>
-                      <span className="text-neutral-400 block text-[10px]">Hair color</span>
-                    </div>
-                  </div>
+                  {todayActivity && todayActivity.length > 0 ? (
+                    todayActivity.map((act, i) => (
+                      <div key={i} className="flex items-start gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#C35000] mt-1 shrink-0" />
+                        <div>
+                          <span className="font-medium text-neutral-800">{act.time} · {act.customer}</span>
+                          <span className="text-neutral-400 block text-[10px]">{act.service}</span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <span className="text-[11px] text-neutral-400 block">No activity scheduled for today.</span>
+                  )}
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Bottom Section: Today's Appointments Table Card */}
+        {/* Bottom Section: Today's Appointments Table Card (QA #1: No hardcoded rows) */}
         <div className="rounded-2xl bg-white border border-[#EDECE8] shadow-xs overflow-hidden">
           <div className="p-5 border-b border-[#EDECE8] flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -505,7 +608,7 @@ export function OverviewView({
             </div>
           </div>
 
-          {/* Table */}
+          {/* Table (QA #1: Empty state row when 0 appointments) */}
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-neutral-50/70 border-b border-[#EDECE8] text-neutral-400 font-medium">
@@ -520,78 +623,101 @@ export function OverviewView({
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#EDECE8]">
-                {filtered.map((row) => (
-                  <tr key={row.id} className="hover:bg-neutral-50/60 transition">
-                    <td className="px-5 py-3.5 font-medium text-neutral-700">{row.time}</td>
-                    <td className="px-5 py-3.5 font-semibold text-neutral-900">{row.customer}</td>
-                    <td className="px-5 py-3.5 text-neutral-600">{row.service}</td>
-                    <td className="px-5 py-3.5 text-neutral-600">{row.staff}</td>
-                    <td className="px-5 py-3.5">
-                      <span className={row.source === "Walk-In" ? "text-[#C35000] font-medium" : "text-neutral-500"}>
-                        {row.source}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      {row.status === "Confirmed" && (
-                        <span className="text-[11px] font-medium text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
-                          Confirmed
-                        </span>
-                      )}
-                      {row.status === "Pending approval" && (
-                        <span className="text-[11px] font-medium text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
-                          Pending approval
-                        </span>
-                      )}
-                      {row.status === "Check In" && (
-                        <span className="text-[11px] font-medium text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full">
-                          Check In
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-5 py-3.5 text-right relative">
-                      <button
-                        type="button"
-                        onClick={() => setActiveMenuId(activeMenuId === row.id ? null : row.id)}
-                        className="p-1 rounded text-neutral-400 hover:text-neutral-700 transition"
-                      >
-                        •••
-                      </button>
-
-                      {activeMenuId === row.id && (
-                        <div className="absolute right-4 mt-1 w-40 rounded-xl bg-white border border-[#EDECE8] shadow-lg py-1 z-30 text-left text-xs">
-                          {row.status !== "Confirmed" && (
-                            <button
-                              type="button"
-                              onClick={() => handleStatusChange(row.id, "Confirmed")}
-                              className="w-full text-left px-3.5 py-1.5 hover:bg-neutral-50 text-neutral-700"
-                            >
-                              Confirm
-                            </button>
-                          )}
-                          {row.status !== "Check In" && (
-                            <button
-                              type="button"
-                              onClick={() => handleStatusChange(row.id, "Check In")}
-                              className="w-full text-left px-3.5 py-1.5 hover:bg-neutral-50 text-neutral-700"
-                            >
-                              Check In
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setCancelTarget(row);
-                              setActiveMenuId(null);
-                            }}
-                            className="w-full text-left px-3.5 py-1.5 hover:bg-red-50 text-red-600 font-medium"
-                          >
-                            Cancel booking
-                          </button>
-                        </div>
-                      )}
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-5 py-8 text-center text-xs text-neutral-400">
+                      No appointments scheduled for today.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filtered.map((row) => (
+                    <tr key={row.id} className="hover:bg-neutral-50/60 transition">
+                      <td className="px-5 py-3.5 font-medium text-neutral-700">{row.time}</td>
+                      <td className="px-5 py-3.5 font-semibold text-neutral-900">{row.customer}</td>
+                      <td className="px-5 py-3.5 text-neutral-600">{row.service}</td>
+                      <td className="px-5 py-3.5 text-neutral-600">{row.staff}</td>
+                      <td className="px-5 py-3.5">
+                        <span className={row.source === "Walk-In" ? "text-[#C35000] font-medium" : "text-neutral-500"}>
+                          {row.source}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        {row.status === "Confirmed" && (
+                          <span className="text-[11px] font-medium text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                            Confirmed
+                          </span>
+                        )}
+                        {row.status === "Pending approval" && (
+                          <span className="text-[11px] font-medium text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
+                            Pending approval
+                          </span>
+                        )}
+                        {row.status === "Check In" && (
+                          <span className="text-[11px] font-medium text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full">
+                            Check In
+                          </span>
+                        )}
+                        {row.status === "In service" && (
+                          <span className="text-[11px] font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full">
+                            In service
+                          </span>
+                        )}
+                        {row.status === "Completed" && (
+                          <span className="text-[11px] font-medium text-neutral-600 bg-neutral-100 border border-neutral-200 px-2.5 py-0.5 rounded-full">
+                            Completed
+                          </span>
+                        )}
+                        {row.status === "Cancelled" && (
+                          <span className="text-[11px] font-medium text-red-700 bg-red-50 border border-red-200 px-2.5 py-0.5 rounded-full">
+                            Cancelled
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3.5 text-right relative">
+                        <button
+                          type="button"
+                          onClick={() => setActiveMenuId(activeMenuId === row.id ? null : row.id)}
+                          className="p-1 rounded text-neutral-400 hover:text-neutral-700 transition"
+                        >
+                          •••
+                        </button>
+
+                        {activeMenuId === row.id && (
+                          <div className="absolute right-4 mt-1 w-40 rounded-xl bg-white border border-[#EDECE8] shadow-lg py-1 z-30 text-left text-xs">
+                            {row.status !== "Confirmed" && (
+                              <button
+                                type="button"
+                                onClick={() => handleStatusChange(row.id, "Confirmed")}
+                                className="w-full text-left px-3.5 py-1.5 hover:bg-neutral-50 text-neutral-700"
+                              >
+                                Confirm
+                              </button>
+                            )}
+                            {row.status !== "Check In" && (
+                              <button
+                                type="button"
+                                onClick={() => handleStatusChange(row.id, "Check In")}
+                                className="w-full text-left px-3.5 py-1.5 hover:bg-neutral-50 text-neutral-700"
+                              >
+                                Check In
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCancelTarget(row);
+                                setActiveMenuId(null);
+                              }}
+                              className="w-full text-left px-3.5 py-1.5 hover:bg-red-50 text-red-600 font-medium"
+                            >
+                              Cancel booking
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -603,7 +729,7 @@ export function OverviewView({
             </div>
           )}
 
-          {/* Cancel Confirmation Modal */}
+          {/* Cancel Confirmation Modal (QA #3) */}
           {cancelTarget && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
               <div className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-neutral-200">
@@ -634,7 +760,7 @@ export function OverviewView({
             </div>
           )}
 
-          {/* New Booking Modal */}
+          {/* New Booking Modal (QA #4) */}
           {isNewBookingOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
               <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-neutral-200 space-y-4">
@@ -644,36 +770,23 @@ export function OverviewView({
                   </h3>
                   <button
                     type="button"
-                    onClick={() => setIsNewBookingOpen(false)}
+                    onClick={() => {
+                      setIsNewBookingOpen(false);
+                      setBookingError(null);
+                    }}
                     className="text-neutral-400 hover:text-neutral-600 text-lg leading-none"
                   >
                     ×
                   </button>
                 </div>
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const formData = new FormData(e.currentTarget);
-                    const customer = formData.get("customer") as string;
-                    const service = formData.get("service") as string;
-                    const staff = formData.get("staff") as string;
-                    const time = formData.get("time") as string;
-                    if (!customer) return;
-                    const newRow: AppointmentRow = {
-                      id: String(Date.now()),
-                      time: time || "10:00 AM",
-                      customer,
-                      service: service || "Custom Service",
-                      staff: staff || "Maria Santos",
-                      source: "Online",
-                      status: "Confirmed",
-                    };
-                    setAppointments((prev) => [newRow, ...prev]);
-                    setIsNewBookingOpen(false);
-                    showToast(`New appointment booked for ${customer}`);
-                  }}
-                  className="space-y-3 text-xs"
-                >
+
+                {bookingError && (
+                  <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+                    {bookingError}
+                  </div>
+                )}
+
+                <form onSubmit={handleNewBookingSubmit} className="space-y-3 text-xs">
                   <div>
                     <label className="block text-neutral-700 font-medium mb-1">Customer name</label>
                     <input
@@ -688,7 +801,7 @@ export function OverviewView({
                       <label className="block text-neutral-700 font-medium mb-1">Service</label>
                       <input
                         name="service"
-                        defaultValue="Hair Styling & Blow Dry"
+                        defaultValue="Signature haircut"
                         className="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50/60 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C35000]"
                       />
                     </div>
@@ -705,23 +818,28 @@ export function OverviewView({
                     <label className="block text-neutral-700 font-medium mb-1">Staff member</label>
                     <input
                       name="staff"
-                      defaultValue="Maria Santos"
+                      defaultValue="Lead Specialist"
                       className="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50/60 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C35000]"
                     />
                   </div>
                   <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-neutral-100">
                     <button
                       type="button"
-                      onClick={() => setIsNewBookingOpen(false)}
-                      className="px-3.5 py-2 rounded-xl border border-neutral-200 text-neutral-700 hover:bg-neutral-50"
+                      disabled={isBookingSubmitting}
+                      onClick={() => {
+                        setIsNewBookingOpen(false);
+                        setBookingError(null);
+                      }}
+                      className="px-3.5 py-2 rounded-xl border border-neutral-200 text-neutral-700 hover:bg-neutral-50 disabled:opacity-60"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2 rounded-xl bg-[#C35000] hover:bg-[#A94400] text-white font-semibold"
+                      disabled={isBookingSubmitting}
+                      className="px-4 py-2 rounded-xl bg-[#C35000] hover:bg-[#A94400] text-white font-semibold disabled:opacity-60 transition"
                     >
-                      Create Booking
+                      {isBookingSubmitting ? "Creating Booking..." : "Create Booking"}
                     </button>
                   </div>
                 </form>

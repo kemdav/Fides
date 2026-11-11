@@ -64,8 +64,10 @@ export function ShareWebsiteModal({
 interface PublishReviewModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onPublish: () => void;
+  onPublish: () => void | Promise<void>;
   siteAddress: string;
+  isPublishing?: boolean;
+  errorMessage?: string | null;
 }
 
 export function PublishReviewModal({
@@ -73,6 +75,8 @@ export function PublishReviewModal({
   onClose,
   onPublish,
   siteAddress,
+  isPublishing,
+  errorMessage,
 }: PublishReviewModalProps) {
   if (!isOpen) return null;
 
@@ -125,6 +129,12 @@ export function PublishReviewModal({
           </ul>
         </div>
 
+        {errorMessage && (
+          <div className="mt-3 p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs text-center font-medium">
+            {errorMessage}
+          </div>
+        )}
+
         <p className="mt-3 text-[11px] text-neutral-400 text-center">
           Appointments, services, and customer accounts are unaffected.
         </p>
@@ -139,13 +149,11 @@ export function PublishReviewModal({
           </button>
           <button
             type="button"
-            onClick={() => {
-              onClose();
-              onPublish();
-            }}
-            className="px-4 py-2 text-xs font-semibold text-white bg-[#C35000] hover:bg-[#A94400] rounded-xl shadow-xs transition"
+            disabled={isPublishing}
+            onClick={() => onPublish()}
+            className="px-4 py-2 text-xs font-semibold text-white bg-[#C35000] hover:bg-[#A94400] disabled:opacity-60 rounded-xl shadow-xs transition"
           >
-            Publish website
+            {isPublishing ? "Publishing..." : "Publish website"}
           </button>
         </div>
       </div>

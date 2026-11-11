@@ -9,6 +9,8 @@ import {
   customDomainSchema,
   assetTypeSchema,
   ALLOWED_MIME_TYPES,
+  ALLOWED_LOGO_MIME_TYPES,
+  ALLOWED_COVER_MIME_TYPES,
   MAX_FILE_SIZES,
 } from "@/lib/validations/website-settings";
 import type { WebsiteSettingsData } from "@/components/merchant/website-settings/types";
@@ -18,10 +20,10 @@ export type ActionResult<T = unknown> =
   | { success: false; error: string };
 
 /**
- * Helper: Authenticates user, verifies membership, and enforces Owner / Admin role.
+ * Helper: Authenticates user, verifies membership, and strictly enforces Owner role (QA #15).
  */
 async function authenticateOwner(tenantIdParam?: string): Promise<
-  | { success: true; userId: string; tenantId: string; role: string; isDemo: false }
+  | { success: true; userId: string; tenantId: string; role: "owner"; isDemo: false }
   | { success: false; error: string; statusCode: number; isDemo?: boolean }
 > {
   const supabase = await createClient();
@@ -46,7 +48,6 @@ async function authenticateOwner(tenantIdParam?: string): Promise<
     .eq("id", user.id)
     .single();
 
-  const isPlatformAdmin = profile?.role === "admin";
   const defaultTenantId = profile?.tenant_id;
   const targetTenantId = tenantIdParam || defaultTenantId;
 
@@ -58,16 +59,6 @@ async function authenticateOwner(tenantIdParam?: string): Promise<
     };
   }
 
-  if (isPlatformAdmin) {
-    return {
-      success: true,
-      userId: user.id,
-      tenantId: targetTenantId,
-      role: "admin",
-      isDemo: false,
-    };
-  }
-
   // 2. Query tenant_memberships to check role for target tenant
   const { data: membership } = await supabase
     .from("tenant_memberships")
@@ -76,10 +67,13 @@ async function authenticateOwner(tenantIdParam?: string): Promise<
     .eq("profile_id", user.id)
     .maybeSingle();
 
-  const userRole = membership?.role ?? profile?.role ?? "staff";
+  const isTenantOwner =
+    membership?.role === "owner" ||
+    (profile?.tenant_id === targetTenantId && profile?.role === "owner");
 
-  // Strict Role-Based Access Control: Only 'owner' or platform 'admin'
-  if (userRole !== "owner" && userRole !== "admin") {
+  // Strict Role-Based Access Control: strictly 'owner' (QA #15).
+  // Non-owners (admin, receptionist, staff) must be rejected with 403.
+  if (!isTenantOwner) {
     return {
       success: false,
       error: "Access Denied: Only business owners have permission to modify website settings.",
@@ -91,7 +85,7 @@ async function authenticateOwner(tenantIdParam?: string): Promise<
     success: true,
     userId: user.id,
     tenantId: targetTenantId,
-    role: userRole,
+    role: "owner",
     isDemo: false,
   };
 }
@@ -119,7 +113,7 @@ export async function getWebsiteSettingsAction(
 
   const { data: tenant } = await supabase
     .from("tenants")
-    .select("name, slug, brand_color, secondary_color, accent_color, address, phone, timezone")
+    .select("name, slug, logo_url, brand_color, secondary_color, accent_color, address, phone, timezone")
     .eq("id", auth.tenantId)
     .single();
 
@@ -132,15 +126,30 @@ export async function getWebsiteSettingsAction(
   const liveData: Partial<WebsiteSettingsData> = {
     businessName: settings?.display_name || tenant?.name || "Bella Vita Salon & Spa",
     subdomain: tenant?.slug || "bellavita",
+    logoUrl: tenant?.logo_url || "",
+    typography: settings?.typography || "Ovo + Mulish",
     mainColor: tenant?.brand_color || "#FFFFEB",
     secondaryColor: tenant?.secondary_color || "#ADD8E6",
     accentColor: tenant?.accent_color || "#CC5000",
     headline: settings?.headline || settings?.tagline || "A little time for yourself.",
     supportingMessage: settings?.supporting_message || "",
+    coverPhotoName: settings?.cover_photo_name || "bella-vita-studio.jpg",
+    coverPhotoUrl: settings?.cover_photo_url || "",
+    showFeaturedServices: settings?.show_featured_services ?? true,
+    showContactDetails: settings?.show_contact_details ?? true,
+    businessCategory: settings?.business_category || "Beauty & wellness",
     about: settings?.about || "",
-    streetAddress: tenant?.address || "",
-    phoneNumber: tenant?.phone || "",
-    timeZone: tenant?.timezone || "Asia/Manila (UTC+08:00)",
+    businessEmail: settings?.business_email || "",
+    phoneNumber: tenant?.phone || settings?.phone_number || "",
+    instagram: settings?.instagram || "",
+    streetAddress: tenant?.address || settings?.street_address || "",
+    cityProvince: settings?.city_province || "",
+    postalCode: settings?.postal_code || "",
+    hoursMonFri: settings?.hours_mon_fri || "9:00 AM – 6:00 PM",
+    hoursSat: settings?.hours_sat || "10:00 AM – 5:00 PM",
+    hoursSun: settings?.hours_sun || "Closed",
+    timeZone: tenant?.timezone || settings?.time_zone || "Asia/Manila (UTC+08:00)",
+    showOpeningHours: settings?.show_opening_hours ?? true,
     customDomain: settings?.custom_domain || "",
     isDomainVerified: settings?.custom_domain_status === "active",
     pageTitle: settings?.page_title || "",
@@ -247,6 +256,7 @@ export async function publishWebsiteSettingsAction(
       address: valid.streetAddress,
       phone: valid.phoneNumber,
       timezone: valid.timeZone,
+      ...(valid.logoUrl !== undefined ? { logo_url: valid.logoUrl || null } : {}),
     })
     .eq("id", auth.tenantId);
 
@@ -254,7 +264,7 @@ export async function publishWebsiteSettingsAction(
     return { success: false, error: `Failed to update tenant branding: ${tenantError.message}` };
   }
 
-  // 2. Commit live website content, hours, custom domain & SEO to public.tenant_settings
+  // 2. Commit live website content, hours, custom domain & SEO to public.tenant_settings (QA #10)
   const { error: settingsError } = await supabase.from("tenant_settings").upsert(
     {
       tenant_id: auth.tenantId,
@@ -263,16 +273,21 @@ export async function publishWebsiteSettingsAction(
       headline: valid.headline,
       supporting_message: valid.supportingMessage,
       cover_photo_name: valid.coverPhotoName,
+      cover_photo_url: valid.coverPhotoUrl || null,
       show_featured_services: valid.showFeaturedServices,
       show_contact_details: valid.showContactDetails,
       business_category: valid.businessCategory,
+      business_email: valid.businessEmail,
+      phone_number: valid.phoneNumber,
       about: valid.about,
       instagram: valid.instagram,
+      street_address: valid.streetAddress,
       city_province: valid.cityProvince,
       postal_code: valid.postalCode,
       hours_mon_fri: valid.hoursMonFri,
       hours_sat: valid.hoursSat,
       hours_sun: valid.hoursSun,
+      time_zone: valid.timeZone,
       show_opening_hours: valid.showOpeningHours,
       typography: valid.typography,
       custom_domain: valid.customDomain || null,
@@ -412,30 +427,58 @@ export async function checkCustomDomainDnsAction(
     return { success: false, error: auth.error };
   }
 
+  const supabase = await createClient();
+
+  // Load expected verification token from tenant settings
+  const { data: currentSettings } = await supabase
+    .from("tenant_settings")
+    .select("custom_domain_token")
+    .eq("tenant_id", auth.tenantId)
+    .maybeSingle();
+
+  const expectedToken = currentSettings?.custom_domain_token || `fides-site-verification=${auth.tenantId}`;
+
   let isTxtVerified = false;
   let isRoutingVerified = false;
   const recordsChecked: string[] = [];
 
+  const resolveWithTimeout = async <R>(promise: Promise<R>, timeoutMs = 5000): Promise<R | null> => {
+    try {
+      const timeoutPromise = new Promise<null>((_, reject) =>
+        setTimeout(() => reject(new Error("DNS timeout")), timeoutMs)
+      );
+      return await Promise.race([promise, timeoutPromise]);
+    } catch {
+      return null;
+    }
+  };
+
   try {
-    // 1. Resolve TXT records
-    const txtRecords = await dns.resolveTxt(targetDomain).catch(() => []);
+    // 1. Resolve TXT records (QA #12)
+    const txtRecords = await resolveWithTimeout(dns.resolveTxt(targetDomain));
     recordsChecked.push("TXT");
-    const flatTxt = txtRecords.flat().join(" ");
-    if (flatTxt.includes("fides-verify=")) {
-      isTxtVerified = true;
+    if (txtRecords && Array.isArray(txtRecords)) {
+      const flatTxt = txtRecords.flat().join(" ");
+      if (
+        flatTxt.includes("fides-site-verification=") ||
+        flatTxt.includes("fides-verify=") ||
+        (expectedToken && flatTxt.includes(expectedToken))
+      ) {
+        isTxtVerified = true;
+      }
     }
 
     // 2. Resolve CNAME or A records
     if (targetDomain.startsWith("www.")) {
-      const cnames = await dns.resolveCname(targetDomain).catch(() => []);
+      const cnames = await resolveWithTimeout(dns.resolveCname(targetDomain));
       recordsChecked.push("CNAME");
-      if (cnames.some((c) => c.includes("fides.app"))) {
+      if (cnames && Array.isArray(cnames) && cnames.some((c) => c.includes("fides.app"))) {
         isRoutingVerified = true;
       }
     } else {
-      const aRecords = await dns.resolve4(targetDomain).catch(() => []);
+      const aRecords = await resolveWithTimeout(dns.resolve4(targetDomain));
       recordsChecked.push("A");
-      if (aRecords.length > 0) {
+      if (aRecords && Array.isArray(aRecords) && aRecords.length > 0) {
         isRoutingVerified = true;
       }
     }
@@ -444,16 +487,18 @@ export async function checkCustomDomainDnsAction(
   }
 
   const newStatus = isTxtVerified && isRoutingVerified ? "active" : "pending_dns";
-  const supabase = await createClient();
 
   await supabase
     .from("tenant_settings")
     .update({
       custom_domain: targetDomain,
       custom_domain_status: newStatus,
+      custom_domain_token: expectedToken,
       custom_domain_last_checked_at: new Date().toISOString(),
     })
     .eq("tenant_id", auth.tenantId);
+
+  revalidatePath("/dashboard/settings/website");
 
   return {
     success: true,
@@ -498,15 +543,23 @@ export async function uploadTenantMediaAction(
   }
   const assetType = parsedAssetType.data;
 
-  // Validate MIME type
-  if (!ALLOWED_MIME_TYPES.has(file.type)) {
+  // Validate MIME type (QA #7: logo allows SVG, cover does not)
+  const allowedSet =
+    assetType === "logo"
+      ? ALLOWED_LOGO_MIME_TYPES
+      : assetType === "cover"
+      ? ALLOWED_COVER_MIME_TYPES
+      : ALLOWED_MIME_TYPES;
+
+  if (!allowedSet.has(file.type)) {
+    const formats = assetType === "cover" ? "PNG, JPEG, or WEBP" : "PNG, JPEG, WEBP, or SVG";
     return {
       success: false,
-      error: `Unsupported file format (${file.type}). Please upload a PNG, JPEG, WEBP, or SVG.`,
+      error: `Unsupported file format (${file.type}). Please upload a ${formats}.`,
     };
   }
 
-  // Validate file size
+  // Validate file size (QA #7)
   const maxBytes = MAX_FILE_SIZES[assetType];
   if (file.size > maxBytes) {
     const maxMb = Math.round(maxBytes / (1024 * 1024));
@@ -518,7 +571,7 @@ export async function uploadTenantMediaAction(
 
   const supabase = await createClient();
   const sanitizedName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-  // Tenant-isolated storage path: {tenant_id}/{assetType}/{filename}
+  // Tenant-isolated storage path: {tenant_id}/{assetType}/{filename} (QA #8)
   const storagePath = `${auth.tenantId}/${assetType}/${sanitizedName}`;
 
   const arrayBuffer = await file.arrayBuffer();
@@ -542,13 +595,8 @@ export async function uploadTenantMediaAction(
     .from("tenant-assets")
     .getPublicUrl(storagePath);
 
-  // If uploading logo, update tenant logo_url
-  if (assetType === "logo") {
-    await supabase
-      .from("tenants")
-      .update({ logo_url: publicUrlData.publicUrl })
-      .eq("id", auth.tenantId);
-  }
+  // Note: Logo URL is stored in draft_settings by caller and only committed
+  // to live public.tenants on publish (QA #9). Do NOT update live tenants.logo_url here!
 
   return {
     success: true,

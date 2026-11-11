@@ -1,7 +1,12 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { MerchantSidebar } from "../merchant-sidebar";
+import {
+  updateAppointmentStatusAction,
+  createAppointmentBookingAction,
+} from "@/app/actions/appointments";
 
 export interface AppointmentItem {
   id: string;
@@ -10,96 +15,39 @@ export interface AppointmentItem {
   service: string;
   staff: string;
   source: "Online" | "Walk-In";
-  status: "Confirmed" | "Check In" | "Pending approval";
+  status: "Confirmed" | "Check In" | "Pending approval" | "In service" | "Completed" | "Cancelled";
+  startsAt?: string;
 }
-
-const INITIAL_APPOINTMENTS: AppointmentItem[] = [
-  {
-    id: "1",
-    time: "09:00",
-    customer: "Ana Reyes",
-    service: "Signature haircut",
-    staff: "Sofia Cruz",
-    source: "Online",
-    status: "Confirmed",
-  },
-  {
-    id: "2",
-    time: "09:45",
-    customer: "Carlo Dela Cruz",
-    service: "Hair color",
-    staff: "Miguel Tan",
-    source: "Walk-In",
-    status: "Check In",
-  },
-  {
-    id: "3",
-    time: "10:30",
-    customer: "Bea Flores",
-    service: "Wellness massage",
-    staff: "Lia Ramos",
-    source: "Online",
-    status: "Pending approval",
-  },
-  {
-    id: "4",
-    time: "11:00",
-    customer: "Daniel Lim",
-    service: "Facial Treatment",
-    staff: "Sofia Cruz",
-    source: "Online",
-    status: "Confirmed",
-  },
-  {
-    id: "5",
-    time: "13:00",
-    customer: "Jessa Tan",
-    service: "Cut + treatment",
-    staff: "Miguel Tan",
-    source: "Walk-In",
-    status: "Confirmed",
-  },
-  {
-    id: "6",
-    time: "14:00",
-    customer: "Marco Yap",
-    service: "Signature haircut",
-    staff: "Lia Ramos",
-    source: "Online",
-    status: "Confirmed",
-  },
-  {
-    id: "7",
-    time: "14:30",
-    customer: "John Flores",
-    service: "Wellness massage",
-    staff: "Miguel Tan",
-    source: "Online",
-    status: "Pending approval",
-  },
-  {
-    id: "8",
-    time: "15:00",
-    customer: "Kim Lim",
-    service: "Facial Treatment",
-    staff: "Sofia Cruz",
-    source: "Online",
-    status: "Confirmed",
-  },
-];
 
 interface AppointmentsViewProps {
   businessName?: string;
   userEmail?: string;
+  tenantId?: string;
+  todayCount?: number;
+  awaitingCount?: number;
+  checkedInCount?: number;
+  completedTodayCount?: number;
   initialItems?: AppointmentItem[];
 }
 
 export function AppointmentsView({
   businessName = "Bella Vita",
   userEmail = "Maria Santos",
-  initialItems = INITIAL_APPOINTMENTS,
+  tenantId,
+  todayCount = 0,
+  awaitingCount = 0,
+  checkedInCount = 0,
+  completedTodayCount = 0,
+  initialItems = [],
 }: AppointmentsViewProps) {
+  const router = useRouter();
   const [items, setItems] = React.useState<AppointmentItem[]>(initialItems);
+  const [prevInitialItems, setPrevInitialItems] = React.useState<AppointmentItem[]>(initialItems);
+  if (initialItems !== prevInitialItems) {
+    setPrevInitialItems(initialItems);
+    setItems(initialItems);
+  }
+
   const [searchQuery, setSearchQuery] = React.useState("");
   const [filterStatus, setFilterStatus] = React.useState<string>("All");
   const [viewMode, setViewMode] = React.useState<"list" | "calendar">("list");
@@ -108,6 +56,8 @@ export function AppointmentsView({
   const [cancelTarget, setCancelTarget] = React.useState<AppointmentItem | null>(null);
   const [isNewBookingOpen, setIsNewBookingOpen] = React.useState(false);
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
+  const [isBookingSubmitting, setIsBookingSubmitting] = React.useState(false);
+  const [bookingError, setBookingError] = React.useState<string | null>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -128,20 +78,118 @@ export function AppointmentsView({
     return matchesSearch && matchesStatus;
   });
 
-  // Action toggle status
-  const handleStatusChange = (id: string, newStatus: AppointmentItem["status"]) => {
+  // Action toggle status (QA #3: persists to Supabase)
+  const handleStatusChange = async (id: string, newStatus: AppointmentItem["status"]) => {
+    setActiveMenuId(null);
+    const prevItems = items;
     setItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item))
     );
-    showToast(`Appointment status updated to ${newStatus}`);
-    setActiveMenuId(null);
+
+    try {
+      const res = await updateAppointmentStatusAction({
+        appointmentId: id,
+        newStatus,
+        tenantIdParam: tenantId,
+      });
+
+      if (!res.success) {
+        setItems(prevItems);
+        showToast(res.error || "Failed to update appointment status.");
+        return;
+      }
+      showToast(`Appointment status updated to ${newStatus}`);
+      router.refresh();
+    } catch (err: unknown) {
+      setItems(prevItems);
+      showToast(err instanceof Error ? err.message : "Failed to update appointment status.");
+    }
   };
 
-  const handleConfirmCancel = () => {
+  // Action cancel appointment (QA #3: persists to Supabase)
+  const handleConfirmCancel = async () => {
     if (!cancelTarget) return;
-    setItems((prev) => prev.filter((item) => item.id !== cancelTarget.id));
-    showToast(`Appointment for ${cancelTarget.customer} cancelled.`);
+    const target = cancelTarget;
     setCancelTarget(null);
+    const prevItems = items;
+    setItems((prev) => prev.filter((item) => item.id !== target.id));
+
+    try {
+      const res = await updateAppointmentStatusAction({
+        appointmentId: target.id,
+        newStatus: "Cancelled",
+        tenantIdParam: tenantId,
+      });
+
+      if (!res.success) {
+        setItems(prevItems);
+        showToast(res.error || "Failed to cancel appointment.");
+        return;
+      }
+      showToast(`Appointment for ${target.customer} cancelled.`);
+      router.refresh();
+    } catch (err: unknown) {
+      setItems(prevItems);
+      showToast(err instanceof Error ? err.message : "Failed to cancel appointment.");
+    }
+  };
+
+  // Action new booking (QA #4: persists to Supabase)
+  const handleNewBookingSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const customer = (formData.get("customer") as string)?.trim();
+    const service = (formData.get("service") as string)?.trim();
+    const staff = (formData.get("staff") as string)?.trim();
+    const time = (formData.get("time") as string)?.trim();
+
+    if (!customer) {
+      setBookingError("Customer name is required.");
+      return;
+    }
+
+    setIsBookingSubmitting(true);
+    setBookingError(null);
+
+    try {
+      const res = await createAppointmentBookingAction({
+        customerName: customer,
+        serviceName: service,
+        staffName: staff,
+        time,
+        tenantIdParam: tenantId,
+      });
+
+      if (!res.success) {
+        setBookingError(res.error || "Failed to create booking.");
+        return;
+      }
+      if (!res.data) {
+        setBookingError("Failed to create booking.");
+        return;
+      }
+
+      const created = res.data;
+      const newItem: AppointmentItem = {
+        id: created.id,
+        time: time || "10:00 AM",
+        customer: created.customerName,
+        service: created.serviceName,
+        staff: created.staffName,
+        source: "Online",
+        status: "Confirmed",
+        startsAt: created.starts_at,
+      };
+
+      setItems((prev) => [newItem, ...prev]);
+      setIsNewBookingOpen(false);
+      showToast(`New appointment booked for ${customer}`);
+      router.refresh();
+    } catch (err: unknown) {
+      setBookingError(err instanceof Error ? err.message : "Failed to create booking.");
+    } finally {
+      setIsBookingSubmitting(false);
+    }
   };
 
   return (
@@ -182,7 +230,7 @@ export function AppointmentsView({
             </div>
 
             <div className="my-4">
-              <span className="text-3xl font-bold font-serif">18</span>
+              <span className="text-3xl font-bold font-serif">{todayCount}</span>
             </div>
 
             <div>
@@ -205,7 +253,7 @@ export function AppointmentsView({
             </div>
 
             <div className="my-4">
-              <span className="text-3xl font-bold font-serif text-neutral-900">3</span>
+              <span className="text-3xl font-bold font-serif text-neutral-900">{awaitingCount}</span>
             </div>
 
             <div>
@@ -227,7 +275,7 @@ export function AppointmentsView({
             </div>
 
             <div className="my-4">
-              <span className="text-3xl font-bold font-serif text-neutral-900">4</span>
+              <span className="text-3xl font-bold font-serif text-neutral-900">{checkedInCount}</span>
             </div>
 
             <div>
@@ -249,7 +297,7 @@ export function AppointmentsView({
             </div>
 
             <div className="my-4">
-              <span className="text-3xl font-bold font-serif text-neutral-900">7</span>
+              <span className="text-3xl font-bold font-serif text-neutral-900">{completedTodayCount}</span>
             </div>
 
             <div>
@@ -261,7 +309,7 @@ export function AppointmentsView({
           </div>
         </div>
 
-        {/* Main Appointments Table Card (Exact match to Screenshot 160513) */}
+        {/* Main Appointments Card */}
         <div className="rounded-2xl bg-white border border-[#EDECE8] shadow-xs overflow-hidden">
           {/* Card Controls */}
           <div className="p-5 border-b border-[#EDECE8] flex flex-wrap items-center justify-between gap-4">
@@ -276,7 +324,7 @@ export function AppointmentsView({
                 </h2>
               </div>
               <span className="text-xs font-semibold text-neutral-600 bg-neutral-100 px-2.5 py-0.5 rounded-full">
-                18 appointments
+                {items.length} appointments
               </span>
             </div>
 
@@ -361,103 +409,232 @@ export function AppointmentsView({
             </div>
           </div>
 
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-neutral-50/70 border-b border-[#EDECE8] text-neutral-400 font-medium">
-                <tr>
-                  <th className="px-5 py-3">Time</th>
-                  <th className="px-5 py-3">Customer</th>
-                  <th className="px-5 py-3">Service</th>
-                  <th className="px-5 py-3">Staff</th>
-                  <th className="px-5 py-3">Source</th>
-                  <th className="px-5 py-3">Status</th>
-                  <th className="px-5 py-3 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#EDECE8]">
-                {filtered.map((row) => (
-                  <tr key={row.id} className="hover:bg-neutral-50/60 transition">
-                    <td className="px-5 py-3.5 font-medium text-neutral-700">{row.time}</td>
-                    <td className="px-5 py-3.5 font-semibold text-neutral-900">{row.customer}</td>
-                    <td className="px-5 py-3.5 text-neutral-600">{row.service}</td>
-                    <td className="px-5 py-3.5 text-neutral-600">{row.staff}</td>
-                    <td className="px-5 py-3.5">
-                      <span className={row.source === "Walk-In" ? "text-[#C35000] font-medium" : "text-neutral-500"}>
-                        {row.source}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      {row.status === "Confirmed" && (
-                        <span className="text-[11px] font-medium text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
-                          Confirmed
+          {/* QA #2: Conditionally render Calendar View vs Table View */}
+          {viewMode === "calendar" ? (
+            <div className="p-6">
+              {filtered.length === 0 ? (
+                <div className="py-12 text-center text-xs text-neutral-400">
+                  No appointments found matching your filter criteria.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filtered.map((item) => (
+                    <div
+                      key={item.id}
+                      className="rounded-2xl border border-[#EDECE8] bg-white p-4 shadow-2xs hover:shadow-xs transition space-y-3"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-[#C35000] bg-[#FDF3EB] border border-[#FADCD9] px-2.5 py-1 rounded-lg font-mono">
+                          {item.time}
                         </span>
-                      )}
-                      {row.status === "Check In" && (
-                        <button
-                          type="button"
-                          onClick={() => handleStatusChange(row.id, "Confirmed")}
-                          className="text-[11px] font-medium text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full hover:bg-blue-100 transition cursor-pointer"
-                        >
-                          Check In
-                        </button>
-                      )}
-                      {row.status === "Pending approval" && (
-                        <button
-                          type="button"
-                          onClick={() => handleStatusChange(row.id, "Confirmed")}
-                          className="text-[11px] font-medium text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full hover:bg-amber-100 transition cursor-pointer"
-                        >
-                          Pending approval
-                        </button>
-                      )}
-                    </td>
-                    <td className="px-5 py-3.5 text-right relative">
-                      <button
-                        type="button"
-                        onClick={() => setActiveMenuId(activeMenuId === row.id ? null : row.id)}
-                        className="p-1 rounded text-neutral-400 hover:text-neutral-700 transition"
-                      >
-                        •••
-                      </button>
+                        <div>
+                          {item.status === "Confirmed" && (
+                            <span className="text-[11px] font-medium text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                              Confirmed
+                            </span>
+                          )}
+                          {item.status === "Check In" && (
+                            <span className="text-[11px] font-medium text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
+                              Check In
+                            </span>
+                          )}
+                          {item.status === "Pending approval" && (
+                            <span className="text-[11px] font-medium text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                              Pending approval
+                            </span>
+                          )}
+                          {item.status === "In service" && (
+                            <span className="text-[11px] font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full">
+                              In service
+                            </span>
+                          )}
+                          {item.status === "Completed" && (
+                            <span className="text-[11px] font-medium text-neutral-600 bg-neutral-100 border border-neutral-200 px-2 py-0.5 rounded-full">
+                              Completed
+                            </span>
+                          )}
+                          {item.status === "Cancelled" && (
+                            <span className="text-[11px] font-medium text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+                              Cancelled
+                            </span>
+                          )}
+                        </div>
+                      </div>
 
-                      {activeMenuId === row.id && (
-                        <div className="absolute right-4 mt-1 w-40 rounded-xl bg-white border border-[#EDECE8] shadow-lg py-1 z-30 text-left text-xs">
-                          {row.status !== "Confirmed" && (
+                      <div>
+                        <h4 className="text-sm font-semibold text-neutral-900">{item.customer}</h4>
+                        <p className="text-xs text-neutral-600 mt-0.5">{item.service}</p>
+                      </div>
+
+                      <div className="flex items-center justify-between text-[11px] text-neutral-500 pt-2 border-t border-[#EDECE8]">
+                        <span>
+                          Staff: <strong className="text-neutral-700 font-medium">{item.staff}</strong>
+                        </span>
+                        <span className={item.source === "Walk-In" ? "text-[#C35000] font-medium" : "text-neutral-500"}>
+                          {item.source}
+                        </span>
+                      </div>
+
+                      {/* Calendar Card Actions (QA #2) */}
+                      <div className="flex items-center justify-end gap-2 pt-1 border-t border-[#EDECE8]">
+                        {item.status !== "Confirmed" && (
+                          <button
+                            type="button"
+                            onClick={() => handleStatusChange(item.id, "Confirmed")}
+                            className="px-2.5 py-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition cursor-pointer"
+                          >
+                            Confirm
+                          </button>
+                        )}
+                        {item.status !== "Check In" && (
+                          <button
+                            type="button"
+                            onClick={() => handleStatusChange(item.id, "Check In")}
+                            className="px-2.5 py-1 text-[11px] font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition cursor-pointer"
+                          >
+                            Check In
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setCancelTarget(item)}
+                          className="px-2.5 py-1 text-[11px] font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Table View */
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-neutral-50/70 border-b border-[#EDECE8] text-neutral-400 font-medium">
+                  <tr>
+                    <th className="px-5 py-3">Time</th>
+                    <th className="px-5 py-3">Customer</th>
+                    <th className="px-5 py-3">Service</th>
+                    <th className="px-5 py-3">Staff</th>
+                    <th className="px-5 py-3">Source</th>
+                    <th className="px-5 py-3">Status</th>
+                    <th className="px-5 py-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#EDECE8]">
+                  {filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-5 py-8 text-center text-xs text-neutral-400">
+                        No appointments found matching your filter criteria.
+                      </td>
+                    </tr>
+                  ) : (
+                    filtered.map((row) => (
+                      <tr key={row.id} className="hover:bg-neutral-50/60 transition">
+                        <td className="px-5 py-3.5 font-medium text-neutral-700">{row.time}</td>
+                        <td className="px-5 py-3.5 font-semibold text-neutral-900">{row.customer}</td>
+                        <td className="px-5 py-3.5 text-neutral-600">{row.service}</td>
+                        <td className="px-5 py-3.5 text-neutral-600">{row.staff}</td>
+                        <td className="px-5 py-3.5">
+                          <span className={row.source === "Walk-In" ? "text-[#C35000] font-medium" : "text-neutral-500"}>
+                            {row.source}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5">
+                          {row.status === "Confirmed" && (
+                            <span className="text-[11px] font-medium text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                              Confirmed
+                            </span>
+                          )}
+                          {row.status === "Check In" && (
                             <button
                               type="button"
                               onClick={() => handleStatusChange(row.id, "Confirmed")}
-                              className="w-full text-left px-3.5 py-1.5 hover:bg-neutral-50 text-neutral-700"
-                            >
-                              Confirm
-                            </button>
-                          )}
-                          {row.status !== "Check In" && (
-                            <button
-                              type="button"
-                              onClick={() => handleStatusChange(row.id, "Check In")}
-                              className="w-full text-left px-3.5 py-1.5 hover:bg-neutral-50 text-neutral-700"
+                              className="text-[11px] font-medium text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full hover:bg-blue-100 transition cursor-pointer"
                             >
                               Check In
                             </button>
                           )}
+                          {row.status === "Pending approval" && (
+                            <button
+                              type="button"
+                              onClick={() => handleStatusChange(row.id, "Confirmed")}
+                              className="text-[11px] font-medium text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full hover:bg-amber-100 transition cursor-pointer"
+                            >
+                              Pending approval
+                            </button>
+                          )}
+                          {row.status === "In service" && (
+                            <span className="text-[11px] font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full">
+                              In service
+                            </span>
+                          )}
+                          {row.status === "Completed" && (
+                            <span className="text-[11px] font-medium text-neutral-600 bg-neutral-100 border border-neutral-200 px-2.5 py-0.5 rounded-full">
+                              Completed
+                            </span>
+                          )}
+                          {row.status === "Cancelled" && (
+                            <span className="text-[11px] font-medium text-red-700 bg-red-50 border border-red-200 px-2.5 py-0.5 rounded-full">
+                              Cancelled
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-5 py-3.5 text-right relative">
                           <button
                             type="button"
-                            onClick={() => {
-                              setCancelTarget(row);
-                              setActiveMenuId(null);
-                            }}
-                            className="w-full text-left px-3.5 py-1.5 hover:bg-red-50 text-red-600 font-medium"
+                            onClick={() => setActiveMenuId(activeMenuId === row.id ? null : row.id)}
+                            className="p-1 rounded text-neutral-400 hover:text-neutral-700 transition"
                           >
-                            Cancel booking
+                            •••
                           </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+
+                          {activeMenuId === row.id && (
+                            <div className="absolute right-4 mt-1 w-40 rounded-xl bg-white border border-[#EDECE8] shadow-lg py-1 z-30 text-left text-xs">
+                              {row.status !== "Confirmed" && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleStatusChange(row.id, "Confirmed")}
+                                  className="w-full text-left px-3.5 py-1.5 hover:bg-neutral-50 text-neutral-700"
+                                >
+                                  Confirm
+                                </button>
+                              )}
+                              {row.status !== "Check In" && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleStatusChange(row.id, "Check In")}
+                                  className="w-full text-left px-3.5 py-1.5 hover:bg-neutral-50 text-neutral-700"
+                                >
+                                  Check In
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setCancelTarget(row);
+                                  setActiveMenuId(null);
+                                }}
+                                className="w-full text-left px-3.5 py-1.5 hover:bg-red-50 text-red-600 font-medium"
+                              >
+                                Cancel booking
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Table Footer */}
+          <div className="p-4 border-t border-[#EDECE8] flex flex-wrap items-center justify-between gap-3 text-xs text-neutral-500">
+            <span>Showing {filtered.length} of {items.length} appointments · All times in Asia/Manila (UTC+8)</span>
           </div>
         </div>
       </main>
@@ -469,7 +646,7 @@ export function AppointmentsView({
         </div>
       )}
 
-      {/* Cancel Confirmation Modal */}
+      {/* Cancel Confirmation Modal (QA #3) */}
       {cancelTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-neutral-200">
@@ -500,7 +677,7 @@ export function AppointmentsView({
         </div>
       )}
 
-      {/* New Booking Modal */}
+      {/* New Booking Modal (QA #4) */}
       {isNewBookingOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-neutral-200 space-y-4">
@@ -510,36 +687,23 @@ export function AppointmentsView({
               </h3>
               <button
                 type="button"
-                onClick={() => setIsNewBookingOpen(false)}
+                onClick={() => {
+                  setIsNewBookingOpen(false);
+                  setBookingError(null);
+                }}
                 className="text-neutral-400 hover:text-neutral-600 text-lg leading-none"
               >
                 ×
               </button>
             </div>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const formData = new FormData(e.currentTarget);
-                const customer = formData.get("customer") as string;
-                const service = formData.get("service") as string;
-                const staff = formData.get("staff") as string;
-                const time = formData.get("time") as string;
-                if (!customer) return;
-                const newItem: AppointmentItem = {
-                  id: String(Date.now()),
-                  time: time || "10:00 AM",
-                  customer,
-                  service: service || "Custom Service",
-                  staff: staff || "Maria Santos",
-                  source: "Online",
-                  status: "Confirmed",
-                };
-                setItems((prev) => [newItem, ...prev]);
-                setIsNewBookingOpen(false);
-                showToast(`New appointment booked for ${customer}`);
-              }}
-              className="space-y-3 text-xs"
-            >
+
+            {bookingError && (
+              <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+                {bookingError}
+              </div>
+            )}
+
+            <form onSubmit={handleNewBookingSubmit} className="space-y-3 text-xs">
               <div>
                 <label className="block text-neutral-700 font-medium mb-1">Customer name</label>
                 <input
@@ -554,7 +718,7 @@ export function AppointmentsView({
                   <label className="block text-neutral-700 font-medium mb-1">Service</label>
                   <input
                     name="service"
-                    defaultValue="Hair Styling & Blow Dry"
+                    defaultValue="Signature haircut"
                     className="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50/60 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C35000]"
                   />
                 </div>
@@ -571,23 +735,28 @@ export function AppointmentsView({
                 <label className="block text-neutral-700 font-medium mb-1">Staff member</label>
                 <input
                   name="staff"
-                  defaultValue="Maria Santos"
+                  defaultValue="Lead Specialist"
                   className="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50/60 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C35000]"
                 />
               </div>
               <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-neutral-100">
                 <button
                   type="button"
-                  onClick={() => setIsNewBookingOpen(false)}
-                  className="px-3.5 py-2 rounded-xl border border-neutral-200 text-neutral-700 hover:bg-neutral-50"
+                  disabled={isBookingSubmitting}
+                  onClick={() => {
+                    setIsNewBookingOpen(false);
+                    setBookingError(null);
+                  }}
+                  className="px-3.5 py-2 rounded-xl border border-neutral-200 text-neutral-700 hover:bg-neutral-50 disabled:opacity-60"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-[#C35000] hover:bg-[#A94400] text-white font-semibold"
+                  disabled={isBookingSubmitting}
+                  className="px-4 py-2 rounded-xl bg-[#C35000] hover:bg-[#A94400] text-white font-semibold disabled:opacity-60 transition"
                 >
-                  Create Booking
+                  {isBookingSubmitting ? "Creating Booking..." : "Create Booking"}
                 </button>
               </div>
             </form>

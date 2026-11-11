@@ -2,11 +2,14 @@
 
 import * as React from "react";
 import { AlertCircleIcon } from "./icons";
+import { subdomainSchema } from "@/lib/validations/website-settings";
+import { updateTenantSubdomainAction } from "@/app/actions/website-settings";
 
 interface ChangeAddressModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentSubdomain: string;
+  tenantId?: string;
   onConfirm: (newSubdomain: string) => void;
 }
 
@@ -14,6 +17,7 @@ export function ChangeAddressModal({
   isOpen,
   onClose,
   currentSubdomain,
+  tenantId,
   onConfirm,
 }: ChangeAddressModalProps) {
   if (!isOpen) return null;
@@ -21,6 +25,7 @@ export function ChangeAddressModal({
   return (
     <ChangeAddressDialogContent
       currentSubdomain={currentSubdomain}
+      tenantId={tenantId}
       onClose={onClose}
       onConfirm={onConfirm}
     />
@@ -29,27 +34,42 @@ export function ChangeAddressModal({
 
 function ChangeAddressDialogContent({
   currentSubdomain,
+  tenantId,
   onClose,
   onConfirm,
 }: Omit<ChangeAddressModalProps, "isOpen">) {
   const [subdomain, setSubdomain] = React.useState(currentSubdomain);
   const [error, setError] = React.useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     const cleaned = subdomain.trim().toLowerCase();
-    if (!cleaned) {
-      setError("Please enter a website address.");
+
+    // 1. Local validation against format rules and reserved subdomains (QA #11)
+    const parsed = subdomainSchema.safeParse(cleaned);
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message ?? "Invalid website address.");
       return;
     }
-    if (!/^[a-z0-9-]+$/.test(cleaned)) {
-      setError("Only lowercase letters, numbers, and hyphens are allowed.");
-      return;
+
+    // 2. Invoke and await the server action
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const res = await updateTenantSubdomainAction(cleaned, tenantId);
+      if (!res.success) {
+        setError(res.error || "Failed to update website address.");
+        return;
+      }
+
+      // 3. Only transition to address-updated state after server action succeeds
+      onConfirm(cleaned);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to update address.");
+    } finally {
+      setIsSubmitting(false);
     }
-    if (cleaned.length < 3 || cleaned.length > 40) {
-      setError("Website address must be between 3 and 40 characters.");
-      return;
-    }
-    onConfirm(cleaned);
   };
 
   return (
@@ -122,10 +142,11 @@ function ChangeAddressDialogContent({
           </button>
           <button
             type="button"
+            disabled={isSubmitting}
             onClick={handleConfirm}
-            className="px-4 py-2 text-xs font-semibold text-white bg-[#C35000] hover:bg-[#A94400] rounded-xl shadow-xs transition"
+            className="px-4 py-2 text-xs font-semibold text-white bg-[#C35000] hover:bg-[#A94400] disabled:opacity-60 rounded-xl shadow-xs transition"
           >
-            Confirm address
+            {isSubmitting ? "Updating..." : "Confirm address"}
           </button>
         </div>
       </div>

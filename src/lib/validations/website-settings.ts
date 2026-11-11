@@ -27,6 +27,7 @@ export const websiteSettingsSchema = z.object({
   // Brand identity
   businessName: z.string().min(1, "Business name is required").max(100),
   logoInitials: z.string().min(1).max(4),
+  logoUrl: z.string().optional().or(z.literal("")),
   typography: z.string().min(1).default("Ovo + Mulish"),
   mainColor: z.string().regex(HEX_COLOR_REGEX, "Main color must be a 6-character hex code"),
   secondaryColor: z.string().regex(HEX_COLOR_REGEX, "Secondary color must be a 6-character hex code"),
@@ -36,6 +37,7 @@ export const websiteSettingsSchema = z.object({
   headline: z.string().min(1, "Headline is required").max(200),
   supportingMessage: z.string().max(500).default(""),
   coverPhotoName: z.string().max(100).default("bella-vita-studio.jpg"),
+  coverPhotoUrl: z.string().optional().or(z.literal("")),
   showFeaturedServices: z.boolean().default(true),
   showContactDetails: z.boolean().default(true),
 
@@ -70,6 +72,19 @@ export const websiteSettingsSchema = z.object({
 });
 
 export const assetTypeSchema = z.enum(["logo", "cover", "social"]);
+
+export const ALLOWED_LOGO_MIME_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/svg+xml",
+]);
+
+export const ALLOWED_COVER_MIME_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+]);
 
 export const ALLOWED_MIME_TYPES = new Set([
   "image/png",

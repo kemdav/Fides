@@ -28,6 +28,11 @@ import {
   discardWebsiteDraftAction,
   uploadTenantMediaAction,
 } from "@/app/actions/website-settings";
+import {
+  ALLOWED_LOGO_MIME_TYPES,
+  ALLOWED_COVER_MIME_TYPES,
+  MAX_FILE_SIZES,
+} from "@/lib/validations/website-settings";
 
 const INITIAL_SETTINGS: WebsiteSettingsData = {
   businessName: "Bella Vita Salon & Spa",
@@ -76,12 +81,16 @@ const INITIAL_SETTINGS: WebsiteSettingsData = {
 interface WebsiteSettingsViewProps {
   initialData?: Partial<WebsiteSettingsData>;
   tenantSlug?: string;
+  tenantId?: string;
+  customDomainToken?: string;
   userEmail?: string;
 }
 
 export function WebsiteSettingsView({
   initialData,
   tenantSlug,
+  tenantId,
+  customDomainToken,
   userEmail = "Maria Santos",
 }: WebsiteSettingsViewProps) {
   // Stored saved state
@@ -118,6 +127,10 @@ export function WebsiteSettingsView({
   const [uploadError, setUploadError] = React.useState<string | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = React.useState(false);
   const [isUploadingCover, setIsUploadingCover] = React.useState(false);
+  const [isSavingDraft, setIsSavingDraft] = React.useState(false);
+  const [saveDraftError, setSaveDraftError] = React.useState<string | null>(null);
+  const [isPublishing, setIsPublishing] = React.useState(false);
+  const [publishError, setPublishError] = React.useState<string | null>(null);
 
   const logoInputRef = React.useRef<HTMLInputElement | null>(null);
   const coverInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -129,6 +142,26 @@ export function WebsiteSettingsView({
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Validate MIME type locally before upload (QA #7)
+    const allowed =
+      assetType === "logo" ? ALLOWED_LOGO_MIME_TYPES : ALLOWED_COVER_MIME_TYPES;
+    if (!allowed.has(file.type)) {
+      const allowedText =
+        assetType === "cover" ? "PNG, JPEG, or WEBP" : "PNG, JPEG, WEBP, or SVG";
+      setUploadError(`Unsupported file format (${file.type}). Please upload a ${allowedText}.`);
+      event.target.value = "";
+      return;
+    }
+
+    // Validate file size locally before upload (QA #7)
+    const maxBytes = MAX_FILE_SIZES[assetType];
+    if (file.size > maxBytes) {
+      const maxMb = Math.round(maxBytes / (1024 * 1024));
+      setUploadError(`File is too large. Maximum allowed size for ${assetType} is ${maxMb} MB.`);
+      event.target.value = "";
+      return;
+    }
+
     if (assetType === "logo") setIsUploadingLogo(true);
     else setIsUploadingCover(true);
     setUploadError(null);
@@ -138,9 +171,10 @@ export function WebsiteSettingsView({
       formData.append("file", file);
       formData.append("assetType", assetType);
 
-      const res = await uploadTenantMediaAction(formData);
+      const res = await uploadTenantMediaAction(formData, tenantId);
       if (res.success) {
         if (res.data) {
+          // QA #9: Logo upload saves into draft settings only, does not alter live site
           if (assetType === "logo") {
             handleChange("logoUrl", res.data.url);
           } else {
@@ -190,22 +224,48 @@ export function WebsiteSettingsView({
     setTimeout(() => setLinkCopiedToast(false), 2200);
   };
 
-  // Actions
+  // Actions (QA #10: Await server action and verify success before showing modal)
   const handleSaveDraft = async () => {
-    setSavedSettings(form);
-    setIsDraftSavedOpen(true);
-    await saveWebsiteDraftAction(form);
+    setIsSavingDraft(true);
+    setSaveDraftError(null);
+    try {
+      const res = await saveWebsiteDraftAction(form, tenantId);
+      if (!res.success) {
+        setSaveDraftError(res.error || "Failed to save draft.");
+        return;
+      }
+      setSavedSettings(form);
+      setIsDraftSavedOpen(true);
+    } catch (err: unknown) {
+      setSaveDraftError(err instanceof Error ? err.message : "Failed to save draft.");
+    } finally {
+      setIsSavingDraft(false);
+    }
   };
 
   const handlePublish = async () => {
-    setSavedSettings(form);
-    setIsPublishedOpen(true);
-    await publishWebsiteSettingsAction(form);
+    setIsPublishing(true);
+    setPublishError(null);
+    try {
+      const res = await publishWebsiteSettingsAction(form, tenantId);
+      if (!res.success) {
+        setPublishError(res.error || "Failed to publish settings.");
+        return;
+      }
+      setSavedSettings(form);
+      setIsPublishReviewOpen(false);
+      setIsPublishedOpen(true);
+    } catch (err: unknown) {
+      setPublishError(err instanceof Error ? err.message : "Failed to publish settings.");
+    } finally {
+      setIsPublishing(false);
+    }
   };
 
   const handleDiscard = async () => {
     setForm(savedSettings);
-    await discardWebsiteDraftAction();
+    await discardWebsiteDraftAction(tenantId);
+    setIsDiscardOpen(false);
   };
 
   return (
@@ -225,6 +285,20 @@ export function WebsiteSettingsView({
           <button
             type="button"
             onClick={() => setUploadError(null)}
+            className="ml-2 font-bold hover:opacity-80"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {saveDraftError && (
+        <div className="fixed top-5 right-5 z-50 bg-rose-600 text-white px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2 text-xs font-medium animate-in fade-in slide-in-from-top-2 duration-150">
+          <AlertCircleIcon className="w-4 h-4 text-white" />
+          <span>{saveDraftError}</span>
+          <button
+            type="button"
+            onClick={() => setSaveDraftError(null)}
             className="ml-2 font-bold hover:opacity-80"
           >
             ×
@@ -1338,18 +1412,20 @@ export function WebsiteSettingsView({
 
             <button
               type="button"
+              disabled={isSavingDraft}
               onClick={handleSaveDraft}
-              className="px-4 py-2 rounded-xl border border-[#EDECE8] bg-white hover:bg-neutral-50 text-xs font-semibold text-neutral-800 transition shadow-2xs"
+              className="px-4 py-2 rounded-xl border border-[#EDECE8] bg-white hover:bg-neutral-50 text-xs font-semibold text-neutral-800 transition shadow-2xs disabled:opacity-60"
             >
-              Save draft
+              {isSavingDraft ? "Saving..." : "Save draft"}
             </button>
 
             <button
               type="button"
+              disabled={isPublishing}
               onClick={() => setIsPublishReviewOpen(true)}
-              className="px-4 py-2 rounded-xl bg-[#C35000] hover:bg-[#A94400] text-white text-xs font-semibold transition shadow-xs"
+              className="px-4 py-2 rounded-xl bg-[#C35000] hover:bg-[#A94400] text-white text-xs font-semibold transition shadow-xs disabled:opacity-60"
             >
-              Publish changes
+              {isPublishing ? "Publishing..." : "Publish changes"}
             </button>
           </div>
         </div>
@@ -1376,6 +1452,9 @@ export function WebsiteSettingsView({
         isOpen={isConnectDomainOpen}
         onClose={() => setIsConnectDomainOpen(false)}
         domainName={form.customDomain}
+        verificationToken={customDomainToken || `fides-site-verification=${tenantId || form.subdomain}`}
+        tenantId={tenantId}
+        onVerified={() => handleChange("isDomainVerified", true)}
         onCheckStatus={() => setIsWaitingDnsOpen(true)}
       />
 
@@ -1388,6 +1467,7 @@ export function WebsiteSettingsView({
         isOpen={isChangeAddressOpen}
         onClose={() => setIsChangeAddressOpen(false)}
         currentSubdomain={form.subdomain}
+        tenantId={tenantId}
         onConfirm={handleConfirmAddress}
       />
 
@@ -1408,6 +1488,8 @@ export function WebsiteSettingsView({
         onClose={() => setIsPublishReviewOpen(false)}
         onPublish={handlePublish}
         siteAddress={`${form.subdomain}.fides.app`}
+        isPublishing={isPublishing}
+        errorMessage={publishError}
       />
 
       <PublishedModal
