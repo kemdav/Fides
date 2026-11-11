@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { OverviewView } from "@/components/merchant/overview/overview-view";
 import { createClient } from "@/lib/supabase/server";
 
@@ -37,7 +37,7 @@ export default async function MerchantDashboardPage({
     .single();
 
   if (!tenant) {
-    redirect(`/${slug}`);
+    notFound();
   }
 
   return (

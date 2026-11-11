@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { AppointmentsView } from "@/components/merchant/appointments/appointments-view";
 import { createClient } from "@/lib/supabase/server";
 
@@ -32,7 +32,7 @@ export default async function MerchantAppointmentsPage({
     .single();
 
   if (!tenant) {
-    redirect(`/${slug}`);
+    notFound();
   }
 
   return (
