@@ -1,13 +1,12 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { logout } from "@/app/actions/auth";
+import { OverviewView, AppointmentRow, DayChartStat } from "@/components/merchant/overview/overview-view";
 
 /**
- * Protected Dashboard Server Component.
+ * Merchant Dashboard Overview (`/dashboard`).
  *
- * Verifies active session with `supabase.auth.getUser()`.
- * Displays error banners (e.g. Tenant Mismatch) and session details.
+ * Pixel-matched to design specifications (Screenshot 2026-11-07 160453).
+ * Fetches real metrics, appointments, and payments from Supabase for authenticated tenant (QA #1).
  */
 export default async function DashboardPage({
   searchParams,
@@ -22,188 +21,189 @@ export default async function DashboardPage({
   } = await supabase.auth.getUser();
 
   if (error || !user) {
-    redirect("/login");
+    redirect("/login?redirect=/dashboard");
   }
 
-  const { error: pageError, tenant: currentTenantSlug } =
-    (await searchParams) || {};
+  const { tenant: currentTenantSlug } = (await searchParams) || {};
 
-  // Fetch profile and memberships to display user context
+  // Fetch profile to resolve active tenant
   const { data: profile } = await supabase
     .from("profiles")
     .select("role, tenant_id")
     .eq("id", user.id)
     .single();
 
-  const { data: memberships } = await supabase
-    .from("tenant_memberships")
-    .select("tenant_id, role")
-    .eq("profile_id", user.id);
+  let tenantId = profile?.tenant_id;
+  let businessName = "Bella Vita";
 
-  // Fetch all tenant records visible to the user
-  const tenantIds = Array.from(
-    new Set(
-      [
-        profile?.tenant_id,
-        ...(memberships?.map((m) => m.tenant_id) || []),
-      ].filter(Boolean),
-    ),
-  ) as string[];
-
-  let tenantDetails: {
-    id: string;
-    name: string;
-    slug: string;
-    status: string;
-  }[] = [];
-  if (tenantIds.length > 0) {
+  if (currentTenantSlug) {
     const { data: tData } = await supabase
       .from("tenants")
-      .select("id, name, slug, status")
-      .in("id", tenantIds);
+      .select("id, name, slug")
+      .eq("slug", currentTenantSlug)
+      .single();
     if (tData) {
-      tenantDetails = tData;
+      tenantId = tData.id;
+      businessName = tData.name;
+    }
+  } else if (tenantId) {
+    const { data: tData } = await supabase
+      .from("tenants")
+      .select("id, name, slug")
+      .eq("id", tenantId)
+      .single();
+    if (tData) {
+      businessName = tData.name;
     }
   }
 
+  let todayCount = 0;
+  let confirmedCount = 0;
+  let pendingCount = 0;
+  let checkedInCount = 0;
+  let completedVisitsCount = 0;
+  let revenueTotal = 0;
+  let chartStats: DayChartStat[] = [];
+  let initialRows: AppointmentRow[] = [];
+  let todayActivity: { time: string; customer: string; service: string }[] = [];
+
+  if (tenantId) {
+    // 1. Fetch appointments with customer, staff, and service relations
+    const { data: allAppointments } = await supabase
+      .from("appointments")
+      .select(`
+        id,
+        starts_at,
+        ends_at,
+        source,
+        status,
+        total_cents,
+        customer_id,
+        customers (id, full_name, email, phone),
+        staff_members (id, full_name),
+        appointment_services (
+          service_id,
+          services (id, name)
+        )
+      `)
+      .eq("tenant_id", tenantId)
+      .order("starts_at", { ascending: true });
+
+    // 2. Fetch payments for revenue computation
+    const { data: allPayments } = await supabase
+      .from("payments")
+      .select("id, amount_cents, status, created_at")
+      .eq("tenant_id", tenantId);
+
+    // 3. Compute counts based on today's date (QA #1)
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+
+    const appts = allAppointments || [];
+    const todayAppointments = appts.filter((a) => a.starts_at && a.starts_at.slice(0, 10) === todayStr);
+
+    todayCount = todayAppointments.length;
+    confirmedCount = todayAppointments.filter((a) => a.status === "confirmed").length;
+    pendingCount = appts.filter((a) => a.status === "pending_approval").length;
+    checkedInCount = todayAppointments.filter(
+      (a) => a.status === "checked_in" || a.status === "in_service"
+    ).length;
+
+    const completedAppts = todayAppointments.filter((a) => a.status === "completed");
+    completedVisitsCount = completedAppts.length;
+
+    // 4. Compute revenue from payments or completed appointments (QA #1)
+    const paidPayments = (allPayments || []).filter((p) => p.status === "paid");
+    revenueTotal = paidPayments.reduce((sum, p) => sum + Math.round(p.amount_cents / 100), 0);
+    if (revenueTotal === 0 && completedAppts.length > 0) {
+      revenueTotal = completedAppts.reduce((sum, a) => sum + Math.round((a.total_cents || 0) / 100), 0);
+    }
+
+    // 5. Compute dynamic chart statistics for this week (Mon - Sun)
+    const currentDay = now.getUTCDay();
+    const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay;
+    const monday = new Date(now);
+    monday.setUTCDate(now.getUTCDate() + mondayOffset);
+
+    const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    chartStats = weekDays.map((dayName, idx) => {
+      const d = new Date(monday);
+      d.setUTCDate(monday.getUTCDate() + idx);
+      const dStr = d.toISOString().slice(0, 10);
+
+      const dayAppts = appts.filter((a) => a.starts_at && a.starts_at.slice(0, 10) === dStr);
+      const booked = dayAppts.filter((a) => a.status !== "cancelled" && a.status !== "rejected").length;
+      const completed = dayAppts.filter((a) => a.status === "completed").length;
+
+      return { day: dayName, booked, completed };
+    });
+
+    // 6. Map today's appointments into table rows (QA #1: No mock rows fallback)
+    initialRows = todayAppointments.map((row) => {
+      const timeStr = new Date(row.starts_at).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+
+      const cust = Array.isArray(row.customers) ? row.customers[0] : row.customers;
+      const customerName = cust?.full_name?.trim() || "Customer";
+
+      const staff = Array.isArray(row.staff_members) ? row.staff_members[0] : row.staff_members;
+      const staffName = staff?.full_name?.trim() || "Specialist";
+
+      const apptServices = Array.isArray(row.appointment_services)
+        ? row.appointment_services[0]
+        : row.appointment_services;
+      const svc = Array.isArray(apptServices?.services)
+        ? apptServices?.services[0]
+        : apptServices?.services;
+      const serviceName = svc?.name || "Signature service";
+
+      const sourceVal: AppointmentRow["source"] =
+        row.source === "walk_in" ? "Walk-In" : "Online";
+
+      let statusVal: AppointmentRow["status"] = "Confirmed";
+      if (row.status === "pending_approval") statusVal = "Pending approval";
+      else if (row.status === "checked_in") statusVal = "Check In";
+      else if (row.status === "in_service") statusVal = "In service";
+      else if (row.status === "completed") statusVal = "Completed";
+      else if (row.status === "cancelled") statusVal = "Cancelled";
+
+      return {
+        id: row.id,
+        time: timeStr || "09:00",
+        customer: customerName,
+        service: serviceName,
+        staff: staffName,
+        source: sourceVal,
+        status: statusVal,
+        startsAt: row.starts_at,
+        rawStatus: row.status,
+      };
+    });
+
+    todayActivity = initialRows.slice(0, 4).map((r) => ({
+      time: r.time,
+      customer: r.customer,
+      service: r.service,
+    }));
+  }
+
   return (
-    <main className="min-h-screen bg-neutral-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-lg bg-white border border-neutral-200 rounded-xl shadow-sm p-6 sm:p-8 space-y-6">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-neutral-900">
-            Protected Dashboard
-          </h1>
-          <p className="text-sm text-neutral-500">
-            Active Supabase session verified
-          </p>
-        </div>
-
-        {pageError && (
-          <div
-            role="alert"
-            className="rounded-lg bg-red-50 border border-red-200 p-4 text-sm text-red-700 flex items-start gap-2.5 animate-in fade-in"
-          >
-            <span className="text-lg leading-none">🚫</span>
-            <div className="flex-1 font-semibold">{pageError}</div>
-          </div>
-        )}
-
-        {currentTenantSlug && !pageError && (
-          <div
-            role="status"
-            className="rounded-lg bg-emerald-50 border border-emerald-200 p-3.5 text-sm text-emerald-800 flex items-center justify-between"
-          >
-            <span className="font-medium">
-              Active Tenant Context: <strong>{currentTenantSlug}</strong>
-            </span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-900 font-semibold">
-              Authorized
-            </span>
-          </div>
-        )}
-
-        <div className="rounded-lg bg-neutral-100 p-4 text-sm space-y-2.5">
-          <div>
-            <span className="font-semibold text-neutral-700">Email:</span>{" "}
-            <span className="text-neutral-900">{user.email}</span>
-          </div>
-          <div>
-            <span className="font-semibold text-neutral-700">User ID:</span>{" "}
-            <code className="text-xs bg-neutral-200 px-1.5 py-0.5 rounded font-mono text-neutral-800 break-all">
-              {user.id}
-            </code>
-          </div>
-          <div>
-            <span className="font-semibold text-neutral-700">
-              Platform Role:
-            </span>{" "}
-            <span className="capitalize font-medium text-neutral-900">
-              {profile?.role || "staff"}
-            </span>
-          </div>
-          <div>
-            <span className="font-semibold text-neutral-700">
-              Your Tenants:
-            </span>{" "}
-            {tenantDetails.length > 0 ? (
-              <div className="mt-1 space-y-1">
-                {tenantDetails.map((t) => (
-                  <div
-                    key={t.id}
-                    className="flex items-center justify-between bg-white px-2.5 py-1.5 rounded border border-neutral-200 text-xs"
-                  >
-                    <span className="font-medium text-neutral-900">
-                      {t.name} (slug:{" "}
-                      <code className="text-neutral-700">{t.slug}</code>)
-                    </span>
-                    <span
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                        t.status === "active"
-                          ? "bg-green-100 text-green-800"
-                          : t.status === "suspended"
-                            ? "bg-red-100 text-red-800"
-                            : "bg-neutral-100 text-neutral-700"
-                      }`}
-                    >
-                      {t.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <span className="text-xs text-neutral-500 font-mono">
-                {memberships && memberships.length > 0
-                  ? memberships
-                      .map((m) => `${m.tenant_id} (${m.role})`)
-                      .join(", ")
-                  : "None configured"}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Quick Test Triggers */}
-        <div className="border border-neutral-200 rounded-lg p-4 bg-neutral-50 space-y-3">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-500">
-            Interactive Test Triggers
-          </h3>
-          <div className="flex flex-col gap-2">
-            <Link
-              href="/dashboard?tenant=alpha"
-              className="inline-flex items-center justify-between text-xs font-medium px-3 py-2 rounded-md bg-white border border-neutral-300 hover:bg-neutral-100 text-neutral-800 transition"
-            >
-              <span>Test Tenant Alpha Access (Should be authorized)</span>
-              <span className="text-neutral-400">→</span>
-            </Link>
-
-            <Link
-              href="/dashboard?tenant=beta"
-              className="inline-flex items-center justify-between text-xs font-medium px-3 py-2 rounded-md bg-white border border-neutral-300 hover:bg-neutral-100 text-neutral-800 transition"
-            >
-              <span>Test Tenant Mismatch (Try accessing Beta)</span>
-              <span className="text-neutral-400">→</span>
-            </Link>
-
-            <Link
-              href="/admin"
-              className="inline-flex items-center justify-between text-xs font-medium px-3 py-2 rounded-md bg-white border border-neutral-300 hover:bg-neutral-100 text-neutral-800 transition"
-            >
-              <span>Test Unauthorized Role Guard (Try accessing /admin)</span>
-              <span className="text-neutral-400">→</span>
-            </Link>
-          </div>
-        </div>
-
-        {/* Server Action: Sign Out */}
-        <form action={logout}>
-          <button
-            type="submit"
-            className="w-full rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition cursor-pointer"
-          >
-            Sign Out
-          </button>
-        </form>
-      </div>
-    </main>
+    <OverviewView
+      businessName={businessName}
+      userEmail={user.email ?? "Maria Santos"}
+      tenantId={tenantId ?? undefined}
+      todayCount={todayCount}
+      confirmedCount={confirmedCount}
+      pendingCount={pendingCount}
+      checkedInCount={checkedInCount}
+      completedVisitsCount={completedVisitsCount}
+      revenueTotal={revenueTotal}
+      chartStats={chartStats}
+      todayActivity={todayActivity}
+      initialRows={initialRows}
+    />
   );
 }

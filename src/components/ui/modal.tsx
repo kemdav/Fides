@@ -14,6 +14,8 @@ export type ModalProps = {
   description?: React.ReactNode;
   children?: React.ReactNode;
   className?: string;
+  unstyled?: boolean;
+  labelledBy?: string;
 };
 
 /**
@@ -30,6 +32,8 @@ export function Modal({
   description,
   children,
   className,
+  unstyled = false,
+  labelledBy,
 }: ModalProps) {
   const dialogRef = React.useRef<HTMLDialogElement>(null);
 
@@ -44,16 +48,28 @@ export function Modal({
     }
   }, [open]);
 
+  React.useEffect(() => {
+    if (!open) return;
+    const root = document.documentElement;
+    const previous = root.style.overflow;
+    root.style.overflow = "hidden";
+    return () => {
+      root.style.overflow = previous;
+    };
+  }, [open]);
+
   return (
     <dialog
       ref={dialogRef}
+      aria-labelledby={labelledBy}
       onClose={onClose}
       onCancel={(event) => {
         event.preventDefault();
         onClose();
       }}
       className={cn(
-        "w-[min(32rem,calc(100vw-2rem))] rounded-lg border border-neutral-200 bg-white p-6 text-neutral-900 shadow-lg",
+        !unstyled &&
+          "w-[min(32rem,calc(100vw-2rem))] rounded-lg border border-neutral-200 bg-white p-6 text-neutral-900 shadow-lg",
         "backdrop:bg-black/40",
         className
       )}
