@@ -16,3 +16,8 @@ export type { StorefrontAboutProps } from "./storefront-about";
 export { StorefrontFooter } from "./storefront-footer";
 export type { StorefrontFooterProps } from "./storefront-footer";
 
+export { SearchInput } from "./search-input";
+export type { SearchInputProps } from "./search-input";
+
+export { ServicesList } from "./services-list";
+export type { ServicesListProps } from "./services-list";

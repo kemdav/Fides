@@ -1,0 +1,52 @@
+import type { Metadata } from "next";
+import {
+  StorefrontHeader,
+  StorefrontFooter,
+  ServicesList,
+} from "@/components/storefront";
+import {
+  BUSINESS_NAME,
+  STOREFRONT_NAV,
+  ALL_SERVICES,
+} from "@/components/storefront/storefront-data";
+
+interface ServicesPageProps {
+  params: Promise<{ slug: string }>;
+}
+
+export async function generateMetadata({
+  params,
+}: ServicesPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  void slug; // Will be used to look up tenant metadata.
+  return {
+    title: `${BUSINESS_NAME} – Services`,
+    description: `Browse all services offered by ${BUSINESS_NAME}`,
+    openGraph: {
+      title: `${BUSINESS_NAME} – Services`,
+      description: `Browse all services offered by ${BUSINESS_NAME}`,
+      type: "website",
+    },
+  };
+}
+
+export default async function ServicesPage({ params }: ServicesPageProps) {
+  const { slug } = await params;
+  void slug; // TODO: Fetch tenant services from DB using `slug`.
+
+  return (
+    <>
+      <StorefrontHeader
+        businessName={BUSINESS_NAME}
+        navLinks={[...STOREFRONT_NAV]}
+        activeHref="/services"
+      />
+
+      <main className="flex-1">
+        <ServicesList services={ALL_SERVICES} />
+      </main>
+
+      <StorefrontFooter businessName={BUSINESS_NAME} />
+    </>
+  );
+}
