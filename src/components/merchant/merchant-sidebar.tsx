@@ -7,19 +7,22 @@ import { usePathname } from "next/navigation";
 interface MerchantSidebarProps {
   businessName?: string;
   userEmail?: string;
+  basePath?: string;
 }
 
 export function MerchantSidebar({
   businessName = "Bella Vita",
   userEmail = "Maria Santos",
+  basePath = "",
 }: MerchantSidebarProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
   // Active route matching
-  const isOverview = pathname === "/dashboard" || pathname === "/dashboard/overview";
-  const isAppointments = pathname.startsWith("/dashboard/appointments") || pathname === "/appointments";
-  const isWebsiteSettings = pathname.startsWith("/dashboard/settings/website") || pathname === "/website-settings";
+  const dashboardPath = `${basePath}/dashboard`;
+  const isOverview = pathname === dashboardPath || pathname === `${dashboardPath}/overview`;
+  const isAppointments = pathname.startsWith(`${dashboardPath}/appointments`);
+  const isWebsiteSettings = pathname.startsWith(`${dashboardPath}/settings/website`);
 
   return (
     <>
@@ -93,7 +96,7 @@ export function MerchantSidebar({
             </span>
             <nav className="space-y-1 text-xs font-medium">
               <Link
-                href="/dashboard"
+                href={dashboardPath}
                 onClick={() => setMobileOpen(false)}
                 className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition ${
                   isOverview
@@ -111,7 +114,7 @@ export function MerchantSidebar({
               </Link>
 
               <Link
-                href="/dashboard/appointments"
+                href={`${dashboardPath}/appointments`}
                 onClick={() => setMobileOpen(false)}
                 className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition ${
                   isAppointments
@@ -212,7 +215,7 @@ export function MerchantSidebar({
             </span>
             <nav className="space-y-1 text-xs font-medium">
               <Link
-                href="/dashboard/settings/website"
+                href={`${dashboardPath}/settings/website`}
                 onClick={() => setMobileOpen(false)}
                 className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition ${
                   isWebsiteSettings

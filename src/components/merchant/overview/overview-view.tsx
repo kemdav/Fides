@@ -40,6 +40,7 @@ export interface OverviewViewProps {
   chartStats?: DayChartStat[];
   todayActivity?: { time: string; customer: string; service: string }[];
   initialRows?: AppointmentRow[];
+  basePath?: string;
 }
 
 export function OverviewView({
@@ -55,6 +56,7 @@ export function OverviewView({
   chartStats = [],
   todayActivity = [],
   initialRows = [],
+  basePath = "",
 }: OverviewViewProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -226,7 +228,11 @@ export function OverviewView({
 
   return (
     <div className="min-h-screen bg-[#FFFDF6] text-neutral-900 flex flex-col md:flex-row antialiased font-sans">
-      <MerchantSidebar businessName={businessName} userEmail={userEmail} />
+      <MerchantSidebar
+        businessName={businessName}
+        userEmail={userEmail}
+        basePath={basePath}
+      />
 
       <main className="flex-1 px-6 sm:px-10 py-7 space-y-6 max-w-7xl">
         {/* Top Header */}

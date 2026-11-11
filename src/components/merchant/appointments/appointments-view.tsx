@@ -28,6 +28,7 @@ interface AppointmentsViewProps {
   checkedInCount?: number;
   completedTodayCount?: number;
   initialItems?: AppointmentItem[];
+  basePath?: string;
 }
 
 export function AppointmentsView({
@@ -39,6 +40,7 @@ export function AppointmentsView({
   checkedInCount = 0,
   completedTodayCount = 0,
   initialItems = [],
+  basePath = "",
 }: AppointmentsViewProps) {
   const router = useRouter();
   const [items, setItems] = React.useState<AppointmentItem[]>(initialItems);
@@ -194,7 +196,11 @@ export function AppointmentsView({
 
   return (
     <div className="min-h-screen bg-[#FFFDF6] text-neutral-900 flex flex-col md:flex-row antialiased font-sans">
-      <MerchantSidebar businessName={businessName} userEmail={userEmail} />
+      <MerchantSidebar
+        businessName={businessName}
+        userEmail={userEmail}
+        basePath={basePath}
+      />
 
       <main className="flex-1 px-6 sm:px-10 py-7 space-y-6 max-w-7xl">
         {/* Top Header */}
