@@ -4,7 +4,7 @@ import { buttonClasses } from "@/components/ui";
 
 interface AboutPageSectionProps {
   eyebrow: string;
-  heading: string;
+  heading: React.ReactNode;
   children?: React.ReactNode;
   headingClassName?: string;
   showDescription?: boolean;
@@ -38,8 +38,10 @@ function AboutPageSection({
 
 export function StorefrontAboutPage({
   businessName,
+  contactHref = "#contact",
 }: {
   businessName: string;
+  contactHref?: string;
 }) {
   return (
     <main className="flex-1">
@@ -81,21 +83,25 @@ export function StorefrontAboutPage({
       </section>
 
       <section className="bg-white">
-        <div className="mx-auto grid max-w-[1440px] gap-8 px-5 py-8 sm:px-8 sm:py-10 lg:grid-cols-2 lg:gap-16 lg:px-[90px] lg:py-16">
+        <div className="mx-auto grid max-w-[1440px] gap-8 px-5 py-8 sm:px-8 sm:py-10 lg:grid-cols-[2fr_3fr] lg:gap-16 lg:px-[90px] lg:py-16">
           <AboutPageSection
             eyebrow="Our story"
-            heading="Little moments of care, more room for you."
+            heading={
+              <>
+                Little moments of care,{" "}
+                <span className="block">more room for you.</span>
+              </>
+            }
             showDescription={false}
-          >
-          </AboutPageSection>
+          />
           <div className="text-sm/6 text-muted sm:text-base/7">
             <p>
               Life can feel full. We believe looking after yourself should feel
               like a welcome pause, not another thing on your list.
             </p>
             <p>
-              That&apos;s the idea at the heart of Bella Vita: bringing calm and
-              wellness care together with a warm, personal experience.
+              That&rsquo;s the idea at the heart of Bella Vita: bringing calm
+              and wellness care together with a warm, personal experience.
             </p>
             <p className="mt-3">
               Our team is here to make your visit easy, thoughtful, and
@@ -116,7 +122,10 @@ export function StorefrontAboutPage({
               sizes="(max-width: 1024px) 100vw, 40vw"
             />
           </div>
-          <AboutPageSection eyebrow="Our mission" heading="A warm welcome. Care that starts with you.">
+          <AboutPageSection
+            eyebrow="Our mission"
+            heading="A warm welcome. Care that starts with you."
+          >
             <p>
               Our mission is simple: to create a warm, welcoming space where
               everyone can find a little time for themselves.
@@ -126,8 +135,8 @@ export function StorefrontAboutPage({
             </p>
             <p className="mt-2">
               Your preferences, comfort, and questions matter. We take a
-              personal approach, with clear guidance and attention to the
-              little things that help you feel at ease.
+              personal approach, with clear guidance and attention to the little
+              things that help you feel at ease.
             </p>
           </AboutPageSection>
         </div>
@@ -158,7 +167,9 @@ export function StorefrontAboutPage({
             ].map(([title, description]) => (
               <div key={title}>
                 <span className="block h-px w-10 bg-burnt" />
-                <h3 className="mt-4 text-base font-semibold text-ink">{title}</h3>
+                <h3 className="mt-4 text-base font-semibold text-ink">
+                  {title}
+                </h3>
                 <p className="mt-3 text-sm/6 text-muted">{description}</p>
               </div>
             ))}
@@ -169,7 +180,9 @@ export function StorefrontAboutPage({
       <section className="bg-powder">
         <div className="mx-auto flex max-w-[1440px] flex-col gap-5 px-5 py-8 sm:px-8 sm:py-10 lg:flex-row lg:items-center lg:justify-between lg:px-[90px] lg:py-16">
           <div>
-            <h2 className="font-display text-3xl text-ink">Make a little time for yourself.</h2>
+            <h2 className="font-display text-3xl text-ink">
+              Make a little time for yourself.
+            </h2>
             <p className="mt-3 max-w-md text-sm/6 text-muted">
               A fresh look, a moment of rest, or simply a little care. Choose a
               service and find a time that works for you.
@@ -177,7 +190,7 @@ export function StorefrontAboutPage({
           </div>
           <div className="flex gap-2">
             <Link
-              href="#contact"
+              href={contactHref}
               className={buttonClasses({
                 variant: "brand-outline",
                 size: "lg",

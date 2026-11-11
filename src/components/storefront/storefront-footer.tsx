@@ -6,6 +6,10 @@ export interface StorefrontFooterProps {
   businessName: string;
   /** Footer surface color. */
   background?: "powder" | "white";
+  navLinks?: { label: string; href: string }[];
+  activeHref?: string;
+  contactHref?: string;
+  bookHref?: string;
 }
 
 const navigationLinks = [
@@ -14,15 +18,19 @@ const navigationLinks = [
   { label: "About", href: "#about" },
 ];
 
-const contactLinks = [
-  { label: "Contact Us", href: "#contact" },
-  { label: "Book Now", href: "#book" },
-];
-
 export function StorefrontFooter({
   businessName,
   background = "powder",
+  navLinks = navigationLinks,
+  activeHref,
+  contactHref = "#contact",
+  bookHref = "#book",
 }: StorefrontFooterProps) {
+  const contactLinks = [
+    { label: "Contact Us", href: contactHref },
+    { label: "Book Now", href: bookHref },
+  ];
+
   return (
     <footer
       className={cn(
@@ -35,7 +43,7 @@ export function StorefrontFooter({
           {/* Brand */}
           <div className="flex flex-col gap-2">
             <Link
-              href="#home"
+              href={navLinks[0]?.href ?? "#home"}
               className="font-display text-2xl leading-[normal] text-burnt"
             >
               {businessName}
@@ -50,12 +58,15 @@ export function StorefrontFooter({
             <div className="flex flex-col gap-3">
               <h3 className="text-sm font-semibold text-ink">Navigation</h3>
               <ul className="flex flex-col gap-2">
-                {navigationLinks.map((link) => (
+                {navLinks.map((link) => (
                   <li key={link.label}>
                     <Link
                       href={link.href}
                       className={cn(
-                        "text-sm text-muted transition-colors hover:text-burnt-dark"
+                        "text-sm transition-colors hover:text-burnt-dark",
+                        activeHref === link.href
+                          ? "font-semibold text-burnt-dark"
+                          : "text-muted"
                       )}
                     >
                       {link.label}
@@ -73,7 +84,10 @@ export function StorefrontFooter({
                     <Link
                       href={link.href}
                       className={cn(
-                        "text-sm text-muted transition-colors hover:text-burnt-dark"
+                        "text-sm transition-colors hover:text-burnt-dark",
+                        activeHref === link.href
+                          ? "font-semibold text-burnt-dark"
+                          : "text-muted"
                       )}
                     >
                       {link.label}

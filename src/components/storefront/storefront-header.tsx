@@ -14,12 +14,18 @@ export interface StorefrontHeaderProps {
   navLinks: StorefrontNav[];
   /** Currently-active nav href (used for underline indicator). */
   activeHref?: string;
+  contactHref?: string;
+  homeHref?: string;
+  bookHref?: string;
 }
 
 export function StorefrontHeader({
   businessName,
   navLinks,
   activeHref,
+  contactHref = "#contact",
+  homeHref = "#home",
+  bookHref = "#book",
 }: StorefrontHeaderProps) {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -68,7 +74,7 @@ export function StorefrontHeader({
       >
         {/* Logo */}
         <Link
-          href="#home"
+          href={homeHref}
           className="font-display text-2xl leading-[normal] text-burnt lg:text-3xl"
         >
           {businessName}
@@ -108,7 +114,7 @@ export function StorefrontHeader({
 
           <div className="flex items-center gap-3">
             <Link
-              href="#contact"
+              href={contactHref}
               className={buttonClasses({
                 variant: "brand-outline",
                 size: "md",
@@ -117,7 +123,7 @@ export function StorefrontHeader({
               Contact Us
             </Link>
             <Link
-              href="#book"
+              href={bookHref}
               className={buttonClasses({ variant: "brand", size: "md" })}
             >
               Book Now
@@ -180,7 +186,7 @@ export function StorefrontHeader({
           </nav>
           <div className="mt-4 flex gap-3">
             <Link
-              href="#contact"
+              href={contactHref}
               onClick={() => setOpen(false)}
               className={buttonClasses({
                 variant: "brand-outline",
@@ -190,7 +196,7 @@ export function StorefrontHeader({
               Contact Us
             </Link>
             <Link
-              href="#book"
+              href={bookHref}
               onClick={() => setOpen(false)}
               className={buttonClasses({ variant: "brand", size: "md" })}
             >

@@ -8,9 +8,13 @@ import { SearchInput } from "./search-input";
 export interface ServicesListProps {
   /** All services available for this tenant. */
   services: ServiceCardData[];
+  contactHref?: string;
 }
 
-export function ServicesList({ services }: ServicesListProps) {
+export function ServicesList({
+  services,
+  contactHref = "#contact",
+}: ServicesListProps) {
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -72,7 +76,7 @@ export function ServicesList({ services }: ServicesListProps) {
           <p>
             <span className="text-muted">Not sure what to choose?</span>{" "}
             <Link
-              href="#contact"
+              href={contactHref}
               className="font-medium text-burnt hover:text-burnt-dark"
             >
               Contact Us

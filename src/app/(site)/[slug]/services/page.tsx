@@ -42,13 +42,25 @@ export default async function ServicesPage({ params }: ServicesPageProps) {
         businessName={BUSINESS_NAME}
         navLinks={nav}
         activeHref={`/${slug}/services`}
+        contactHref={`/${slug}/contact`}
+        homeHref={`/${slug}`}
+        bookHref={`/${slug}/services`}
       />
 
       <main className="flex-1 bg-powder">
-        <ServicesList services={ALL_SERVICES} />
+        <ServicesList
+          services={ALL_SERVICES}
+          contactHref={`/${slug}/contact`}
+        />
       </main>
 
-      <StorefrontFooter businessName={BUSINESS_NAME} />
+      <StorefrontFooter
+        businessName={BUSINESS_NAME}
+        navLinks={nav}
+        activeHref={`/${slug}/services`}
+        contactHref={`/${slug}/contact`}
+        bookHref={`/${slug}/services`}
+      />
     </>
   );
 }

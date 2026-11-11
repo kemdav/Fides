@@ -39,9 +39,22 @@ export default async function AboutPage({ params }: AboutPageProps) {
         businessName={BUSINESS_NAME}
         navLinks={nav}
         activeHref={`/${slug}/about`}
+        contactHref={`/${slug}/contact`}
+        homeHref={`/${slug}`}
+        bookHref={`/${slug}/services`}
       />
-      <StorefrontAboutPage businessName={BUSINESS_NAME} />
-      <StorefrontFooter businessName={BUSINESS_NAME} background="white" />
+      <StorefrontAboutPage
+        businessName={BUSINESS_NAME}
+        contactHref={`/${slug}/contact`}
+      />
+      <StorefrontFooter
+        businessName={BUSINESS_NAME}
+        background="white"
+        navLinks={nav}
+        activeHref={`/${slug}/about`}
+        contactHref={`/${slug}/contact`}
+        bookHref={`/${slug}/services`}
+      />
     </>
   );
 }

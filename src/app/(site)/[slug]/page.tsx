@@ -50,6 +50,9 @@ export default async function StorefrontPage({ params }: StorefrontPageProps) {
         businessName={BUSINESS_NAME}
         navLinks={nav}
         activeHref={`/${slug}`}
+        contactHref={`/${slug}/contact`}
+        homeHref={`/${slug}`}
+        bookHref={`/${slug}/services`}
       />
 
       <main className="flex-1">
@@ -76,7 +79,13 @@ export default async function StorefrontPage({ params }: StorefrontPageProps) {
         />
       </main>
 
-      <StorefrontFooter businessName={BUSINESS_NAME} />
+      <StorefrontFooter
+        businessName={BUSINESS_NAME}
+        navLinks={nav}
+        activeHref={`/${slug}`}
+        contactHref={`/${slug}/contact`}
+        bookHref={`/${slug}/services`}
+      />
     </>
   );
 }

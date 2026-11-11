@@ -23,3 +23,5 @@ export type { SearchInputProps } from "./search-input";
 
 export { ServicesList } from "./services-list";
 export type { ServicesListProps } from "./services-list";
+
+export { StorefrontContactPage } from "./storefront-contact-page";
