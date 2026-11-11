@@ -62,7 +62,7 @@ export function StorefrontHeader({
     >
       <div
         className={cn(
-          "mx-auto flex max-w-[1200px] items-center justify-between px-5 transition-[height] duration-300 sm:px-8 lg:px-0",
+          "mx-auto flex max-w-[1440px] items-center justify-between px-5 transition-[height] duration-300 sm:px-8 lg:px-14",
           scrolled ? "h-14 lg:h-16" : "h-16 lg:h-20"
         )}
       >

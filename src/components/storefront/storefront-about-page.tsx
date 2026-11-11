@@ -5,8 +5,9 @@ import { buttonClasses } from "@/components/ui";
 interface AboutPageSectionProps {
   eyebrow: string;
   heading: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   headingClassName?: string;
+  showDescription?: boolean;
 }
 
 function AboutPageSection({
@@ -14,6 +15,7 @@ function AboutPageSection({
   heading,
   children,
   headingClassName,
+  showDescription = true,
 }: AboutPageSectionProps) {
   return (
     <div>
@@ -21,13 +23,15 @@ function AboutPageSection({
         {eyebrow}
       </p>
       <h2
-        className={`mt-3 font-display text-3xl leading-[1.1] text-ink sm:text-5xl ${headingClassName ?? ""}`}
+        className={`mt-3 font-display text-3xl leading-[1.1] text-ink sm:text-[32px] ${headingClassName ?? ""}`}
       >
         {heading}
       </h2>
-      <div className="mt-5 text-xs text-muted sm:text-base/7">
-        {children}
-      </div>
+      {showDescription && (
+        <div className="mt-5 text-sm/6 text-muted sm:text-base/7">
+          {children}
+        </div>
+      )}
     </div>
   );
 }
@@ -40,11 +44,11 @@ export function StorefrontAboutPage({
   return (
     <main className="flex-1">
       <section className="bg-powder">
-        <div className="mx-auto grid max-w-[1200px] items-center gap-8 px-5 py-8 sm:px-8 sm:py-12 lg:grid-cols-2 lg:gap-16 lg:px-0 lg:py-16">
+        <div className="mx-auto grid max-w-[1440px] items-center gap-8 px-5 py-8 sm:px-8 sm:py-12 lg:grid-cols-2 lg:gap-16 lg:px-[90px] lg:py-16">
           <AboutPageSection
             eyebrow={`About ${businessName}`}
             heading="A space to pause. Care to feel good."
-            headingClassName="max-w-[390px]"
+            headingClassName="max-w-[430px] sm:text-[40px]"
           >
             <p>
               Welcome to Bella Vita. A little time to slow down, feel cared for,
@@ -55,7 +59,7 @@ export function StorefrontAboutPage({
               href="#book"
               className={buttonClasses({
                 variant: "brand",
-                size: "md",
+                size: "lg",
                 className: "mt-6",
               })}
             >
@@ -77,20 +81,21 @@ export function StorefrontAboutPage({
       </section>
 
       <section className="bg-white">
-        <div className="mx-auto grid max-w-[1200px] gap-8 px-5 py-8 sm:px-8 sm:py-10 lg:grid-cols-2 lg:gap-16 lg:px-0 lg:py-12">
+        <div className="mx-auto grid max-w-[1440px] gap-8 px-5 py-8 sm:px-8 sm:py-10 lg:grid-cols-2 lg:gap-16 lg:px-[90px] lg:py-16">
           <AboutPageSection
             eyebrow="Our story"
             heading="Little moments of care, more room for you."
+            showDescription={false}
           >
+          </AboutPageSection>
+          <div className="text-sm/6 text-muted sm:text-base/7">
             <p>
               Life can feel full. We believe looking after yourself should feel
               like a welcome pause, not another thing on your list.
             </p>
-          </AboutPageSection>
-          <div className="text-sm/6 text-muted sm:text-base/7">
             <p>
               That&apos;s the idea at the heart of Bella Vita: bringing calm and
-              wellness into together with a warm, personal experience.
+              wellness care together with a warm, personal experience.
             </p>
             <p className="mt-3">
               Our team is here to make your visit easy, thoughtful, and
@@ -101,7 +106,7 @@ export function StorefrontAboutPage({
       </section>
 
       <section className="bg-powder">
-        <div className="mx-auto grid max-w-[1200px] items-center gap-8 px-5 py-8 sm:px-8 sm:py-12 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-16 lg:px-0 lg:py-16">
+        <div className="mx-auto grid max-w-[1440px] items-center gap-8 px-5 py-8 sm:px-8 sm:py-12 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-16 lg:px-[90px] lg:py-16">
           <div className="relative aspect-[1.35/1] overflow-hidden rounded-lg">
             <Image
               src="/images/storefront/Massage Service photograph.png"
@@ -129,11 +134,11 @@ export function StorefrontAboutPage({
       </section>
 
       <section className="bg-white">
-        <div className="mx-auto max-w-[1200px] px-5 py-8 sm:px-8 sm:py-12 lg:px-0 lg:py-14">
+        <div className="mx-auto max-w-[1440px] px-5 py-8 sm:px-8 sm:py-12 lg:px-[90px] lg:py-16">
           <p className="text-xs font-bold uppercase tracking-wider text-burnt">
-            Your bella vita
+            Your time with us
           </p>
-          <h2 className="mt-3 font-display text-3xl leading-[1.1] text-ink sm:text-4xl">
+          <h2 className="mt-3 font-display text-3xl leading-[1.1] text-ink sm:text-[32px]">
             What you can expect at Bella Vita
           </h2>
           <div className="mt-6 grid gap-6 sm:grid-cols-3">
@@ -152,7 +157,7 @@ export function StorefrontAboutPage({
               ],
             ].map(([title, description]) => (
               <div key={title}>
-                <span className="block h-px w-3 bg-burnt" />
+                <span className="block h-px w-10 bg-burnt" />
                 <h3 className="mt-4 text-base font-semibold text-ink">{title}</h3>
                 <p className="mt-3 text-sm/6 text-muted">{description}</p>
               </div>
@@ -162,7 +167,7 @@ export function StorefrontAboutPage({
       </section>
 
       <section className="bg-powder">
-        <div className="mx-auto flex max-w-[1200px] flex-col gap-5 px-5 py-8 sm:px-8 sm:py-10 lg:flex-row lg:items-center lg:justify-between lg:px-0">
+        <div className="mx-auto flex max-w-[1440px] flex-col gap-5 px-5 py-8 sm:px-8 sm:py-10 lg:flex-row lg:items-center lg:justify-between lg:px-[90px] lg:py-16">
           <div>
             <h2 className="font-display text-3xl text-ink">Make a little time for yourself.</h2>
             <p className="mt-3 max-w-md text-sm/6 text-muted">
@@ -175,7 +180,7 @@ export function StorefrontAboutPage({
               href="#contact"
               className={buttonClasses({
                 variant: "brand-outline",
-                size: "md",
+                size: "lg",
               })}
             >
               Contact Us
@@ -184,7 +189,7 @@ export function StorefrontAboutPage({
               href="#book"
               className={buttonClasses({
                 variant: "brand",
-                size: "md",
+                size: "lg",
               })}
             >
               Book An Appointment

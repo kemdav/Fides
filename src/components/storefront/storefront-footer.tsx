@@ -30,7 +30,7 @@ export function StorefrontFooter({
         background === "white" ? "bg-white" : "bg-powder"
       )}
     >
-      <div className="mx-auto max-w-[1200px] px-5 py-10 sm:px-8 lg:px-0 lg:py-14">
+      <div className="mx-auto max-w-[1440px] px-5 py-10 sm:px-8 lg:px-[90px] lg:py-14">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
           {/* Brand */}
           <div className="flex flex-col gap-2">
