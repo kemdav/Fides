@@ -8,11 +8,19 @@ import type { ServiceCardData } from "@/components/storefront";
 
 export const BUSINESS_NAME = "Bella Vita";
 
-export const STOREFRONT_NAV = [
-  { label: "Home", href: "/" },
-  { label: "Services", href: "/services" },
-  { label: "About", href: "/#about" },
-] as const;
+/**
+ * Builds tenant-scoped navigation links.
+ * All hrefs are prefixed with `/<slug>` so they resolve correctly under the
+ * dynamic `[slug]` route segment.
+ */
+export function getStorefrontNav(slug: string) {
+  const base = `/${slug}`;
+  return [
+    { label: "Home", href: base },
+    { label: "Services", href: `${base}/services` },
+    { label: "About", href: `${base}#about` },
+  ];
+}
 
 /**
  * All services offered by the tenant.
@@ -80,3 +88,4 @@ export const ALL_SERVICES: ServiceCardData[] = [
     href: "#book",
   },
 ];
+

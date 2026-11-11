@@ -6,7 +6,7 @@ import {
 } from "@/components/storefront";
 import {
   BUSINESS_NAME,
-  STOREFRONT_NAV,
+  getStorefrontNav,
   ALL_SERVICES,
 } from "@/components/storefront/storefront-data";
 
@@ -32,14 +32,16 @@ export async function generateMetadata({
 
 export default async function ServicesPage({ params }: ServicesPageProps) {
   const { slug } = await params;
-  void slug; // TODO: Fetch tenant services from DB using `slug`.
+  const nav = getStorefrontNav(slug);
+
+  // TODO: Fetch tenant services from DB using `slug`.
 
   return (
     <>
       <StorefrontHeader
         businessName={BUSINESS_NAME}
-        navLinks={[...STOREFRONT_NAV]}
-        activeHref="/services"
+        navLinks={nav}
+        activeHref={`/${slug}/services`}
       />
 
       <main className="flex-1">

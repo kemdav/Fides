@@ -8,7 +8,7 @@ import {
 } from "@/components/storefront";
 import {
   BUSINESS_NAME,
-  STOREFRONT_NAV,
+  getStorefrontNav,
   ALL_SERVICES,
 } from "@/components/storefront/storefront-data";
 
@@ -40,14 +40,16 @@ export async function generateMetadata({
 
 export default async function StorefrontPage({ params }: StorefrontPageProps) {
   const { slug } = await params;
-  void slug; // TODO: Fetch tenant config + services from DB using `slug`.
+  const nav = getStorefrontNav(slug);
+
+  // TODO: Fetch tenant config + services from DB using `slug`.
 
   return (
     <>
       <StorefrontHeader
         businessName={BUSINESS_NAME}
-        navLinks={[...STOREFRONT_NAV]}
-        activeHref="/"
+        navLinks={nav}
+        activeHref={`/${slug}`}
       />
 
       <main className="flex-1">
@@ -62,13 +64,13 @@ export default async function StorefrontPage({ params }: StorefrontPageProps) {
 
         <FeaturedServices
           services={ALL_SERVICES.slice(0, 3)}
-          viewAllHref="services"
+          viewAllHref={`/${slug}/services`}
         />
 
         <StorefrontAbout
           businessName={BUSINESS_NAME}
           description="Our mission is simple: to create a warm, welcoming space where everyone can find a little time for themselves."
-          ctaHref="/#about"
+          ctaHref={`/${slug}#about`}
           imageSrc="/images/storefront/hero Image.png"
           imageAlt={`About ${BUSINESS_NAME}`}
         />
