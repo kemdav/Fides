@@ -117,14 +117,14 @@ export function StorefrontHeader({
               href={contactHref}
               className={buttonClasses({
                 variant: "brand-outline",
-                size: "md",
+                size: "lg",
               })}
             >
               Contact Us
             </Link>
             <Link
               href={bookHref}
-              className={buttonClasses({ variant: "brand", size: "md" })}
+              className={buttonClasses({ variant: "brand", size: "lg" })}
             >
               Book Now
             </Link>
