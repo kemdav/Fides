@@ -45,7 +45,7 @@ export function SearchInput({
   return (
     <div
       className={cn(
-        "flex items-center gap-2 rounded-lg border border-line bg-white px-4 py-2.5 transition-colors focus-within:border-burnt/50 focus-within:ring-2 focus-within:ring-burnt/20",
+        "flex items-center gap-2 rounded-lg border border-transparent bg-mist px-3 py-2.5 transition-colors focus-within:border-burnt/50 focus-within:ring-2 focus-within:ring-burnt/20",
         className
       )}
     >
@@ -60,4 +60,3 @@ export function SearchInput({
     </div>
   );
 }
-

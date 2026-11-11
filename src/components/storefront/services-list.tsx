@@ -24,35 +24,35 @@ export function ServicesList({ services }: ServicesListProps) {
   }, [services, query]);
 
   return (
-    <section className="bg-white">
-      <div className="mx-auto max-w-[1440px] px-4 py-12 sm:px-8 md:py-16 lg:px-20 lg:py-20">
+    <section className="bg-powder">
+      <div className="mx-auto max-w-[1200px] px-5 py-8 sm:px-8 sm:py-12 lg:px-0 lg:py-16">
         {/* Header: title + search */}
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex flex-col gap-2">
-            <h1 className="font-display text-3xl leading-[1.15] text-ink sm:text-4xl lg:text-[42px]">
+            <h1 className="font-display text-3xl leading-[1.15] text-ink lg:text-4xl">
               Services
             </h1>
-            <p className="max-w-[440px] text-sm/6 text-muted">
+            <p className="max-w-[440px] text-xs/5 text-muted">
               A little care, just for you. Choose your service and find a time
               that fits.
             </p>
           </div>
           <SearchInput
             onChange={setQuery}
-            className="w-full sm:w-72 lg:w-80"
+            className="w-full sm:w-64 lg:w-72"
           />
         </div>
 
         {/* Count row */}
-        <div className="mt-8 flex items-center justify-between lg:mt-10">
-          <h2 className="text-lg font-semibold text-ink">All services</h2>
-          <span className="text-sm text-muted">
+        <div className="mt-6 flex items-center justify-between lg:mt-8">
+          <h2 className="text-base font-semibold text-ink">All services</h2>
+          <span className="text-xs text-muted">
             {filtered.length} {filtered.length === 1 ? "service" : "services"}
           </span>
         </div>
 
         {/* Cards grid */}
-        <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((service) => (
             <ServiceCard key={service.name} {...service} />
           ))}
@@ -65,11 +65,11 @@ export function ServicesList({ services }: ServicesListProps) {
         )}
 
         {/* Bottom helper row */}
-        <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted">
+        <div className="mt-6 flex flex-col gap-3 text-[10px] sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-muted">
             Select a service to choose your appointment time.
           </p>
-          <p className="text-sm">
+          <p>
             <span className="text-muted">Not sure what to choose?</span>{" "}
             <Link
               href="#contact"
@@ -83,4 +83,3 @@ export function ServicesList({ services }: ServicesListProps) {
     </section>
   );
 }
-

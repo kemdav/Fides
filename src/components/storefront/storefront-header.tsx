@@ -62,7 +62,7 @@ export function StorefrontHeader({
     >
       <div
         className={cn(
-          "mx-auto flex max-w-[1440px] items-center justify-between px-4 transition-[height] duration-300 sm:px-8 lg:px-20",
+          "mx-auto flex max-w-[1200px] items-center justify-between px-5 transition-[height] duration-300 sm:px-8 lg:px-0",
           scrolled ? "h-14 lg:h-16" : "h-16 lg:h-20"
         )}
       >
@@ -159,7 +159,7 @@ export function StorefrontHeader({
       {open && (
         <div
           id="storefront-mobile-menu"
-          className="absolute inset-x-0 top-full rounded-b-2xl border border-burnt/30 bg-powder px-4 pb-6 pt-2 shadow-[0_8px_16px_-8px_rgb(0_0_0/0.15)] sm:px-8 lg:hidden"
+          className="absolute inset-x-0 top-full rounded-b-2xl border border-burnt/30 bg-powder px-5 pb-6 pt-2 shadow-[0_8px_16px_-8px_rgb(0_0_0/0.15)] sm:px-8 lg:hidden"
         >
           <nav aria-label="Mobile" className="flex flex-col">
             {navLinks.map((link) => (
@@ -202,4 +202,3 @@ export function StorefrontHeader({
     </header>
   );
 }
-

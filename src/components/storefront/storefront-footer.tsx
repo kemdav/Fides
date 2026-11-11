@@ -20,7 +20,7 @@ const contactLinks = [
 export function StorefrontFooter({ businessName }: StorefrontFooterProps) {
   return (
     <footer className="border-t border-line bg-powder">
-      <div className="mx-auto max-w-[1440px] px-4 py-10 sm:px-8 lg:px-20 lg:py-14">
+      <div className="mx-auto max-w-[1200px] px-5 py-10 sm:px-8 lg:px-0 lg:py-14">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
           {/* Brand */}
           <div className="flex flex-col gap-2">
@@ -78,4 +78,3 @@ export function StorefrontFooter({ businessName }: StorefrontFooterProps) {
     </footer>
   );
 }
-
