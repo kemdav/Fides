@@ -40,8 +40,8 @@ export default async function AboutPage({ params }: AboutPageProps) {
         navLinks={nav}
         activeHref={`/${slug}/about`}
       />
-      <StorefrontAboutPage />
-      <StorefrontFooter businessName={BUSINESS_NAME} />
+      <StorefrontAboutPage businessName={BUSINESS_NAME} />
+      <StorefrontFooter businessName={BUSINESS_NAME} background="white" />
     </>
   );
 }

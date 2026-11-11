@@ -4,6 +4,8 @@ import { cn } from "@/lib/utils";
 export interface StorefrontFooterProps {
   /** Business display name. */
   businessName: string;
+  /** Footer surface color. */
+  background?: "powder" | "white";
 }
 
 const navigationLinks = [
@@ -17,9 +19,17 @@ const contactLinks = [
   { label: "Book Now", href: "#book" },
 ];
 
-export function StorefrontFooter({ businessName }: StorefrontFooterProps) {
+export function StorefrontFooter({
+  businessName,
+  background = "powder",
+}: StorefrontFooterProps) {
   return (
-    <footer className="border-t border-line bg-powder">
+    <footer
+      className={cn(
+        "border-t border-line",
+        background === "white" ? "bg-white" : "bg-powder"
+      )}
+    >
       <div className="mx-auto max-w-[1200px] px-5 py-10 sm:px-8 lg:px-0 lg:py-14">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
           {/* Brand */}

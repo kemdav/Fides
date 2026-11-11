@@ -70,7 +70,7 @@ export default async function StorefrontPage({ params }: StorefrontPageProps) {
         <StorefrontAbout
           businessName={BUSINESS_NAME}
           description="Our mission is simple: to create a warm, welcoming space where everyone can find a little time for themselves."
-          ctaHref={`/${slug}#about`}
+          ctaHref={`/${slug}/about`}
           imageSrc="/images/storefront/hero Image.png"
           imageAlt={`About ${BUSINESS_NAME}`}
         />

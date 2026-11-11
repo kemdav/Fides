@@ -6,36 +6,45 @@ interface AboutPageSectionProps {
   eyebrow: string;
   heading: string;
   children: React.ReactNode;
+  headingClassName?: string;
 }
 
 function AboutPageSection({
   eyebrow,
   heading,
   children,
+  headingClassName,
 }: AboutPageSectionProps) {
   return (
     <div>
-      <p className="text-[9px] font-bold uppercase tracking-wider text-burnt">
+      <p className="text-xs font-bold uppercase tracking-wider text-burnt">
         {eyebrow}
       </p>
-      <h2 className="mt-2 font-display text-xl leading-[1.1] text-ink sm:text-2xl">
+      <h2
+        className={`mt-3 font-display text-3xl leading-[1.1] text-ink sm:text-5xl ${headingClassName ?? ""}`}
+      >
         {heading}
       </h2>
-      <div className="mt-3 text-[10px]/[1.55] text-muted sm:text-xs/5">
+      <div className="mt-5 text-xs text-muted sm:text-base/7">
         {children}
       </div>
     </div>
   );
 }
 
-export function StorefrontAboutPage() {
+export function StorefrontAboutPage({
+  businessName,
+}: {
+  businessName: string;
+}) {
   return (
     <main className="flex-1">
       <section className="bg-powder">
         <div className="mx-auto grid max-w-[1200px] items-center gap-8 px-5 py-8 sm:px-8 sm:py-12 lg:grid-cols-2 lg:gap-16 lg:px-0 lg:py-16">
           <AboutPageSection
-            eyebrow="A little about us"
+            eyebrow={`About ${businessName}`}
             heading="A space to pause. Care to feel good."
+            headingClassName="max-w-[390px]"
           >
             <p>
               Welcome to Bella Vita. A little time to slow down, feel cared for,
@@ -46,8 +55,8 @@ export function StorefrontAboutPage() {
               href="#book"
               className={buttonClasses({
                 variant: "brand",
-                size: "sm",
-                className: "mt-4 h-7 px-2 text-[10px]",
+                size: "md",
+                className: "mt-6",
               })}
             >
               Book An Appointment
@@ -78,7 +87,7 @@ export function StorefrontAboutPage() {
               like a welcome pause, not another thing on your list.
             </p>
           </AboutPageSection>
-          <div className="text-[10px]/[1.55] text-muted sm:text-xs/5">
+          <div className="text-sm/6 text-muted sm:text-base/7">
             <p>
               That&apos;s the idea at the heart of Bella Vita: bringing calm and
               wellness into together with a warm, personal experience.
@@ -121,10 +130,10 @@ export function StorefrontAboutPage() {
 
       <section className="bg-white">
         <div className="mx-auto max-w-[1200px] px-5 py-8 sm:px-8 sm:py-12 lg:px-0 lg:py-14">
-          <p className="text-[9px] font-bold uppercase tracking-wider text-burnt">
+          <p className="text-xs font-bold uppercase tracking-wider text-burnt">
             Your bella vita
           </p>
-          <h2 className="mt-2 font-display text-xl leading-[1.1] text-ink sm:text-2xl">
+          <h2 className="mt-3 font-display text-3xl leading-[1.1] text-ink sm:text-4xl">
             What you can expect at Bella Vita
           </h2>
           <div className="mt-6 grid gap-6 sm:grid-cols-3">
@@ -144,8 +153,8 @@ export function StorefrontAboutPage() {
             ].map(([title, description]) => (
               <div key={title}>
                 <span className="block h-px w-3 bg-burnt" />
-                <h3 className="mt-3 text-xs font-semibold text-ink">{title}</h3>
-                <p className="mt-2 text-[10px]/[1.55] text-muted">{description}</p>
+                <h3 className="mt-4 text-base font-semibold text-ink">{title}</h3>
+                <p className="mt-3 text-sm/6 text-muted">{description}</p>
               </div>
             ))}
           </div>
@@ -155,8 +164,8 @@ export function StorefrontAboutPage() {
       <section className="bg-powder">
         <div className="mx-auto flex max-w-[1200px] flex-col gap-5 px-5 py-8 sm:px-8 sm:py-10 lg:flex-row lg:items-center lg:justify-between lg:px-0">
           <div>
-            <h2 className="font-display text-xl text-ink">Make a little time for yourself.</h2>
-            <p className="mt-2 max-w-md text-[10px]/[1.55] text-muted">
+            <h2 className="font-display text-3xl text-ink">Make a little time for yourself.</h2>
+            <p className="mt-3 max-w-md text-sm/6 text-muted">
               A fresh look, a moment of rest, or simply a little care. Choose a
               service and find a time that works for you.
             </p>
@@ -166,8 +175,7 @@ export function StorefrontAboutPage() {
               href="#contact"
               className={buttonClasses({
                 variant: "brand-outline",
-                size: "sm",
-                className: "h-7 px-2 text-[10px]",
+                size: "md",
               })}
             >
               Contact Us
@@ -176,8 +184,7 @@ export function StorefrontAboutPage() {
               href="#book"
               className={buttonClasses({
                 variant: "brand",
-                size: "sm",
-                className: "h-7 px-2 text-[10px]",
+                size: "md",
               })}
             >
               Book An Appointment
