@@ -47,6 +47,22 @@ export interface OverviewViewProps {
 }
 
 const EMPTY_APPOINTMENTS: AppointmentRow[] = [];
+const WALK_IN_SERVICES = [
+  { value: "Signature haircut", label: "Signature haircut · ₱450" },
+  { value: "Balayage & gloss", label: "Balayage & gloss · ₱1,500" },
+  { value: "Botanical spa manicure", label: "Botanical spa manicure · ₱950" },
+];
+const WALK_IN_STAFF = ["Sofia Cruz", "Marco Reyes", "Elena Cruz"];
+const CALENDAR_WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
+
+function formatWalkInDate(date: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(year, month - 1, day));
+}
 
 export function OverviewView({
   businessName = "Bella Vita",
@@ -79,6 +95,15 @@ export function OverviewView({
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
   const [isBookingSubmitting, setIsBookingSubmitting] = React.useState(false);
   const [bookingError, setBookingError] = React.useState<string | null>(null);
+  const [walkInService, setWalkInService] = React.useState(WALK_IN_SERVICES[0].value);
+  const [walkInStaff, setWalkInStaff] = React.useState(WALK_IN_STAFF[0]);
+  const [walkInServiceOpen, setWalkInServiceOpen] = React.useState(false);
+  const [walkInStaffOpen, setWalkInStaffOpen] = React.useState(false);
+  const [walkInDateOpen, setWalkInDateOpen] = React.useState(false);
+  const [walkInDate, setWalkInDate] = React.useState(new Date().toISOString().slice(0, 10));
+  const [walkInCalendarMonth, setWalkInCalendarMonth] = React.useState(
+    () => new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+  );
   const [expandedAppointmentId, setExpandedAppointmentId] = React.useState<string | null>(null);
   const [selectedCalendarDay, setSelectedCalendarDay] = React.useState<number | null>(null);
   const displayName = userName || userEmail;
@@ -162,9 +187,13 @@ export function OverviewView({
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const customer = (formData.get("customer") as string)?.trim();
+    const email = (formData.get("email") as string)?.trim();
+    const phone = (formData.get("phone") as string)?.trim();
     const service = (formData.get("service") as string)?.trim();
     const staff = (formData.get("staff") as string)?.trim();
+    const date = (formData.get("date") as string)?.trim();
     const time = (formData.get("time") as string)?.trim();
+    const notes = (formData.get("notes") as string)?.trim();
 
     if (!customer) {
       setBookingError("Customer name is required.");
@@ -177,9 +206,14 @@ export function OverviewView({
     try {
       const res = await createAppointmentBookingAction({
         customerName: customer,
+        customerEmail: email,
+        customerPhone: phone,
         serviceName: service,
         staffName: staff,
+        date,
         time,
+        notes,
+        source: "walk_in",
         tenantIdParam: tenantId,
       });
 
@@ -199,7 +233,7 @@ export function OverviewView({
         customer: created.customerName,
         service: created.serviceName,
         staff: created.staffName,
-        source: "Online",
+        source: "Walk-In",
         status: "Confirmed",
         startsAt: created.starts_at,
         rawStatus: created.status,
@@ -262,6 +296,27 @@ export function OverviewView({
   const activeCalendarLabel = new Date(
     `${activeCalendarDateKey}T12:00:00`
   ).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const walkInCalendarDays = React.useMemo(() => {
+    const firstDay = new Date(
+      walkInCalendarMonth.getFullYear(),
+      walkInCalendarMonth.getMonth(),
+      1
+    ).getDay();
+    const daysInMonth = new Date(
+      walkInCalendarMonth.getFullYear(),
+      walkInCalendarMonth.getMonth() + 1,
+      0
+    ).getDate();
+
+    return [
+      ...Array.from({ length: firstDay }, () => null),
+      ...Array.from({ length: daysInMonth }, (_, index) => index + 1),
+    ];
+  }, [walkInCalendarMonth]);
+  const walkInMonthLabel = walkInCalendarMonth.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
 
   return (
     <div className="min-h-screen bg-[#FFFDF6] text-neutral-900 flex flex-col md:flex-row antialiased font-sans">
@@ -919,84 +974,337 @@ export function OverviewView({
 
           {/* New Booking Modal (QA #4) */}
           {isNewBookingOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
-              <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-neutral-200 space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
-                  <h3 className="text-base font-semibold text-neutral-900">
-                    New Appointment Booking
-                  </h3>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/35 backdrop-blur-xs animate-in fade-in duration-200">
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="add-walk-in-title"
+                className="relative w-full max-w-2xl max-h-[calc(100vh-1.5rem)] overflow-y-auto rounded-xl bg-white px-5 py-5 sm:px-6 sm:py-5 shadow-2xl border border-[#E1E4E8] animate-in fade-in zoom-in-95 slide-in-from-bottom-3 duration-200"
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 id="add-walk-in-title" className="text-2xl sm:text-[27px] leading-tight font-normal font-display text-[#354357]">
+                      Add Walk-in
+                    </h3>
+                    <p className="mt-1 text-xs sm:text-[13px] tracking-wide text-[#6D7580]">
+                      Create an immediate appointment or add the customer to the waiting list.
+                    </p>
+                  </div>
                   <button
                     type="button"
                     onClick={() => {
                       setIsNewBookingOpen(false);
                       setBookingError(null);
                     }}
-                    className="text-neutral-400 hover:text-neutral-600 text-lg leading-none"
+                    className="text-2xl leading-none text-[#858C94] hover:text-[#354357] transition"
+                    aria-label="Close walk-in form"
                   >
                     ×
                   </button>
                 </div>
 
                 {bookingError && (
-                  <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+                  <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
                     {bookingError}
                   </div>
                 )}
 
-                <form onSubmit={handleNewBookingSubmit} className="space-y-3 text-xs">
-                  <div>
-                    <label className="block text-neutral-700 font-medium mb-1">Customer name</label>
-                    <input
-                      name="customer"
-                      required
-                      placeholder="e.g. Jessica Alva"
-                      className="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50/60 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C35000]"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
+                <form onSubmit={handleNewBookingSubmit} className="mt-5 space-y-4 text-xs">
+                  <fieldset className="space-y-2.5">
+                    <legend className="text-[11px] font-semibold text-[#6D7580]">
+                      Customer Information
+                    </legend>
                     <div>
-                      <label className="block text-neutral-700 font-medium mb-1">Service</label>
+                      <label htmlFor="walk-in-customer" className="mb-1.5 block text-[13px] font-medium text-[#354357]">
+                        Customer Name<span className="text-[#C35000]">*</span>
+                      </label>
                       <input
-                        name="service"
-                        defaultValue="Signature haircut"
-                        className="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50/60 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C35000]"
+                        id="walk-in-customer"
+                        name="customer"
+                        required
+                        placeholder="Name"
+                        className="h-12 w-full rounded-lg border border-[#AEB6C0] bg-white px-3 text-[13px] text-[#354357] placeholder:text-[#858C94] focus:border-[#C35000] focus:outline-none"
                       />
                     </div>
-                    <div>
-                      <label className="block text-neutral-700 font-medium mb-1">Time</label>
-                      <input
-                        name="time"
-                        defaultValue="10:00 AM"
-                        className="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50/60 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C35000]"
-                      />
+                    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                      <div>
+                        <label htmlFor="walk-in-email" className="mb-1.5 block text-[13px] font-medium text-[#354357]">
+                          Email <span className="text-[#354357]">(optional)</span>
+                        </label>
+                        <input
+                          id="walk-in-email"
+                          name="email"
+                          type="email"
+                          placeholder="@gmail.com"
+                          className="h-12 w-full rounded-lg border border-[#AEB6C0] bg-white px-3 text-[13px] text-[#354357] placeholder:text-[#858C94] focus:border-[#C35000] focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="walk-in-phone" className="mb-1.5 block text-[13px] font-medium text-[#354357]">
+                          Contact Number<span className="text-[#C35000]">*</span>
+                        </label>
+                        <input
+                          id="walk-in-phone"
+                          name="phone"
+                          required
+                          type="tel"
+                          placeholder="09956663254"
+                          className="h-12 w-full rounded-lg border border-[#AEB6C0] bg-white px-3 text-[13px] text-[#354357] placeholder:text-[#858C94] focus:border-[#C35000] focus:outline-none"
+                        />
+                      </div>
                     </div>
-                  </div>
+                  </fieldset>
+
+                  <fieldset className="space-y-2.5">
+                    <legend className="text-[11px] font-semibold text-[#6D7580]">
+                      Service &amp; staff
+                    </legend>
+                    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                      <div>
+                        <label htmlFor="walk-in-service" className="mb-1.5 block text-[13px] font-medium text-[#354357]">
+                          Requested Service<span className="text-[#C35000]">*</span>
+                        </label>
+                        <div className="relative">
+                          <input type="hidden" name="service" value={walkInService} />
+                          <button
+                            id="walk-in-service"
+                            type="button"
+                            aria-haspopup="listbox"
+                            aria-expanded={walkInServiceOpen}
+                            onClick={() => {
+                              setWalkInServiceOpen((open) => !open);
+                              setWalkInStaffOpen(false);
+                              setWalkInDateOpen(false);
+                            }}
+                            className="mt-0 flex h-12 w-full items-center justify-between rounded-lg border border-[#AEB6C0] bg-white px-3 text-left text-[13px] text-[#354357] outline-none focus:border-[#C35000]"
+                          >
+                            <span>
+                              {WALK_IN_SERVICES.find((option) => option.value === walkInService)?.label}
+                            </span>
+                            <svg aria-hidden viewBox="0 0 16 10" className={`h-3.5 w-3.5 text-[#6D7580] transition-transform ${walkInServiceOpen ? "rotate-180" : ""}`} fill="currentColor">
+                              <path d="M1.2 1.4a1 1 0 0 1 1.4-.2L8 5.7l5.4-4.5a1 1 0 1 1 1.2 1.6l-6 5a1 1 0 0 1-1.2 0l-6-5a1 1 0 0 1-.2-1.4Z" />
+                            </svg>
+                          </button>
+                          {walkInServiceOpen && (
+                            <ul role="listbox" className="absolute inset-x-0 top-full z-20 mt-2 overflow-hidden rounded-lg border border-[#AEB6C0] bg-white py-1 shadow-md">
+                              {WALK_IN_SERVICES.map((option) => (
+                                <li key={option.value}>
+                                  <button
+                                    type="button"
+                                    role="option"
+                                    aria-selected={walkInService === option.value}
+                                    onClick={() => {
+                                      setWalkInService(option.value);
+                                      setWalkInServiceOpen(false);
+                                    }}
+                                    className="w-full px-3 py-2.5 text-left text-[13px] text-[#354357] transition-colors hover:bg-[#F4F1EA]"
+                                  >
+                                    {option.label}
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <label htmlFor="walk-in-staff" className="mb-1.5 block text-[13px] font-medium text-[#354357]">
+                          Service Staff<span className="text-[#C35000]">*</span>
+                        </label>
+                        <div className="relative">
+                          <input type="hidden" name="staff" value={walkInStaff} />
+                          <button
+                            id="walk-in-staff"
+                            type="button"
+                            aria-haspopup="listbox"
+                            aria-expanded={walkInStaffOpen}
+                            onClick={() => {
+                              setWalkInStaffOpen((open) => !open);
+                              setWalkInServiceOpen(false);
+                              setWalkInDateOpen(false);
+                            }}
+                            className="flex h-12 w-full items-center justify-between rounded-lg border border-[#AEB6C0] bg-white px-3 text-left text-[13px] text-[#354357] outline-none focus:border-[#C35000]"
+                          >
+                            <span>{walkInStaff}</span>
+                            <svg aria-hidden viewBox="0 0 16 10" className={`h-3.5 w-3.5 text-[#6D7580] transition-transform ${walkInStaffOpen ? "rotate-180" : ""}`} fill="currentColor">
+                              <path d="M1.2 1.4a1 1 0 0 1 1.4-.2L8 5.7l5.4-4.5a1 1 0 1 1 1.2 1.6l-6 5a1 1 0 0 1-1.2 0l-6-5a1 1 0 0 1-.2-1.4Z" />
+                            </svg>
+                          </button>
+                          {walkInStaffOpen && (
+                            <ul role="listbox" className="absolute inset-x-0 top-full z-20 mt-2 overflow-hidden rounded-lg border border-[#AEB6C0] bg-white py-1 shadow-md">
+                              {WALK_IN_STAFF.map((staff) => (
+                                <li key={staff}>
+                                  <button
+                                    type="button"
+                                    role="option"
+                                    aria-selected={walkInStaff === staff}
+                                    onClick={() => {
+                                      setWalkInStaff(staff);
+                                      setWalkInStaffOpen(false);
+                                    }}
+                                    className="w-full px-3 py-2.5 text-left text-[13px] text-[#354357] transition-colors hover:bg-[#F4F1EA]"
+                                  >
+                                    {staff}
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </fieldset>
+
+                  <fieldset className="space-y-2.5">
+                    <legend className="text-[11px] font-semibold text-[#6D7580]">
+                      Schedule
+                    </legend>
+                    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                      <div>
+                        <label htmlFor="walk-in-date" className="mb-1.5 block text-[13px] font-medium text-[#354357]">
+                          Appointment Date<span className="text-[#C35000]">*</span>
+                        </label>
+                        <div className="relative">
+                          <input type="hidden" name="date" value={walkInDate} />
+                          <button
+                            id="walk-in-date"
+                            type="button"
+                            aria-haspopup="dialog"
+                            aria-expanded={walkInDateOpen}
+                            onClick={() => {
+                              setWalkInDateOpen((open) => !open);
+                              setWalkInServiceOpen(false);
+                              setWalkInStaffOpen(false);
+                            }}
+                            className="flex h-12 w-full items-center justify-between rounded-lg border border-[#AEB6C0] bg-white px-3 text-left text-[13px] text-[#354357] outline-none focus:border-[#C35000]"
+                          >
+                            <span>{formatWalkInDate(walkInDate)}</span>
+                            <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4 text-[#354357]" fill="none" stroke="currentColor" strokeWidth="1.8">
+                              <rect x="4" y="5.5" width="16" height="14" rx="1.5" />
+                              <path d="M8 3.5v4M16 3.5v4M4 10h16" strokeLinecap="round" />
+                            </svg>
+                          </button>
+                          {walkInDateOpen && (
+                            <div role="dialog" aria-label="Choose appointment date" className="absolute left-0 top-full z-20 mt-2 w-full min-w-[260px] rounded-lg border border-[#AEB6C0] bg-white p-3 shadow-md">
+                              <div className="mb-2 flex items-center justify-between">
+                                <button
+                                  type="button"
+                                  aria-label="Previous month"
+                                  onClick={() => setWalkInCalendarMonth((month) => new Date(month.getFullYear(), month.getMonth() - 1, 1))}
+                                  className="rounded-md px-2 py-1 text-[#354357] hover:bg-[#F4F1EA]"
+                                >
+                                  ‹
+                                </button>
+                                <span className="text-[13px] font-medium text-[#354357]">{walkInMonthLabel}</span>
+                                <button
+                                  type="button"
+                                  aria-label="Next month"
+                                  onClick={() => setWalkInCalendarMonth((month) => new Date(month.getFullYear(), month.getMonth() + 1, 1))}
+                                  className="rounded-md px-2 py-1 text-[#354357] hover:bg-[#F4F1EA]"
+                                >
+                                  ›
+                                </button>
+                              </div>
+                              <div className="grid grid-cols-7 text-center text-[10px] font-semibold text-[#858C94]">
+                                {CALENDAR_WEEKDAYS.map((day, index) => <span key={`${day}-${index}`}>{day}</span>)}
+                              </div>
+                              <div className="mt-1 grid grid-cols-7 gap-y-1 text-center">
+                                {walkInCalendarDays.map((day, index) => {
+                                  if (!day) return <span key={`empty-${index}`} />;
+                                  const dateValue = `${walkInCalendarMonth.getFullYear()}-${String(walkInCalendarMonth.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                                  const selected = dateValue === walkInDate;
+                                  return (
+                                    <button
+                                      key={dateValue}
+                                      type="button"
+                                      onClick={() => {
+                                        setWalkInDate(dateValue);
+                                        setWalkInDateOpen(false);
+                                      }}
+                                      className={`mx-auto flex h-7 w-7 items-center justify-center rounded-md text-[12px] transition ${selected ? "bg-[#C35000] text-white" : "text-[#354357] hover:bg-[#F4F1EA]"}`}
+                                    >
+                                      {day}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <label htmlFor="walk-in-time" className="mb-1.5 block text-[13px] font-medium text-[#354357]">
+                          Appointment Time<span className="text-[#C35000]">*</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            id="walk-in-time"
+                            name="time"
+                            required
+                            defaultValue="10:45 AM"
+                            placeholder="10:45 AM"
+                            className="h-12 w-full rounded-lg border border-[#AEB6C0] bg-white px-3 pr-9 text-[13px] text-[#354357] placeholder:text-[#858C94] focus:border-[#C35000] focus:outline-none"
+                          />
+                          <svg
+                            aria-hidden="true"
+                            viewBox="0 0 24 24"
+                            className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#354357]"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                          >
+                            <circle cx="12" cy="12" r="8.5" />
+                            <path d="M12 7.5v5l3 1.75" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  </fieldset>
+
                   <div>
-                    <label className="block text-neutral-700 font-medium mb-1">Staff member</label>
-                    <input
-                      name="staff"
-                      defaultValue="Lead Specialist"
-                      className="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50/60 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C35000]"
+                    <label htmlFor="walk-in-notes" className="mb-1.5 block text-[13px] font-medium text-[#354357]">
+                      Notes <span className="text-[#354357]">(optional)</span>
+                    </label>
+                    <textarea
+                      id="walk-in-notes"
+                      name="notes"
+                      rows={2}
+                      placeholder="Add customer requests or service notes..."
+                      className="w-full resize-none rounded-lg border border-[#AEB6C0] bg-white px-3 py-3 text-[13px] text-[#354357] placeholder:text-[#354357] focus:border-[#C35000] focus:outline-none"
                     />
                   </div>
-                  <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-neutral-100">
+
+                  <label className="flex items-center gap-2 text-[12px] text-[#6D7580]">
+                    <input
+                      type="checkbox"
+                      name="sendInvitation"
+                      className="h-3.5 w-3.5 rounded-sm accent-[#C35000]"
+                    />
+                    <span>Send account invitation after this visit</span>
+                  </label>
+                  <p className="text-[11px] tracking-wide text-[#858C94]">
+                    Existing scheduled bookings are protected. If a slot becomes unavailable, use the waiting list.
+                  </p>
+
+                  <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
                     <button
                       type="button"
                       disabled={isBookingSubmitting}
                       onClick={() => {
                         setIsNewBookingOpen(false);
                         setBookingError(null);
+                        showToast("Customer added to the waiting list.");
                       }}
-                      className="px-3.5 py-2 rounded-xl border border-neutral-200 text-neutral-700 hover:bg-neutral-50 disabled:opacity-60"
+                      className="h-9 rounded-md border border-[#C35000] px-3 text-xs font-medium text-[#C35000] hover:bg-[#FFF7F0] disabled:opacity-60"
                     >
-                      Cancel
+                      Add to waiting list
                     </button>
                     <button
                       type="submit"
                       disabled={isBookingSubmitting}
-                      className="px-4 py-2 rounded-xl bg-[#C35000] hover:bg-[#A94400] text-white font-semibold disabled:opacity-60 transition"
+                      className="h-9 rounded-md bg-[#C35000] px-6 text-xs font-semibold text-white shadow-xs transition hover:bg-[#A94400] disabled:opacity-60"
                     >
-                      {isBookingSubmitting ? "Creating Booking..." : "Create Booking"}
+                      {isBookingSubmitting ? "Creating walk-in..." : "Create walk-in appointment"}
                     </button>
                   </div>
                 </form>
