@@ -54,6 +54,7 @@ const WALK_IN_SERVICES = [
 ];
 const WALK_IN_STAFF = ["Sofia Cruz", "Marco Reyes", "Elena Cruz"];
 const CALENDAR_WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
+const APPOINTMENT_TIMES = ["09:00 AM", "09:30 AM", "10:00 AM", "10:45 AM", "11:30 AM", "01:00 PM", "02:30 PM"];
 
 function formatWalkInDate(date: string) {
   const [year, month, day] = date.split("-").map(Number);
@@ -95,11 +96,14 @@ export function OverviewView({
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
   const [isBookingSubmitting, setIsBookingSubmitting] = React.useState(false);
   const [bookingError, setBookingError] = React.useState<string | null>(null);
+  const [bookingType, setBookingType] = React.useState<"appointment" | "walk-in">("appointment");
   const [walkInService, setWalkInService] = React.useState(WALK_IN_SERVICES[0].value);
   const [walkInStaff, setWalkInStaff] = React.useState(WALK_IN_STAFF[0]);
   const [walkInServiceOpen, setWalkInServiceOpen] = React.useState(false);
   const [walkInStaffOpen, setWalkInStaffOpen] = React.useState(false);
   const [walkInDateOpen, setWalkInDateOpen] = React.useState(false);
+  const [walkInTimeOpen, setWalkInTimeOpen] = React.useState(false);
+  const [walkInTime, setWalkInTime] = React.useState("10:45 AM");
   const [walkInDate, setWalkInDate] = React.useState(new Date().toISOString().slice(0, 10));
   const [walkInCalendarMonth, setWalkInCalendarMonth] = React.useState(
     () => new Date(new Date().getFullYear(), new Date().getMonth(), 1)
@@ -199,6 +203,10 @@ export function OverviewView({
       setBookingError("Customer name is required.");
       return;
     }
+    if (!date) {
+      setBookingError("Appointment date is required.");
+      return;
+    }
 
     setIsBookingSubmitting(true);
     setBookingError(null);
@@ -213,7 +221,7 @@ export function OverviewView({
         date,
         time,
         notes,
-        source: "walk_in",
+        source: bookingType === "walk-in" ? "walk_in" : "online",
         tenantIdParam: tenantId,
       });
 
@@ -233,7 +241,7 @@ export function OverviewView({
         customer: created.customerName,
         service: created.serviceName,
         staff: created.staffName,
-        source: "Walk-In",
+        source: bookingType === "walk-in" ? "Walk-In" : "Online",
         status: "Confirmed",
         startsAt: created.starts_at,
         rawStatus: created.status,
@@ -241,7 +249,11 @@ export function OverviewView({
 
       setAppointments((prev) => [newRow, ...prev]);
       setIsNewBookingOpen(false);
-      showToast(`New appointment booked for ${customer}`);
+      showToast(
+        bookingType === "walk-in"
+          ? `New walk-in appointment booked for ${customer}`
+          : `New appointment booked for ${customer}`
+      );
       router.refresh();
     } catch (err: unknown) {
       setBookingError(err instanceof Error ? err.message : "Failed to create booking.");
@@ -376,14 +388,22 @@ export function OverviewView({
 
             <button
               type="button"
-              onClick={() => setIsNewBookingOpen(true)}
+              onClick={() => {
+                setBookingType("appointment");
+                setWalkInDate("");
+                setIsNewBookingOpen(true);
+              }}
               className="px-4 py-2 rounded-lg bg-[#C35000] hover:bg-[#A94400] text-white text-xs font-semibold shadow-xs flex items-center gap-1.5 transition"
             >
               <span>+ New Booking</span>
             </button>
             <button
               type="button"
-              onClick={() => setIsNewBookingOpen(true)}
+              onClick={() => {
+                setBookingType("walk-in");
+                setWalkInDate(new Date().toISOString().slice(0, 10));
+                setIsNewBookingOpen(true);
+              }}
               className="px-4 py-2 rounded-lg border border-[#C35000] bg-white hover:bg-[#FFF7F0] text-[#C35000] text-xs font-semibold shadow-xs flex items-center gap-1.5 transition"
             >
               <span>+ Add Walk-in</span>
@@ -974,20 +994,22 @@ export function OverviewView({
 
           {/* New Booking Modal (QA #4) */}
           {isNewBookingOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/35 backdrop-blur-xs animate-in fade-in duration-200">
+            <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 sm:items-center sm:p-5 bg-black/35 backdrop-blur-xs animate-in fade-in duration-200">
               <div
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="add-walk-in-title"
-                className="relative w-full max-w-2xl max-h-[calc(100vh-1.5rem)] overflow-y-auto rounded-xl bg-white px-5 py-5 sm:px-6 sm:py-5 shadow-2xl border border-[#E1E4E8] animate-in fade-in zoom-in-95 slide-in-from-bottom-3 duration-200"
+                className="relative my-auto w-full max-w-2xl overflow-visible rounded-xl bg-white px-5 py-5 sm:px-6 sm:py-5 shadow-2xl border border-[#E1E4E8] animate-in fade-in zoom-in-95 slide-in-from-bottom-3 duration-200"
               >
                 <div className="flex items-start justify-between">
                   <div>
                     <h3 id="add-walk-in-title" className="text-2xl sm:text-[27px] leading-tight font-normal font-display text-[#354357]">
-                      Add Walk-in
+                      {bookingType === "walk-in" ? "Add Walk-in" : "New Appointment"}
                     </h3>
                     <p className="mt-1 text-xs sm:text-[13px] tracking-wide text-[#6D7580]">
-                      Create an immediate appointment or add the customer to the waiting list.
+                      {bookingType === "walk-in"
+                        ? "Create an immediate appointment or add the customer to the waiting list."
+                        : "Create a booking for an existing or new customer."}
                     </p>
                   </div>
                   <button
@@ -997,7 +1019,7 @@ export function OverviewView({
                       setBookingError(null);
                     }}
                     className="text-2xl leading-none text-[#858C94] hover:text-[#354357] transition"
-                    aria-label="Close walk-in form"
+                    aria-label={`Close ${bookingType === "walk-in" ? "walk-in" : "appointment"} form`}
                   >
                     ×
                   </button>
@@ -1014,18 +1036,36 @@ export function OverviewView({
                     <legend className="text-[11px] font-semibold text-[#6D7580]">
                       Customer Information
                     </legend>
-                    <div>
-                      <label htmlFor="walk-in-customer" className="mb-1.5 block text-[13px] font-medium text-[#354357]">
-                        Customer Name<span className="text-[#C35000]">*</span>
-                      </label>
-                      <input
-                        id="walk-in-customer"
-                        name="customer"
-                        required
-                        placeholder="Name"
-                        className="h-12 w-full rounded-lg border border-[#AEB6C0] bg-white px-3 text-[13px] text-[#354357] placeholder:text-[#858C94] focus:border-[#C35000] focus:outline-none"
-                      />
+                    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                      <div>
+                        <label htmlFor="walk-in-customer" className="mb-1.5 block text-[13px] font-medium text-[#354357]">
+                          Customer Name<span className="text-[#C35000]">*</span>
+                        </label>
+                        <input
+                          id="walk-in-customer"
+                          name="customer"
+                          required
+                          placeholder="Juan Dela Cruz"
+                          className="h-12 w-full rounded-lg border border-[#AEB6C0] bg-white px-3 text-[13px] text-[#354357] placeholder:text-[#858C94] focus:border-[#C35000] focus:outline-none"
+                        />
+                      </div>
+                      {bookingType === "appointment" && (
+                        <div>
+                          <label htmlFor="walk-in-phone" className="mb-1.5 block text-[13px] font-medium text-[#354357]">
+                            Contact Number<span className="text-[#C35000]">*</span>
+                          </label>
+                          <input
+                            id="walk-in-phone"
+                            name="phone"
+                            required
+                            type="tel"
+                            placeholder="09956663254"
+                            className="h-12 w-full rounded-lg border border-[#AEB6C0] bg-white px-3 text-[13px] text-[#354357] placeholder:text-[#858C94] focus:border-[#C35000] focus:outline-none"
+                          />
+                        </div>
+                      )}
                     </div>
+                    {bookingType === "walk-in" && (
                     <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                       <div>
                         <label htmlFor="walk-in-email" className="mb-1.5 block text-[13px] font-medium text-[#354357]">
@@ -1035,7 +1075,7 @@ export function OverviewView({
                           id="walk-in-email"
                           name="email"
                           type="email"
-                          placeholder="@gmail.com"
+                          placeholder="juan@gmail.com"
                           className="h-12 w-full rounded-lg border border-[#AEB6C0] bg-white px-3 text-[13px] text-[#354357] placeholder:text-[#858C94] focus:border-[#C35000] focus:outline-none"
                         />
                       </div>
@@ -1053,6 +1093,7 @@ export function OverviewView({
                         />
                       </div>
                     </div>
+                    )}
                   </fieldset>
 
                   <fieldset className="space-y-2.5">
@@ -1062,7 +1103,7 @@ export function OverviewView({
                     <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                       <div>
                         <label htmlFor="walk-in-service" className="mb-1.5 block text-[13px] font-medium text-[#354357]">
-                          Requested Service<span className="text-[#C35000]">*</span>
+                          {bookingType === "walk-in" ? "Requested Service" : "Service Name"}<span className="text-[#C35000]">*</span>
                         </label>
                         <div className="relative">
                           <input type="hidden" name="service" value={walkInService} />
@@ -1178,7 +1219,9 @@ export function OverviewView({
                             }}
                             className="flex h-12 w-full items-center justify-between rounded-lg border border-[#AEB6C0] bg-white px-3 text-left text-[13px] text-[#354357] outline-none focus:border-[#C35000]"
                           >
-                            <span>{formatWalkInDate(walkInDate)}</span>
+                            <span className={walkInDate ? "text-[#354357]" : "text-[#858C94]"}>
+                              {walkInDate ? formatWalkInDate(walkInDate) : "Select an option"}
+                            </span>
                             <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4 text-[#354357]" fill="none" stroke="currentColor" strokeWidth="1.8">
                               <rect x="4" y="5.5" width="16" height="14" rx="1.5" />
                               <path d="M8 3.5v4M16 3.5v4M4 10h16" strokeLinecap="round" />
@@ -1241,9 +1284,9 @@ export function OverviewView({
                             id="walk-in-time"
                             name="time"
                             required
-                            defaultValue="10:45 AM"
-                            placeholder="10:45 AM"
-                            className="h-12 w-full rounded-lg border border-[#AEB6C0] bg-white px-3 pr-9 text-[13px] text-[#354357] placeholder:text-[#858C94] focus:border-[#C35000] focus:outline-none"
+                            value={walkInTime}
+                            readOnly
+                            className="h-12 w-full rounded-lg border border-[#AEB6C0] bg-white px-3 pr-9 text-[13px] text-[#354357] focus:border-[#C35000] focus:outline-none"
                           />
                           <svg
                             aria-hidden="true"
@@ -1256,6 +1299,37 @@ export function OverviewView({
                             <circle cx="12" cy="12" r="8.5" />
                             <path d="M12 7.5v5l3 1.75" strokeLinecap="round" strokeLinejoin="round" />
                           </svg>
+                          <button
+                            type="button"
+                            aria-label="Choose appointment time"
+                            onClick={() => {
+                              setWalkInTimeOpen((open) => !open);
+                              setWalkInDateOpen(false);
+                              setWalkInServiceOpen(false);
+                              setWalkInStaffOpen(false);
+                            }}
+                            className="absolute inset-0 rounded-lg"
+                          />
+                          {walkInTimeOpen && (
+                            <ul role="listbox" className="absolute inset-x-0 top-full z-20 mt-2 max-h-48 overflow-y-auto rounded-lg border border-[#AEB6C0] bg-white py-1 shadow-md">
+                              {APPOINTMENT_TIMES.map((time) => (
+                                <li key={time}>
+                                  <button
+                                    type="button"
+                                    role="option"
+                                    aria-selected={walkInTime === time}
+                                    onClick={() => {
+                                      setWalkInTime(time);
+                                      setWalkInTimeOpen(false);
+                                    }}
+                                    className="w-full px-3 py-2.5 text-left text-[13px] text-[#354357] hover:bg-[#F4F1EA]"
+                                  >
+                                    {time}
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1274,37 +1348,59 @@ export function OverviewView({
                     />
                   </div>
 
-                  <label className="flex items-center gap-2 text-[12px] text-[#6D7580]">
-                    <input
-                      type="checkbox"
-                      name="sendInvitation"
-                      className="h-3.5 w-3.5 rounded-sm accent-[#C35000]"
-                    />
-                    <span>Send account invitation after this visit</span>
-                  </label>
-                  <p className="text-[11px] tracking-wide text-[#858C94]">
-                    Existing scheduled bookings are protected. If a slot becomes unavailable, use the waiting list.
-                  </p>
+                  {bookingType === "walk-in" && (
+                    <>
+                      <label className="flex items-center gap-2 text-[12px] text-[#6D7580]">
+                        <input
+                          type="checkbox"
+                          name="sendInvitation"
+                          className="h-3.5 w-3.5 rounded-sm accent-[#C35000]"
+                        />
+                        <span>Send account invitation after this visit</span>
+                      </label>
+                      <p className="text-[11px] tracking-wide text-[#858C94]">
+                        Existing scheduled bookings are protected. If a slot becomes unavailable, use the waiting list.
+                      </p>
+                    </>
+                  )}
 
-                  <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
-                    <button
-                      type="button"
-                      disabled={isBookingSubmitting}
-                      onClick={() => {
-                        setIsNewBookingOpen(false);
-                        setBookingError(null);
-                        showToast("Customer added to the waiting list.");
-                      }}
-                      className="h-9 rounded-md border border-[#C35000] px-3 text-xs font-medium text-[#C35000] hover:bg-[#FFF7F0] disabled:opacity-60"
-                    >
-                      Add to waiting list
-                    </button>
+                  <div className={`flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:items-center ${bookingType === "walk-in" ? "sm:justify-between" : "sm:justify-end"}`}>
+                    {bookingType === "walk-in" ? (
+                      <button
+                        type="button"
+                        disabled={isBookingSubmitting}
+                        onClick={() => {
+                          setIsNewBookingOpen(false);
+                          setBookingError(null);
+                          showToast("Customer added to the waiting list.");
+                        }}
+                        className="h-9 rounded-md border border-[#C35000] px-3 text-xs font-medium text-[#C35000] hover:bg-[#FFF7F0] disabled:opacity-60"
+                      >
+                        Add to waiting list
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={isBookingSubmitting}
+                        onClick={() => {
+                          setIsNewBookingOpen(false);
+                          setBookingError(null);
+                        }}
+                        className="h-9 rounded-md border border-[#E1E4E8] px-5 text-xs font-medium text-[#354357] hover:bg-[#F4F1EA] disabled:opacity-60"
+                      >
+                        Cancel
+                      </button>
+                    )}
                     <button
                       type="submit"
                       disabled={isBookingSubmitting}
                       className="h-9 rounded-md bg-[#C35000] px-6 text-xs font-semibold text-white shadow-xs transition hover:bg-[#A94400] disabled:opacity-60"
                     >
-                      {isBookingSubmitting ? "Creating walk-in..." : "Create walk-in appointment"}
+                      {isBookingSubmitting
+                        ? "Creating..."
+                        : bookingType === "walk-in"
+                          ? "Create walk-in appointment"
+                          : "Create Appointment"}
                     </button>
                   </div>
                 </form>
