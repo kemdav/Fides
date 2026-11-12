@@ -42,6 +42,7 @@ export interface OverviewViewProps {
   chartStats?: DayChartStat[];
   todayActivity?: { time: string; customer: string; service: string }[];
   initialRows?: AppointmentRow[];
+  calendarAppointments?: AppointmentRow[];
   basePath?: string;
 }
 
@@ -60,8 +61,8 @@ export function OverviewView({
   completedVisitsCount = 0,
   revenueTotal = 0,
   chartStats = [],
-  todayActivity = [],
   initialRows = EMPTY_APPOINTMENTS,
+  calendarAppointments = EMPTY_APPOINTMENTS,
   basePath = "",
 }: OverviewViewProps) {
   const router = useRouter();
@@ -79,6 +80,7 @@ export function OverviewView({
   const [isBookingSubmitting, setIsBookingSubmitting] = React.useState(false);
   const [bookingError, setBookingError] = React.useState<string | null>(null);
   const [expandedAppointmentId, setExpandedAppointmentId] = React.useState<string | null>(null);
+  const [selectedCalendarDay, setSelectedCalendarDay] = React.useState<number | null>(null);
   const displayName = userName || userEmail;
 
   const showToast = (msg: string) => {
@@ -228,6 +230,38 @@ export function OverviewView({
           { day: "Sun", booked: 0, completed: 0 },
         ];
   const maxVal = Math.max(1, ...stats.map((s) => Math.max(s.booked, s.completed)));
+  const calendarDate = new Date();
+  const currentMonthLabel = calendarDate.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+  const calendarDaysInMonth = new Date(
+    calendarDate.getFullYear(),
+    calendarDate.getMonth() + 1,
+    0
+  ).getDate();
+  const calendarStartDay = new Date(
+    calendarDate.getFullYear(),
+    calendarDate.getMonth(),
+    1
+  ).getDay();
+  const calendarCells: Array<number | null> = [
+    ...Array.from({ length: calendarStartDay }, () => null),
+    ...Array.from({ length: calendarDaysInMonth }, (_, index) => index + 1),
+  ];
+  const activeCalendarDay = selectedCalendarDay ?? calendarDate.getDate();
+  const activeCalendarDateKey = `${calendarDate.getFullYear()}-${String(
+    calendarDate.getMonth() + 1
+  ).padStart(2, "0")}-${String(activeCalendarDay).padStart(2, "0")}`;
+  const activeCalendarAppointments = calendarAppointments.filter(
+    (appointment) => appointment.startsAt?.slice(0, 10) === activeCalendarDateKey
+  );
+  const activeCompletedAppointments = activeCalendarAppointments.filter(
+    (appointment) => appointment.status === "Completed"
+  );
+  const activeCalendarLabel = new Date(
+    `${activeCalendarDateKey}T12:00:00`
+  ).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
   return (
     <div className="min-h-screen bg-[#FFFDF6] text-neutral-900 flex flex-col md:flex-row antialiased font-sans">
@@ -316,21 +350,21 @@ export function OverviewView({
               <span>Today&apos;s appointments</span>
             </div>
 
-            <div className="my-4 flex items-baseline gap-3">
-              <span className="text-3xl font-normal font-display">{todayCount}</span>
+            <div className="my-4 flex items-center gap-3">
+              <span className="text-3xl font-semibold font-sans">{todayCount}</span>
               <span className="text-[10px] lg:text-[11px] font-medium bg-white/20 px-2 py-0.5 rounded-full">
                 {confirmedCount} confirmed
               </span>
             </div>
 
             <div>
+              <span className="text-[10px] lg:text-[11px] text-white/80 block mb-1.5">Your schedule at a glance</span>
               <div className="w-full h-1 bg-white/25 rounded-full overflow-hidden mb-1.5">
                 <div
                   className="h-full bg-white rounded-full transition-all duration-300"
                   style={{ width: `${todayCount > 0 ? Math.min(100, (confirmedCount / todayCount) * 100) : 0}%` }}
                 />
               </div>
-              <span className="text-[10px] lg:text-[11px] text-white/80">Your schedule at a glance</span>
             </div>
           </div>
 
@@ -344,22 +378,24 @@ export function OverviewView({
               <span>Pending approvals</span>
             </div>
 
-            <div className="my-4 flex items-baseline gap-3">
-              <span className="text-3xl font-normal font-display text-[#354357]">{pendingCount}</span>
+            <div className="my-4 flex items-center gap-3">
+              <span className="text-3xl font-semibold font-sans text-[#354357]">{pendingCount}</span>
               <span className="text-[11px] font-medium text-amber-800 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-full">
                 Needs review
               </span>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="flex items-end gap-1 h-5">
-                <div className="w-1.5 h-3 bg-[#ADD8E6] rounded-xs" />
-                <div className="w-1.5 h-5 bg-[#C35000] rounded-xs" />
-                <div className="w-1.5 h-2 bg-[#ADD8E6] rounded-xs" />
-                <div className="w-1.5 h-4 bg-[#C35000] rounded-xs" />
-                <div className="w-1.5 h-3 bg-[#ADD8E6] rounded-xs" />
+            <div className="flex items-end gap-3">
+              <div className="flex items-end gap-1 h-8 shrink-0" aria-hidden="true">
+                <div className="w-2.5 h-4 bg-[#ADD8E6] rounded-sm" />
+                <div className="w-2.5 h-6 bg-[#ADD8E6] rounded-sm" />
+                <div className="w-2.5 h-8 bg-[#ADD8E6] rounded-sm" />
+                <div className="w-2.5 h-5 bg-[#ADD8E6] rounded-sm" />
+                <div className="w-2.5 h-7 bg-[#C35000] rounded-sm" />
+                <div className="w-2.5 h-6 bg-[#ADD8E6] rounded-sm" />
+                <div className="w-2.5 h-8 bg-[#ADD8E6] rounded-sm" />
               </div>
-              <span className="text-[10px] lg:text-[11px] text-neutral-500">
+              <span className="pl-2 max-w-[125px] text-[10px] lg:text-[11px] leading-tight text-neutral-500">
                 {pendingCount} {pendingCount === 1 ? "request is" : "requests are"} waiting for your approval
               </span>
             </div>
@@ -375,23 +411,23 @@ export function OverviewView({
               <span>Checked-in customers</span>
             </div>
 
-            <div className="my-4 flex items-baseline gap-3">
-              <span className="text-3xl font-normal font-display text-[#354357]">{checkedInCount}</span>
+            <div className="my-4 flex items-center gap-3">
+              <span className="text-3xl font-semibold font-sans text-[#354357]">{checkedInCount}</span>
               <span className="text-[11px] font-medium text-amber-800 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-full">
                 Ready for service
               </span>
             </div>
 
             <div>
+              <span className="text-[10px] lg:text-[11px] text-neutral-500 block mb-1.5">
+                {checkedInCount} {checkedInCount === 1 ? "customer" : "customers"} ready for their appointments
+              </span>
               <div className="w-full h-1 bg-neutral-100 rounded-full overflow-hidden mb-1.5">
                 <div
                   className="h-full bg-[#ADD8E6] rounded-full transition-all duration-300"
                   style={{ width: `${todayCount > 0 ? Math.min(100, (checkedInCount / todayCount) * 100) : 0}%` }}
                 />
               </div>
-              <span className="text-[10px] lg:text-[11px] text-neutral-500">
-                {checkedInCount} {checkedInCount === 1 ? "customer" : "customers"} ready for their appointments
-              </span>
             </div>
           </div>
 
@@ -405,34 +441,36 @@ export function OverviewView({
               <span>Completed revenue</span>
             </div>
 
-            <div className="my-4 flex items-baseline gap-3">
-              <span className="text-3xl font-normal font-display text-[#354357]">
+            <div className="my-4 flex items-center gap-3">
+              <span className="text-3xl font-semibold font-sans text-[#354357]">
                 ₱{revenueTotal.toLocaleString()}
               </span>
               <span className="text-[11px] font-medium text-[#C35000] bg-[#FDF3EB] border border-[#FADCD9] px-2 py-0.5 rounded-full">
-                {completedVisitsCount} visits
+                {completedVisitsCount} {completedVisitsCount === 1 ? "visit" : "visits"}
               </span>
             </div>
 
             <div>
+              <span className="text-[10px] lg:text-[11px] text-neutral-500 block mb-1.5">Collected from completed visits</span>
               <div className="w-full h-1 bg-neutral-100 rounded-full overflow-hidden mb-1.5">
                 <div className="w-3/4 h-full bg-[#C35000] rounded-full" />
               </div>
-              <span className="text-[10px] lg:text-[11px] text-neutral-500">Collected from completed visits</span>
             </div>
           </div>
         </div>
 
         {/* Middle Section: Appointment statistics & Calendar */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
           {/* Appointment statistics (7 cols) */}
-          <div className="lg:col-span-7 rounded-2xl bg-white border border-[#EDECE8] p-6 shadow-xs space-y-4">
+          <div className="lg:col-span-7 h-full rounded-2xl bg-white border border-[#EDECE8] p-6 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-neutral-500">
-                  <rect x="3" y="4" width="18" height="18" rx="2" />
-                  <line x1="16" y1="2" x2="16" y2="6" />
-                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="4" y1="19" x2="4" y2="14" />
+                  <line x1="9" y1="19" x2="9" y2="9" />
+                  <line x1="14" y1="19" x2="14" y2="5" />
+                  <line x1="19" y1="19" x2="19" y2="11" />
+                  <path d="M3 19h18" />
                 </svg>
                 <h3 className="text-xs font-semibold text-neutral-900 uppercase tracking-wider">
                   Appointment statistics
@@ -459,19 +497,19 @@ export function OverviewView({
                     <div className="w-full flex items-end justify-center gap-1 h-44">
                       {/* Booked bar */}
                       <div
-                        className="w-4 bg-[#C35000] rounded-t-sm transition-all duration-300 relative group-hover:opacity-90 min-h-[4px]"
+                        className="w-5 bg-[#C35000] rounded-t-sm transition-all duration-300 relative min-h-[4px]"
                         style={{ height: `${item.booked > 0 ? (item.booked / maxVal) * 100 : 4}%` }}
                       >
-                        <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[9px] font-bold text-neutral-600 opacity-0 group-hover:opacity-100">
+                        <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-semibold text-neutral-500">
                           {item.booked}
                         </span>
                       </div>
                       {/* Completed bar */}
                       <div
-                        className="w-4 bg-[#ADD8E6] rounded-t-sm transition-all duration-300 relative group-hover:opacity-90 min-h-[4px]"
+                        className="w-5 bg-[#ADD8E6] rounded-t-sm transition-all duration-300 relative min-h-[4px]"
                         style={{ height: `${item.completed > 0 ? (item.completed / maxVal) * 100 : 4}%` }}
                       >
-                        <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[9px] font-bold text-neutral-600 opacity-0 group-hover:opacity-100">
+                        <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-semibold text-neutral-500">
                           {item.completed}
                         </span>
                       </div>
@@ -486,22 +524,29 @@ export function OverviewView({
           </div>
 
           {/* Calendar & Today's Activity (5 cols) */}
-          <div className="lg:col-span-5 rounded-2xl bg-white border border-[#EDECE8] p-6 shadow-xs space-y-4">
+          <div className="lg:col-span-5 h-full rounded-2xl bg-white border border-[#EDECE8] p-6 shadow-xs space-y-4">
             <div className="flex items-center justify-between pb-1">
               <div className="flex items-center gap-2">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-neutral-500">
-                  <rect x="3" y="4" width="18" height="18" rx="2" />
-                  <line x1="16" y1="2" x2="16" y2="6" />
-                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <rect x="3" y="5" width="18" height="16" rx="2" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                  <line x1="8" y1="3" x2="8" y2="7" />
+                  <line x1="16" y1="3" x2="16" y2="7" />
                 </svg>
                 <h3 className="text-xs font-semibold text-neutral-900 uppercase tracking-wider">
                   Calendar
                 </h3>
               </div>
-              <span className="flex items-center gap-1.5 text-xs text-neutral-600">
-                <span className="w-2 h-2 rounded-full bg-[#C35000]" />
-                <span>Appointments</span>
-              </span>
+              <div className="flex items-center gap-3 text-[10px] text-neutral-600">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#C35000]" />
+                  <span>Booked</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#ADD8E6]" />
+                  <span>Completed</span>
+                </span>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start pt-1">
@@ -509,46 +554,70 @@ export function OverviewView({
               <div>
                 <div className="flex items-center justify-between text-xs font-medium text-neutral-800 mb-2">
                   <span className="cursor-pointer text-neutral-400 hover:text-neutral-700">‹</span>
-                  <span className="font-semibold">Current Month</span>
+                  <span className="font-semibold">{currentMonthLabel}</span>
                   <span className="cursor-pointer text-neutral-400 hover:text-neutral-700">›</span>
                 </div>
                 <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-neutral-400 mb-1">
                   <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
                 </div>
                 <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-medium text-neutral-700">
-                  <span className="text-neutral-300">27</span>
-                  <span className="text-neutral-300">28</span>
-                  <span className="text-neutral-300">29</span>
-                  <span className="text-neutral-300">30</span>
-                  <span>1</span><span>2</span><span>3</span>
-                  <span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
-                  <span>11</span><span>12</span><span>13</span><span>14</span><span>15</span><span>16</span><span>17</span>
-                  <span>18</span><span>19</span><span>20</span>
-                  <span className="bg-[#C35000] text-white rounded-full flex items-center justify-center font-bold">21</span>
-                  <span>22</span><span>23</span><span>24</span>
-                  <span>25</span><span>26</span><span>27</span><span>28</span><span>29</span><span>30</span><span>31</span>
+                  {calendarCells.map((day, index) => (
+                    <button
+                      type="button"
+                      key={`${day ?? "empty"}-${index}`}
+                      disabled={day === null}
+                      onClick={() => day !== null && setSelectedCalendarDay(day)}
+                      className={`flex items-center justify-center aspect-square ${
+                        day === null
+                          ? "cursor-default"
+                          : day === activeCalendarDay
+                            ? "bg-[#C35000]/15 text-[#C35000] rounded-md font-bold"
+                            : "rounded-md hover:bg-[#C35000]/10"
+                      }`}
+                    >
+                      {day}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* Today's Activity (QA #1: dynamic items from appointments) */}
+              {/* Selected date activity */}
               <div className="space-y-2.5 border-t sm:border-t-0 sm:border-l border-[#EDECE8] sm:pl-4 pt-3 sm:pt-0">
                 <span className="text-xs font-semibold text-neutral-900 block">
-                  Today&apos;s activity
+                  {activeCalendarLabel}&apos;s activity
                 </span>
-                <div className="space-y-2 text-[11px]">
-                  {todayActivity && todayActivity.length > 0 ? (
-                    todayActivity.map((act, i) => (
-                      <div key={i} className="flex items-start gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#C35000] mt-1 shrink-0" />
+                <div className="space-y-2 text-[11px] max-h-40 overflow-y-auto">
+                  {activeCalendarAppointments.length > 0 ? (
+                    activeCalendarAppointments.map((appointment) => (
+                      <div key={appointment.id} className="flex items-start gap-1.5">
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full mt-1 shrink-0 ${
+                            appointment.status === "Completed"
+                              ? "bg-[#ADD8E6]"
+                              : "bg-[#C35000]"
+                          }`}
+                        />
                         <div>
-                          <span className="font-medium text-neutral-800">{act.time} · {act.customer}</span>
-                          <span className="text-neutral-400 block text-[10px]">{act.service}</span>
+                          <span className="font-medium text-neutral-800">
+                            {appointment.time} · {appointment.customer}
+                          </span>
+                          <span className="text-neutral-400 block text-[10px]">
+                            {appointment.service} · {appointment.status}
+                          </span>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <span className="text-[11px] text-neutral-400 block">No activity scheduled for today.</span>
+                    <span className="text-[11px] text-neutral-400 block">
+                      No activity scheduled for this date.
+                    </span>
                   )}
+                </div>
+                <div className="border-t border-[#EDECE8] pt-2 text-[10px] text-neutral-500">
+                  <span className="font-semibold text-neutral-700">
+                    {activeCompletedAppointments.length}
+                  </span>{" "}
+                  completed appointment{activeCompletedAppointments.length === 1 ? "" : "s"}
                 </div>
               </div>
             </div>

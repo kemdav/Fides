@@ -87,7 +87,7 @@ export default async function MerchantDashboardPage({
     (sum, payment) => sum + Math.round(payment.amount_cents / 100),
     0
   );
-  const initialRows: AppointmentRow[] = todayAppointments.map((appointment) => {
+  const toAppointmentRow = (appointment: (typeof appointments)[number]): AppointmentRow => {
     const customer = Array.isArray(appointment.customers)
       ? appointment.customers[0]
       : appointment.customers;
@@ -123,7 +123,9 @@ export default async function MerchantDashboardPage({
       startsAt: appointment.starts_at,
       rawStatus: appointment.status,
     };
-  });
+  };
+  const calendarAppointments = appointments.map(toAppointmentRow);
+  const initialRows: AppointmentRow[] = todayAppointments.map(toAppointmentRow);
 
   const currentDay = now.getUTCDay();
   const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay;
@@ -172,6 +174,7 @@ export default async function MerchantDashboardPage({
         service: row.service,
       }))}
       initialRows={initialRows}
+      calendarAppointments={calendarAppointments}
     />
   );
 }

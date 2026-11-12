@@ -65,6 +65,7 @@ export default async function DashboardPage({
   let revenueTotal = 0;
   let chartStats: DayChartStat[] = [];
   let initialRows: AppointmentRow[] = [];
+  let calendarAppointments: AppointmentRow[] = [];
   let todayActivity: { time: string; customer: string; service: string }[] = [];
 
   if (tenantId) {
@@ -188,6 +189,7 @@ export default async function DashboardPage({
       customer: r.customer,
       service: r.service,
     }));
+    calendarAppointments = initialRows;
   }
 
   return (
@@ -206,6 +208,7 @@ export default async function DashboardPage({
       chartStats={chartStats}
       todayActivity={todayActivity}
       initialRows={initialRows}
+      calendarAppointments={calendarAppointments}
     />
   );
 }
