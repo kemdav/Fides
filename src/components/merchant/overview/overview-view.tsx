@@ -43,6 +43,8 @@ export interface OverviewViewProps {
   basePath?: string;
 }
 
+const EMPTY_APPOINTMENTS: AppointmentRow[] = [];
+
 export function OverviewView({
   businessName = "Bella Vita",
   userEmail = "Maria Santos",
@@ -55,17 +57,12 @@ export function OverviewView({
   revenueTotal = 0,
   chartStats = [],
   todayActivity = [],
-  initialRows = [],
+  initialRows = EMPTY_APPOINTMENTS,
   basePath = "",
 }: OverviewViewProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = React.useState("");
   const [appointments, setAppointments] = React.useState<AppointmentRow[]>(initialRows);
-  const [prevInitialRows, setPrevInitialRows] = React.useState<AppointmentRow[]>(initialRows);
-  if (initialRows !== prevInitialRows) {
-    setPrevInitialRows(initialRows);
-    setAppointments(initialRows);
-  }
 
   const [filterStatus, setFilterStatus] = React.useState<string>("All");
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
