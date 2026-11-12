@@ -29,7 +29,7 @@ export default async function DashboardPage({
   // Fetch profile to resolve active tenant
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, tenant_id")
+    .select("full_name, role, tenant_id")
     .eq("id", user.id)
     .single();
 
@@ -193,7 +193,9 @@ export default async function DashboardPage({
   return (
     <OverviewView
       businessName={businessName}
+      userName={profile?.full_name?.trim() || user.email?.split("@")[0] || "Merchant"}
       userEmail={user.email ?? "Maria Santos"}
+      userRole={profile?.role === "owner" ? "Business owner" : profile?.role || "Staff"}
       tenantId={tenantId ?? undefined}
       todayCount={todayCount}
       confirmedCount={confirmedCount}

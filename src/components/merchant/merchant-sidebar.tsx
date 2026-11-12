@@ -6,17 +6,22 @@ import { usePathname } from "next/navigation";
 
 interface MerchantSidebarProps {
   businessName?: string;
+  userName?: string;
   userEmail?: string;
+  userRole?: string;
   basePath?: string;
 }
 
 export function MerchantSidebar({
   businessName = "Bella Vita",
+  userName = "Maria Santos",
   userEmail = "Maria Santos",
+  userRole = "Business owner",
   basePath = "",
 }: MerchantSidebarProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const displayName = userName || userEmail;
 
   // Active route matching
   const dashboardPath = `${basePath}/dashboard`;
@@ -41,7 +46,7 @@ export function MerchantSidebar({
               <line x1="3" y1="18" x2="21" y2="18" />
             </svg>
           </button>
-          <span className="font-serif text-lg font-bold text-[#C35000]">
+          <span className="font-display text-lg text-[#C35000]">
             {businessName}
           </span>
         </div>
@@ -60,18 +65,18 @@ export function MerchantSidebar({
 
       {/* Sidebar Navigation */}
       <aside
-        className={`fixed md:sticky top-0 bottom-0 left-0 z-50 md:z-10 w-64 bg-white border-r border-[#EDECE8] flex flex-col justify-between shrink-0 transition-transform duration-200 md:translate-x-0 ${
+        className={`fixed md:sticky top-0 bottom-0 left-0 z-50 md:z-10 w-64 md:w-44 bg-white border-r border-[#EDECE8] flex flex-col justify-between shrink-0 transition-transform duration-200 md:translate-x-0 ${
           mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:translate-x-0"
         }`}
       >
-        <div className="p-5 flex-1 overflow-y-auto">
+        <div className="p-4 md:p-3 flex-1 overflow-y-auto">
           {/* Header */}
           <div className="mb-6 flex items-start justify-between">
             <div>
-              <h1 className="text-xl font-bold tracking-tight text-[#C35000] font-serif">
+              <h1 className="text-xl font-normal tracking-tight text-[#C35000] font-display">
                 {businessName}
               </h1>
-              <p className="text-[10px] font-bold tracking-wider uppercase text-neutral-400 mt-0.5">
+              <p className="text-[8px] font-medium tracking-wide uppercase text-neutral-400 mt-0.5">
                 Merchant Workspace
               </p>
             </div>
@@ -94,7 +99,7 @@ export function MerchantSidebar({
             <span className="block text-[11px] font-bold tracking-wider uppercase text-neutral-400 mb-2">
               Manage
             </span>
-            <nav className="space-y-1 text-xs font-medium">
+            <nav className="space-y-0.5 text-[11px] font-medium">
               <Link
                 href={dashboardPath}
                 onClick={() => setMobileOpen(false)}
@@ -213,7 +218,7 @@ export function MerchantSidebar({
             <span className="block text-[11px] font-bold tracking-wider uppercase text-neutral-400 mb-2">
               Configuration
             </span>
-            <nav className="space-y-1 text-xs font-medium">
+            <nav className="space-y-0.5 text-[11px] font-medium">
               <Link
                 href={`${dashboardPath}/settings/website`}
                 onClick={() => setMobileOpen(false)}
@@ -258,10 +263,10 @@ export function MerchantSidebar({
             </div>
             <div className="min-w-0">
               <span className="block text-xs font-semibold text-neutral-900 truncate">
-                {userEmail}
+                {displayName}
               </span>
               <span className="block text-[11px] text-neutral-400">
-                Business owner
+                {userRole}
               </span>
             </div>
           </div>
