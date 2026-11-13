@@ -1,29 +1,54 @@
 "use client";
 
 import Image from "next/image";
-import { FormEvent, useState } from "react";
+import { useActionState, useState } from "react";
 import { buttonClasses } from "@/components/ui";
+import {
+  submitContactForm,
+  type ContactFormState,
+} from "@/app/(site)/[slug]/contact/actions";
 
 const topicOptions = ["Services", "Booking", "General question"];
 
-export function StorefrontContactPage({
-  servicesHref = "#services",
-}: {
+const initialState: ContactFormState = {
+  success: false,
+};
+
+export interface StorefrontContactPageProps {
+  tenantId: string;
+  tenantSlug: string;
+  businessName?: string;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
   servicesHref?: string;
-}) {
-  const [submitted, setSubmitted] = useState(false);
+}
+
+export function StorefrontContactPage({
+  tenantId,
+  tenantSlug,
+  businessName = "Our Studio",
+  email,
+  phone,
+  address,
+  servicesHref = "#services",
+}: StorefrontContactPageProps) {
   const [topic, setTopic] = useState("");
   const [topicOpen, setTopicOpen] = useState(false);
   const [topicError, setTopicError] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  const [state, formAction, isPending] = useActionState(
+    submitContactForm,
+    initialState
+  );
+
+  function handleFormSubmit(event: React.FormEvent<HTMLFormElement>) {
     if (!topic) {
+      event.preventDefault();
       setTopicError(true);
       return;
     }
     setTopicError(false);
-    setSubmitted(true);
   }
 
   return (
@@ -46,7 +71,7 @@ export function StorefrontContactPage({
           <div className="relative aspect-[1.55/1] overflow-hidden rounded-lg">
             <Image
               src="/images/storefront/hero Image.png"
-              alt="Bella Vita appointment booking on a phone"
+              alt={`${businessName} appointment booking on a phone`}
               fill
               priority
               className="object-cover"
@@ -68,18 +93,45 @@ export function StorefrontContactPage({
             <p className="mt-3 text-sm/6 text-muted">
               All fields are required unless marked optional.
             </p>
-            <form className="mt-7 grid gap-5 sm:grid-cols-2" onSubmit={handleSubmit}>
+            <form
+              action={formAction}
+              onSubmit={handleFormSubmit}
+              className="mt-7 grid gap-5 sm:grid-cols-2"
+            >
+              {/* Hidden inputs to scope inquiry to active tenant */}
+              <input type="hidden" name="tenantId" value={tenantId} />
+              <input type="hidden" name="tenantSlug" value={tenantSlug} />
+              <input type="hidden" name="topic" value={topic} />
+
               <label className="text-base/6 text-ink">
                 Name*
-                <input required name="name" placeholder="Juan Dela Cruz" className="mt-2 h-12 w-full rounded-lg border border-[#aeb6c0] px-4 text-base outline-none placeholder:text-muted focus:border-burnt" />
+                <input
+                  required
+                  name="name"
+                  placeholder="Juan Dela Cruz"
+                  disabled={isPending}
+                  className="mt-2 h-12 w-full rounded-lg border border-[#aeb6c0] px-4 text-base outline-none placeholder:text-muted focus:border-burnt disabled:opacity-60"
+                />
               </label>
               <label className="text-base/6 text-ink">
                 Email*
-                <input required type="email" name="email" placeholder="juan@gmail.com" className="mt-2 h-12 w-full rounded-lg border border-[#aeb6c0] px-4 text-base outline-none placeholder:text-muted focus:border-burnt" />
+                <input
+                  required
+                  type="email"
+                  name="email"
+                  placeholder="juan@gmail.com"
+                  disabled={isPending}
+                  className="mt-2 h-12 w-full rounded-lg border border-[#aeb6c0] px-4 text-base outline-none placeholder:text-muted focus:border-burnt disabled:opacity-60"
+                />
               </label>
               <label className="text-base/6 text-ink">
                 Phone
-                <input name="phone" placeholder="09123456789" className="mt-2 h-12 w-full rounded-lg border border-[#aeb6c0] px-4 text-base outline-none placeholder:text-muted focus:border-burnt" />
+                <input
+                  name="phone"
+                  placeholder="09123456789"
+                  disabled={isPending}
+                  className="mt-2 h-12 w-full rounded-lg border border-[#aeb6c0] px-4 text-base outline-none placeholder:text-muted focus:border-burnt disabled:opacity-60"
+                />
               </label>
               <div className="relative text-base/6 text-ink">
                 Service/Topic*
@@ -87,8 +139,9 @@ export function StorefrontContactPage({
                   type="button"
                   aria-haspopup="listbox"
                   aria-expanded={topicOpen}
+                  disabled={isPending}
                   onClick={() => setTopicOpen((open) => !open)}
-                  className="mt-2 flex h-12 w-full items-center justify-between rounded-lg border border-[#aeb6c0] bg-white px-4 text-left text-base outline-none focus:border-burnt"
+                  className="mt-2 flex h-12 w-full items-center justify-between rounded-lg border border-[#aeb6c0] bg-white px-4 text-left text-base outline-none focus:border-burnt disabled:opacity-60"
                 >
                   <span className={topic ? "text-ink" : "text-muted"}>
                     {topic || "Select a Topic"}
@@ -132,24 +185,73 @@ export function StorefrontContactPage({
               </div>
               <label className="text-base/6 text-ink sm:col-span-2">
                 Message*
-                <textarea required name="message" placeholder="How can we help you?" className="mt-2 min-h-32 w-full resize-y rounded-lg border border-[#aeb6c0] px-4 py-3 text-base outline-none placeholder:text-muted focus:border-burnt" />
+                <textarea
+                  required
+                  name="message"
+                  placeholder="How can we help you?"
+                  disabled={isPending}
+                  className="mt-2 min-h-32 w-full resize-y rounded-lg border border-[#aeb6c0] px-4 py-3 text-base outline-none placeholder:text-muted focus:border-burnt disabled:opacity-60"
+                />
               </label>
               <p className="text-sm/6 text-muted sm:col-span-2">
                 Please share only what&apos;s needed for your enquiry. Avoid including
                 sensitive personal or payment information.
               </p>
               <div className="sm:col-span-2">
-                <button type="submit" className={buttonClasses({ variant: "brand", size: "lg" })}>
-                  Send Message
+                <button
+                  type="submit"
+                  disabled={isPending}
+                  className={buttonClasses({
+                    variant: "brand",
+                    size: "lg",
+                    className: isPending ? "opacity-75 cursor-not-allowed" : "",
+                  })}
+                >
+                  {isPending ? "Sending..." : "Send Message"}
                 </button>
-                {submitted && (
-                  <p className="mt-3 text-sm text-success">Thanks — we&apos;ll be in touch soon.</p>
+
+                {state.success && (
+                  <p className="mt-3 text-sm font-medium text-emerald-600">
+                    {state.message || "Thanks — we'll be in touch soon."}
+                  </p>
+                )}
+                {state.error && (
+                  <p className="mt-3 text-sm font-medium text-burnt">
+                    {state.error}
+                  </p>
                 )}
               </div>
             </form>
           </div>
 
           <div className="text-sm/6 text-muted">
+            {/* Dynamic tenant contact details card */}
+            {(email || phone || address) && (
+              <div className="mb-8 rounded-lg border border-[#e2e8f0] bg-powder/70 p-6">
+                <h3 className="font-display text-xl text-ink">Direct Details</h3>
+                <div className="mt-4 space-y-3">
+                  {email && (
+                    <div>
+                      <span className="block text-xs font-bold uppercase tracking-wider text-burnt">Email</span>
+                      <a href={`mailto:${email}`} className="text-sm font-medium text-ink hover:underline">{email}</a>
+                    </div>
+                  )}
+                  {phone && (
+                    <div>
+                      <span className="block text-xs font-bold uppercase tracking-wider text-burnt">Phone</span>
+                      <a href={`tel:${phone}`} className="text-sm font-medium text-ink hover:underline">{phone}</a>
+                    </div>
+                  )}
+                  {address && (
+                    <div>
+                      <span className="block text-xs font-bold uppercase tracking-wider text-burnt">Location</span>
+                      <p className="text-sm font-medium text-ink">{address}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             <p className="text-xs font-bold uppercase tracking-wider text-burnt">A little guidance</p>
             <h2 className="mt-3 font-display text-2xl text-ink">Not sure where to start?</h2>
             <p className="mt-4">A few details can help us understand what you need.</p>

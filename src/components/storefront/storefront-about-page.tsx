@@ -36,13 +36,31 @@ function AboutPageSection({
   );
 }
 
+export interface StorefrontAboutPageProps {
+  businessName: string;
+  contactHref?: string;
+  bookHref?: string;
+  aboutText?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  hoursMonFri?: string | null;
+  hoursSat?: string | null;
+  hoursSun?: string | null;
+  showOpeningHours?: boolean;
+}
+
 export function StorefrontAboutPage({
   businessName,
   contactHref = "#contact",
-}: {
-  businessName: string;
-  contactHref?: string;
-}) {
+  bookHref = "#book",
+  aboutText,
+  address,
+  phone,
+  hoursMonFri,
+  hoursSat,
+  hoursSun,
+  showOpeningHours = true,
+}: StorefrontAboutPageProps) {
   return (
     <main className="flex-1">
       <section className="bg-powder">
@@ -53,12 +71,11 @@ export function StorefrontAboutPage({
             headingClassName="max-w-[430px] sm:text-[40px]"
           >
             <p>
-              Welcome to Bella Vita. A little time to slow down, feel cared for,
-              and reconnect with yourself—whether you&apos;re here for a fresh
-              look or a quiet moment of rest.
+              {aboutText ||
+                `Welcome to ${businessName}. A little time to slow down, feel cared for, and reconnect with yourself—whether you're here for a fresh look or a quiet moment of rest.`}
             </p>
             <Link
-              href="#book"
+              href={bookHref}
               className={buttonClasses({
                 variant: "brand",
                 size: "lg",
@@ -72,7 +89,7 @@ export function StorefrontAboutPage({
           <div className="relative aspect-[1.55/1] overflow-hidden rounded-lg">
             <Image
               src="/images/storefront/hero Image.png"
-              alt="Bella Vita appointment booking on a phone"
+              alt={`${businessName} appointment booking on a phone`}
               fill
               priority
               className="object-cover"
@@ -100,7 +117,7 @@ export function StorefrontAboutPage({
               like a welcome pause, not another thing on your list.
             </p>
             <p>
-              That&rsquo;s the idea at the heart of Bella Vita: bringing calm
+              That&rsquo;s the idea at the heart of {businessName}: bringing calm
               and wellness care together with a warm, personal experience.
             </p>
             <p className="mt-3">
@@ -116,7 +133,7 @@ export function StorefrontAboutPage({
           <div className="relative aspect-[1.35/1] overflow-hidden rounded-lg">
             <Image
               src="/images/storefront/Massage Service photograph.png"
-              alt="Wellness massage at Bella Vita"
+              alt={`Wellness massage at ${businessName}`}
               fill
               className="object-cover"
               sizes="(max-width: 1024px) 100vw, 40vw"
@@ -148,7 +165,7 @@ export function StorefrontAboutPage({
             Your time with us
           </p>
           <h2 className="mt-3 font-display text-3xl leading-[1.1] text-ink sm:text-[32px]">
-            What you can expect at Bella Vita
+            What you can expect at {businessName}
           </h2>
           <div className="mt-6 grid gap-6 sm:grid-cols-3">
             {[
@@ -177,7 +194,62 @@ export function StorefrontAboutPage({
         </div>
       </section>
 
-      <section className="bg-powder">
+      {(address || (showOpeningHours && hoursMonFri)) && (
+        <section className="border-t border-[#e2e8f0] bg-powder">
+          <div className="mx-auto max-w-[1440px] px-5 py-8 sm:px-8 sm:py-12 lg:px-[90px] lg:py-16">
+            <p className="text-xs font-bold uppercase tracking-wider text-burnt">
+              Visit us
+            </p>
+            <h2 className="mt-3 font-display text-3xl leading-[1.1] text-ink sm:text-[32px]">
+              Location & Hours
+            </h2>
+            <div className="mt-6 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+              {address && (
+                <div>
+                  <span className="block h-px w-10 bg-burnt" />
+                  <h3 className="mt-4 text-base font-semibold text-ink">
+                    Our Location
+                  </h3>
+                  <p className="mt-3 text-sm/6 text-muted">{address}</p>
+                  {phone && (
+                    <p className="mt-1 text-sm/6 font-medium text-burnt">
+                      {phone}
+                    </p>
+                  )}
+                </div>
+              )}
+              {showOpeningHours && hoursMonFri && (
+                <div>
+                  <span className="block h-px w-10 bg-burnt" />
+                  <h3 className="mt-4 text-base font-semibold text-ink">
+                    Business Hours
+                  </h3>
+                  <div className="mt-3 space-y-1 text-sm/6 text-muted">
+                    <p>
+                      <span className="font-medium text-ink">Mon – Fri:</span>{" "}
+                      {hoursMonFri}
+                    </p>
+                    {hoursSat && (
+                      <p>
+                        <span className="font-medium text-ink">Saturday:</span>{" "}
+                        {hoursSat}
+                      </p>
+                    )}
+                    {hoursSun && (
+                      <p>
+                        <span className="font-medium text-ink">Sunday:</span>{" "}
+                        {hoursSun}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section className="bg-white">
         <div className="mx-auto flex max-w-[1440px] flex-col gap-5 px-5 py-8 sm:px-8 sm:py-10 lg:flex-row lg:items-center lg:justify-between lg:px-[90px] lg:py-16">
           <div>
             <h2 className="font-display text-3xl text-ink">
@@ -199,7 +271,7 @@ export function StorefrontAboutPage({
               Contact Us
             </Link>
             <Link
-              href="#book"
+              href={bookHref}
               className={buttonClasses({
                 variant: "brand",
                 size: "lg",

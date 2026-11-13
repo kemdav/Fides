@@ -27,7 +27,7 @@ COMMENT ON TABLE public.inquiries IS
 CREATE INDEX IF NOT EXISTS inquiries_tenant_id_created_at_idx
     ON public.inquiries (tenant_id, created_at DESC);
 
--- --------------------------------z--------------------------------------------
+-- ----------------------------------------------------------------------------
 -- 2. Enable Row Level Security (RLS)
 -- ----------------------------------------------------------------------------
 

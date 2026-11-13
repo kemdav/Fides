@@ -1,0 +1,215 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { buttonClasses } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+export const navLinks = [
+  { label: "Home", href: "/" },
+  { label: "Services", href: "/services" },
+  { label: "About", href: "/about" },
+];
+
+export interface ProviderHeaderProps {
+  tenantName?: string;
+  tenantSlug?: string;
+  contactHref?: string;
+  bookHref?: string;
+}
+
+export function ProviderHeader({
+  tenantName = "Bella Vita",
+  tenantSlug,
+  contactHref = "/contact",
+  bookHref = "/services",
+}: ProviderHeaderProps) {
+  const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    const onScroll = () => {
+      setScrolled(window.scrollY > 8);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const root = document.documentElement;
+    const previousBody = document.body.style.overflow;
+    const previousRoot = root.style.overflow;
+    document.body.style.overflow = "hidden";
+    root.style.overflow = "hidden";
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const onChange = () => desktop.matches && setOpen(false);
+    window.addEventListener("keydown", onKey);
+    desktop.addEventListener("change", onChange);
+    return () => {
+      document.body.style.overflow = previousBody;
+      root.style.overflow = previousRoot;
+      window.removeEventListener("keydown", onKey);
+      desktop.removeEventListener("change", onChange);
+    };
+  }, [open]);
+
+  const resolveHref = (href: string) => {
+    if (!tenantSlug) return href;
+    return href === "/" ? `/${tenantSlug}` : `/${tenantSlug}${href}`;
+  };
+
+  const isLinkActive = (href: string) => {
+    const resolved = resolveHref(href);
+    // Matches exact Next.js route path or tenant-prefixed path
+    return pathname === href || pathname === resolved;
+  };
+
+  const resolvedContactHref = resolveHref(contactHref);
+  const resolvedBookHref = resolveHref(bookHref);
+
+  return (
+    <header
+      className={cn(
+        "sticky top-0 z-50 bg-powder transition-shadow duration-300",
+        scrolled && "shadow-[0_2px_12px_rgb(0_0_0/0.08)]"
+      )}
+    >
+      <div
+        className={cn(
+          "mx-auto flex max-w-[1440px] items-center justify-between px-4 transition-[height] duration-300 sm:px-8 lg:px-[81px]",
+          scrolled ? "h-16 lg:h-[88px]" : "h-20 lg:h-[120px]"
+        )}
+      >
+        <Link
+          href={resolveHref("/")}
+          className="px-2 font-display text-4xl leading-[normal] text-burnt lg:px-[23px] lg:text-[40px]"
+        >
+          {tenantName}
+        </Link>
+
+        <div className="hidden items-center gap-[59px] lg:flex">
+          <nav aria-label="Primary" className="flex items-center gap-5">
+            {navLinks.map((link) => {
+              const active = isLinkActive(link.href);
+              return (
+                <Link
+                  key={link.label}
+                  href={resolveHref(link.href)}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "flex flex-col items-center rounded-t px-4 pt-2 text-base/6 font-semibold transition-colors",
+                    active ? "text-burnt-dark" : "text-muted hover:text-burnt-dark"
+                  )}
+                >
+                  {link.label}
+                  <span aria-hidden className="relative mt-2 h-[3px] w-full">
+                    <span className="absolute inset-x-0 bottom-0 h-px bg-line" />
+                    <span
+                      className={cn(
+                        "absolute inset-x-0 bottom-0 h-[3px] origin-center rounded-sm bg-burnt-dark transition-transform duration-300 ease-out",
+                        active ? "scale-x-100" : "scale-x-0"
+                      )}
+                    />
+                  </span>
+                </Link>
+              );
+            })}
+          </nav>
+          <div className="flex items-center gap-5">
+            <Link
+              href={resolvedContactHref}
+              className={buttonClasses({ variant: "brand-outline", size: "cta" })}
+            >
+              Contact Us
+            </Link>
+            <Link
+              href={resolvedBookHref}
+              className={buttonClasses({ variant: "brand", size: "cta" })}
+            >
+              Book Now
+            </Link>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          aria-label="Toggle menu"
+          aria-expanded={open}
+          aria-controls="mobile-menu"
+          onClick={() => setOpen((value) => !value)}
+          className="flex size-11 flex-col items-center justify-center gap-1.5 rounded-lg text-burnt lg:hidden"
+        >
+          <span
+            className={cn(
+              "h-0.5 w-6 rounded bg-current transition-[translate,rotate,opacity] duration-300 ease-out motion-reduce:transition-none",
+              open && "translate-y-2 rotate-45"
+            )}
+          />
+          <span
+            className={cn(
+              "h-0.5 w-6 rounded bg-current transition-[translate,rotate,opacity] duration-300 ease-out motion-reduce:transition-none",
+              open && "opacity-0"
+            )}
+          />
+          <span
+            className={cn(
+              "h-0.5 w-6 rounded bg-current transition-[translate,rotate,opacity] duration-300 ease-out motion-reduce:transition-none",
+              open && "-translate-y-2 -rotate-45"
+            )}
+          />
+        </button>
+      </div>
+
+      {open && (
+        <div
+          id="mobile-menu"
+          className="absolute inset-x-0 top-full rounded-b-2xl border border-burnt/30 bg-powder px-4 pb-6 pt-2 shadow-[0_8px_16px_-8px_rgb(0_0_0/0.15)] sm:px-8 lg:hidden"
+        >
+          <nav aria-label="Mobile" className="flex flex-col">
+            {navLinks.map((link) => {
+              const active = isLinkActive(link.href);
+              return (
+                <Link
+                  key={link.label}
+                  href={resolveHref(link.href)}
+                  onClick={() => setOpen(false)}
+                  className={cn(
+                    "py-3 text-base/6 font-semibold hover:text-burnt-dark",
+                    active ? "text-burnt-dark" : "text-muted"
+                  )}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+          </nav>
+          <div className="mt-4 flex gap-3">
+            <Link
+              href={resolvedContactHref}
+              onClick={() => setOpen(false)}
+              className={buttonClasses({ variant: "brand-outline", size: "cta" })}
+            >
+              Contact Us
+            </Link>
+            <Link
+              href={resolvedBookHref}
+              onClick={() => setOpen(false)}
+              className={buttonClasses({ variant: "brand", size: "cta" })}
+            >
+              Book Now
+            </Link>
+          </div>
+        </div>
+      )}
+    </header>
+  );
+}
+
+export default ProviderHeader;
