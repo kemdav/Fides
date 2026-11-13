@@ -287,7 +287,7 @@ export function AppointmentsView({
           />
 
           {/* KPI Metric Cards */}
-          <div className="grid grid-cols-[minmax(0,1fr)] gap-5 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-5 xl:grid-cols-4">
             <MetricCard featured label="Today's appointments" value={todayCount} caption="All bookings scheduled for today" icon="calendar" progress={66} />
             <MetricCard label="Awaiting approval" value={awaitingCount} caption="Review requests before the start time" icon="verified" iconWeight="regular" progress={33} />
             <MetricCard label="Checked-in customers" value={checkedInCount} caption="Ready for their appointment" icon="users" progress={40} />

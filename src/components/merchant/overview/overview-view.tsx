@@ -280,12 +280,12 @@ export function OverviewView({
           />
 
           {/* KPI Metric Cards (QA #1: Real loaded counts and amounts) */}
-          <div className="grid grid-cols-[minmax(0,1fr)] gap-5 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-5 xl:grid-cols-4">
             <MetricCard
               featured
               label="Today's appointments"
               value={todayCount}
-              caption={`${confirmedCount} confirmed · Your schedule at a glance`}
+              caption={`Your schedule at a glance`}
               icon="calendar"
               progress={todayCount > 0 ? Math.min(100, Math.round((confirmedCount / todayCount) * 100)) : 0}
             />
@@ -299,14 +299,14 @@ export function OverviewView({
             <MetricCard
               label="Checked-in customers"
               value={checkedInCount}
-              caption={`${checkedInCount} ${checkedInCount === 1 ? "customer" : "customers"} ready for their appointments`}
+              caption={`${checkedInCount === 1 ? "Customer" : "Customers"} ready for their appointments`}
               icon="users"
               progress={todayCount > 0 ? Math.min(100, Math.round((checkedInCount / todayCount) * 100)) : 0}
             />
             <MetricCard
               label="Completed revenue"
               value={revenueTotal}
-              caption={`${completedVisitsCount} ${completedVisitsCount === 1 ? "visit" : "visits"} completed today`}
+              caption={`${completedVisitsCount === 1 ? "Visit" : "Visits"} completed today`}
               icon="card"
               progress={75}
             />
