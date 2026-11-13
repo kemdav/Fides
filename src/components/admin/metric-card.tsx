@@ -15,9 +15,10 @@ type MetricCardProps = {
   href?: string;
   onClick?: () => void;
   pressed?: boolean;
+  iconWeight?: "regular" | "bold" | "fill";
 };
 
-export function MetricCard({ label, value, caption, icon, progress, featured, badge, href, onClick, pressed }: MetricCardProps) {
+export function MetricCard({ label, value, caption, icon, progress, featured, badge, href, onClick, pressed, iconWeight }: MetricCardProps) {
   const className = cn(
     "flex h-[184px] flex-col gap-3 overflow-hidden rounded-[10px] p-6 text-left shadow-[0_3px_7px_rgb(44_58_75/0.04)]",
     featured ? "bg-burnt text-white" : "bg-white text-ink",
@@ -30,7 +31,7 @@ export function MetricCard({ label, value, caption, icon, progress, featured, ba
       <div className="flex h-5 items-center gap-2">
         <Icon
           name={icon}
-          weight={featured || icon === "verified" ? "fill" : "regular"}
+          weight={iconWeight ?? (featured ? "fill" : "regular")}
           className={cn("size-5", featured ? "text-white" : "text-glyph")}
         />
         <p className="truncate text-sm font-semibold leading-5">{label}</p>

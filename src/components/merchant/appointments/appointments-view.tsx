@@ -7,10 +7,9 @@ import { Icon } from "@/components/admin/icon";
 import { AdminButton } from "@/components/admin/admin-button";
 import { MetricCard } from "@/components/admin/metric-card";
 import { PageContent, PageHeading, StatusPill, Surface } from "@/components/admin/primitives";
-import {
-  updateAppointmentStatusAction,
-  createAppointmentBookingAction,
-} from "@/app/actions/appointments";
+import { updateAppointmentStatusAction } from "@/app/actions/appointments";
+import { NewAppointmentModal, type NewAppointmentResult } from "@/components/merchant/new-appointment-modal";
+import { WalkInModal, type WalkInResult } from "@/components/merchant/walk-in-modal";
 
 export interface AppointmentItem {
   id: string;
@@ -137,11 +136,9 @@ export function AppointmentsView({
   const [activeMenuId, setActiveMenuId] = React.useState<string | null>(null);
   const [cancelTarget, setCancelTarget] = React.useState<AppointmentItem | null>(null);
   const [isNewBookingOpen, setIsNewBookingOpen] = React.useState(false);
-  const [bookingType, setBookingType] = React.useState<"appointment" | "walk-in">("appointment");
+  const [isWalkInOpen, setIsWalkInOpen] = React.useState(false);
   const [expandedAppointmentId, setExpandedAppointmentId] = React.useState<string | null>(null);
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
-  const [isBookingSubmitting, setIsBookingSubmitting] = React.useState(false);
-  const [bookingError, setBookingError] = React.useState<string | null>(null);
   const [popoverItem, setPopoverItem] = React.useState<AppointmentItem | null>(null);
 
   const showToast = (msg: string) => {
@@ -222,34 +219,6 @@ export function AppointmentsView({
     }
   };
 
-  const handleNewBookingSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const customer = (formData.get("customer") as string)?.trim();
-    const service  = (formData.get("service")  as string)?.trim();
-    const staff    = (formData.get("staff")    as string)?.trim();
-    const phone    = (formData.get("phone")    as string)?.trim();
-    const date     = (formData.get("date")     as string)?.trim();
-    const time     = (formData.get("time")     as string)?.trim();
-    if (!customer) { setBookingError("Customer name is required."); return; }
-    setIsBookingSubmitting(true);
-    setBookingError(null);
-    try {
-      const res = await createAppointmentBookingAction({ customerName: customer, customerPhone: phone, serviceName: service, staffName: staff, date, time, source: bookingType === "walk-in" ? "walk_in" : "online", tenantIdParam: tenantId });
-      if (!res.success) { setBookingError(res.error || "Failed to create booking."); return; }
-      if (!res.data) { setBookingError("Failed to create booking."); return; }
-      const created = res.data;
-      setItems((prev) => [{ id: created.id, time: time || "10:00 AM", customer: created.customerName, service: created.serviceName, staff: created.staffName, source: bookingType === "walk-in" ? "Walk-In" : "Online", status: "Confirmed", startsAt: created.starts_at }, ...prev]);
-      setIsNewBookingOpen(false);
-      showToast(`${bookingType === "walk-in" ? "Walk-in" : "New appointment"} booked for ${customer}`);
-      router.refresh();
-    } catch (err: unknown) {
-      setBookingError(err instanceof Error ? err.message : "Failed to create booking.");
-    } finally {
-      setIsBookingSubmitting(false);
-    }
-  };
-
   // ── calendar grid helpers ─────────────────────────────────────────────────
   /**
    * For "week" view: columns = days (Mon–Sun), rows = hours.
@@ -307,11 +276,11 @@ export function AppointmentsView({
             description="Manage bookings, approvals, and appointment outcomes in one place."
             actions={
               <div className="flex flex-wrap items-center gap-2">
-                <AdminButton variant="outline" size="sm" onClick={() => { setBookingType("walk-in"); setIsNewBookingOpen(true); }}>
-                  + Add Walk-in
-                </AdminButton>
-                <AdminButton variant="primary" size="sm" onClick={() => { setBookingType("appointment"); setIsNewBookingOpen(true); }}>
+                <AdminButton variant="primary" size="sm" onClick={() => setIsNewBookingOpen(true)}>
                   + New Booking
+                </AdminButton>
+                <AdminButton variant="outline" size="sm" onClick={() => setIsWalkInOpen(true)}>
+                  + Add Walk-in
                 </AdminButton>
               </div>
             }
@@ -320,7 +289,7 @@ export function AppointmentsView({
           {/* KPI Metric Cards */}
           <div className="grid grid-cols-[minmax(0,1fr)] gap-5 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard featured label="Today's appointments" value={todayCount} caption="All bookings scheduled for today" icon="calendar" progress={66} />
-            <MetricCard label="Awaiting approval" value={awaitingCount} caption="Review requests before the start time" icon="verified" progress={33} />
+            <MetricCard label="Awaiting approval" value={awaitingCount} caption="Review requests before the start time" icon="verified" iconWeight="regular" progress={33} />
             <MetricCard label="Checked-in customers" value={checkedInCount} caption="Ready for their appointment" icon="users" progress={40} />
             <MetricCard label="Completed today" value={completedTodayCount} caption="Services completed today" icon="clock" progress={75} />
           </div>
@@ -984,67 +953,43 @@ export function AppointmentsView({
         </div>
       )}
 
-      {/* New Booking Modal */}
-      {isNewBookingOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-[10px] bg-white p-6 sm:p-8 shadow-2xl border border-line space-y-5">
-            <div className="flex items-start justify-between pb-5 border-b border-hairline">
-              <div>
-                <h3 className="font-display text-[28px] leading-[38px] text-ink">
-                  {bookingType === "walk-in" ? "Add Walk-in" : "New Appointment"}
-                </h3>
-                <p className="mt-1 text-sm text-muted">
-                  {bookingType === "walk-in"
-                    ? "Create an immediate appointment or add the customer to the waiting list."
-                    : "Create a booking for an existing or new customer."}
-                </p>
-              </div>
-              <button type="button" onClick={() => { setIsNewBookingOpen(false); setBookingError(null); }} className="flex size-9 items-center justify-center rounded-lg text-glyph hover:bg-mist hover:text-ink transition-colors" aria-label="Close">
-                <Icon name="close" className="size-5" />
-              </button>
-            </div>
-
-            {bookingError && (
-              <div className="rounded-lg border border-danger/20 bg-danger-bg px-4 py-3 text-sm font-medium text-danger">{bookingError}</div>
-            )}
-
-            <form onSubmit={handleNewBookingSubmit} className="space-y-5 text-sm">
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-ink">Customer name <span className="text-burnt">*</span></label>
-                <input name="customer" required placeholder="e.g. Jessica Alva" className="h-12 w-full rounded-lg border border-outline bg-white px-4 text-sm text-ink placeholder:text-glyph focus:outline-none focus:ring-2 focus:ring-burnt/30 focus:border-burnt" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-ink">Service</label>
-                  <input name="service" defaultValue="Signature haircut" className="h-12 w-full rounded-lg border border-outline bg-white px-4 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-burnt/30 focus:border-burnt" />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-ink">Time</label>
-                  <input name="time" defaultValue="10:00 AM" className="h-12 w-full rounded-lg border border-outline bg-white px-4 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-burnt/30 focus:border-burnt" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-ink">Appointment date <span className="text-burnt">*</span></label>
-                  <input name="date" type="date" defaultValue={new Date().toISOString().slice(0, 10)} className="h-12 w-full rounded-lg border border-outline bg-white px-4 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-burnt/30 focus:border-burnt" />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-ink">Contact number</label>
-                  <input name="phone" type="tel" placeholder="09956663254" className="h-12 w-full rounded-lg border border-outline bg-white px-4 text-sm text-ink placeholder:text-glyph focus:outline-none focus:ring-2 focus:ring-burnt/30 focus:border-burnt" />
-                </div>
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-ink">Staff member</label>
-                <input name="staff" defaultValue="Lead Specialist" className="h-12 w-full rounded-lg border border-outline bg-white px-4 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-burnt/30 focus:border-burnt" />
-              </div>
-              <div className="flex items-center justify-end gap-3 pt-2 border-t border-hairline">
-                <AdminButton variant="outline" size="sm" type="button" disabled={isBookingSubmitting} onClick={() => { setIsNewBookingOpen(false); setBookingError(null); }}>Cancel</AdminButton>
-                <AdminButton variant="primary" size="sm" type="submit" disabled={isBookingSubmitting}>{isBookingSubmitting ? "Creating Booking..." : "Create Booking"}</AdminButton>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* New Appointment Modal (QA #4) */}
+      <NewAppointmentModal
+        isOpen={isNewBookingOpen}
+        tenantId={tenantId}
+        onClose={() => setIsNewBookingOpen(false)}
+        onCreated={(result: NewAppointmentResult) => {
+          setItems((prev) => [{
+            id:       result.id,
+            time:     result.time,
+            customer: result.customer,
+            service:  result.service,
+            staff:    result.staff,
+            source:   result.source,
+            status:   "Confirmed",
+            startsAt: result.startsAt,
+          }, ...prev]);
+        }}
+        showToast={showToast}
+      />
+      <WalkInModal
+        isOpen={isWalkInOpen}
+        tenantId={tenantId}
+        onClose={() => setIsWalkInOpen(false)}
+        onCreated={(result: WalkInResult) => {
+          setItems((prev) => [{
+            id: result.id,
+            time: result.time,
+            customer: result.customer,
+            service: result.service,
+            staff: result.staff,
+            source: "Walk-In",
+            status: "Confirmed",
+            startsAt: result.startsAt,
+          }, ...prev]);
+        }}
+        showToast={showToast}
+      />
     </div>
   );
 }

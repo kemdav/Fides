@@ -8,10 +8,9 @@ import { Icon } from "@/components/admin/icon";
 import { AdminButton } from "@/components/admin/admin-button";
 import { MetricCard } from "@/components/admin/metric-card";
 import { PageContent, PageHeading, StatusPill, Surface } from "@/components/admin/primitives";
-import {
-  updateAppointmentStatusAction,
-  createAppointmentBookingAction,
-} from "@/app/actions/appointments";
+import { updateAppointmentStatusAction } from "@/app/actions/appointments";
+import { NewAppointmentModal, type NewAppointmentResult } from "@/components/merchant/new-appointment-modal";
+import { WalkInModal, type WalkInResult } from "@/components/merchant/walk-in-modal";
 
 export interface AppointmentRow {
   id: string;
@@ -51,23 +50,6 @@ export interface OverviewViewProps {
 }
 
 const EMPTY_APPOINTMENTS: AppointmentRow[] = [];
-const WALK_IN_SERVICES = [
-  { value: "Signature haircut", label: "Signature haircut · ₱450" },
-  { value: "Balayage & gloss", label: "Balayage & gloss · ₱1,500" },
-  { value: "Botanical spa manicure", label: "Botanical spa manicure · ₱950" },
-];
-const WALK_IN_STAFF = ["Sofia Cruz", "Marco Reyes", "Elena Cruz"];
-const CALENDAR_WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
-const APPOINTMENT_TIMES = ["09:00 AM", "09:30 AM", "10:00 AM", "10:45 AM", "11:30 AM", "01:00 PM", "02:30 PM"];
-
-function formatWalkInDate(date: string) {
-  const [year, month, day] = date.split("-").map(Number);
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(year, month - 1, day));
-}
 
 function AppointmentStatusPill({ status }: { status: AppointmentRow["status"] }) {
   const toneMap: Record<AppointmentRow["status"], { tone: React.ComponentProps<typeof StatusPill>["tone"]; label: string }> = {
@@ -110,21 +92,8 @@ export function OverviewView({
   const [activeMenuId, setActiveMenuId] = React.useState<string | null>(null);
   const [cancelTarget, setCancelTarget] = React.useState<AppointmentRow | null>(null);
   const [isNewBookingOpen, setIsNewBookingOpen] = React.useState(false);
+  const [isWalkInOpen, setIsWalkInOpen] = React.useState(false);
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
-  const [isBookingSubmitting, setIsBookingSubmitting] = React.useState(false);
-  const [bookingError, setBookingError] = React.useState<string | null>(null);
-  const [bookingType, setBookingType] = React.useState<"appointment" | "walk-in">("appointment");
-  const [walkInService, setWalkInService] = React.useState(WALK_IN_SERVICES[0].value);
-  const [walkInStaff, setWalkInStaff] = React.useState(WALK_IN_STAFF[0]);
-  const [walkInServiceOpen, setWalkInServiceOpen] = React.useState(false);
-  const [walkInStaffOpen, setWalkInStaffOpen] = React.useState(false);
-  const [walkInDateOpen, setWalkInDateOpen] = React.useState(false);
-  const [walkInTimeOpen, setWalkInTimeOpen] = React.useState(false);
-  const [walkInTime, setWalkInTime] = React.useState("10:45 AM");
-  const [walkInDate, setWalkInDate] = React.useState(new Date().toISOString().slice(0, 10));
-  const [walkInCalendarMonth, setWalkInCalendarMonth] = React.useState(
-    () => new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-  );
   const [expandedAppointmentId, setExpandedAppointmentId] = React.useState<string | null>(null);
   const [selectedCalendarDay, setSelectedCalendarDay] = React.useState<number | null>(null);
   const displayName = userName || userEmail;
@@ -203,82 +172,6 @@ export function OverviewView({
     }
   };
 
-  // QA #4: Persist new booking to Supabase
-  const handleNewBookingSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const customer = (formData.get("customer") as string)?.trim();
-    const email = (formData.get("email") as string)?.trim();
-    const phone = (formData.get("phone") as string)?.trim();
-    const service = (formData.get("service") as string)?.trim();
-    const staff = (formData.get("staff") as string)?.trim();
-    const date = (formData.get("date") as string)?.trim();
-    const time = (formData.get("time") as string)?.trim();
-    const notes = (formData.get("notes") as string)?.trim();
-
-    if (!customer) {
-      setBookingError("Customer name is required.");
-      return;
-    }
-    if (!date) {
-      setBookingError("Appointment date is required.");
-      return;
-    }
-
-    setIsBookingSubmitting(true);
-    setBookingError(null);
-
-    try {
-      const res = await createAppointmentBookingAction({
-        customerName: customer,
-        customerEmail: email,
-        customerPhone: phone,
-        serviceName: service,
-        staffName: staff,
-        date,
-        time,
-        notes,
-        source: bookingType === "walk-in" ? "walk_in" : "online",
-        tenantIdParam: tenantId,
-      });
-
-      if (!res.success) {
-        setBookingError(res.error || "Failed to create booking.");
-        return;
-      }
-      if (!res.data) {
-        setBookingError("Failed to create booking.");
-        return;
-      }
-
-      const created = res.data;
-      const newRow: AppointmentRow = {
-        id: created.id,
-        time: time || "10:00 AM",
-        customer: created.customerName,
-        service: created.serviceName,
-        staff: created.staffName,
-        source: bookingType === "walk-in" ? "Walk-In" : "Online",
-        status: "Confirmed",
-        startsAt: created.starts_at,
-        rawStatus: created.status,
-      };
-
-      setAppointments((prev) => [newRow, ...prev]);
-      setIsNewBookingOpen(false);
-      showToast(
-        bookingType === "walk-in"
-          ? `New walk-in appointment booked for ${customer}`
-          : `New appointment booked for ${customer}`
-      );
-      router.refresh();
-    } catch (err: unknown) {
-      setBookingError(err instanceof Error ? err.message : "Failed to create booking.");
-    } finally {
-      setIsBookingSubmitting(false);
-    }
-  };
-
   // Chart statistics data (QA #1: dynamic chart bars from loaded records)
   const stats =
     chartStats && chartStats.length > 0
@@ -325,28 +218,6 @@ export function OverviewView({
   const activeCalendarLabel = new Date(
     `${activeCalendarDateKey}T12:00:00`
   ).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  const walkInCalendarDays = React.useMemo(() => {
-    const firstDay = new Date(
-      walkInCalendarMonth.getFullYear(),
-      walkInCalendarMonth.getMonth(),
-      1
-    ).getDay();
-    const daysInMonth = new Date(
-      walkInCalendarMonth.getFullYear(),
-      walkInCalendarMonth.getMonth() + 1,
-      0
-    ).getDate();
-
-    return [
-      ...Array.from({ length: firstDay }, () => null),
-      ...Array.from({ length: daysInMonth }, (_, index) => index + 1),
-    ];
-  }, [walkInCalendarMonth]);
-  const walkInMonthLabel = walkInCalendarMonth.toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
-
   return (
     <div className="flex min-h-dvh flex-col bg-powder text-ink lg:flex-row">
       <MerchantSidebar
@@ -393,14 +264,14 @@ export function OverviewView({
                 <AdminButton
                   variant="primary"
                   size="sm"
-                  onClick={() => { setBookingType("appointment"); setWalkInDate(""); setIsNewBookingOpen(true); }}
+                  onClick={() => setIsNewBookingOpen(true)}
                 >
                   + New Booking
                 </AdminButton>
                 <AdminButton
                   variant="outline"
                   size="sm"
-                  onClick={() => { setBookingType("walk-in"); setWalkInDate(new Date().toISOString().slice(0, 10)); setIsNewBookingOpen(true); }}
+                  onClick={() => setIsWalkInOpen(true)}
                 >
                   + Add Walk-in
                 </AdminButton>
@@ -827,357 +698,47 @@ export function OverviewView({
         </div>
       )}
 
-      {/* New Booking / Walk-in Modal (QA #4) */}
-      {isNewBookingOpen && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 sm:items-center sm:p-5 bg-black/35 backdrop-blur-xs">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="new-booking-title"
-            className="relative my-auto w-full max-w-2xl overflow-visible rounded-[10px] bg-white px-6 py-6 shadow-2xl border border-line"
-          >
-            <div className="flex items-start justify-between pb-5 border-b border-hairline">
-              <div>
-                <h3 id="new-booking-title" className="font-display text-[28px] leading-[38px] text-ink">
-                  {bookingType === "walk-in" ? "Add Walk-in" : "New Appointment"}
-                </h3>
-                <p className="mt-1 text-sm text-muted">
-                  {bookingType === "walk-in"
-                    ? "Create an immediate appointment or add the customer to the waiting list."
-                    : "Create a booking for an existing or new customer."}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => { setIsNewBookingOpen(false); setBookingError(null); }}
-                className="flex size-9 items-center justify-center rounded-lg text-glyph hover:bg-mist hover:text-ink transition-colors"
-                aria-label={`Close ${bookingType === "walk-in" ? "walk-in" : "appointment"} form`}
-              >
-                <Icon name="close" className="size-5" />
-              </button>
-            </div>
+      {/* New Appointment Modal (QA #4) */}
+      <NewAppointmentModal
+        isOpen={isNewBookingOpen}
+        tenantId={tenantId}
+        onClose={() => setIsNewBookingOpen(false)}
+        onCreated={(result: NewAppointmentResult) => {
+          const newRow: AppointmentRow = {
+            id: result.id,
+            time: result.time,
+            customer: result.customer,
+            service: result.service,
+            staff: result.staff,
+            source: result.source,
+            status: "Confirmed",
+            startsAt: result.startsAt,
+          };
+          setAppointments((prev) => [newRow, ...prev]);
+        }}
+        showToast={showToast}
+      />
 
-            {bookingError && (
-              <div className="mt-4 rounded-lg border border-danger/20 bg-danger-bg px-4 py-3 text-sm font-medium text-danger">
-                {bookingError}
-              </div>
-            )}
-
-            <form onSubmit={handleNewBookingSubmit} className="mt-5 space-y-5 text-sm">
-              <fieldset className="space-y-3">
-                <legend className="text-xs font-semibold uppercase tracking-[1.2px] text-muted">
-                  Customer Information
-                </legend>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="booking-customer" className="mb-1.5 block text-sm font-semibold text-ink">
-                      Customer Name <span className="text-burnt">*</span>
-                    </label>
-                    <input
-                      id="booking-customer"
-                      name="customer"
-                      required
-                      placeholder="Juan Dela Cruz"
-                      className="h-12 w-full rounded-lg border border-outline bg-white px-4 text-sm text-ink placeholder:text-glyph focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/30"
-                    />
-                  </div>
-                  {bookingType === "appointment" && (
-                    <div>
-                      <label htmlFor="booking-phone" className="mb-1.5 block text-sm font-semibold text-ink">
-                        Contact Number <span className="text-burnt">*</span>
-                      </label>
-                      <input
-                        id="booking-phone"
-                        name="phone"
-                        required
-                        type="tel"
-                        placeholder="09956663254"
-                        className="h-12 w-full rounded-lg border border-outline bg-white px-4 text-sm text-ink placeholder:text-glyph focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/30"
-                      />
-                    </div>
-                  )}
-                </div>
-                {bookingType === "walk-in" && (
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div>
-                      <label htmlFor="booking-email" className="mb-1.5 block text-sm font-semibold text-ink">
-                        Email <span className="text-muted">(optional)</span>
-                      </label>
-                      <input
-                        id="booking-email"
-                        name="email"
-                        type="email"
-                        placeholder="juan@gmail.com"
-                        className="h-12 w-full rounded-lg border border-outline bg-white px-4 text-sm text-ink placeholder:text-glyph focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/30"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="booking-phone-walkin" className="mb-1.5 block text-sm font-semibold text-ink">
-                        Contact Number <span className="text-burnt">*</span>
-                      </label>
-                      <input
-                        id="booking-phone-walkin"
-                        name="phone"
-                        required
-                        type="tel"
-                        placeholder="09956663254"
-                        className="h-12 w-full rounded-lg border border-outline bg-white px-4 text-sm text-ink placeholder:text-glyph focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/30"
-                      />
-                    </div>
-                  </div>
-                )}
-              </fieldset>
-
-              <fieldset className="space-y-3">
-                <legend className="text-xs font-semibold uppercase tracking-[1.2px] text-muted">
-                  Service &amp; Staff
-                </legend>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="booking-service" className="mb-1.5 block text-sm font-semibold text-ink">
-                      {bookingType === "walk-in" ? "Requested Service" : "Service Name"} <span className="text-burnt">*</span>
-                    </label>
-                    <div className="relative">
-                      <input type="hidden" name="service" value={walkInService} />
-                      <button
-                        id="booking-service"
-                        type="button"
-                        aria-haspopup="listbox"
-                        aria-expanded={walkInServiceOpen}
-                        onClick={() => { setWalkInServiceOpen((o) => !o); setWalkInStaffOpen(false); setWalkInDateOpen(false); }}
-                        className="flex h-12 w-full items-center justify-between rounded-lg border border-outline bg-white px-4 text-left text-sm text-ink focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/30"
-                      >
-                        <span>{WALK_IN_SERVICES.find((o) => o.value === walkInService)?.label}</span>
-                        <Icon name="chevron-down" className={`size-4 text-glyph transition-transform ${walkInServiceOpen ? "rotate-180" : ""}`} />
-                      </button>
-                      {walkInServiceOpen && (
-                        <ul role="listbox" className="absolute inset-x-0 top-full z-20 mt-1 overflow-hidden rounded-lg border border-outline bg-white py-1 shadow-lg">
-                          {WALK_IN_SERVICES.map((option) => (
-                            <li key={option.value}>
-                              <button
-                                type="button"
-                                role="option"
-                                aria-selected={walkInService === option.value}
-                                onClick={() => { setWalkInService(option.value); setWalkInServiceOpen(false); }}
-                                className="w-full px-4 py-2.5 text-left text-sm text-body hover:bg-mist"
-                              >
-                                {option.label}
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <label htmlFor="booking-staff" className="mb-1.5 block text-sm font-semibold text-ink">
-                      Service Staff <span className="text-burnt">*</span>
-                    </label>
-                    <div className="relative">
-                      <input type="hidden" name="staff" value={walkInStaff} />
-                      <button
-                        id="booking-staff"
-                        type="button"
-                        aria-haspopup="listbox"
-                        aria-expanded={walkInStaffOpen}
-                        onClick={() => { setWalkInStaffOpen((o) => !o); setWalkInServiceOpen(false); setWalkInDateOpen(false); }}
-                        className="flex h-12 w-full items-center justify-between rounded-lg border border-outline bg-white px-4 text-left text-sm text-ink focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/30"
-                      >
-                        <span>{walkInStaff}</span>
-                        <Icon name="chevron-down" className={`size-4 text-glyph transition-transform ${walkInStaffOpen ? "rotate-180" : ""}`} />
-                      </button>
-                      {walkInStaffOpen && (
-                        <ul role="listbox" className="absolute inset-x-0 top-full z-20 mt-1 overflow-hidden rounded-lg border border-outline bg-white py-1 shadow-lg">
-                          {WALK_IN_STAFF.map((staff) => (
-                            <li key={staff}>
-                              <button
-                                type="button"
-                                role="option"
-                                aria-selected={walkInStaff === staff}
-                                onClick={() => { setWalkInStaff(staff); setWalkInStaffOpen(false); }}
-                                className="w-full px-4 py-2.5 text-left text-sm text-body hover:bg-mist"
-                              >
-                                {staff}
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </fieldset>
-
-              <fieldset className="space-y-3">
-                <legend className="text-xs font-semibold uppercase tracking-[1.2px] text-muted">
-                  Schedule
-                </legend>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="booking-date" className="mb-1.5 block text-sm font-semibold text-ink">
-                      Appointment Date <span className="text-burnt">*</span>
-                    </label>
-                    <div className="relative">
-                      <input type="hidden" name="date" value={walkInDate} />
-                      <button
-                        id="booking-date"
-                        type="button"
-                        aria-haspopup="dialog"
-                        aria-expanded={walkInDateOpen}
-                        onClick={() => { setWalkInDateOpen((o) => !o); setWalkInServiceOpen(false); setWalkInStaffOpen(false); }}
-                        className="flex h-12 w-full items-center justify-between rounded-lg border border-outline bg-white px-4 text-left text-sm text-ink focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/30"
-                      >
-                        <span className={walkInDate ? "text-ink" : "text-glyph"}>
-                          {walkInDate ? formatWalkInDate(walkInDate) : "Select a date"}
-                        </span>
-                        <Icon name="calendar" className="size-4 text-glyph" />
-                      </button>
-                      {walkInDateOpen && (
-                        <div role="dialog" aria-label="Choose appointment date" className="absolute left-0 top-full z-20 mt-1 w-full min-w-[260px] rounded-lg border border-outline bg-white p-4 shadow-lg">
-                          <div className="mb-3 flex items-center justify-between">
-                            <button
-                              type="button"
-                              aria-label="Previous month"
-                              onClick={() => setWalkInCalendarMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
-                              className="rounded-md px-2 py-1 text-body hover:bg-mist"
-                            >
-                              ‹
-                            </button>
-                            <span className="text-sm font-semibold text-ink">{walkInMonthLabel}</span>
-                            <button
-                              type="button"
-                              aria-label="Next month"
-                              onClick={() => setWalkInCalendarMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
-                              className="rounded-md px-2 py-1 text-body hover:bg-mist"
-                            >
-                              ›
-                            </button>
-                          </div>
-                          <div className="grid grid-cols-7 text-center text-[10px] font-semibold text-subtle">
-                            {CALENDAR_WEEKDAYS.map((d, i) => <span key={`${d}-${i}`}>{d}</span>)}
-                          </div>
-                          <div className="mt-1 grid grid-cols-7 gap-y-1 text-center">
-                            {walkInCalendarDays.map((day, index) => {
-                              if (!day) return <span key={`empty-${index}`} />;
-                              const dateValue = `${walkInCalendarMonth.getFullYear()}-${String(walkInCalendarMonth.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-                              const selected = dateValue === walkInDate;
-                              return (
-                                <button
-                                  key={dateValue}
-                                  type="button"
-                                  onClick={() => { setWalkInDate(dateValue); setWalkInDateOpen(false); }}
-                                  className={`mx-auto flex h-8 w-8 items-center justify-center rounded-md text-sm transition ${selected ? "bg-burnt text-white" : "text-body hover:bg-mist"}`}
-                                >
-                                  {day}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <label htmlFor="booking-time" className="mb-1.5 block text-sm font-semibold text-ink">
-                      Appointment Time <span className="text-burnt">*</span>
-                    </label>
-                    <div className="relative">
-                      <input id="booking-time" name="time" required value={walkInTime} readOnly
-                        className="h-12 w-full rounded-lg border border-outline bg-white px-4 pr-10 text-sm text-ink focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/30"
-                      />
-                      <Icon name="clock" className="pointer-events-none absolute right-3 top-3.5 size-4 text-glyph" />
-                      <button
-                        type="button"
-                        aria-label="Choose appointment time"
-                        onClick={() => { setWalkInTimeOpen((o) => !o); setWalkInDateOpen(false); setWalkInServiceOpen(false); setWalkInStaffOpen(false); }}
-                        className="absolute inset-0 rounded-lg"
-                      />
-                      {walkInTimeOpen && (
-                        <ul role="listbox" className="absolute inset-x-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-lg border border-outline bg-white py-1 shadow-lg">
-                          {APPOINTMENT_TIMES.map((time) => (
-                            <li key={time}>
-                              <button
-                                type="button"
-                                role="option"
-                                aria-selected={walkInTime === time}
-                                onClick={() => { setWalkInTime(time); setWalkInTimeOpen(false); }}
-                                className="w-full px-4 py-2.5 text-left text-sm text-body hover:bg-mist"
-                              >
-                                {time}
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </fieldset>
-
-              <div>
-                <label htmlFor="booking-notes" className="mb-1.5 block text-sm font-semibold text-ink">
-                  Notes <span className="text-muted">(optional)</span>
-                </label>
-                <textarea
-                  id="booking-notes"
-                  name="notes"
-                  rows={2}
-                  placeholder="Add customer requests or service notes..."
-                  className="w-full resize-none rounded-lg border border-outline bg-white px-4 py-3 text-sm text-ink placeholder:text-glyph focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/30"
-                />
-              </div>
-
-              {bookingType === "walk-in" && (
-                <>
-                  <label className="flex items-center gap-2 text-sm text-muted">
-                    <input type="checkbox" name="sendInvitation" className="h-4 w-4 rounded border-outline accent-burnt" />
-                    <span>Send account invitation after this visit</span>
-                  </label>
-                  <p className="text-xs text-subtle">
-                    Existing scheduled bookings are protected. If a slot becomes unavailable, use the waiting list.
-                  </p>
-                </>
-              )}
-
-              <div className={`flex flex-col-reverse gap-3 pt-2 border-t border-hairline sm:flex-row sm:items-center ${bookingType === "walk-in" ? "sm:justify-between" : "sm:justify-end"}`}>
-                {bookingType === "walk-in" ? (
-                  <AdminButton
-                    variant="outline"
-                    size="xs"
-                    type="button"
-                    disabled={isBookingSubmitting}
-                    onClick={() => { setIsNewBookingOpen(false); setBookingError(null); showToast("Customer added to the waiting list."); }}
-                  >
-                    Add to waiting list
-                  </AdminButton>
-                ) : (
-                  <AdminButton
-                    variant="outline"
-                    size="xs"
-                    type="button"
-                    disabled={isBookingSubmitting}
-                    onClick={() => { setIsNewBookingOpen(false); setBookingError(null); }}
-                  >
-                    Cancel
-                  </AdminButton>
-                )}
-                <AdminButton
-                  variant="primary"
-                  size="sm"
-                  type="submit"
-                  disabled={isBookingSubmitting}
-                >
-                  {isBookingSubmitting
-                    ? "Creating..."
-                    : bookingType === "walk-in"
-                      ? "Create walk-in appointment"
-                      : "Create Appointment"}
-                </AdminButton>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Walk-in Modal */}
+      <WalkInModal
+        isOpen={isWalkInOpen}
+        tenantId={tenantId}
+        onClose={() => setIsWalkInOpen(false)}
+        onCreated={(result: WalkInResult) => {
+          const newRow: AppointmentRow = {
+            id: result.id,
+            time: result.time,
+            customer: result.customer,
+            service: result.service,
+            staff: result.staff,
+            source: "Walk-In",
+            status: "Confirmed",
+            startsAt: result.startsAt,
+          };
+          setAppointments((prev) => [newRow, ...prev]);
+        }}
+        showToast={showToast}
+      />
     </div>
   );
 }
