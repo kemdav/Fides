@@ -131,7 +131,7 @@ export function AppointmentsView({
   const [searchQuery, setSearchQuery] = React.useState("");
   const [filterStatus, setFilterStatus] = React.useState<string>("All");
   const [viewMode, setViewMode] = React.useState<"list" | "calendar">("list");
-  const [calSubView, setCalSubView] = React.useState<"day" | "week" | "resources">("week");
+  const [calSubView, setCalSubView] = React.useState<"day" | "week" | "resources">("day");
   const [calendarAnchor, setCalendarAnchor] = React.useState<Date>(() => new Date());
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [activeMenuId, setActiveMenuId] = React.useState<string | null>(null);
@@ -580,79 +580,168 @@ export function AppointmentsView({
                   </div>
                 )}
 
-                {/* ── DAY VIEW ─────────────────────────────────────────────── */}
-                {calSubView === "day" && (
-                  <div className="overflow-x-auto">
-                    {/* Staff header */}
-                    <div className="flex border-b border-hairline" style={{ minWidth: "480px" }}>
-                      <div className="w-16 shrink-0 bg-white" />
-                      {staffList.map((s) => (
-                        <div key={s} className="flex-1 border-l border-hairline bg-white px-2 py-2 text-center">
-                          <p className="text-xs font-semibold text-ink truncate">{s}</p>
-                          <p className="text-[10px] text-muted">09:00–17:00</p>
-                        </div>
-                      ))}
-                    </div>
+                {/* ── DAY VIEW — single-column timeline ────────────────────── */}
+                {calSubView === "day" && (() => {
+                  // All appointments for the selected day, sorted by start time
+                  const dayItems = filtered
+                    .filter((item) => {
+                      if (!item.startsAt) {
+                        // fall back: treat items without startsAt as today
+                        const anchor = calendarAnchor;
+                        const t = new Date();
+                        return (
+                          t.getFullYear() === anchor.getFullYear() &&
+                          t.getMonth()    === anchor.getMonth() &&
+                          t.getDate()     === anchor.getDate()
+                        );
+                      }
+                      const d = new Date(item.startsAt);
+                      return (
+                        d.getFullYear() === calendarAnchor.getFullYear() &&
+                        d.getMonth()    === calendarAnchor.getMonth() &&
+                        d.getDate()     === calendarAnchor.getDate()
+                      );
+                    })
+                    .slice()
+                    .sort((a, b) => parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time));
 
-                    {/* Scrollable time grid */}
-                    <div className="overflow-y-auto" style={{ maxHeight: `${HOUR_HEIGHT * 8}px` }}>
+                  // detect overlapping blocks so we can tile them side-by-side
+                  // assign each item a column index within its overlap group
+                  type ItemWithCol = AppointmentItem & { _col: number; _cols: number };
+                  const placed: ItemWithCol[] = [];
+                  for (const item of dayItems) {
+                    const startMin = parseTimeToMinutes(item.time);
+                    const endMin   = startMin + 60; // assume 60-min default
+                    // find overlapping already-placed items
+                    const overlapping = placed.filter((p) => {
+                      const ps = parseTimeToMinutes(p.time);
+                      const pe = ps + 60;
+                      return startMin < pe && endMin > ps;
+                    });
+                    // find first free column
+                    const usedCols = new Set(overlapping.map((p) => p._col));
+                    let col = 0;
+                    while (usedCols.has(col)) col++;
+                    const totalCols = Math.max(col + 1, ...overlapping.map((p) => p._cols));
+                    // update all overlapping items to same totalCols
+                    for (const p of overlapping) p._cols = totalCols;
+                    placed.push({ ...item, _col: col, _cols: totalCols });
+                  }
+
+                  return (
+                    <div className="overflow-y-auto" style={{ maxHeight: `${HOUR_HEIGHT * 9}px` }}>
                       <div className="relative flex" style={{ minWidth: "480px" }}>
-                        {/* Time labels */}
-                        <div className="w-16 shrink-0 bg-white">
+                        {/* Time-label column */}
+                        <div className="w-16 shrink-0 bg-white select-none">
                           {HOURS.map((h) => (
-                            <div key={h} className="border-b border-hairline flex items-start justify-end pr-2 pt-1" style={{ height: `${HOUR_HEIGHT}px` }}>
-                              <span className="text-[10px] text-subtle font-medium">{String(h).padStart(2,"0")}:00</span>
+                            <div
+                              key={h}
+                              className="relative border-b border-hairline flex items-start justify-end pr-3 pt-1"
+                              style={{ height: `${HOUR_HEIGHT}px` }}
+                            >
+                              <span className="text-[11px] font-medium text-subtle -translate-y-2.5">
+                                {h === 12
+                                  ? "12:00 PM"
+                                  : h < 12
+                                    ? `${String(h).padStart(2, "0")}:00 AM`
+                                    : `${String(h - 12).padStart(2, "0")}:00 PM`}
+                              </span>
                             </div>
                           ))}
                         </div>
 
-                        {/* Staff columns */}
-                        {staffList.map((staffName) => {
-                          const staffItems = (itemsByStaff.get(staffName) ?? []).filter((item) => {
-                            if (!item.startsAt) return false;
-                            const d = new Date(item.startsAt);
+                        {/* Main timeline column */}
+                        <div
+                          className="relative flex-1 bg-white"
+                          style={{ height: `${HOUR_HEIGHT * HOURS.length}px` }}
+                        >
+                          {/* Hour + half-hour grid lines */}
+                          {HOURS.map((h) => (
+                            <React.Fragment key={h}>
+                              <div
+                                className="absolute left-0 right-0 border-t border-hairline"
+                                style={{ top: `${(h - CAL_START_HOUR) * HOUR_HEIGHT}px` }}
+                              />
+                              <div
+                                className="absolute left-0 right-0 border-t border-dashed border-hairline"
+                                style={{ top: `${(h - CAL_START_HOUR) * HOUR_HEIGHT + HOUR_HEIGHT / 2}px` }}
+                              />
+                            </React.Fragment>
+                          ))}
+
+                          {/* Current-time indicator */}
+                          {(() => {
+                            const now = new Date();
+                            const nowMins = now.getHours() * 60 + now.getMinutes();
+                            const isAnchorToday =
+                              calendarAnchor.getDate()     === now.getDate() &&
+                              calendarAnchor.getMonth()    === now.getMonth() &&
+                              calendarAnchor.getFullYear() === now.getFullYear();
+                            if (!isAnchorToday) return null;
+                            const top = (nowMins - CAL_START_HOUR * 60) / 60 * HOUR_HEIGHT;
+                            if (top < 0) return null;
                             return (
-                              d.getFullYear() === calendarAnchor.getFullYear() &&
-                              d.getMonth()    === calendarAnchor.getMonth() &&
-                              d.getDate()     === calendarAnchor.getDate()
+                              <div
+                                className="absolute left-0 right-0 z-20 flex items-center pointer-events-none"
+                                style={{ top: `${top}px` }}
+                              >
+                                <span className="w-2.5 h-2.5 rounded-full bg-burnt shrink-0 -ml-1.5" />
+                                <div className="flex-1 h-px bg-burnt" />
+                              </div>
                             );
-                          });
-                          return (
-                            <div
-                              key={staffName}
-                              className="relative flex-1 border-l border-hairline bg-white"
-                              style={{ height: `${HOUR_HEIGHT * HOURS.length}px` }}
-                            >
-                              {HOURS.map((h) => (
-                                <div key={h} className="absolute w-full border-b border-hairline" style={{ top: `${(h - CAL_START_HOUR) * HOUR_HEIGHT}px`, height: `${HOUR_HEIGHT}px` }}>
-                                  <div className="absolute w-full border-b border-dashed border-hairline" style={{ top: `${HOUR_HEIGHT / 2}px` }} />
-                                </div>
-                              ))}
-                              {staffItems.map((item) => {
-                                const top    = getCalendarTop(item.time);
-                                const height = HOUR_HEIGHT;
-                                const colors = statusColors(item.status);
-                                return (
-                                  <button
-                                    key={item.id}
-                                    type="button"
-                                    onClick={() => setPopoverItem(popoverItem?.id === item.id ? null : item)}
-                                    className={`absolute left-1 right-1 rounded-md border-l-[3px] px-2 py-1 text-left overflow-hidden shadow-sm hover:brightness-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${colors.bg} ${colors.border}`}
-                                    style={{ top: `${top}px`, height: `${height - 4}px`, zIndex: 10 }}
-                                  >
-                                    <p className={`text-[11px] font-bold leading-tight truncate ${colors.text}`}>{item.customer}</p>
-                                    <p className={`text-[10px] leading-tight truncate ${colors.text} opacity-80`}>{formatTime24(item.time)} · {item.service}</p>
-                                    <span className={`mt-0.5 inline-flex items-center rounded-full border px-1.5 py-px text-[9px] font-semibold ${colors.pill}`}>{item.status}</span>
-                                  </button>
-                                );
-                              })}
+                          })()}
+
+                          {/* Appointment blocks */}
+                          {placed.map((item) => {
+                            const top    = getCalendarTop(item.time);
+                            const height = Math.max(HOUR_HEIGHT * 0.9, HOUR_HEIGHT); // 1-hr default
+                            const colors = statusColors(item.status);
+                            const colW   = 100 / item._cols;
+                            const left   = colW * item._col;
+                            return (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => setPopoverItem(popoverItem?.id === item.id ? null : item)}
+                                className={`absolute rounded-lg border-l-[3px] px-3 py-1.5 text-left overflow-hidden shadow-sm hover:brightness-95 active:scale-[0.99] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${colors.bg} ${colors.border}`}
+                                style={{
+                                  top:    `${top + 2}px`,
+                                  height: `${height - 6}px`,
+                                  left:   `calc(${left}% + 4px)`,
+                                  width:  `calc(${colW}% - 8px)`,
+                                  zIndex: 10,
+                                }}
+                              >
+                                <p className={`text-xs font-bold leading-tight truncate ${colors.text}`}>
+                                  {item.customer}
+                                </p>
+                                <p className={`text-[11px] leading-snug truncate ${colors.text} opacity-80`}>
+                                  {formatTime24(item.time)} · {item.service}
+                                </p>
+                                <p className={`text-[11px] leading-snug truncate ${colors.text} opacity-70`}>
+                                  {item.staff}
+                                </p>
+                                {height >= HOUR_HEIGHT && (
+                                  <span className={`mt-1 inline-flex items-center rounded-full border px-2 py-px text-[10px] font-semibold ${colors.pill}`}>
+                                    {item.status}
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+
+                          {/* Empty state */}
+                          {dayItems.length === 0 && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 pointer-events-none">
+                              <Icon name="calendar" className="size-8 text-line" />
+                              <p className="text-sm text-subtle">No appointments scheduled for this day.</p>
                             </div>
-                          );
-                        })}
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* ── RESOURCES VIEW ───────────────────────────────────────── */}
                 {calSubView === "resources" && (
