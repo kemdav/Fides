@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import {
   StorefrontAboutPage,
   StorefrontFooter,
   StorefrontHeader,
 } from "@/components/storefront";
-import {
-  BUSINESS_NAME,
-  getStorefrontNav,
-} from "@/components/storefront/storefront-data";
+import { getStorefrontNav } from "@/components/storefront/storefront-data";
+import { getTenantBySlug } from "@/lib/supabase/queries";
 
 interface AboutPageProps {
   params: Promise<{ slug: string }>;
@@ -17,13 +16,16 @@ export async function generateMetadata({
   params,
 }: AboutPageProps): Promise<Metadata> {
   const { slug } = await params;
-  void slug;
+  const tenant = await getTenantBySlug(slug);
+  const businessName =
+    tenant?.display_name?.trim() || tenant?.name || "Storefront";
+
   return {
-    title: `${BUSINESS_NAME} – About`,
-    description: `Learn more about ${BUSINESS_NAME}`,
+    title: `${businessName} – About`,
+    description: tenant?.about || `Learn more about ${businessName}`,
     openGraph: {
-      title: `${BUSINESS_NAME} – About`,
-      description: `Learn more about ${BUSINESS_NAME}`,
+      title: `${businessName} – About`,
+      description: tenant?.about || `Learn more about ${businessName}`,
       type: "website",
     },
   };
@@ -31,12 +33,19 @@ export async function generateMetadata({
 
 export default async function AboutPage({ params }: AboutPageProps) {
   const { slug } = await params;
+  const tenant = await getTenantBySlug(slug);
+
+  if (!tenant || tenant.status !== "active") {
+    notFound();
+  }
+
+  const businessName = tenant.display_name?.trim() || tenant.name;
   const nav = getStorefrontNav(slug);
 
   return (
     <>
       <StorefrontHeader
-        businessName={BUSINESS_NAME}
+        businessName={businessName}
         navLinks={nav}
         activeHref={`/${slug}/about`}
         contactHref={`/${slug}/contact`}
@@ -44,11 +53,19 @@ export default async function AboutPage({ params }: AboutPageProps) {
         bookHref={`/${slug}/services`}
       />
       <StorefrontAboutPage
-        businessName={BUSINESS_NAME}
+        businessName={businessName}
         contactHref={`/${slug}/contact`}
+        bookHref={`/${slug}/services`}
+        aboutText={tenant.about}
+        address={tenant.address}
+        phone={tenant.phone}
+        hoursMonFri={tenant.hours_mon_fri}
+        hoursSat={tenant.hours_sat}
+        hoursSun={tenant.hours_sun}
+        showOpeningHours={tenant.show_opening_hours}
       />
       <StorefrontFooter
-        businessName={BUSINESS_NAME}
+        businessName={businessName}
         background="white"
         navLinks={nav}
         activeHref={`/${slug}/about`}

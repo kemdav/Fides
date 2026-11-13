@@ -62,12 +62,12 @@ export async function submitContactForm(
   if (error) {
     return {
       success: false,
-      error: error.message || "Failed to submit your message. Please try again.",
+      error: error.message,
     };
   }
 
   return {
     success: true,
-    message: "Thank you for reaching out! We have received your message and will get back to you shortly.",
+    message: "Thank you for contacting us. We'll get back to you shortly.",
   };
 }
