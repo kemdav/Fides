@@ -345,7 +345,7 @@ export function OverviewView({
         {/* Top Header */}
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-[28px] leading-[38px] sm:text-[32px] sm:leading-[42px] font-normal font-display text-[#354357] tracking-tight">
+            <h1 className="text-[28px] leading-[38px] sm:text-[32px] sm:leading-[42px] font-normal font-display text-neutral-900 tracking-tight">
               Welcome back, {displayName.split(" ")[0] || "Maria"}
             </h1>
             <p className="text-xs sm:text-sm text-neutral-500 mt-1">
@@ -445,7 +445,7 @@ export function OverviewView({
             </div>
 
             <div className="my-4 flex items-center gap-3">
-              <span className="text-4xl font-semibold font-sans text-[#354357]">{pendingCount}</span>
+              <span className="text-4xl font-semibold font-sans text-ink">{pendingCount}</span>
               <span className="text-xs font-medium text-amber-800 bg-amber-50 border border-amber-200/80 px-2.5 py-1 rounded-full">
                 Needs review
               </span>
@@ -475,7 +475,7 @@ export function OverviewView({
             </div>
 
             <div className="my-4 flex items-center gap-3">
-              <span className="text-4xl font-semibold font-sans text-[#354357]">{checkedInCount}</span>
+              <span className="text-4xl font-semibold font-sans text-ink">{checkedInCount}</span>
               <span className="text-xs font-medium text-amber-800 bg-amber-50 border border-amber-200/80 px-2.5 py-1 rounded-full">
                 Ready for service
               </span>
@@ -502,7 +502,7 @@ export function OverviewView({
             </div>
 
             <div className="my-4 flex items-center gap-3">
-              <span className="text-4xl font-semibold font-sans text-[#354357]">
+              <span className="text-4xl font-semibold font-sans text-ink">
                 ₱{revenueTotal.toLocaleString()}
               </span>
               <span className="text-xs font-medium text-[#C35000] bg-[#FDF3EB] border border-[#FADCD9] px-2.5 py-1 rounded-full">

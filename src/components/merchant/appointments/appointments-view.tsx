@@ -58,6 +58,7 @@ export function AppointmentsView({
   const [activeMenuId, setActiveMenuId] = React.useState<string | null>(null);
   const [cancelTarget, setCancelTarget] = React.useState<AppointmentItem | null>(null);
   const [isNewBookingOpen, setIsNewBookingOpen] = React.useState(false);
+  const [bookingType, setBookingType] = React.useState<"appointment" | "walk-in">("appointment");
   const [expandedAppointmentId, setExpandedAppointmentId] = React.useState<string | null>(null);
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
   const [isBookingSubmitting, setIsBookingSubmitting] = React.useState(false);
@@ -145,6 +146,8 @@ export function AppointmentsView({
     const customer = (formData.get("customer") as string)?.trim();
     const service = (formData.get("service") as string)?.trim();
     const staff = (formData.get("staff") as string)?.trim();
+    const phone = (formData.get("phone") as string)?.trim();
+    const date = (formData.get("date") as string)?.trim();
     const time = (formData.get("time") as string)?.trim();
 
     if (!customer) {
@@ -158,9 +161,12 @@ export function AppointmentsView({
     try {
       const res = await createAppointmentBookingAction({
         customerName: customer,
+        customerPhone: phone,
         serviceName: service,
         staffName: staff,
+        date,
         time,
+        source: bookingType === "walk-in" ? "walk_in" : "online",
         tenantIdParam: tenantId,
       });
 
@@ -180,14 +186,14 @@ export function AppointmentsView({
         customer: created.customerName,
         service: created.serviceName,
         staff: created.staffName,
-        source: "Online",
+        source: bookingType === "walk-in" ? "Walk-In" : "Online",
         status: "Confirmed",
         startsAt: created.starts_at,
       };
 
       setItems((prev) => [newItem, ...prev]);
       setIsNewBookingOpen(false);
-      showToast(`New appointment booked for ${customer}`);
+      showToast(`${bookingType === "walk-in" ? "Walk-in" : "New appointment"} booked for ${customer}`);
       router.refresh();
     } catch (err: unknown) {
       setBookingError(err instanceof Error ? err.message : "Failed to create booking.");
@@ -218,10 +224,23 @@ export function AppointmentsView({
 
           <button
             type="button"
-            onClick={() => setIsNewBookingOpen(true)}
+            onClick={() => {
+              setBookingType("appointment");
+              setIsNewBookingOpen(true);
+            }}
             className="h-[45px] rounded-[9px] bg-[#C35000] px-4 text-sm font-semibold leading-[21px] text-white shadow-xs flex items-center gap-2 transition hover:bg-[#A94400]"
           >
             <span>+ New Booking</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setBookingType("walk-in");
+              setIsNewBookingOpen(true);
+            }}
+            className="h-[45px] rounded-[9px] border border-[#C35000] bg-white px-4 text-sm font-semibold leading-[21px] text-[#C35000] shadow-xs transition hover:bg-[#FFF7F0]"
+          >
+            <span>+ Add Walk-in</span>
           </button>
         </header>
 
@@ -239,10 +258,10 @@ export function AppointmentsView({
             </div>
 
             <div>
+              <span className="mb-1.5 block text-sm text-white/80">All bookings scheduled for today</span>
               <div className="w-full h-1 bg-white/25 rounded-full overflow-hidden mb-1.5">
                 <div className="w-2/3 h-full bg-white rounded-full" />
               </div>
-              <span className="text-[11px] text-white/80">All bookings scheduled for today</span>
             </div>
           </div>
 
@@ -254,14 +273,14 @@ export function AppointmentsView({
             </div>
 
             <div className="my-4">
-              <span className="text-4xl font-bold font-sans text-neutral-900">{awaitingCount}</span>
+              <span className="text-4xl font-bold font-sans text-ink">{awaitingCount}</span>
             </div>
 
             <div>
+              <span className="mb-1.5 block text-sm text-neutral-500">Review requests before the start time</span>
               <div className="w-full h-1 bg-neutral-100 rounded-full overflow-hidden mb-1.5">
                 <div className="w-1/3 h-full bg-[#C35000] rounded-full" />
               </div>
-              <span className="text-[11px] text-neutral-500">Review requests before the start time</span>
             </div>
           </div>
 
@@ -273,14 +292,14 @@ export function AppointmentsView({
             </div>
 
             <div className="my-4">
-              <span className="text-4xl font-bold font-sans text-neutral-900">{checkedInCount}</span>
+              <span className="text-4xl font-bold font-sans text-ink">{checkedInCount}</span>
             </div>
 
             <div>
+              <span className="mb-1.5 block text-sm text-neutral-500">Ready for their appointment</span>
               <div className="w-full h-1 bg-neutral-100 rounded-full overflow-hidden mb-1.5">
                 <div className="w-2/5 h-full bg-[#C35000] rounded-full" />
               </div>
-              <span className="text-[11px] text-neutral-500">Ready for their appointment</span>
             </div>
           </div>
 
@@ -292,14 +311,14 @@ export function AppointmentsView({
             </div>
 
             <div className="my-4">
-              <span className="text-4xl font-bold font-sans text-neutral-900">{completedTodayCount}</span>
+              <span className="text-4xl font-bold font-sans text-ink">{completedTodayCount}</span>
             </div>
 
             <div>
+              <span className="mb-1.5 block text-sm text-neutral-500">Services completed today</span>
               <div className="w-full h-1 bg-neutral-100 rounded-full overflow-hidden mb-1.5">
                 <div className="w-3/4 h-full bg-[#C35000] rounded-full" />
               </div>
-              <span className="text-[11px] text-neutral-500">Services completed today</span>
             </div>
           </div>
         </div>
@@ -505,6 +524,7 @@ export function AppointmentsView({
             </div>
           ) : (
             /* Table View */
+            <>
             <div className="md:hidden divide-y divide-[#EDECE8]">
               {filtered.length === 0 ? (
                 <p className="px-5 py-10 text-center text-sm text-neutral-400">
@@ -694,6 +714,7 @@ export function AppointmentsView({
                 </tbody>
               </table>
             </div>
+            </>
           )}
 
           {/* Table Footer */}
@@ -746,9 +767,16 @@ export function AppointmentsView({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-[10px] bg-white p-7 sm:p-8 shadow-2xl border border-neutral-200 space-y-6">
             <div className="flex items-center justify-between pb-4 border-b border-neutral-100">
-              <h3 className="text-xl font-semibold text-neutral-900">
-                New Appointment Booking
-              </h3>
+              <div>
+                <h3 className="font-display text-2xl font-normal leading-tight text-[#354357]">
+                  {bookingType === "walk-in" ? "Add Walk-in" : "New Appointment"}
+                </h3>
+                <p className="mt-1 text-sm text-[#6D7580]">
+                  {bookingType === "walk-in"
+                    ? "Create an immediate appointment or add the customer to the waiting list."
+                    : "Create a booking for an existing or new customer."}
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => {
@@ -791,6 +819,26 @@ export function AppointmentsView({
                   <input
                     name="time"
                     defaultValue="10:00 AM"
+                    className="h-12 w-full rounded-lg border border-[#AEB6C0] bg-white px-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#C35000]/30"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-neutral-700">Appointment date</label>
+                  <input
+                    name="date"
+                    type="date"
+                    defaultValue={new Date().toISOString().slice(0, 10)}
+                    className="h-12 w-full rounded-lg border border-[#AEB6C0] bg-white px-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#C35000]/30"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-neutral-700">Contact number</label>
+                  <input
+                    name="phone"
+                    type="tel"
+                    placeholder="09956663254"
                     className="h-12 w-full rounded-lg border border-[#AEB6C0] bg-white px-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#C35000]/30"
                   />
                 </div>
