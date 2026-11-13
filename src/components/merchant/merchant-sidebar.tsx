@@ -18,13 +18,13 @@ const manageItems: { label: string; icon: IconName; suffix?: string }[] = [
   { label: "Overview", icon: "grid" },
   { label: "Appointments", icon: "calendar", suffix: "/appointments" },
   { label: "Walk-ins", icon: "users" },
-  { label: "QR check-in", icon: "verified" },
+  { label: "QR check-in", icon: "qr-code" },
   { label: "Customers", icon: "users" },
   { label: "Services", icon: "layers" },
   { label: "Staff & permissions", icon: "shield" },
   { label: "Availability", icon: "clock" },
   { label: "Payments", icon: "card" },
-  { label: "Reports", icon: "verified" },
+  { label: "Reports", icon: "document" },
 ];
 
 export function MerchantSidebar({
@@ -108,8 +108,8 @@ export function MerchantSidebar({
         </nav>
         <p className="mt-2 text-xs leading-[18px] tracking-[1.3px] text-neutral-400">CONFIGURATION</p>
         <nav aria-label="Merchant configuration" className="flex w-full flex-col gap-[7px]">
-          {renderItem({ label: "Website settings", icon: "layers" }, true)}
-          {renderItem({ label: "Booking settings", icon: "clock" })}
+          {renderItem({ label: "Website settings", icon: "settings" }, true)}
+          {renderItem({ label: "Booking settings", icon: "book-settings" })}
           {renderItem({ label: "Subscription", icon: "card" })}
         </nav>
         <div className="flex-1" />

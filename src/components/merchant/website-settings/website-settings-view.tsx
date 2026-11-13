@@ -269,7 +269,7 @@ export function WebsiteSettingsView({
   };
 
   return (
-    <div className="min-h-screen bg-[#FFFDF6] text-neutral-900 flex flex-col md:flex-row antialiased font-sans">
+    <div className="min-h-screen bg-powder text-neutral-900 flex flex-col md:flex-row antialiased font-sans">
       {/* Toast notification */}
       {linkCopiedToast && (
         <div className="fixed top-5 right-5 z-50 bg-neutral-900 text-white px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2 text-xs font-medium animate-in fade-in slide-in-from-top-2 duration-150">
@@ -402,7 +402,7 @@ export function WebsiteSettingsView({
               {/* Left Column: Form controls */}
               <div className="lg:col-span-7 space-y-6">
                 {/* 01 Brand identity Card */}
-                <section className="bg-white rounded-2xl border border-[#EDECE8] p-6 shadow-2xs space-y-6">
+                <section className="rounded-[10px] bg-white border border-[#EDECE8] p-6 shadow-[0_3px_14px_rgb(44_58_75/0.04)] space-y-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-neutral-400">01</span>
@@ -596,7 +596,7 @@ export function WebsiteSettingsView({
                 </section>
 
                 {/* 02 Homepage content Card */}
-                <section className="bg-white rounded-2xl border border-[#EDECE8] p-6 shadow-2xs space-y-5">
+                <section className="rounded-[10px] bg-white border border-[#EDECE8] p-6 shadow-[0_3px_14px_rgb(44_58_75/0.04)] space-y-5">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-neutral-400">02</span>
@@ -733,7 +733,7 @@ export function WebsiteSettingsView({
 
               {/* Right Column: Website Preview (Pixel-matched to Screenshot 160436) */}
               <div className="lg:col-span-5 lg:sticky lg:top-8 space-y-3">
-                <div className="bg-white rounded-2xl border border-[#EDECE8] p-5 shadow-xs space-y-4">
+                <div className="rounded-[10px] bg-white border border-[#EDECE8] p-6 shadow-[0_3px_14px_rgb(44_58_75/0.04)] space-y-4">
                   {/* Preview Top Header */}
                   <div className="flex items-center justify-between pb-1">
                     <div className="flex items-center gap-2">
@@ -943,7 +943,7 @@ export function WebsiteSettingsView({
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
               {/* Left Column: Public Profile & Contact */}
               <div className="space-y-6">
-                <section className="bg-white rounded-2xl border border-[#EDECE8] p-6 shadow-2xs space-y-4">
+                <section className="rounded-[10px] bg-white border border-[#EDECE8] p-6 shadow-[0_3px_14px_rgb(44_58_75/0.04)] space-y-4">
                   <div className="border-b border-[#EDECE8] pb-3">
                     <span className="text-xs font-bold text-neutral-400 block">01 · PUBLIC PROFILE</span>
                     <h2 className="text-sm font-semibold text-neutral-900 mt-1">
@@ -1000,7 +1000,7 @@ export function WebsiteSettingsView({
                   </div>
                 </section>
 
-                <section className="bg-white rounded-2xl border border-[#EDECE8] p-6 shadow-2xs space-y-4">
+                <section className="rounded-[10px] bg-white border border-[#EDECE8] p-6 shadow-[0_3px_14px_rgb(44_58_75/0.04)] space-y-4">
                   <div className="border-b border-[#EDECE8] pb-3">
                     <span className="text-xs font-bold text-neutral-400 block">02 · CUSTOMER CONTACT</span>
                     <h2 className="text-sm font-semibold text-neutral-900 mt-1">
@@ -1053,7 +1053,7 @@ export function WebsiteSettingsView({
 
               {/* Right Column: Location & Opening Hours */}
               <div className="space-y-6">
-                <section className="bg-white rounded-2xl border border-[#EDECE8] p-6 shadow-2xs space-y-4">
+                <section className="rounded-[10px] bg-white border border-[#EDECE8] p-6 shadow-[0_3px_14px_rgb(44_58_75/0.04)] space-y-4">
                   <div className="border-b border-[#EDECE8] pb-3">
                     <span className="text-xs font-bold text-neutral-400 block">03 · LOCATION</span>
                     <h2 className="text-sm font-semibold text-neutral-900 mt-1">
@@ -1104,7 +1104,7 @@ export function WebsiteSettingsView({
                   </div>
                 </section>
 
-                <section className="bg-white rounded-2xl border border-[#EDECE8] p-6 shadow-2xs space-y-4">
+                <section className="rounded-[10px] bg-white border border-[#EDECE8] p-6 shadow-[0_3px_14px_rgb(44_58_75/0.04)] space-y-4">
                   <div className="border-b border-[#EDECE8] pb-3">
                     <span className="text-xs font-bold text-neutral-400 block">04 · OPENING HOURS</span>
                     <h2 className="text-sm font-semibold text-neutral-900 mt-1">

@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { MerchantSidebar } from "../merchant-sidebar";
+import { Icon } from "@/components/admin/icon";
 import {
   updateAppointmentStatusAction,
   createAppointmentBookingAction,
@@ -57,6 +58,7 @@ export function AppointmentsView({
   const [activeMenuId, setActiveMenuId] = React.useState<string | null>(null);
   const [cancelTarget, setCancelTarget] = React.useState<AppointmentItem | null>(null);
   const [isNewBookingOpen, setIsNewBookingOpen] = React.useState(false);
+  const [expandedAppointmentId, setExpandedAppointmentId] = React.useState<string | null>(null);
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
   const [isBookingSubmitting, setIsBookingSubmitting] = React.useState(false);
   const [bookingError, setBookingError] = React.useState<string | null>(null);
@@ -195,7 +197,7 @@ export function AppointmentsView({
   };
 
   return (
-    <div className="min-h-screen bg-[#FFFDF6] text-neutral-900 flex flex-col md:flex-row antialiased font-sans">
+    <div className="min-h-screen bg-powder text-neutral-900 flex flex-col md:flex-row antialiased font-sans">
       <MerchantSidebar
         businessName={businessName}
         userEmail={userEmail}
@@ -224,19 +226,16 @@ export function AppointmentsView({
         </header>
 
         {/* 4 Stat Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-5">
           {/* 1. Today's appointments (Burnt orange card) */}
-          <div className="rounded-2xl bg-[#C35000] text-white p-5 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center gap-2 text-xs font-medium text-white/90">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-              </svg>
+          <div className="min-h-[200px] rounded-[10px] bg-[#C35000] p-6 text-white shadow-[0_3px_14px_rgb(44_58_75/0.04)] flex flex-col justify-between">
+            <div className="flex items-center gap-3 text-sm font-medium leading-[21px] text-white/90">
+              <Icon name="calendar" weight="fill" className="size-5" />
               <span>Today&apos;s appointments</span>
             </div>
 
             <div className="my-4">
-              <span className="text-3xl font-bold font-serif">{todayCount}</span>
+              <span className="text-4xl font-bold font-sans">{todayCount}</span>
             </div>
 
             <div>
@@ -248,18 +247,14 @@ export function AppointmentsView({
           </div>
 
           {/* 2. Awaiting approval */}
-          <div className="rounded-2xl bg-white border border-[#EDECE8] p-5 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center gap-2 text-xs font-medium text-neutral-500">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-neutral-400">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                <circle cx="8.5" cy="7" r="4" />
-                <polyline points="17 11 19 13 23 9" />
-              </svg>
+          <div className="min-h-[200px] rounded-[10px] bg-white border border-[#EDECE8] p-6 shadow-[0_3px_14px_rgb(44_58_75/0.04)] flex flex-col justify-between">
+            <div className="flex items-center gap-3 text-sm font-medium leading-[21px] text-neutral-500">
+              <Icon name="verified" className="size-5 text-neutral-400" />
               <span>Awaiting approval</span>
             </div>
 
             <div className="my-4">
-              <span className="text-3xl font-bold font-serif text-neutral-900">{awaitingCount}</span>
+              <span className="text-4xl font-bold font-sans text-neutral-900">{awaitingCount}</span>
             </div>
 
             <div>
@@ -271,17 +266,14 @@ export function AppointmentsView({
           </div>
 
           {/* 3. Checked-in customers */}
-          <div className="rounded-2xl bg-white border border-[#EDECE8] p-5 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center gap-2 text-xs font-medium text-neutral-500">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-neutral-400">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-              </svg>
+          <div className="min-h-[200px] rounded-[10px] bg-white border border-[#EDECE8] p-6 shadow-[0_3px_14px_rgb(44_58_75/0.04)] flex flex-col justify-between">
+            <div className="flex items-center gap-3 text-sm font-medium leading-[21px] text-neutral-500">
+              <Icon name="users" className="size-5 text-neutral-400" />
               <span>Checked-in customers</span>
             </div>
 
             <div className="my-4">
-              <span className="text-3xl font-bold font-serif text-neutral-900">{checkedInCount}</span>
+              <span className="text-4xl font-bold font-sans text-neutral-900">{checkedInCount}</span>
             </div>
 
             <div>
@@ -293,17 +285,14 @@ export function AppointmentsView({
           </div>
 
           {/* 4. Completed today */}
-          <div className="rounded-2xl bg-white border border-[#EDECE8] p-5 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center gap-2 text-xs font-medium text-neutral-500">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-neutral-400">
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 14 14" />
-              </svg>
+          <div className="min-h-[200px] rounded-[10px] bg-white border border-[#EDECE8] p-6 shadow-[0_3px_14px_rgb(44_58_75/0.04)] flex flex-col justify-between">
+            <div className="flex items-center gap-3 text-sm font-medium leading-[21px] text-neutral-500">
+              <Icon name="clock" className="size-5 text-neutral-400" />
               <span>Completed today</span>
             </div>
 
             <div className="my-4">
-              <span className="text-3xl font-bold font-serif text-neutral-900">{completedTodayCount}</span>
+              <span className="text-4xl font-bold font-sans text-neutral-900">{completedTodayCount}</span>
             </div>
 
             <div>
@@ -316,20 +305,20 @@ export function AppointmentsView({
         </div>
 
         {/* Main Appointments Card */}
-        <div className="rounded-2xl bg-white border border-[#EDECE8] shadow-xs overflow-hidden">
+        <div className="rounded-[10px] bg-white border border-[#EDECE8] shadow-[0_3px_14px_rgb(44_58_75/0.04)] overflow-hidden">
           {/* Card Controls */}
-          <div className="p-5 border-b border-[#EDECE8] flex flex-wrap items-center justify-between gap-4">
+          <div className="p-6 border-b border-[#EDECE8] flex flex-wrap items-center justify-between gap-5">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-neutral-500">
                   <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                   <circle cx="9" cy="7" r="4" />
                 </svg>
-                <h2 className="text-sm font-semibold text-neutral-900">
+                <h2 className="text-base font-semibold leading-[24px] text-neutral-900">
                   Appointments
                 </h2>
               </div>
-              <span className="text-xs font-semibold text-neutral-600 bg-neutral-100 px-2.5 py-0.5 rounded-full">
+              <span className="text-sm font-semibold text-neutral-600 bg-neutral-100 px-3 py-1 rounded-full">
                 {items.length} appointments
               </span>
             </div>
@@ -342,7 +331,7 @@ export function AppointmentsView({
                   placeholder="Search customer or service"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 pr-3 py-1.5 rounded-xl border border-[#EDECE8] bg-neutral-50 text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-[#C35000] focus:bg-white w-48 sm:w-60"
+                  className="h-10 pl-10 pr-3 rounded-[9px] border border-[#EDECE8] bg-neutral-50 text-sm text-neutral-900 focus:outline-none focus:ring-1 focus:ring-[#C35000] focus:bg-white w-48 sm:w-60"
                 />
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5 text-neutral-400 absolute left-2.5 top-2.5 pointer-events-none">
                   <circle cx="11" cy="11" r="8" />
@@ -355,7 +344,7 @@ export function AppointmentsView({
                 <button
                   type="button"
                   onClick={() => setIsFilterOpen(!isFilterOpen)}
-                  className="px-3 py-1.5 rounded-xl border border-[#EDECE8] bg-white text-xs font-medium text-neutral-700 hover:bg-neutral-50 flex items-center gap-1.5"
+                  className="h-10 rounded-[9px] border border-[#EDECE8] bg-white px-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50 flex items-center gap-2"
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3 h-3 text-neutral-400">
                     <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
@@ -392,7 +381,7 @@ export function AppointmentsView({
                 <button
                   type="button"
                   onClick={() => setViewMode("list")}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
+                  className={`px-3 py-2 rounded-lg text-sm font-semibold transition ${
                     viewMode === "list"
                       ? "bg-[#C35000] text-white"
                       : "text-neutral-600 hover:text-neutral-900"
@@ -403,7 +392,7 @@ export function AppointmentsView({
                 <button
                   type="button"
                   onClick={() => setViewMode("calendar")}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
+                  className={`px-3 py-2 rounded-lg text-sm font-semibold transition ${
                     viewMode === "calendar"
                       ? "bg-[#C35000] text-white"
                       : "text-neutral-600 hover:text-neutral-900"
@@ -427,7 +416,7 @@ export function AppointmentsView({
                   {filtered.map((item) => (
                     <div
                       key={item.id}
-                      className="rounded-2xl border border-[#EDECE8] bg-white p-4 shadow-2xs hover:shadow-xs transition space-y-3"
+                      className="rounded-[10px] border border-[#EDECE8] bg-white p-5 shadow-[0_3px_14px_rgb(44_58_75/0.04)] hover:shadow-xs transition space-y-4"
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-[#C35000] bg-[#FDF3EB] border border-[#FADCD9] px-2.5 py-1 rounded-lg font-mono">
@@ -516,8 +505,77 @@ export function AppointmentsView({
             </div>
           ) : (
             /* Table View */
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+            <div className="md:hidden divide-y divide-[#EDECE8]">
+              {filtered.length === 0 ? (
+                <p className="px-5 py-10 text-center text-sm text-neutral-400">
+                  No appointments found matching your filter criteria.
+                </p>
+              ) : (
+                filtered.map((row) => {
+                  const isExpanded = expandedAppointmentId === row.id;
+                  return (
+                    <div key={row.id} className="px-5 py-4">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedAppointmentId(isExpanded ? null : row.id)}
+                        className="w-full text-left"
+                        aria-expanded={isExpanded}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-base font-semibold text-neutral-900">{row.customer}</p>
+                            <p className="mt-1 text-sm text-neutral-500">
+                              {row.time} · {row.service}
+                            </p>
+                          </div>
+                          <span className="shrink-0 rounded-full bg-[#FDF3EB] px-2.5 py-1 text-xs font-semibold text-[#C35000]">
+                            {row.status}
+                          </span>
+                        </div>
+                      </button>
+                      {isExpanded && (
+                        <div className="mt-4 space-y-3 rounded-lg bg-powder p-4 text-sm text-neutral-600">
+                          <div className="grid grid-cols-2 gap-3">
+                            <span>Staff<strong className="mt-1 block text-neutral-900">{row.staff}</strong></span>
+                            <span>Source<strong className="mt-1 block text-neutral-900">{row.source}</strong></span>
+                          </div>
+                          <div className="flex flex-wrap gap-2 border-t border-[#EDECE8] pt-3">
+                            {row.status !== "Confirmed" && (
+                              <button
+                                type="button"
+                                onClick={() => handleStatusChange(row.id, "Confirmed")}
+                                className="rounded-md bg-[#C35000] px-3 py-2 text-xs font-semibold text-white"
+                              >
+                                Confirm
+                              </button>
+                            )}
+                            {row.status !== "Check In" && (
+                              <button
+                                type="button"
+                                onClick={() => handleStatusChange(row.id, "Check In")}
+                                className="rounded-md border border-[#C35000] px-3 py-2 text-xs font-semibold text-[#C35000]"
+                              >
+                                Check In
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => setCancelTarget(row)}
+                              className="rounded-md border border-red-200 px-3 py-2 text-xs font-semibold text-red-600"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full text-left text-sm">
                 <thead className="bg-neutral-50/70 border-b border-[#EDECE8] text-neutral-400 font-medium">
                   <tr>
                     <th className="px-5 py-3">Time</th>
@@ -686,9 +744,9 @@ export function AppointmentsView({
       {/* New Booking Modal (QA #4) */}
       {isNewBookingOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-neutral-200 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
-              <h3 className="text-base font-semibold text-neutral-900">
+          <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-[10px] bg-white p-7 sm:p-8 shadow-2xl border border-neutral-200 space-y-6">
+            <div className="flex items-center justify-between pb-4 border-b border-neutral-100">
+              <h3 className="text-xl font-semibold text-neutral-900">
                 New Appointment Booking
               </h3>
               <button
@@ -697,55 +755,55 @@ export function AppointmentsView({
                   setIsNewBookingOpen(false);
                   setBookingError(null);
                 }}
-                className="text-neutral-400 hover:text-neutral-600 text-lg leading-none"
+                className="flex size-10 items-center justify-center rounded-lg text-2xl text-neutral-400 hover:bg-neutral-50 hover:text-neutral-600"
               >
                 ×
               </button>
             </div>
 
             {bookingError && (
-              <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+              <div className="rounded-lg bg-red-50 border border-red-200 p-3.5 text-sm font-medium">
                 {bookingError}
               </div>
             )}
 
-            <form onSubmit={handleNewBookingSubmit} className="space-y-3 text-xs">
+            <form onSubmit={handleNewBookingSubmit} className="space-y-5 text-sm">
               <div>
-                <label className="block text-neutral-700 font-medium mb-1">Customer name</label>
+                <label className="mb-2 block text-sm font-semibold text-neutral-700">Customer name</label>
                 <input
                   name="customer"
                   required
                   placeholder="e.g. Jessica Alva"
-                  className="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50/60 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C35000]"
+                  className="h-12 w-full rounded-lg border border-[#AEB6C0] bg-white px-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#C35000]/30"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-neutral-700 font-medium mb-1">Service</label>
+                  <label className="mb-2 block text-sm font-semibold text-neutral-700">Service</label>
                   <input
                     name="service"
                     defaultValue="Signature haircut"
-                    className="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50/60 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C35000]"
+                    className="h-12 w-full rounded-lg border border-[#AEB6C0] bg-white px-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#C35000]/30"
                   />
                 </div>
                 <div>
-                  <label className="block text-neutral-700 font-medium mb-1">Time</label>
+                  <label className="mb-2 block text-sm font-semibold text-neutral-700">Time</label>
                   <input
                     name="time"
                     defaultValue="10:00 AM"
-                    className="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50/60 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C35000]"
+                    className="h-12 w-full rounded-lg border border-[#AEB6C0] bg-white px-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#C35000]/30"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-neutral-700 font-medium mb-1">Staff member</label>
+                <label className="mb-2 block text-sm font-semibold text-neutral-700">Staff member</label>
                 <input
                   name="staff"
                   defaultValue="Lead Specialist"
-                  className="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50/60 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C35000]"
+                  className="h-12 w-full rounded-lg border border-[#AEB6C0] bg-white px-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#C35000]/30"
                 />
               </div>
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-neutral-100">
+              <div className="flex items-center justify-end gap-3 pt-5 border-t border-neutral-100">
                 <button
                   type="button"
                   disabled={isBookingSubmitting}
@@ -753,14 +811,14 @@ export function AppointmentsView({
                     setIsNewBookingOpen(false);
                     setBookingError(null);
                   }}
-                  className="px-3.5 py-2 rounded-xl border border-neutral-200 text-neutral-700 hover:bg-neutral-50 disabled:opacity-60"
+                  className="h-11 rounded-lg border border-neutral-200 px-5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 disabled:opacity-60"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isBookingSubmitting}
-                  className="px-4 py-2 rounded-xl bg-[#C35000] hover:bg-[#A94400] text-white font-semibold disabled:opacity-60 transition"
+                  className="h-11 rounded-lg bg-[#C35000] px-6 text-sm font-semibold text-white shadow-xs transition hover:bg-[#A94400] disabled:opacity-60"
                 >
                   {isBookingSubmitting ? "Creating Booking..." : "Create Booking"}
                 </button>
