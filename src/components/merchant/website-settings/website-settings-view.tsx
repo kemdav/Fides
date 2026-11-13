@@ -315,9 +315,9 @@ export function WebsiteSettingsView({
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Page Top Header */}
-        <header className="px-6 sm:px-10 pt-7 pb-4 flex flex-wrap items-center justify-between gap-4">
+        <header className="px-4 py-6 sm:px-6 lg:px-8 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl sm:text-4xl font-normal font-serif text-neutral-900 tracking-tight">
+            <h1 className="text-[28px] leading-[38px] sm:text-[32px] sm:leading-[42px] font-normal font-serif text-neutral-900 tracking-tight">
               Website settings
             </h1>
             <p className="text-xs sm:text-sm text-neutral-500 mt-1">
@@ -343,8 +343,8 @@ export function WebsiteSettingsView({
         </header>
 
         {/* Tab Navigation */}
-        <div className="px-6 sm:px-10 border-b border-[#EDECE8]">
-          <div className="flex items-center gap-6 text-xs sm:text-sm font-medium overflow-x-auto">
+        <div className="px-4 sm:px-6 lg:px-8 border-b border-[#EDECE8]">
+          <div className="flex items-center gap-7 text-sm font-medium overflow-x-auto">
             <button
               type="button"
               onClick={() => setActiveTab("branding")}
@@ -393,7 +393,7 @@ export function WebsiteSettingsView({
         </div>
 
         {/* TAB CONTENTS */}
-        <main className="flex-1 px-6 sm:px-10 py-6 pb-28">
+        <main className="flex-1 px-4 py-6 pb-28 sm:px-6 lg:px-8">
           {/* =========================================================================
               TAB 1: BRANDING & HOMEPAGE (Pixel-matched to Screenshot 160436)
              ========================================================================= */}

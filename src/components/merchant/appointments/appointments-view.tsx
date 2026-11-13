@@ -202,11 +202,11 @@ export function AppointmentsView({
         basePath={basePath}
       />
 
-      <main className="flex-1 px-6 sm:px-10 py-7 space-y-6 max-w-7xl">
+      <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8 space-y-5">
         {/* Top Header */}
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl sm:text-4xl font-normal font-serif text-neutral-900 tracking-tight">
+            <h1 className="text-[28px] leading-[38px] sm:text-[32px] sm:leading-[42px] font-normal font-serif text-neutral-900 tracking-tight">
               Appointments
             </h1>
             <p className="text-xs sm:text-sm text-neutral-500 mt-1">
@@ -217,7 +217,7 @@ export function AppointmentsView({
           <button
             type="button"
             onClick={() => setIsNewBookingOpen(true)}
-            className="px-4 py-2 rounded-xl bg-[#C35000] hover:bg-[#A94400] text-white text-xs font-semibold shadow-xs flex items-center gap-1.5 transition"
+            className="h-[45px] rounded-[9px] bg-[#C35000] px-4 text-sm font-semibold leading-[21px] text-white shadow-xs flex items-center gap-2 transition hover:bg-[#A94400]"
           >
             <span>+ New Booking</span>
           </button>

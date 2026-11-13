@@ -340,11 +340,11 @@ export function OverviewView({
         basePath={basePath}
       />
 
-      <main className="min-w-0 flex-1 px-4 sm:px-7 lg:px-8 xl:px-10 py-5 sm:py-7 space-y-5 lg:space-y-6">
+      <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8 space-y-5">
         {/* Top Header */}
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl sm:text-4xl font-normal font-display text-[#354357] tracking-tight">
+            <h1 className="text-[28px] leading-[38px] sm:text-[32px] sm:leading-[42px] font-normal font-display text-[#354357] tracking-tight">
               Welcome back, {displayName.split(" ")[0] || "Maria"}
             </h1>
             <p className="text-xs sm:text-sm text-neutral-500 mt-1">
@@ -393,7 +393,7 @@ export function OverviewView({
                 setWalkInDate("");
                 setIsNewBookingOpen(true);
               }}
-              className="px-4 py-2 rounded-lg bg-[#C35000] hover:bg-[#A94400] text-white text-xs font-semibold shadow-xs flex items-center gap-1.5 transition"
+              className="h-[45px] rounded-[9px] bg-[#C35000] px-4 text-sm font-semibold leading-[21px] text-white shadow-xs flex items-center gap-2 transition hover:bg-[#A94400]"
             >
               <span>+ New Booking</span>
             </button>
@@ -404,7 +404,7 @@ export function OverviewView({
                 setWalkInDate(new Date().toISOString().slice(0, 10));
                 setIsNewBookingOpen(true);
               }}
-              className="px-4 py-2 rounded-lg border border-[#C35000] bg-white hover:bg-[#FFF7F0] text-[#C35000] text-xs font-semibold shadow-xs flex items-center gap-1.5 transition"
+              className="h-[45px] rounded-[9px] border border-[#C35000] bg-white px-4 text-sm font-semibold leading-[21px] text-[#C35000] shadow-xs flex items-center gap-2 transition hover:bg-[#FFF7F0]"
             >
               <span>+ Add Walk-in</span>
             </button>
