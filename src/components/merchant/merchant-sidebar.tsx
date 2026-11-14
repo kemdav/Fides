@@ -52,7 +52,7 @@ export function MerchantSidebar({
 
     if (!available) {
       return (
-        <div key={item.label} className="flex h-[45px] items-center gap-3 rounded-[9px] p-3 text-sm leading-[21px] text-neutral-400">
+        <div key={item.label} className="flex min-h-[clamp(32px,4.2vh,40px)] items-center gap-3 rounded-[9px] px-3 py-1.5 text-sm leading-[21px] text-neutral-400">
           <Icon name={item.icon} className="size-5" />
           <span>{item.label}</span>
         </div>
@@ -65,7 +65,7 @@ export function MerchantSidebar({
         href={href}
         onClick={() => setMobileOpen(false)}
         className={cn(
-          "flex h-[45px] items-center gap-3 whitespace-nowrap rounded-[9px] p-3 text-sm font-semibold leading-[21px] transition-colors",
+          "flex min-h-[clamp(32px,4.2vh,40px)] items-center gap-3 whitespace-nowrap rounded-[9px] px-3 py-1.5 text-sm font-semibold leading-[21px] transition-colors",
           active ? "bg-[#C35000]/10 text-[#C35000]" : "text-[#354357] hover:bg-[#F4F1EA]"
         )}
       >
@@ -90,12 +90,12 @@ export function MerchantSidebar({
       )}
 
       <aside className={cn(
-        "fixed bottom-0 left-0 top-0 z-50 flex w-[248px] shrink-0 flex-col gap-3 border-r border-[#EDECE8] bg-white p-5 transition-transform duration-200 lg:sticky lg:z-10 lg:flex",
+        "fixed bottom-0 left-0 top-0 z-50 flex w-[248px] shrink-0 flex-col gap-[clamp(4px,1vh,12px)] overflow-hidden border-r border-[#EDECE8] bg-white p-4 transition-transform duration-200 lg:sticky lg:z-10 lg:flex lg:h-dvh",
         mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"
       )}>
-        <div className="flex items-start justify-between border-b border-[#EDECE8] pb-5">
+        <div className="flex shrink-0 items-start justify-between border-b border-[#EDECE8] pb-4">
           <div>
-            <h1 className="font-display text-[32px] leading-[42px] tracking-tight text-[#C35000]">{businessName}</h1>
+            <h1 className="break-words font-display text-[clamp(24px,3.2vh,32px)] leading-[clamp(29px,4vh,38px)] tracking-tight text-[#C35000]">{businessName}</h1>
             <p className="text-xs font-semibold uppercase leading-[18px] tracking-[1.3px] text-neutral-400">Merchant Workspace</p>
           </div>
           <button type="button" onClick={() => setMobileOpen(false)} className="p-1 text-neutral-400 lg:hidden" aria-label="Close navigation menu">
@@ -103,17 +103,17 @@ export function MerchantSidebar({
           </button>
         </div>
         <p className="text-xs leading-[18px] tracking-[1.3px] text-neutral-400">WORKSPACE</p>
-        <nav aria-label="Merchant workspace" className="flex w-full flex-col gap-[7px]">
+        <nav aria-label="Merchant workspace" className="flex w-full flex-col gap-[clamp(1px,0.4vh,5px)]">
           {manageItems.map((item) => renderItem(item))}
         </nav>
         <p className="mt-2 text-xs leading-[18px] tracking-[1.3px] text-neutral-400">CONFIGURATION</p>
-        <nav aria-label="Merchant configuration" className="flex w-full flex-col gap-[7px]">
+        <nav aria-label="Merchant configuration" className="flex w-full flex-col gap-[clamp(1px,0.4vh,5px)]">
           {renderItem({ label: "Website settings", icon: "settings" }, true)}
           {renderItem({ label: "Booking settings", icon: "book-settings" })}
           {renderItem({ label: "Subscription", icon: "card" })}
         </nav>
         <div className="flex-1" />
-        <div className="flex items-center gap-3 border-t border-[#EDECE8] pt-5">
+        <div className="flex shrink-0 items-center gap-3 border-t border-[#EDECE8] pt-4">
           <div className="flex size-10 items-center justify-center rounded-full bg-[#C35000] text-sm font-semibold text-white">MS</div>
           <div className="min-w-0">
             <span className="block truncate text-sm font-semibold leading-[21px] text-[#354357]">{displayName}</span>

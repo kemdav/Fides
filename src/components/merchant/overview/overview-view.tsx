@@ -96,6 +96,10 @@ export function OverviewView({
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
   const [expandedAppointmentId, setExpandedAppointmentId] = React.useState<string | null>(null);
   const [selectedCalendarDay, setSelectedCalendarDay] = React.useState<number | null>(null);
+  const [calendarMonth, setCalendarMonth] = React.useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
   const displayName = userName || userEmail;
 
   const showToast = (msg: string) => {
@@ -186,28 +190,31 @@ export function OverviewView({
           { day: "Sun", booked: 0, completed: 0 },
         ];
   const maxVal = Math.max(1, ...stats.map((s) => Math.max(s.booked, s.completed)));
-  const calendarDate = new Date();
-  const currentMonthLabel = calendarDate.toLocaleDateString("en-US", {
+  const today = new Date();
+  const currentMonthLabel = calendarMonth.toLocaleDateString("en-US", {
     month: "long",
     year: "numeric",
   });
   const calendarDaysInMonth = new Date(
-    calendarDate.getFullYear(),
-    calendarDate.getMonth() + 1,
+    calendarMonth.getFullYear(),
+    calendarMonth.getMonth() + 1,
     0
   ).getDate();
   const calendarStartDay = new Date(
-    calendarDate.getFullYear(),
-    calendarDate.getMonth(),
+    calendarMonth.getFullYear(),
+    calendarMonth.getMonth(),
     1
   ).getDay();
   const calendarCells: Array<number | null> = [
     ...Array.from({ length: calendarStartDay }, () => null),
     ...Array.from({ length: calendarDaysInMonth }, (_, index) => index + 1),
   ];
-  const activeCalendarDay = selectedCalendarDay ?? calendarDate.getDate();
-  const activeCalendarDateKey = `${calendarDate.getFullYear()}-${String(
-    calendarDate.getMonth() + 1
+  const isCurrentMonth =
+    calendarMonth.getFullYear() === today.getFullYear() &&
+    calendarMonth.getMonth() === today.getMonth();
+  const activeCalendarDay = selectedCalendarDay ?? (isCurrentMonth ? today.getDate() : 1);
+  const activeCalendarDateKey = `${calendarMonth.getFullYear()}-${String(
+    calendarMonth.getMonth() + 1
   ).padStart(2, "0")}-${String(activeCalendarDay).padStart(2, "0")}`;
   const activeCalendarAppointments = calendarAppointments.filter(
     (appointment) => appointment.startsAt?.slice(0, 10) === activeCalendarDateKey
@@ -219,7 +226,7 @@ export function OverviewView({
     `${activeCalendarDateKey}T12:00:00`
   ).toLocaleDateString("en-US", { month: "short", day: "numeric" });
   return (
-    <div className="flex min-h-dvh flex-col bg-powder text-ink lg:flex-row">
+    <div className="flex min-h-dvh flex-col bg-powder text-ink lg:h-dvh lg:flex-row lg:overflow-hidden">
       <MerchantSidebar
         businessName={businessName}
         userName={userName}
@@ -228,7 +235,7 @@ export function OverviewView({
         basePath={basePath}
       />
 
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 lg:h-dvh lg:overflow-y-auto">
         <PageContent>
           {/* Page Heading */}
           <PageHeading
@@ -295,6 +302,7 @@ export function OverviewView({
               caption={`${pendingCount} ${pendingCount === 1 ? "request is" : "requests are"} waiting for your approval`}
               icon="clock"
               progress={35}
+              miniChart
             />
             <MetricCard
               label="Checked-in customers"
@@ -388,9 +396,29 @@ export function OverviewView({
                 {/* Mini Calendar */}
                 <div>
                   <div className="flex items-center justify-between text-xs font-medium text-ink mb-2">
-                    <span className="cursor-pointer text-glyph hover:text-muted">‹</span>
+                    <button
+                      type="button"
+                      aria-label="Previous month"
+                      onClick={() => {
+                        setCalendarMonth((month) => new Date(month.getFullYear(), month.getMonth() - 1, 1));
+                        setSelectedCalendarDay(null);
+                      }}
+                      className="flex size-8 items-center justify-center rounded-md text-2xl leading-none text-glyph hover:bg-mist hover:text-ink"
+                    >
+                      ‹
+                    </button>
                     <span className="font-semibold">{currentMonthLabel}</span>
-                    <span className="cursor-pointer text-glyph hover:text-muted">›</span>
+                    <button
+                      type="button"
+                      aria-label="Next month"
+                      onClick={() => {
+                        setCalendarMonth((month) => new Date(month.getFullYear(), month.getMonth() + 1, 1));
+                        setSelectedCalendarDay(null);
+                      }}
+                      className="flex size-8 items-center justify-center rounded-md text-2xl leading-none text-glyph hover:bg-mist hover:text-ink"
+                    >
+                      ›
+                    </button>
                   </div>
                   <div className="grid grid-cols-7 gap-1.5 text-center text-xs text-subtle mb-2">
                     <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>

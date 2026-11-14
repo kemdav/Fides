@@ -264,10 +264,10 @@ export function AppointmentsView({
   const today = new Date();
 
   return (
-    <div className="flex min-h-dvh flex-col bg-powder text-ink lg:flex-row">
+    <div className="flex min-h-dvh flex-col bg-powder text-ink lg:h-dvh lg:flex-row lg:overflow-hidden">
       <MerchantSidebar businessName={businessName} userEmail={userEmail} basePath={basePath} />
 
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 lg:h-dvh lg:overflow-y-auto">
         <PageContent>
           {/* Page Heading */}
           <PageHeading

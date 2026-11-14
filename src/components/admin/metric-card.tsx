@@ -12,18 +12,31 @@ type MetricCardProps = {
   progress: number;
   featured?: boolean;
   badge?: ReactNode;
+  miniChart?: boolean;
   href?: string;
   onClick?: () => void;
   pressed?: boolean;
   iconWeight?: "regular" | "bold" | "fill";
 };
 
-export function MetricCard({ label, value, caption, icon, progress, featured, badge, href, onClick, pressed, iconWeight }: MetricCardProps) {
+export function MetricCard({
+  label,
+  value,
+  caption,
+  icon,
+  progress,
+  featured,
+  badge,
+  miniChart,
+  href,
+  onClick,
+  pressed,
+  iconWeight,
+}: MetricCardProps) {
   const className = cn(
     "flex h-[184px] flex-col gap-3 overflow-hidden rounded-[10px] p-6 text-left shadow-[0_3px_7px_rgb(44_58_75/0.04)]",
     featured ? "bg-burnt text-white" : "bg-white text-ink",
-    (href || onClick) &&
-      interactiveRing
+    (href || onClick) && interactiveRing,
   );
 
   const content = (
@@ -40,15 +53,50 @@ export function MetricCard({ label, value, caption, icon, progress, featured, ba
         <p className="text-[32px] font-semibold leading-9">{value}</p>
         {badge}
       </div>
-      <p className={cn("truncate text-[13px] leading-[18px]", featured ? "text-white" : "text-muted")}>
-        {caption}
-      </p>
-      <div className="mt-auto flex h-[5px] overflow-hidden rounded-[3px] bg-mist" aria-hidden>
-        <div
-          className={cn("h-[5px] rounded-[3px]", featured ? "bg-white" : "bg-burnt")}
-          style={{ width: `${progress}%` }}
-        />
-      </div>
+      {miniChart ? (
+        <div className="mt-auto flex min-h-10 items-center gap-5">
+          <div className="flex h-10 items-end gap-1.5" aria-hidden>
+            {[20, 32, 40, 32, 54, 40, 32].map((height, index) => (
+              <span
+                key={`${height}-${index}`}
+                className={`w-3 rounded-[3px] ${index === 4 ? "bg-burnt" : "bg-sky"}`}
+                style={{ height }}
+              />
+            ))}
+          </div>
+          <p
+            className={cn(
+              "max-w-[150px] text-[13px] leading-[14px]",
+              featured ? "text-white" : "text-muted",
+            )}
+          >
+            {caption}
+          </p>
+        </div>
+      ) : (
+        <>
+          <p
+            className={cn(
+              "truncate text-[13px] leading-[18px]",
+              featured ? "text-white" : "text-muted",
+            )}
+          >
+            {caption}
+          </p>
+          <div
+            className="mt-auto flex h-[5px] overflow-hidden rounded-[3px] bg-mist"
+            aria-hidden
+          >
+            <div
+              className={cn(
+                "h-[5px] rounded-[3px]",
+                featured ? "bg-white" : "bg-burnt",
+              )}
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </>
+      )}
     </>
   );
 

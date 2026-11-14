@@ -276,7 +276,7 @@ export function WebsiteSettingsView({
   ];
 
   return (
-    <div className="flex min-h-dvh flex-col bg-powder text-ink lg:flex-row">
+    <div className="flex min-h-dvh flex-col bg-powder text-ink lg:h-dvh lg:flex-row lg:overflow-hidden">
       {/* Toast notifications */}
       {linkCopiedToast && (
         <div className="fixed top-5 right-5 z-50 bg-ink text-white px-4 py-2.5 rounded-[10px] shadow-xl flex items-center gap-2 text-xs font-medium">
@@ -308,7 +308,7 @@ export function WebsiteSettingsView({
       />
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex min-w-0 flex-col lg:h-dvh lg:overflow-y-auto">
         <PageContent>
           {/* Page Heading */}
           <PageHeading
