@@ -95,7 +95,7 @@ NOW(),
 ''
 )
 ON CONFLICT (id) DO NOTHING;
-
+@
 -- 3. Seed Auth Identities (required by Supabase GoTrue email login)
 INSERT INTO auth.identities (
 id,

@@ -5,8 +5,10 @@ import { iconBodies } from "./icon-data";
 export type IconName =
   | "alert"
   | "bell"
+  | "book-settings"
   | "calendar"
   | "card"
+  | "chart"
   | "check"
   | "chevron-down"
   | "clock"
@@ -16,8 +18,11 @@ export type IconName =
   | "layers"
   | "lock"
   | "more"
+  | "document"
+  | "qr-code"
   | "search"
   | "shield"
+  | "settings"
   | "users"
   | "verified";
 

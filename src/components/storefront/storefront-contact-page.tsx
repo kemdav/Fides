@@ -75,7 +75,7 @@ export function StorefrontContactPage({
               </label>
               <label className="text-base/6 text-ink">
                 Email*
-                <input required type="email" name="email" placeholder="juan@gmail.com" className="mt-2 h-12 w-full rounded-lg border border-[#aeb6c0] px-4 text-base outline-none placeholder:text-muted focus:border-burnt" />
+                <input required type="email" name="email" placeholder="juan.delacruz@gmail.com" className="mt-2 h-12 w-full rounded-lg border border-[#aeb6c0] px-4 text-base outline-none placeholder:text-muted focus:border-burnt" />
               </label>
               <label className="text-base/6 text-ink">
                 Phone

@@ -1,6 +1,6 @@
 -- ============================================================================
 -- Fides — Customer Inquiries Table & RLS Policies
--- Migration: 00012_inquiries.sql
+-- Migration: 00014_inquiries.sql
 -- Purpose: Store customer messages sent via the public provider contact form
 --          and restrict dashboard visibility to tenant members and platform admins.
 -- ============================================================================
