@@ -21,8 +21,9 @@ export type IconName =
   | "document"
   | "qr-code"
   | "search"
-  | "shield"
   | "settings"
+  | "shield"
+  | "trash"
   | "users"
   | "verified";
 

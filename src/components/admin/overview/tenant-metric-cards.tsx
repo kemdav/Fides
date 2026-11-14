@@ -1,10 +1,12 @@
 "use client";
 
 import { MetricCard } from "../metric-card";
+import { isRenewingSoon } from "@/lib/admin/tenants";
 import { useTenants } from "../tenant-provider";
 
 export function TenantMetricCards() {
-  const { tenants } = useTenants();
+  const { tenants, now } = useTenants();
+  const renewing = tenants.filter((tenant) => isRenewingSoon(tenant, now)).length;
   const active = tenants.filter((tenant) => tenant.access === "active").length;
   const suspended = tenants.filter((tenant) => tenant.access === "suspended");
 
@@ -21,7 +23,7 @@ export function TenantMetricCards() {
       <MetricCard
         href="/admin/tenants?status=renewing"
         label="Renewing in 7 days"
-        value={1}
+        value={renewing}
         caption="Review the upcoming renewal →"
         icon="card"
         progress={65}

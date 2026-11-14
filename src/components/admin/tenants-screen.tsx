@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useMemo, useState } from "react";
-import { formatNextBilling, isRenewingSoon, type Tenant } from "@/lib/admin/tenants";
+import { formatNextBilling, formatPrice, isRenewingSoon, type PlanSummary, type Tenant } from "@/lib/admin/tenants";
 import { pluralize } from "@/lib/admin/tiers";
 import { cn } from "@/lib/utils";
 import { AdminButton } from "./admin-button";
@@ -9,7 +9,7 @@ import { Icon } from "./icon";
 import { MetricCard } from "./metric-card";
 import { Checkbox, PageContent, PageHeading, StatusPill, Surface } from "./primitives";
 import { Select } from "./select";
-import { TenantsProvider, useTenants } from "./tenant-provider";
+import { TenantsProvider, useTenants, type PendingAccount } from "./tenant-provider";
 
 export type StatusFilter = "all" | "active" | "suspended" | "renewing";
 
@@ -21,16 +21,16 @@ const filterOptions: { value: StatusFilter; label: string }[] = [
 ];
 
 const rowGrid =
-  "md:grid-cols-[18px_minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,0.9fr)_88px] lg:grid-cols-[18px_40px_minmax(0,1.3fr)_minmax(0,1.1fr)_minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,0.9fr)_88px]";
+  "md:grid-cols-[18px_minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,0.9fr)_132px] lg:grid-cols-[18px_40px_minmax(0,1.3fr)_minmax(0,1.1fr)_minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,0.9fr)_132px]";
 
-function matchesFilter(tenant: Tenant, filter: StatusFilter) {
+function matchesFilter(tenant: Tenant, filter: StatusFilter, now: number) {
   if (filter === "all") return true;
-  if (filter === "renewing") return isRenewingSoon(tenant);
+  if (filter === "renewing") return isRenewingSoon(tenant, now);
   return tenant.access === filter;
 }
 
 function subscription(tenant: Tenant) {
-  return `${tenant.plan} · $${tenant.price}/mo`;
+  return `${tenant.plan} · ${formatPrice(tenant.price)}/mo`;
 }
 
 function StatusBadge({ tenant }: { tenant: Tenant }) {
@@ -45,8 +45,8 @@ function StatusBadge({ tenant }: { tenant: Tenant }) {
 }
 
 function RowActions({ tenant }: { tenant: Tenant }) {
-  const { openTenant, showResult } = useTenants();
-  const due = isRenewingSoon(tenant);
+  const { openTenant, openDelete, sendReminders, now } = useTenants();
+  const due = isRenewingSoon(tenant, now);
   const iconButton =
     "flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40";
   return (
@@ -56,7 +56,7 @@ function RowActions({ tenant }: { tenant: Tenant }) {
         aria-label={`Send billing reminder to ${tenant.name}`}
         title={due ? undefined : "No renewal due within 7 days"}
         disabled={!due}
-        onClick={() => showResult("Reminder sent", `A billing reminder was sent to ${tenant.name}.`)}
+        onClick={() => sendReminders([tenant.id])}
         className={cn(iconButton, "text-burnt disabled:text-glyph disabled:opacity-50 disabled:hover:bg-transparent")}
       >
         <Icon name="bell" weight="fill" className="size-6" />
@@ -69,51 +69,63 @@ function RowActions({ tenant }: { tenant: Tenant }) {
       >
         <Icon name="more" weight="fill" className="size-6" />
       </button>
+      <button
+        type="button"
+        aria-label={`Delete ${tenant.name}`}
+        title="Delete account"
+        onClick={() => openDelete(tenant.id)}
+        className={cn(iconButton, "text-danger")}
+      >
+        <Icon name="trash" className="size-5" />
+      </button>
     </div>
   );
 }
 
 function MobileActions({ tenant }: { tenant: Tenant }) {
-  const { openTenant, showResult } = useTenants();
+  const { openTenant, openDelete, sendReminders, now } = useTenants();
   return (
-    <div className="grid grid-cols-2 gap-2 border-t border-hairline pt-3">
+    <div className="grid grid-cols-3 gap-2 border-t border-hairline pt-3">
       <AdminButton
         variant="outline"
         size="xs"
-        disabled={!isRenewingSoon(tenant)}
-        onClick={() => showResult("Reminder sent", `A billing reminder was sent to ${tenant.name}.`)}
+        disabled={!isRenewingSoon(tenant, now)}
+        onClick={() => sendReminders([tenant.id])}
       >
         Send reminder
       </AdminButton>
       <AdminButton variant="outline" size="xs" onClick={() => openTenant(tenant.id)}>
         Manage
       </AdminButton>
+      <AdminButton variant="danger" size="xs" onClick={() => openDelete(tenant.id)}>
+        Delete
+      </AdminButton>
     </div>
   );
 }
 
 function TenantsContent({ initialFilter }: { initialFilter: StatusFilter }) {
-  const { tenants, showResult, openBulkAccess, sendReminders } = useTenants();
+  const { tenants, pending, openPending, showResult, openBulkAccess, sendReminders, now } = useTenants();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<StatusFilter>(initialFilter);
   const [selected, setSelected] = useState<string[]>([]);
   const searchId = useId();
 
   const active = tenants.filter((tenant) => tenant.access === "active").length;
-  const renewing = tenants.filter(isRenewingSoon).length;
+  const renewing = tenants.filter((tenant) => isRenewingSoon(tenant, now)).length;
   const suspended = tenants.filter((tenant) => tenant.access === "suspended").length;
 
   const rows = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return tenants.filter(
       (tenant) =>
-        matchesFilter(tenant, filter) &&
+        matchesFilter(tenant, filter, now) &&
         (!needle ||
           tenant.name.toLowerCase().includes(needle) ||
           tenant.reference.toLowerCase().includes(needle) ||
           tenant.owner.toLowerCase().includes(needle))
     );
-  }, [tenants, query, filter]);
+  }, [tenants, query, filter, now]);
 
   const selectedRows = rows.filter((tenant) => selected.includes(tenant.id));
   const allSelected = rows.length > 0 && selectedRows.length === rows.length;
@@ -127,7 +139,7 @@ function TenantsContent({ initialFilter }: { initialFilter: StatusFilter }) {
     setSelected((current) => (checked ? [...new Set([...current, ...visible])] : current.filter((id) => !visible.includes(id))));
   }
 
-  const dueSelected = selectedRows.filter(isRenewingSoon);
+  const dueSelected = selectedRows.filter((tenant) => isRenewingSoon(tenant, now));
   const activeSelected = selectedRows.filter((tenant) => tenant.access === "active");
   const suspendedSelected = selectedRows.filter((tenant) => tenant.access === "suspended");
   const clearSelection = () => setSelected([]);
@@ -137,7 +149,7 @@ function TenantsContent({ initialFilter }: { initialFilter: StatusFilter }) {
   }
 
   function exportTenants() {
-    const header = ["Business", "Account ID", "Owner", "Email", "Plan", "Monthly price (USD)", "Next billing", "Status"];
+    const header = ["Business", "Account ID", "Owner", "Email", "Plan", "Monthly price (PHP)", "Next billing", "Status"];
     const exported = selectedRows.length ? selectedRows : rows;
     const lines = exported.map((tenant) =>
       [tenant.name, tenant.reference, tenant.owner, tenant.email, tenant.plan, tenant.price, formatNextBilling(tenant), tenant.access]
@@ -197,6 +209,39 @@ function TenantsContent({ initialFilter }: { initialFilter: StatusFilter }) {
           onClick={() => toggle("suspended")}
         />
       </div>
+
+      {pending.length > 0 ? (
+        <Surface className="flex flex-col gap-3">
+          <div className="flex items-center gap-2.5">
+            <Icon name="verified" className="size-[18px] text-glyph" />
+            <h2 className="text-base font-semibold leading-[23px] text-body">Pending approval</h2>
+            <span className="rounded-full bg-warn-bg px-2.5 py-1 text-[11px] font-semibold leading-4 text-warn-fg">{pending.length}</span>
+          </div>
+          <ul className="flex flex-col">
+            {pending.map((item) => (
+              <li key={item.id} className="flex flex-col gap-3 border-t border-hairline py-3 first:border-t-0 md:flex-row md:items-center md:justify-between">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold leading-5">{item.business}</p>
+                  <p className="truncate text-xs leading-[18px] text-muted">
+                    {item.owner} · {item.email} · {item.plan} · {item.reference}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <AdminButton size="xs" onClick={() => openPending("approve", item.id)}>
+                    Approve
+                  </AdminButton>
+                  <AdminButton variant="outline" size="xs" onClick={() => openPending("reject", item.id)}>
+                    Reject
+                  </AdminButton>
+                  <AdminButton variant="danger" size="xs" onClick={() => openPending("delete", item.id)}>
+                    Delete
+                  </AdminButton>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Surface>
+      ) : null}
 
       <Surface className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -319,7 +364,7 @@ function TenantsContent({ initialFilter }: { initialFilter: StatusFilter }) {
 
         {rows.length === 0 ? (
           <p role="status" className="py-6 text-sm text-muted">
-            No tenants match your filters.
+            {tenants.length === 0 ? "No approved business accounts yet. Approved applications appear here." : "No tenants match your filters."}
           </p>
         ) : (
           <ul className="flex flex-col">
@@ -381,16 +426,30 @@ function TenantsContent({ initialFilter }: { initialFilter: StatusFilter }) {
         )}
 
         <p className="text-[11px] leading-4 text-subtle">
-          Showing {rows.length} of {tenants.length} tenants · USD · Monthly billing
+          Showing {rows.length} of {tenants.length} tenants · PHP · Monthly billing
         </p>
       </Surface>
     </PageContent>
   );
 }
 
-export function TenantsScreen({ initialFilter = "all" }: { initialFilter?: StatusFilter }) {
+export function TenantsScreen({
+  initialFilter = "all",
+  tenants,
+  pending = [],
+  plans,
+  now,
+  mailConfigured,
+}: {
+  initialFilter?: StatusFilter;
+  tenants: Tenant[];
+  pending?: PendingAccount[];
+  plans: PlanSummary[];
+  now: number;
+  mailConfigured: boolean;
+}) {
   return (
-    <TenantsProvider>
+    <TenantsProvider tenants={tenants} pending={pending} plans={plans} now={now} mailConfigured={mailConfigured}>
       <TenantsContent initialFilter={initialFilter} />
     </TenantsProvider>
   );

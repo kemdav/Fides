@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { AdminButton } from "./admin-button";
 import { DIALOG_TITLE_ID, dialogSurface } from "./verification-dialogs";
 
-export function ActivityDetailsDialog({ event, onClose }: { event: ActivityEvent; onClose: () => void }) {
+export function ActivityDetailsDialog({ event, now, onClose }: { event: ActivityEvent; now: number; onClose: () => void }) {
   return (
     <div className={cn(dialogSurface, "flex flex-col gap-4 p-5 sm:p-7")}>
       <h2 id={DIALOG_TITLE_ID} className="font-display text-[26px] leading-[38px]">
@@ -13,7 +13,7 @@ export function ActivityDetailsDialog({ event, onClose }: { event: ActivityEvent
       </h2>
       <p className="text-xl font-semibold leading-[29px]">{event.title}</p>
       <p className="text-sm font-semibold leading-[21px]">{event.business}</p>
-      <p className="text-xs leading-[18px]">{formatEventTime(event)}</p>
+      <p className="text-xs leading-[18px]">{formatEventTime(event, now)}</p>
       <div className="flex flex-col gap-4 rounded-lg bg-mist p-4 font-semibold sm:flex-row">
         <div className="flex flex-1 flex-col gap-1.5">
           <p className="text-[11px] leading-4">BEFORE</p>

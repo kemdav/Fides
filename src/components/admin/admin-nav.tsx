@@ -11,6 +11,7 @@ const navItems: { label: string; href: string; icon: IconName }[] = [
   { label: "Tenants", href: "/admin/tenants", icon: "users" },
   { label: "Subscription tiers", href: "/admin/subscription-tiers", icon: "layers" },
   { label: "Activity log", href: "/admin/activity", icon: "clock" },
+  { label: "Settings", href: "/admin/settings", icon: "settings" },
 ];
 
 export function AdminNav({
