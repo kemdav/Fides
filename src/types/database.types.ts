@@ -86,9 +86,30 @@ export type AccountApplicationRow = {
   reviewed_by: string | null;
   review_notes: string | null;
   approved_at: string | null;
+  decided_at: string | null;
   tenant_id: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type RejectedAccountRow = {
+  id: string;
+  application_id: string | null;
+  reference_code: string | null;
+  email: string;
+  full_name: string;
+  owner_legal_name: string | null;
+  phone: string | null;
+  business_name: string | null;
+  business_type: string | null;
+  location: string | null;
+  plan_code: string | null;
+  rejection_reason: string;
+  submitted_at: string | null;
+  rejected_at: string;
+  rejected_by: string;
+  email_sent: boolean;
+  created_at: string;
 };
 
 export type ApplicationIdentityRow = {
@@ -116,15 +137,40 @@ export type ApplicationBusinessRow = {
   updated_at: string;
 };
 
+export type PasswordResetCodeRow = {
+  id: string;
+  user_id: string;
+  email: string;
+  code_hash: string;
+  attempts: number;
+  expires_at: string;
+  verified_at: string | null;
+  reset_token_hash: string | null;
+  consumed_at: string | null;
+  created_at: string;
+};
+
+export type DocumentTypeRow = {
+  code: string;
+  label: string;
+  description: string;
+  category: "identity" | "business";
+  is_required: boolean;
+  sort_order: number;
+  created_at: string;
+};
+
 export type ApplicationDocumentRow = {
   id: string;
   application_id: string;
+  user_id: string | null;
   document_type: string;
   file_name: string | null;
   storage_path: string | null;
   mime_type: string | null;
   size_bytes: number | null;
   created_at: string;
+  updated_at: string;
 };
 
 export type AdminActivityRow = {
@@ -151,6 +197,9 @@ export type Database = {
       account_applications: Table<AccountApplicationRow>;
       application_identities: Table<ApplicationIdentityRow>;
       application_businesses: Table<ApplicationBusinessRow>;
+      password_reset_codes: Table<PasswordResetCodeRow>;
+      rejected_accounts: Table<RejectedAccountRow>;
+      document_types: Table<DocumentTypeRow>;
       application_documents: Table<ApplicationDocumentRow>;
       admin_activity_log: Table<AdminActivityRow>;
     };

@@ -55,6 +55,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
 
   if ((!user || error) && isProtected) {
     const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirect", pathname);
     return redirectWithCookies(loginUrl, response, request, true);
   }
 

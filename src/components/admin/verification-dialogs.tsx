@@ -1,11 +1,12 @@
 "use client";
 
 import { useId, useState, type FormEvent, type ReactNode } from "react";
-import { REASON_MAX, REASON_MIN } from "@/lib/admin/verification";
+import { CUSTOM_REASON_MAX, REJECTION_REASONS, composeRejectionReason } from "@/lib/admin/rejection";
 import { cn } from "@/lib/utils";
 import { AdminButton } from "./admin-button";
 import { Icon } from "./icon";
 import { AssetImage } from "./asset-icon";
+import { Checkbox } from "./primitives";
 
 export const DIALOG_TITLE_ID = "admin-dialog-title";
 
@@ -93,71 +94,103 @@ export function ApproveDialog({
 
 export function RejectDialog({
   business,
+  email,
   onCancel,
   onConfirm,
   busy = false,
 }: {
   business: string;
+  email?: string;
   onCancel: () => void;
-  onConfirm: (reason: string) => void;
+  onConfirm: (reasons: string[], custom: string) => void;
   busy?: boolean;
 }) {
-  const fieldId = useId();
+  const customId = useId();
   const errorId = useId();
-  const [reason, setReason] = useState("");
+  const [step, setStep] = useState<"choose" | "confirm">("choose");
+  const [reasons, setReasons] = useState<string[]>([]);
+  const [custom, setCustom] = useState("");
   const [showError, setShowError] = useState(false);
-  const trimmed = reason.trim();
-  const valid = trimmed.length >= REASON_MIN && trimmed.length <= REASON_MAX;
+  const summary = composeRejectionReason(reasons, custom);
+  const valid = summary.length > 0;
 
-  function submit(event: FormEvent) {
+  function toggle(reason: string) {
+    setReasons((current) => (current.includes(reason) ? current.filter((item) => item !== reason) : [...current, reason]));
+  }
+
+  function next(event: FormEvent) {
     event.preventDefault();
     if (!valid) {
       setShowError(true);
       return;
     }
-    onConfirm(trimmed);
+    setStep("confirm");
+  }
+
+  if (step === "confirm") {
+    return (
+      <ConfirmationCard icon="status-danger" title="Reject and remove this account?">
+        <p className="text-center text-sm leading-[21px] text-muted">
+          {business} will be emailed the reason below{email ? ` at ${email}` : ""}, with a link to create a new account. Their account, documents and images
+          will then be permanently deleted. This cannot be undone.
+        </p>
+        <p className="rounded-lg bg-danger-bg px-4 py-3 text-sm leading-[21px] text-danger-dark">
+          <span className="font-semibold">Reason: </span>
+          {summary}
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <AdminButton variant="outline" className="min-w-[100px]" onClick={() => setStep("choose")} disabled={busy}>
+            Back
+          </AdminButton>
+          <AdminButton variant="danger" className="min-w-[147px]" onClick={() => onConfirm(reasons, custom)} disabled={busy} autoFocus>
+            {busy ? "Rejecting…" : "Reject & send email"}
+          </AdminButton>
+        </div>
+      </ConfirmationCard>
+    );
   }
 
   return (
-    <form onSubmit={submit} noValidate>
+    <form onSubmit={next} noValidate>
       <ConfirmationCard icon="status-danger" title="Reject submission">
         <p className="text-center text-sm leading-[21px] text-muted">
-          Record why {business} cannot be approved. This closes the current submission.
+          Choose why {business} cannot be approved. The applicant is emailed the reason and can register again.
         </p>
-        <label htmlFor={fieldId} className="text-sm leading-5">
-          Rejection Reason<span className="text-danger">*</span>
+        <fieldset className="flex flex-col gap-2">
+          <legend className="mb-1 text-sm leading-5">
+            Rejection reasons<span className="text-danger">*</span>
+          </legend>
+          {REJECTION_REASONS.map((reason) => (
+            <Checkbox key={reason} checked={reasons.includes(reason)} onChange={() => toggle(reason)} label={reason} />
+          ))}
+        </fieldset>
+        <label htmlFor={customId} className="text-sm leading-5">
+          Custom reason <span className="text-muted">(optional if a reason is selected)</span>
         </label>
         <textarea
-          id={fieldId}
-          value={reason}
-          onChange={(event) => setReason(event.target.value)}
-          maxLength={REASON_MAX}
+          id={customId}
+          value={custom}
+          onChange={(event) => setCustom(event.target.value)}
+          maxLength={CUSTOM_REASON_MAX}
           rows={3}
-          autoFocus
           aria-invalid={showError && !valid}
           aria-describedby={errorId}
-          placeholder="Explain why this submission is rejected"
+          placeholder="Add details the applicant should know"
           className={cn(
             "w-full resize-y rounded-lg border bg-white px-4 py-3 text-base font-semibold leading-6 placeholder:font-semibold placeholder:text-ink/50",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 focus-visible:border-burnt",
             showError && !valid ? "border-danger" : "border-glyph"
           )}
         />
-        <p
-          id={errorId}
-          role={showError && !valid ? "alert" : undefined}
-          className={cn("text-center text-xs leading-[18px]", showError && !valid ? "text-danger" : "text-muted")}
-        >
-          {showError && !valid
-            ? `Enter a clear reason between ${REASON_MIN} and ${REASON_MAX} characters before recording the decision.`
-            : "Reason required · Stored with the decision"}
+        <p id={errorId} role={showError && !valid ? "alert" : undefined} className={cn("text-center text-xs leading-[18px]", showError && !valid ? "text-danger" : "text-muted")}>
+          {showError && !valid ? "Select at least one reason or write a custom reason." : "Included in the email · Stored in the activity log"}
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3">
           <AdminButton variant="outline" className="min-w-[100px]" onClick={onCancel}>
             Cancel
           </AdminButton>
-          <AdminButton variant="danger" type="submit" disabled={busy} className="min-w-[147px]">
-            Confirm Rejection
+          <AdminButton variant="danger" type="submit" className="min-w-[147px]">
+            Continue
           </AdminButton>
         </div>
       </ConfirmationCard>
@@ -202,7 +235,7 @@ export function DeleteApplicationDialog({
   return (
     <ConfirmationCard icon="status-danger" title="Delete this record?">
       <p className="text-center text-sm leading-[21px] text-muted">
-        Permanently delete {business}, including the owner login and all registration records. This cannot be undone.
+        Permanently delete {business}: the owner login, all registration records, uploaded documents and images. The email address can then be used to register again. This cannot be undone.
       </p>
       <div className="flex flex-wrap items-center justify-center gap-3">
         <AdminButton variant="outline" className="min-w-[100px]" onClick={onCancel}>

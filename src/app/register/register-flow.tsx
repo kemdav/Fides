@@ -3,17 +3,20 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { CheckIcon } from "@/components/ui";
 import {
+  ALL_DOCUMENTS,
   BUSINESS_TYPES,
   DOCUMENT_SLOTS,
+  documentFieldName,
   FILE_LIMITS,
   formatPeso,
+  GOVERNMENT_ID_SLOT,
   ID_TYPES,
   PLAN_OPTIONS,
   TRIAL_DAYS,
-  type DocumentKey,
+  type BusinessDocumentKey,
 } from "@/lib/registration/options";
 import {
   accountStepSchema,
@@ -26,9 +29,18 @@ import {
 } from "@/lib/registration/schema";
 import { cn } from "@/lib/utils";
 import {
-  Field,
-  FilePicker,
+  DatePicker,
+  DocumentCard,
+  documentFileProblem,
+  FilePreviewDialog,
   formatBytes,
+  IdUpload,
+  releaseObjectUrl,
+  SelectField,
+  toIsoDate,
+} from "./controls";
+import {
+  Field,
   InfoNote,
   MobileProgress,
   PasswordInput,
@@ -40,6 +52,8 @@ import {
   useObjectUrl,
   validateFile,
 } from "./parts";
+
+type DocMap = Partial<Record<BusinessDocumentKey, File>>;
 
 type Values = {
   fullName: string;
@@ -89,9 +103,9 @@ const DRAFT_KEY = "fides-registration-draft";
 const stepSchemas = [accountStepSchema, identityStepSchema, businessStepSchema, null, planStepSchema, null] as const;
 
 const primaryButton =
-  "inline-flex h-12 items-center justify-center rounded-lg bg-burnt px-6 text-base font-semibold text-white transition-colors hover:bg-burnt-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-60";
+  "inline-flex h-11 items-center justify-center rounded-md bg-burnt px-5 text-sm font-semibold text-white transition-colors hover:bg-burnt-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-60";
 const secondaryButton =
-  "inline-flex h-12 items-center justify-center rounded-lg border-2 border-outline/70 bg-white px-6 text-base font-semibold text-ink transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:opacity-60";
+  "inline-flex h-11 items-center justify-center rounded-md border border-ink/50 bg-white px-5 text-sm font-semibold text-ink transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:opacity-60";
 
 export function RegisterFlow() {
   const router = useRouter();
@@ -102,7 +116,9 @@ export function RegisterFlow() {
   const [idFile, setIdFile] = useState<File | null>(null);
   const [logo, setLogo] = useState<File | null>(null);
   const [logoError, setLogoError] = useState<string | null>(null);
-  const [docs, setDocs] = useState<Partial<Record<DocumentKey, File>>>({});
+  const [docs, setDocs] = useState<DocMap>({});
+  const [docErrors, setDocErrors] = useState<Errors>({});
+  const [preview, setPreview] = useState<{ file: File; title: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [draftNote, setDraftNote] = useState<string | null>(null);
@@ -131,15 +147,70 @@ export function RegisterFlow() {
     setErrors((current) => (current[key] ? { ...current, [key]: undefined } : current));
   }
 
+  function focusFirstError() {
+    requestAnimationFrame(() => {
+      const target = document.querySelector<HTMLElement>('[aria-invalid="true"], [data-invalid="true"]');
+      if (!target) return;
+      target.scrollIntoView({ block: "center", behavior: "smooth" });
+      target.focus({ preventScroll: true });
+    });
+  }
+
   function validateCurrent(): boolean {
     const schema = stepSchemas[step];
-    if (!schema) return true;
-    let found = validateStep(schema, values);
+    let found: Errors = schema ? validateStep(schema, values) : {};
     if (step === 0 && !found.confirmPassword && values.password !== values.confirmPassword) {
       found = { ...found, confirmPassword: "Passwords do not match." };
     }
+    if (step === 1 && !idFile) {
+      found = { ...found, idFile: "Upload a government-issued ID (front) to continue." };
+    }
+    if (step === 3) {
+      const missing: Errors = {};
+      for (const slot of DOCUMENT_SLOTS) {
+        if (!docs[slot.key]) missing[slot.key] = `${slot.title} is required. Please upload a PDF, JPG or PNG file (max 5 MB).`;
+      }
+      setDocErrors(missing);
+      const count = Object.keys(missing).length;
+      found = count ? { documents: `${count} required ${count === 1 ? "document is" : "documents are"} still missing. Please upload every document marked REQUIRED.` } : {};
+    }
     setErrors(found);
-    return Object.keys(found).length === 0;
+    const ok = Object.keys(found).length === 0;
+    if (!ok) focusFirstError();
+    return ok;
+  }
+
+  function setBusinessDoc(key: BusinessDocumentKey, title: string, file: File): string | null {
+    const problem = documentFileProblem(file, title);
+    if (problem) return problem;
+    releaseObjectUrl(docs[key]);
+    setDocs((current) => ({ ...current, [key]: file }));
+    setDocErrors((current) => ({ ...current, [key]: undefined }));
+    setErrors((current) => ({ ...current, documents: undefined }));
+    return null;
+  }
+
+  function removeBusinessDoc(key: BusinessDocumentKey) {
+    releaseObjectUrl(docs[key]);
+    setDocs((current) => {
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+  }
+
+  function setIdDocument(file: File): string | null {
+    const problem = documentFileProblem(file, GOVERNMENT_ID_SLOT.title);
+    if (problem) return problem;
+    releaseObjectUrl(idFile);
+    setIdFile(file);
+    setErrors((current) => ({ ...current, idFile: undefined }));
+    return null;
+  }
+
+  function removeIdDocument() {
+    releaseObjectUrl(idFile);
+    setIdFile(null);
   }
 
   function goTo(next: number) {
@@ -188,11 +259,32 @@ export function RegisterFlow() {
       return;
     }
 
+    const missingDocs = ALL_DOCUMENTS.filter((doc) => (doc.key === GOVERNMENT_ID_SLOT.key ? !idFile : !docs[doc.key as BusinessDocumentKey]));
+    if (missingDocs.length > 0) {
+      const onIdentity = missingDocs.some((doc) => doc.key === GOVERNMENT_ID_SLOT.key);
+      const message = `Please upload all required documents before submitting (missing: ${missingDocs.map((doc) => doc.title).join(", ")}).`;
+      setSubmitError(message);
+      if (onIdentity) {
+        setErrors({ idFile: "Upload a government-issued ID (front) to continue." });
+        setStep(1);
+      } else {
+        setDocErrors(Object.fromEntries(missingDocs.map((doc) => [doc.key, `${doc.title} is required.`])));
+        setStep(3);
+      }
+      focusFirstError();
+      return;
+    }
+
     setSubmitting(true);
     try {
       const body = new FormData();
       body.set("payload", JSON.stringify(parsed.data));
       if (logo) body.set("logo", logo);
+      if (idFile) body.set(documentFieldName(GOVERNMENT_ID_SLOT.key), idFile);
+      for (const slot of DOCUMENT_SLOTS) {
+        const file = docs[slot.key];
+        if (file) body.set(documentFieldName(slot.key), file);
+      }
       const response = await fetch("/api/applications", { method: "POST", body });
       const result = (await response.json().catch(() => ({}))) as { error?: string };
       if (!response.ok) {
@@ -212,20 +304,38 @@ export function RegisterFlow() {
     <div className="flex min-h-dvh flex-col bg-powder text-ink lg:flex-row">
       <Sidebar current={step} furthest={furthest} onJump={(index) => setStep(index)} />
       <MobileProgress current={step} />
-      <main className="flex min-w-0 flex-1 flex-col items-center px-4 py-8 sm:px-8 lg:px-12 lg:py-14">
-        <div className={cn("w-full", step === 4 ? "max-w-[1100px]" : step === 5 ? "max-w-[820px]" : "max-w-[680px]")}>
+      <main className="flex min-w-0 flex-1 flex-col items-center px-4 py-6 sm:px-8 lg:px-12 lg:py-10">
+        <div className={cn("flex w-full flex-1 flex-col", step === 4 ? "max-w-[1100px]" : step === 5 ? "max-w-[820px]" : step === 3 ? "max-w-[900px]" : step === 0 ? "max-w-[560px]" : "max-w-[680px]")}>
           {step === 0 && (
             <>
-              {hasDraft ? (
-                <button type="button" onClick={restoreDraft} className="mb-4 w-full rounded-lg bg-[#faece3] px-4 py-2.5 text-sm font-semibold text-burnt hover:bg-[#f6dfd0]">
-                  Restore your saved draft
-                </button>
-              ) : null}
-              <AccountStep values={values} errors={errors} set={set} onNext={next} />
+              <Link
+                href="/"
+                className="mb-4 inline-flex w-fit items-center gap-1.5 rounded-md py-1 pr-2 text-sm font-semibold text-burnt hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
+              >
+                <span aria-hidden>←</span> Back to home
+              </Link>
+              <div className="my-auto">
+                {hasDraft ? (
+                  <button type="button" onClick={restoreDraft} className="mb-4 w-full rounded-lg bg-[#faece3] px-4 py-2.5 text-sm font-semibold text-burnt hover:bg-[#f6dfd0]">
+                    Restore your saved draft
+                  </button>
+                ) : null}
+                <AccountStep values={values} errors={errors} set={set} onNext={next} />
+              </div>
             </>
           )}
           {step === 1 && (
-            <IdentityStep values={values} errors={errors} set={set} idFile={idFile} setIdFile={setIdFile} onBack={back} onNext={next} />
+            <IdentityStep
+              values={values}
+              errors={errors}
+              set={set}
+              idFile={idFile}
+              onIdFile={setIdDocument}
+              onIdRemove={removeIdDocument}
+              onPreview={(file) => setPreview({ file, title: GOVERNMENT_ID_SLOT.title })}
+              onBack={back}
+              onNext={next}
+            />
           )}
           {step === 2 && (
             <BusinessStep
@@ -236,19 +346,34 @@ export function RegisterFlow() {
               logoError={logoError}
               onLogo={(file) => {
                 if (!file) {
+                  releaseObjectUrl(logo);
                   setLogo(null);
                   setLogoError(null);
                   return;
                 }
                 const problem = validateFile(file, FILE_LIMITS.logoTypes, FILE_LIMITS.logoBytes, "The logo");
                 setLogoError(problem);
-                if (!problem) setLogo(file);
+                if (!problem) {
+                  releaseObjectUrl(logo);
+                  setLogo(file);
+                }
               }}
               onBack={back}
               onNext={next}
             />
           )}
-          {step === 3 && <DocumentsStep docs={docs} setDocs={setDocs} onBack={back} onNext={next} />}
+          {step === 3 && (
+            <DocumentsStep
+              docs={docs}
+              docErrors={docErrors}
+              summaryError={errors.documents}
+              onFile={setBusinessDoc}
+              onRemove={removeBusinessDoc}
+              onPreview={(file, title) => setPreview({ file, title })}
+              onBack={back}
+              onNext={next}
+            />
+          )}
           {step === 4 && <PlanStep values={values} errors={errors} set={set} onBack={back} onNext={next} />}
           {step === 5 && (
             <SummaryStep
@@ -269,6 +394,7 @@ export function RegisterFlow() {
           )}
         </div>
       </main>
+      <FilePreviewDialog file={preview?.file ?? null} title={preview?.title ?? ""} onClose={() => setPreview(null)} />
     </div>
   );
 }
@@ -281,7 +407,7 @@ type StepProps = {
 
 function Heading({ title, subtitle, center = true }: { title: string; subtitle: string; center?: boolean }) {
   return (
-    <div className={cn("mb-8 flex flex-col gap-2", center ? "text-center" : "text-left")}>
+    <div className={cn("mb-6 flex flex-col gap-2", center ? "text-center" : "text-left")}>
       <h1 className="font-display text-3xl text-ink sm:text-4xl">{title}</h1>
       <p className="text-sm text-muted sm:text-base">{subtitle}</p>
     </div>
@@ -290,7 +416,7 @@ function Heading({ title, subtitle, center = true }: { title: string; subtitle: 
 
 function Card({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-line bg-white p-5 shadow-[0_8px_24px_-12px_rgb(44_58_75/0.18)] sm:p-8">{children}</div>
+    <div className="rounded-2xl border border-line bg-white p-5 shadow-[0_8px_24px_-12px_rgb(44_58_75/0.18)] sm:p-7">{children}</div>
   );
 }
 
@@ -318,14 +444,25 @@ function AccountStep({ values, errors, set, onNext }: StepProps & { onNext: () =
         <Field label="Business Email" htmlFor="email" error={errors.email}>
           <TextInput id="email" type="email" invalid={!!errors.email} autoComplete="email" placeholder="maria@bellavita.ph" value={values.email} onChange={(e) => set("email", e.target.value)} />
         </Field>
-        <Field label="Phone Number" htmlFor="phone" error={errors.phone}>
-          <TextInput id="phone" type="tel" invalid={!!errors.phone} autoComplete="tel" placeholder="+63 917 000 0000" value={values.phone} onChange={(e) => set("phone", e.target.value)} />
+        <Field label="Phone Number" htmlFor="phone" error={errors.phone} hint="Use 09XXXXXXXXX (11 digits) or +63 9XX XXX XXXX.">
+          <TextInput
+            id="phone"
+            type="tel"
+            inputMode="tel"
+            maxLength={17}
+            invalid={!!errors.phone}
+            aria-describedby={errors.phone ? "phone-error" : "phone-hint"}
+            autoComplete="tel"
+            placeholder="+63 917 000 0000"
+            value={values.phone}
+            onChange={(e) => set("phone", e.target.value.replace(/[^\d+\s()-]/g, ""))}
+          />
         </Field>
         <Field label="Password" htmlFor="password" error={errors.password}>
-          <PasswordInput id="password" invalid={!!errors.password} autoComplete="new-password" placeholder="Create a password" value={values.password} onChange={(e) => set("password", e.target.value)} />
+          <PasswordInput id="password" fieldLabel="password" invalid={!!errors.password} autoComplete="new-password" placeholder="Create a password" value={values.password} onChange={(e) => set("password", e.target.value)} />
         </Field>
         <Field label="Confirm Password" htmlFor="confirmPassword" error={errors.confirmPassword} className="sm:col-span-2">
-          <PasswordInput id="confirmPassword" invalid={!!errors.confirmPassword} autoComplete="new-password" placeholder="Re-enter your password" value={values.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)} />
+          <PasswordInput id="confirmPassword" fieldLabel="confirm password" invalid={!!errors.confirmPassword} autoComplete="new-password" placeholder="Re-enter your password" value={values.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)} />
         </Field>
       </div>
 
@@ -367,7 +504,7 @@ function AccountStep({ values, errors, set, onNext }: StepProps & { onNext: () =
         ) : null}
       </div>
 
-      <div className="mt-8 flex flex-col items-center gap-5">
+      <div className="mt-7 flex flex-col items-center gap-4">
         <button type="submit" className={primaryButton}>
           Create Account →
         </button>
@@ -385,23 +522,19 @@ function AccountStep({ values, errors, set, onNext }: StepProps & { onNext: () =
 
 function StepActions({
   onBack,
-  onNext,
   nextLabel = "Save & Continue →",
-  stacked = false,
 }: {
   onBack?: () => void;
-  onNext?: () => void;
   nextLabel?: string;
-  stacked?: boolean;
 }) {
   return (
-    <div className={cn("mt-8 flex items-center gap-3 border-t border-line pt-6", stacked ? "flex-col-reverse sm:flex-row sm:justify-end" : "justify-end")}>
+    <div className="mt-6 flex flex-col-reverse items-stretch gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-end">
       {onBack ? (
         <button type="button" onClick={onBack} className={secondaryButton}>
           Back
         </button>
       ) : null}
-      <button type="submit" onClick={onNext} className={primaryButton}>
+      <button type="submit" className={primaryButton}>
         {nextLabel}
       </button>
     </div>
@@ -413,11 +546,22 @@ function IdentityStep({
   errors,
   set,
   idFile,
-  setIdFile,
+  onIdFile,
+  onIdRemove,
+  onPreview,
   onBack,
   onNext,
-}: StepProps & { idFile: File | null; setIdFile: (file: File | null) => void; onBack: () => void; onNext: () => void }) {
-  const today = new Date().toISOString().slice(0, 10);
+}: StepProps & {
+  idFile: File | null;
+  onIdFile: (file: File) => string | null;
+  onIdRemove: () => void;
+  onPreview: (file: File) => void;
+  onBack: () => void;
+  onNext: () => void;
+}) {
+  // Owners must be at least 18: the latest selectable date is exactly 18 years ago.
+  const now = new Date();
+  const latest = toIsoDate(now.getFullYear() - 18, now.getMonth(), now.getDate());
   return (
     <form
       noValidate
@@ -432,42 +576,53 @@ function IdentityStep({
         subtitle="We need to confirm the identity of the business owner. This information is kept secure and used only for verification purposes."
       />
       <Card>
-        <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
-          <Field label="Owner's Legal Full Name" htmlFor="ownerLegalName" error={errors.ownerLegalName}>
+        <div className="grid gap-x-5 gap-y-5 sm:grid-cols-2">
+          <Field caps label="Owner's Legal Full Name" htmlFor="ownerLegalName" error={errors.ownerLegalName}>
             <TextInput id="ownerLegalName" invalid={!!errors.ownerLegalName} autoComplete="name" placeholder="Maria Santos" value={values.ownerLegalName} onChange={(e) => set("ownerLegalName", e.target.value)} />
           </Field>
-          <Field label="Date of Birth" htmlFor="dateOfBirth" error={errors.dateOfBirth}>
-            <TextInput id="dateOfBirth" type="date" max={today} invalid={!!errors.dateOfBirth} value={values.dateOfBirth} onChange={(e) => set("dateOfBirth", e.target.value)} />
+          <Field caps label="Date of Birth" htmlFor="dateOfBirth" error={errors.dateOfBirth} hint="You must be at least 18 years old.">
+            <DatePicker
+              id="dateOfBirth"
+              value={values.dateOfBirth}
+              onChange={(value) => set("dateOfBirth", value)}
+              max={latest}
+              invalid={!!errors.dateOfBirth}
+              placeholder="Select date of birth"
+              describedBy={errors.dateOfBirth ? "dateOfBirth-error" : "dateOfBirth-hint"}
+            />
           </Field>
           <Field
+            caps
             label="ID Type"
             htmlFor="idType"
             error={errors.idType}
             className="sm:col-span-2"
             hint="Accepted: Passport, Driver's License, National ID, SSS / GSIS ID, or PhilHealth ID"
           >
-            <select
+            <SelectField
               id="idType"
               value={values.idType}
-              onChange={(e) => set("idType", e.target.value)}
-              className="h-12 w-full rounded-lg border border-outline/60 bg-white px-4 text-base text-ink hover:border-outline focus-visible:border-burnt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/30 sm:max-w-[320px]"
-            >
-              {ID_TYPES.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
+              options={ID_TYPES}
+              onChange={(value) => set("idType", value)}
+              invalid={!!errors.idType}
+              placeholder="Select an ID type"
+              className="w-full sm:max-w-[260px]"
+              describedBy={errors.idType ? "idType-error" : "idType-hint"}
+            />
           </Field>
-          <div className="flex flex-col gap-2 sm:col-span-2">
-            <p className="text-sm font-semibold text-ink">
-              Government-Issued ID (Front) <span className="text-xs font-normal text-subtle">· Optional for now</span>
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-body">
+              Government-Issued ID (Front)
+              <span aria-hidden className="ml-0.5 text-danger">
+                *
+              </span>
+              <span className="sr-only"> (required)</span>
             </p>
-            <FilePicker file={idFile} onChange={setIdFile} label="Government-issued ID (front)" />
+            <IdUpload label="Government-issued ID (front)" file={idFile} error={errors.idFile} onFile={onIdFile} onRemove={onIdRemove} onPreview={onPreview} />
           </div>
           <div className="sm:col-span-2">
-            <InfoNote>
-              Selected files are previewed on this device only and are not stored or sent anywhere yet. Verification typically takes 1–2 business days.
+            <InfoNote icon="shield">
+              Your identity documents are encrypted and stored securely. They are used solely to verify your identity and will never be shared with third parties. Verification typically takes 1–2 business days.
             </InfoNote>
           </div>
         </div>
@@ -516,7 +671,7 @@ function BusinessStep({
           <div className="flex min-w-0 flex-col items-start gap-2">
             <p className="text-sm font-semibold text-ink">Business Logo</p>
             <p className="text-xs text-subtle">Recommended: square JPG or PNG, at least 400×400 px. Max 2 MB.</p>
-            <label className="inline-flex h-11 cursor-pointer items-center rounded-lg border-2 border-outline/70 px-5 text-sm font-semibold text-muted transition-colors hover:border-burnt hover:text-burnt focus-within:ring-2 focus-within:ring-burnt/40">
+            <label className="inline-flex h-11 cursor-pointer items-center rounded-md border border-outline/70 px-5 text-sm font-semibold text-muted transition-colors hover:border-burnt hover:text-burnt focus-within:ring-2 focus-within:ring-burnt/40">
               {logo ? "Replace Logo" : "Upload Logo"}
               <input
                 type="file"
@@ -546,18 +701,14 @@ function BusinessStep({
             <TextInput id="businessName" invalid={!!errors.businessName} placeholder="Bella Vita Salon & Spa" value={values.businessName} onChange={(e) => set("businessName", e.target.value)} />
           </Field>
           <Field label="Business Type" htmlFor="businessType" error={errors.businessType} className="sm:col-span-4">
-            <select
+            <SelectField
               id="businessType"
               value={values.businessType}
-              onChange={(e) => set("businessType", e.target.value)}
-              className="h-12 w-full rounded-lg border border-outline/60 bg-white px-4 text-base text-ink hover:border-outline focus-visible:border-burnt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/30"
-            >
-              {BUSINESS_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
+              options={BUSINESS_TYPES.map((type) => ({ value: type, label: type }))}
+              onChange={(value) => set("businessType", value)}
+              invalid={!!errors.businessType}
+              placeholder="Select a business type"
+            />
           </Field>
           <Field label="Established Year" htmlFor="establishedYear" error={errors.establishedYear} className="sm:col-span-2">
             <TextInput id="establishedYear" inputMode="numeric" maxLength={4} invalid={!!errors.establishedYear} placeholder="2020" value={values.establishedYear} onChange={(e) => set("establishedYear", e.target.value.replace(/\D/g, ""))} />
@@ -577,7 +728,7 @@ function BusinessStep({
         </div>
         <StepActions onBack={onBack} />
       </Card>
-      <div className="mt-6">
+      <div className="mt-5">
         <SecureFooter />
       </div>
     </form>
@@ -586,15 +737,24 @@ function BusinessStep({
 
 function DocumentsStep({
   docs,
-  setDocs,
+  docErrors,
+  summaryError,
+  onFile,
+  onRemove,
+  onPreview,
   onBack,
   onNext,
 }: {
-  docs: Partial<Record<DocumentKey, File>>;
-  setDocs: React.Dispatch<React.SetStateAction<Partial<Record<DocumentKey, File>>>>;
+  docs: DocMap;
+  docErrors: Errors;
+  summaryError?: string;
+  onFile: (key: BusinessDocumentKey, title: string, file: File) => string | null;
+  onRemove: (key: BusinessDocumentKey) => void;
+  onPreview: (file: File, title: string) => void;
   onBack: () => void;
   onNext: () => void;
 }) {
+  const uploaded = DOCUMENT_SLOTS.filter((slot) => docs[slot.key]).length;
   return (
     <form
       noValidate
@@ -605,43 +765,37 @@ function DocumentsStep({
     >
       <Heading
         title="Upload your business documents"
-        subtitle="These documents help us verify your business before your application is reviewed. Uploading is optional for now."
+        subtitle="These documents help us verify your business before your application is reviewed. Review begins after your final submission on the last step."
       />
+      {summaryError ? (
+        <p role="alert" className="mb-4 rounded-lg bg-danger-bg px-4 py-3 text-sm text-danger-dark">
+          {summaryError}
+        </p>
+      ) : null}
+      <p className="mb-3 text-xs font-semibold text-muted" aria-live="polite">
+        {uploaded} of {DOCUMENT_SLOTS.length} required documents uploaded
+      </p>
       <div className="grid gap-5 md:grid-cols-2">
         {DOCUMENT_SLOTS.map((slot) => (
-          <div key={slot.key} className="flex flex-col gap-3 rounded-2xl border border-line bg-white p-5 shadow-[0_8px_24px_-12px_rgb(44_58_75/0.15)]">
-            <div className="flex items-start justify-between gap-3">
-              <span className="flex size-9 items-center justify-center rounded-lg bg-mist text-glyph">
-                <StepIcon name="document" />
-              </span>
-              <span className="rounded-full bg-mist px-2.5 py-1 text-[10px] font-semibold tracking-wide text-muted">OPTIONAL</span>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-ink">{slot.title}</p>
-              <p className="text-xs text-subtle">{slot.hint}</p>
-            </div>
-            <FilePicker
-              compact
-              label={slot.title}
-              file={docs[slot.key] ?? null}
-              onChange={(file) =>
-                setDocs((current) => {
-                  const nextDocs = { ...current };
-                  if (file) nextDocs[slot.key] = file;
-                  else delete nextDocs[slot.key];
-                  return nextDocs;
-                })
-              }
-            />
-          </div>
+          <DocumentCard
+            key={slot.key}
+            title={slot.title}
+            hint={slot.hint}
+            required={slot.required}
+            file={docs[slot.key] ?? null}
+            error={docErrors[slot.key]}
+            onFile={(file) => onFile(slot.key, slot.title, file)}
+            onRemove={() => onRemove(slot.key)}
+            onPreview={(file) => onPreview(file, slot.title)}
+          />
         ))}
       </div>
       <div className="mt-6 flex flex-col gap-4">
         <InfoNote>
-          Files you select are previewed on this device only. They are not stored or sent anywhere in this version, and your application can be submitted without them.
+          These documents will be included in your application summary on the final step. Review by our team begins only after you submit your complete application. This typically takes 1–2 business days.
         </InfoNote>
-        <p className="text-xs text-subtle">Accepted formats: PDF, JPG, PNG — max 5 MB per file.</p>
-        <div className="flex flex-col-reverse items-center gap-3 sm:flex-row sm:justify-end">
+        <p className="text-xs text-subtle">Accepted formats: PDF, JPG, PNG — Max 5 MB per file. Documents are encrypted and stored securely. Questions? Contact our support team.</p>
+        <div className="flex flex-col-reverse items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
           <button type="button" onClick={onBack} className={secondaryButton}>
             Back
           </button>
@@ -675,7 +829,7 @@ function PlanStep({ values, errors, set, onBack, onNext }: StepProps & { onBack:
         title="Select your subscription package"
         subtitle="The Professional plan is pre-selected. You can change your plan anytime after launch."
       />
-      <div role="radiogroup" aria-label="Subscription package" className="mx-auto flex max-w-[420px] flex-col items-stretch gap-6 lg:max-w-none lg:flex-row lg:items-stretch lg:gap-5">
+      <div role="radiogroup" aria-label="Subscription package" className="mx-auto flex max-w-[420px] flex-col items-stretch gap-6 xl:max-w-none xl:flex-row xl:items-stretch xl:gap-5">
         {PLAN_OPTIONS.map((plan) => {
           const selected = values.planCode === plan.code;
           const featured = plan.code === "professional";
@@ -694,12 +848,12 @@ function PlanStep({ values, errors, set, onBack, onNext }: StepProps & { onBack:
             >
               <span className={cn("relative flex h-full flex-col px-7 pb-8 pt-8", featured ? "text-white" : "text-ink")}>
                 <Image src={planBackgrounds[plan.code]} alt="" fill aria-hidden className="rounded-[24px]" />
-                <span className="relative flex items-center justify-between gap-2">
-                  <span className="text-2xl font-semibold">{plan.name}</span>
-                  {featured ? <span className="shrink-0 whitespace-nowrap text-sm font-semibold text-info">Most Popular</span> : null}
+                <span className="relative flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                  <span className="text-xl font-semibold xl:text-2xl">{plan.name}</span>
+                  {featured ? <span className="-mr-7 shrink-0 whitespace-nowrap text-xs font-semibold text-info xl:text-sm">Most Popular</span> : null}
                 </span>
-                <span className="relative mt-5 flex items-end gap-3 font-semibold">
-                  <span className="text-[32px] leading-10 xl:text-4xl">{formatPeso(plan.price)}</span>
+                <span className="relative mt-5 flex flex-wrap items-end gap-x-3 gap-y-1 font-semibold">
+                  <span className="text-[30px] leading-10 xl:text-[34px]">{formatPeso(plan.price)}</span>
                   <span className="whitespace-nowrap pb-1 text-xs leading-5 xl:text-sm">
                     /month (Php)
                     <br />
@@ -741,7 +895,7 @@ function PlanStep({ values, errors, set, onBack, onNext }: StepProps & { onBack:
         {TRIAL_DAYS}-day free trial on all plans · No credit card required · Cancel anytime
       </p>
       <div className="mt-8 flex items-center justify-between gap-3">
-        <button type="button" onClick={onBack} className={cn(secondaryButton, "border-burnt text-burnt")}>
+        <button type="button" onClick={onBack} className={cn(secondaryButton, "border-burnt text-burnt hover:bg-burnt/5")}>
           ← Back
         </button>
         <button type="submit" className={primaryButton}>
@@ -794,7 +948,7 @@ function FileRow({ name, size }: { name: string; size: number }) {
       <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-burnt text-white">
         <StepIcon name="check" className="size-3" />
       </span>
-      <span className="min-w-0 flex-1 truncate">{name} — Selected</span>
+      <span className="min-w-0 flex-1 truncate">{name} — Ready to submit</span>
       <span className="shrink-0 text-subtle">{formatBytes(size)}</span>
     </div>
   );
@@ -817,7 +971,7 @@ function SummaryStep({
 }: StepProps & {
   idFile: File | null;
   logo: File | null;
-  docs: Partial<Record<DocumentKey, File>>;
+  docs: DocMap;
   submitting: boolean;
   submitError: string | null;
   draftNote: string | null;
@@ -828,7 +982,6 @@ function SummaryStep({
 }) {
   const plan = PLAN_OPTIONS.find((item) => item.code === values.planCode) ?? PLAN_OPTIONS[1];
   const idLabel = ID_TYPES.find((item) => item.value === values.idType)?.label ?? values.idType;
-  const docEntries = useMemo(() => DOCUMENT_SLOTS.filter((slot) => docs[slot.key]), [docs]);
   const dob = values.dateOfBirth
     ? new Date(`${values.dateOfBirth}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
     : "—";
@@ -856,7 +1009,13 @@ function SummaryStep({
         <Row label="Owner Name" value={values.ownerLegalName} />
         <Row label="Date of Birth" value={dob} />
         <Row label="ID Type" value={idLabel} />
-        {idFile ? <FileRow name={idFile.name} size={idFile.size} /> : <p className="text-xs text-subtle">No ID file selected.</p>}
+        {idFile ? (
+          <FileRow name={idFile.name} size={idFile.size} />
+        ) : (
+          <p role="alert" className="rounded-lg bg-danger-bg px-3 py-2 text-xs text-danger-dark">
+            Government-issued ID is missing. Go back to upload it before submitting.
+          </p>
+        )}
       </SummaryCard>
 
       <SummaryCard title="Business Information" icon="building" onEdit={() => onEdit(2)}>
@@ -877,12 +1036,19 @@ function SummaryStep({
       </SummaryCard>
 
       <SummaryCard title="Document Requirements" icon="document" onEdit={() => onEdit(3)}>
-        {docEntries.length === 0 ? (
-          <p className="rounded-lg bg-warn-bg px-3 py-2 text-xs text-warn-fg">No documents selected. You can still submit your application.</p>
-        ) : (
-          docEntries.map((slot) => <FileRow key={slot.key} name={docs[slot.key]!.name} size={docs[slot.key]!.size} />)
-        )}
-        <p className="text-xs text-subtle">Documents are not stored in this version.</p>
+        {DOCUMENT_SLOTS.map((slot) => {
+          const file = docs[slot.key];
+          return file ? (
+            <div key={slot.key} className="flex flex-col gap-1">
+              <p className="text-xs text-subtle">{slot.title}</p>
+              <FileRow name={file.name} size={file.size} />
+            </div>
+          ) : (
+            <p key={slot.key} role="alert" className="rounded-lg bg-danger-bg px-3 py-2 text-xs text-danger-dark">
+              {slot.title} is missing. Go back to upload it before submitting.
+            </p>
+          );
+        })}
       </SummaryCard>
 
       <SummaryCard title="Subscription Package" icon="card" onEdit={() => onEdit(4)}>

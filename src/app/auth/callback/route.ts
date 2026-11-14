@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
 
     // Otherwise route to the requested destination or dashboard
     const nextPath =
-      redirectTo && redirectTo.startsWith("/") ? redirectTo : "/dashboard";
+      redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//") ? redirectTo : "/dashboard";
     return NextResponse.redirect(new URL(nextPath, origin));
   }
 

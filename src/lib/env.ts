@@ -25,6 +25,9 @@ function normalizeEnvValue(
   // Unfilled placeholder, e.g. "<gemini-api-key>" or "https://<project-ref>.supabase.co".
   if (/<[^<>]+>/.test(trimmed)) return undefined;
 
+  // Unfilled Resend placeholder from the setup guide: re_xxxxxxxxx
+  if (key === "RESEND_API_KEY" && /^re_x+$/i.test(trimmed)) return undefined;
+
   // Reserved example domains, e.g. "smtp.example.com".
   if (key.endsWith("_HOST") && /(^|\.)example\.(com|org|net)$/i.test(trimmed)) {
     return undefined;
@@ -102,6 +105,11 @@ const serverEnvSchema = z
     GEMINI_API_KEY: z.string().min(1).optional(),
     GEMINI_MODEL: z.string().min(1).default("gemini-2.0-flash"),
     AI_CONCIERGE_TIMEOUT_MS: z.string().optional(),
+    // Email delivery. Resend is the default transport when RESEND_API_KEY is set.
+    RESEND_API_KEY: z.string().min(1).optional(),
+    MAIL_TRANSPORT: z.enum(["resend", "edge", "smtp"]).optional(),
+    FIDES_EMAIL_FUNCTION_SECRET: z.string().min(16).optional(),
+    PASSWORD_RESET_SECRET: z.string().min(16).optional(),
     SMTP_HOST: z.string().min(1).optional(),
     SMTP_PORT: z.string().optional(),
     SMTP_SECURE: z.string().optional(),
@@ -109,6 +117,10 @@ const serverEnvSchema = z
     SMTP_PASS: z.string().min(1).optional(),
     MAIL_FROM_NAME: z.string().min(1).default("Fides"),
     MAIL_FROM_EMAIL: z.string().min(1).optional(),
+    // Sandbox helper: while MAIL_FROM_EMAIL is Resend's test sender (or unset), every email is
+    // redirected to this address (your own Resend account email) so the flows can be tested
+    // end to end before a domain is verified. Ignored once a real sender is configured.
+    MAIL_TEST_RECIPIENT: z.string().email().optional(),
   })
   .transform((env) => ({
     ...env,

@@ -17,7 +17,9 @@ export type IconName =
   | "lock"
   | "more"
   | "search"
+  | "settings"
   | "shield"
+  | "trash"
   | "users"
   | "verified";
 

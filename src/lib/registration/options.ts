@@ -22,16 +22,42 @@ export const BUSINESS_TYPES = [
   "Other Service Provider",
 ] as const;
 
+export const GOVERNMENT_ID_SLOT = {
+  key: "government_id",
+  title: "Government-Issued ID (Front)",
+  hint: "Passport, Driver's License, National ID, SSS / GSIS ID, or PhilHealth ID.",
+  required: true,
+} as const;
+
+/** Business documents shown on the "Document Requirements" step. All are required. */
 export const DOCUMENT_SLOTS = [
-  { key: "dti_sec_registration", title: "DTI or SEC Registration", hint: "Sole proprietor or Corporation registration." },
-  { key: "mayors_permit", title: "Mayor's / Business Permit", hint: "Current permit issued by your local government." },
-  { key: "bir_registration", title: "BIR Certificate of Registration", hint: "BIR Form 2303 for your business." },
-  { key: "barangay_clearance", title: "Barangay Clearance", hint: "Issued by the barangay where you operate." },
-  { key: "proof_of_address", title: "Proof of Business Address", hint: "Lease contract or recent utility bill." },
-  { key: "other_permit", title: "Other Permits or Licenses", hint: "Sanitary, professional, or industry licenses." },
+  { key: "dti_sec_registration", title: "DTI or SEC Registration", hint: "Sole proprietor or Corporation registration.", required: true },
+  { key: "mayors_permit", title: "Mayor's / Business Permit", hint: "Current permit issued by your local government.", required: true },
+  { key: "bir_registration", title: "BIR Certificate of Registration", hint: "BIR Form 2303 for your business.", required: true },
+  { key: "barangay_clearance", title: "Barangay Clearance", hint: "Issued by the barangay where you operate.", required: true },
+  { key: "proof_of_address", title: "Proof of Business Address", hint: "Lease contract or recent utility bill.", required: true },
+  { key: "other_permit", title: "Other Permits or Licenses", hint: "Sanitary, professional, or industry licenses.", required: true },
 ] as const;
 
-export type DocumentKey = (typeof DOCUMENT_SLOTS)[number]["key"];
+export type BusinessDocumentKey = (typeof DOCUMENT_SLOTS)[number]["key"];
+export type DocumentKey = BusinessDocumentKey | typeof GOVERNMENT_ID_SLOT.key;
+
+/** Every document an application must contain, in display order. */
+export const ALL_DOCUMENTS: ReadonlyArray<{ key: DocumentKey; title: string; hint: string; required: boolean }> = [
+  GOVERNMENT_ID_SLOT,
+  ...DOCUMENT_SLOTS,
+];
+
+export const REQUIRED_DOCUMENT_KEYS: readonly DocumentKey[] = ALL_DOCUMENTS.filter((doc) => doc.required).map((doc) => doc.key);
+
+export function documentTitle(key: string): string {
+  return ALL_DOCUMENTS.find((doc) => doc.key === key)?.title ?? key;
+}
+
+/** Form-field name used when documents are posted to /api/applications. */
+export const documentFieldName = (key: DocumentKey) => `doc_${key}`;
+
+export const DOCUMENT_BUCKET = "application-documents";
 
 export const FILE_LIMITS = {
   documentBytes: 5 * 1024 * 1024,

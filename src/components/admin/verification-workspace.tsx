@@ -5,6 +5,7 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import { approveAction, deleteAction, rejectAction } from "@/app/(admin)/admin/actions";
 import {
   daysWaiting,
+  formatDateTime,
   formatSubmittedOn,
   isOverdue,
   isReviewedToday,
@@ -18,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { AdminButton } from "./admin-button";
 import { AdminModal } from "./admin-modal";
 import { Icon } from "./icon";
+import { SubmittedDocuments } from "./document-viewer";
 import { MetricCard } from "./metric-card";
 import { Checkbox, PageContent, PageHeading, StatusPill, Surface } from "./primitives";
 import { ReviewQueue, statusTones } from "./review-queue";
@@ -180,9 +182,10 @@ export function VerificationWorkspace({
             {dialog.type === "reject" && (
               <RejectDialog
                 business={selected.business}
+                email={selected.email}
                 busy={busy}
                 onCancel={close}
-                onConfirm={(reason) => perform("Submission rejected", () => rejectAction(selected.id, reason))}
+                onConfirm={(reasons, custom) => perform("Submission rejected", () => rejectAction(selected.id, reasons, custom))}
               />
             )}
             {dialog.type === "delete" && (
@@ -251,6 +254,10 @@ function EvidencePanel({
           <dd className="text-sm leading-[21px]">{submission.location}</dd>
         </div>
         <div className="flex flex-col gap-[3px]">
+          <dt className="text-xs leading-[18px] text-muted">ID type</dt>
+          <dd className="text-sm leading-[21px]">{submission.idType}</dd>
+        </div>
+        <div className="flex flex-col gap-[3px]">
           <dt className="text-xs leading-[18px] text-muted">Phone</dt>
           <dd className="text-sm leading-[21px]">{submission.phone}</dd>
         </div>
@@ -266,12 +273,29 @@ function EvidencePanel({
 
       <DecisionBanner submission={submission} now={now} />
 
-      <h3 className="text-base font-semibold leading-6">Submitted documents</h3>
-      {submission.documents.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-line px-3 py-4 text-sm text-muted">
-          No documents were uploaded with this application.
-        </p>
+      {submission.previousRejections?.length && submission.status === "pending" ? (
+        <div className="flex items-start gap-[10px] rounded-lg bg-warn-bg p-3 text-xs leading-[18px] text-warn-fg">
+          <Icon name="alert" className="mt-px size-[18px]" />
+          <div className="flex flex-col gap-1">
+            <p className="font-semibold">
+              This email was rejected before ({submission.previousRejections.length}×). Check that the earlier issue is fixed.
+            </p>
+            {submission.previousRejections.slice(0, 3).map((item) => (
+              <p key={item.rejectedAt}>
+                {formatDateTime(item.rejectedAt)} — {item.reason}
+              </p>
+            ))}
+          </div>
+        </div>
       ) : null}
+
+      {submission.archived ? (
+        <p className="rounded-lg bg-mist p-3 text-xs leading-[18px] text-muted">
+          This is a permanent rejection record. The submitted documents, images and login were deleted when the account was rejected, so the applicant can register again.
+        </p>
+      ) : (
+        <SubmittedDocuments key={submission.id} documents={submission.documents} />
+      )}
 
       {submission.status === "pending" ? (
         <>
@@ -303,9 +327,11 @@ function EvidencePanel({
             </AdminButton>
           </>
         ) : null}
-        <AdminButton variant="danger" onClick={onDelete}>
-          Delete
-        </AdminButton>
+        {submission.archived ? null : (
+          <AdminButton variant="danger" onClick={onDelete}>
+            Delete
+          </AdminButton>
+        )}
       </div>
     </Surface>
   );
@@ -336,7 +362,9 @@ function DecisionBanner({ submission, now }: { submission: Submission; now: numb
         </p>
       ) : (
         <p>
-          {statusLabels[status]} — {note.join(" ") || "Decision recorded."}
+          {status === "rejected" ? "Rejected" : status === "approved" || status === "suspended" ? "Approved" : statusLabels[status]}
+          {submission.decidedAt ? ` on ${formatDateTime(submission.decidedAt)}` : ""}
+          {status === "suspended" ? " (currently suspended)" : ""} — {note.join(" ") || "Decision recorded."}
         </p>
       )}
     </div>

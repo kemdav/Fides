@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useId, useMemo, useState } from "react";
 import {
   daysWaiting,
+  formatDecidedOn,
   formatWaiting,
   matchesQuery,
   sortSubmissions,
@@ -54,7 +55,7 @@ function QueueRow({
   href?: string;
 }) {
   const className = cn(
-    "flex h-16 w-full items-center gap-3 rounded-[10px] px-3 py-2 text-left",
+    "flex min-h-16 w-full items-center gap-3 rounded-[10px] px-3 py-2 text-left",
     "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40",
     selected ? "bg-selected" : "hover:bg-mist"
   );
@@ -65,9 +66,11 @@ function QueueRow({
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="truncate text-sm font-semibold leading-[21px]">{submission.business}</span>
-        <span className="truncate text-xs leading-[18px] text-muted">{submission.category}</span>
+        <span className="truncate text-xs leading-[18px] text-muted">
+          {submission.status === "pending" ? submission.category : `${submission.category} · ${submission.owner}`}
+        </span>
       </span>
-      <span className="flex shrink-0 flex-col items-center gap-1 sm:min-w-[100px]">
+      <span className="flex shrink-0 flex-col items-center gap-1 sm:min-w-[120px]">
         {submission.status === "pending" ? (
           <>
             <StatusPill tone="warning">
@@ -83,6 +86,11 @@ function QueueRow({
             {statusLabels[submission.status]}
           </StatusPill>
         )}
+        {submission.status !== "pending" && submission.decidedAt ? (
+          <span className="text-center text-xs leading-[18px] text-muted">
+            {submission.status === "suspended" ? "Approved" : statusLabels[submission.status]} {formatDecidedOn(submission)}
+          </span>
+        ) : null}
       </span>
     </>
   );
@@ -102,6 +110,11 @@ export function ReviewQueue({ title, submissions, selectedId, onSelect, hrefFor,
   const [tab, setTab] = useState<SubmissionStatus>("pending");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SubmissionSort>("oldest");
+  const switchTab = (next: SubmissionStatus) => {
+    setTab(next);
+    // Decided tabs read best newest-decision-first; pending keeps oldest-first.
+    setSort(next === "pending" ? "oldest" : "decided");
+  };
   const searchId = useId();
   const panelId = useId();
 
@@ -132,7 +145,7 @@ export function ReviewQueue({ title, submissions, selectedId, onSelect, hrefFor,
               role="tab"
               aria-selected={active}
               aria-controls={panelId}
-              onClick={() => setTab(item.status)}
+              onClick={() => switchTab(item.status)}
               className={cn(
                 "py-1.5 leading-[18px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40",
                 active ? "font-semibold text-burnt" : "text-muted hover:text-ink"
@@ -171,6 +184,7 @@ export function ReviewQueue({ title, submissions, selectedId, onSelect, hrefFor,
           options={[
             { value: "oldest", label: "Oldest first" },
             { value: "newest", label: "Newest first" },
+            { value: "decided", label: "Latest decision" },
           ]}
           className="w-full sm:w-[163px]"
         />

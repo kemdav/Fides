@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useId, useMemo, useRef, useState, type InputHTMLAttributes, type ReactNode } from "react";
-import { FILE_LIMITS } from "@/lib/registration/options";
+import { useMemo, type InputHTMLAttributes, type ReactNode } from "react";
+import { PasswordInput as BasePasswordInput } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { getObjectUrl, formatBytes } from "./controls";
+
+export { formatBytes };
 
 export const STEPS = [
   { title: "Account Creation", icon: "user" },
@@ -82,64 +85,74 @@ export function Sidebar({ current, onJump, furthest }: { current: number; furthe
     <aside className="relative hidden w-[300px] shrink-0 overflow-hidden bg-[#faecd3] lg:block xl:w-[354px]">
       <div aria-hidden className="absolute -left-20 -top-24 size-[340px] rounded-full bg-[#f6dcb9]/70" />
       <div aria-hidden className="absolute -bottom-20 -right-24 size-[300px] rounded-full bg-[#f6dcb9]/70" />
+      <div aria-hidden className="absolute left-[132px] top-[250px] size-[120px] rounded-full bg-[#f6dcb9]/50" />
       <div aria-hidden className="absolute right-12 top-24 size-9 rotate-[15deg] rounded-lg bg-[#f1d3ab]" />
       <div aria-hidden className="absolute bottom-40 right-16 size-10 rotate-[15deg] rounded-xl bg-[#f1d3ab]" />
-      <div className="sticky top-0 flex min-h-dvh flex-col gap-10 px-8 py-8 xl:px-9">
+      <div aria-hidden className="absolute left-5 top-[360px] size-2 rounded-full bg-[#f1b98a]" />
+      <div aria-hidden className="absolute right-14 top-[200px] size-1.5 rounded-full bg-[#f1b98a]" />
+      <div aria-hidden className="absolute bottom-16 left-16 size-1.5 rounded-full bg-[#f1b98a]" />
+      <div className="sticky top-0 flex h-dvh min-h-[640px] flex-col px-8 pb-8 pt-9 xl:px-10">
         <div>
           <Link href="/" className="font-display text-4xl leading-tight text-burnt">
             Fides
           </Link>
           <p className="text-xs text-burnt/90">Manage and grow your service business</p>
         </div>
-        <ol className="relative flex flex-col">
-          {STEPS.map((step, index) => {
-            const done = index < current;
-            const active = index === current;
-            const reachable = index <= furthest && !active;
-            return (
-              <li key={step.title} className="relative flex gap-4 pb-8 last:pb-0">
-                {index < STEPS.length - 1 ? (
-                  <span
-                    aria-hidden
-                    className={cn("absolute left-[19px] top-[42px] h-[calc(100%-42px)] w-0.5", done ? "bg-success" : active ? "bg-burnt/50" : "bg-[#dfd2c0]")}
-                  />
-                ) : null}
-                <button
-                  type="button"
-                  disabled={!reachable}
-                  onClick={() => onJump(index)}
-                  aria-current={active ? "step" : undefined}
-                  className="flex items-center gap-4 text-left disabled:cursor-default"
-                >
-                  <span
-                    className={cn(
-                      "flex size-10 shrink-0 items-center justify-center rounded-full border-2",
-                      done && "border-success bg-white text-success",
-                      active && "border-burnt bg-burnt text-white",
-                      !done && !active && "border-[#e3e6ee] bg-[#eceff6] text-muted"
-                    )}
+        <nav aria-label="Registration progress" className="mt-16">
+          <ol className="relative flex flex-col">
+            {STEPS.map((step, index) => {
+              const done = index < current;
+              const active = index === current;
+              const reachable = index <= furthest && !active;
+              const last = index === STEPS.length - 1;
+              return (
+                <li key={step.title} className={cn("relative", !last && "pb-[38px]")}>
+                  {!last ? (
+                    <span
+                      aria-hidden
+                      className={cn("absolute left-[18px] top-[46px] h-[22px] w-0.5 rounded-full", done ? "bg-success" : active ? "bg-burnt/40" : "bg-[#e1d6c6]")}
+                    />
+                  ) : null}
+                  <button
+                    type="button"
+                    disabled={!reachable}
+                    onClick={() => onJump(index)}
+                    aria-current={active ? "step" : undefined}
+                    className="flex items-center gap-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-default"
                   >
-                    <StepIcon name={step.icon} />
-                  </span>
-                  <span className="flex flex-col">
-                    <span className={cn("text-sm font-semibold", active ? "text-burnt" : "text-muted")}>{step.title}</span>
-                    <span className={cn("text-[11px]", done ? "flex items-center gap-1 text-success" : active ? "text-burnt/80" : "text-subtle")}>
-                      {done ? (
-                        <>
-                          <StepIcon name="check" className="size-3" /> Completed
-                        </>
-                      ) : active ? (
-                        `Step ${index + 1} · Active`
-                      ) : (
-                        `Step ${index + 1}`
+                    <span
+                      className={cn(
+                        "flex size-[38px] shrink-0 items-center justify-center rounded-full border-2",
+                        done && "border-success bg-white text-success",
+                        active && "border-burnt bg-burnt text-white shadow-[0_4px_10px_-2px_rgb(195_80_0/0.45)]",
+                        !done && !active && "border-[#e3e6ee] bg-[#eceff6] text-muted"
                       )}
+                    >
+                      <StepIcon name={step.icon} className="size-[18px]" />
                     </span>
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ol>
+                    <span className="flex flex-col gap-0.5">
+                      <span className={cn("text-sm leading-5", active ? "font-bold text-burnt" : "font-semibold text-muted")}>{step.title}</span>
+                      <span className={cn("text-[11px] leading-4", done ? "flex items-center gap-1 text-success" : active ? "text-burnt/80" : "text-subtle")}>
+                        {done ? (
+                          <>
+                            <svg viewBox="0 0 24 24" aria-hidden className="size-3.5">
+                              <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.2 14.2-4-4 1.4-1.4 2.6 2.6 5.6-5.6 1.4 1.4-7 7Z" fill="currentColor" />
+                            </svg>
+                            Completed
+                          </>
+                        ) : active ? (
+                          `Step ${index + 1} · Active`
+                        ) : (
+                          `Step ${index + 1}`
+                        )}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+        </nav>
       </div>
     </aside>
   );
@@ -173,6 +186,7 @@ export function Field({
   className,
   children,
   htmlFor,
+  caps = false,
 }: {
   label: string;
   error?: string;
@@ -180,19 +194,27 @@ export function Field({
   className?: string;
   children: ReactNode;
   htmlFor: string;
+  /** Small uppercase label style used on the Identity step in Figma. */
+  caps?: boolean;
 }) {
   return (
-    <div className={cn("flex min-w-0 flex-col gap-2", className)}>
-      <label htmlFor={htmlFor} className="text-sm font-semibold text-ink">
-        {label} <span className="text-danger">*</span>
+    <div className={cn("flex min-w-0 flex-col gap-1.5", className)}>
+      <label htmlFor={htmlFor} className={cn(caps ? "text-xs font-semibold uppercase tracking-wide text-body" : "text-sm font-semibold text-ink")}>
+        {label}
+        <span aria-hidden className="ml-0.5 text-danger">
+          *
+        </span>
+        <span className="sr-only"> (required)</span>
       </label>
       {children}
       {error ? (
-        <p role="alert" className="text-xs text-danger">
+        <p id={`${htmlFor}-error`} role="alert" className="text-xs text-danger">
           {error}
         </p>
       ) : hint ? (
-        <div className="text-xs text-subtle">{hint}</div>
+        <div id={`${htmlFor}-hint`} className="text-xs text-subtle">
+          {hint}
+        </div>
       ) : null}
     </div>
   );
@@ -200,7 +222,7 @@ export function Field({
 
 export const inputClass = (invalid: boolean) =>
   cn(
-    "h-12 w-full rounded-lg border bg-white px-4 text-base text-ink placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2",
+    "h-11 w-full rounded-md border bg-white px-3.5 text-sm text-ink placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2",
     invalid ? "border-danger focus-visible:ring-danger/30" : "border-outline/60 hover:border-outline focus-visible:border-burnt focus-visible:ring-burnt/30"
   );
 
@@ -216,32 +238,14 @@ export function TextInput({
 export function PasswordInput({
   id,
   invalid,
+  fieldLabel,
   ...props
-}: Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & { id: string; invalid: boolean }) {
-  const [show, setShow] = useState(false);
-  return (
-    <div className="relative">
-      <input id={id} type={show ? "text" : "password"} aria-invalid={invalid} className={cn(inputClass(invalid), "pr-20")} {...props} />
-      <button
-        type="button"
-        onClick={() => setShow((value) => !value)}
-        aria-pressed={show}
-        aria-label={show ? "Hide password" : "Show password"}
-        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-3 py-1.5 text-xs font-semibold text-burnt hover:bg-burnt/10"
-      >
-        {show ? "Hide" : "Show"}
-      </button>
-    </div>
-  );
-}
-
-export function formatBytes(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}: Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & { id: string; invalid: boolean; fieldLabel?: string }) {
+  return <BasePasswordInput id={id} aria-invalid={invalid} fieldLabel={fieldLabel} inputClassName={inputClass(invalid)} {...props} />;
 }
 
 export function useObjectUrl(file: File | null): string | null {
-  return useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
+  return useMemo(() => (file ? getObjectUrl(file) : null), [file]);
 }
 
 export function validateFile(file: File, types: readonly string[], limit: number, label: string): string | null {
@@ -250,83 +254,10 @@ export function validateFile(file: File, types: readonly string[], limit: number
   return null;
 }
 
-export function FilePicker({
-  file,
-  onChange,
-  label,
-  idleText,
-  compact = false,
-}: {
-  file: File | null;
-  onChange: (file: File | null) => void;
-  label: string;
-  idleText?: string;
-  compact?: boolean;
-}) {
-  const inputId = useId();
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [error, setError] = useState<string | null>(null);
-  const url = useObjectUrl(file);
-  const isImage = file?.type.startsWith("image/");
-
-  function pick(event: React.ChangeEvent<HTMLInputElement>) {
-    const next = event.target.files?.[0];
-    event.target.value = "";
-    if (!next) return;
-    const problem = validateFile(next, FILE_LIMITS.documentTypes, FILE_LIMITS.documentBytes, "The file");
-    setError(problem);
-    if (!problem) onChange(next);
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      <input id={inputId} ref={inputRef} type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" className="sr-only" onChange={pick} aria-label={label} />
-      {file ? (
-        <div className="flex items-center gap-3 rounded-lg bg-[#eceff6] px-3 py-2.5">
-          {isImage && url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={url} alt="" className="size-10 shrink-0 rounded-md object-cover" />
-          ) : (
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-wash text-success">
-              <StepIcon name="shield" className="size-5" />
-            </span>
-          )}
-          <div className="min-w-0 flex-1">
-            <a href={url ?? undefined} target="_blank" rel="noreferrer" className="block truncate text-sm font-semibold text-ink hover:underline">
-              {file.name}
-            </a>
-            <p className="text-xs text-success">Selected · {formatBytes(file.size)}</p>
-          </div>
-          <button type="button" onClick={() => onChange(null)} className="shrink-0 text-xs font-semibold text-burnt hover:underline">
-            Remove
-          </button>
-        </div>
-      ) : null}
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        className={cn(
-          "flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-outline/60 text-sm text-muted transition-colors hover:border-burnt hover:bg-burnt/5 hover:text-burnt",
-          compact ? "h-11 border-solid bg-white font-semibold" : "flex-col px-4 py-5"
-        )}
-      >
-        {compact ? <StepIcon name="upload" className="size-4" /> : null}
-        <span>{file ? "Upload a different file" : (idleText ?? "Upload File")}</span>
-        {!compact ? <span className="text-[11px] text-subtle">PDF, JPG or PNG · max 5 MB</span> : null}
-      </button>
-      {error ? (
-        <p role="alert" className="text-xs text-danger">
-          {error}
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
-export function InfoNote({ children }: { children: ReactNode }) {
+export function InfoNote({ children, icon = "info" }: { children: ReactNode; icon?: "info" | "shield" }) {
   return (
     <div className="flex items-start gap-3 rounded-lg bg-[#eef2ff] px-4 py-3 text-sm text-info">
-      <StepIcon name="info" className="mt-0.5 size-4 shrink-0" />
+      <StepIcon name={icon === "shield" ? "shield" : "info"} className="mt-0.5 size-4 shrink-0" />
       <p>{children}</p>
     </div>
   );

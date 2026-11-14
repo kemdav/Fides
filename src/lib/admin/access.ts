@@ -1,17 +1,18 @@
 import "server-only";
-import { notFound } from "next/navigation";
-import { getServerEnv } from "@/lib/env";
+import { redirect } from "next/navigation";
+import type { AdminAccount } from "./local-accounts";
+import { getAdminSession } from "./session";
 
-export function isAdminPortalOpen(): boolean {
-  return getServerEnv().ADMIN_PORTAL_PUBLIC_ACCESS;
+/** Admin pages: signed-in local admin required, otherwise back to the login page. */
+export async function requireAdminPortal(): Promise<AdminAccount> {
+  const session = await getAdminSession();
+  if (!session) redirect("/login");
+  return session;
 }
 
-export function requireAdminPortal(): void {
-  if (!isAdminPortalOpen()) notFound();
-}
-
-export function assertAdminAction(): void {
-  if (!isAdminPortalOpen()) {
-    throw new Error("The admin portal is not enabled.");
-  }
+/** Admin server actions: refuse to run without a valid admin session. */
+export async function assertAdminAction(): Promise<AdminAccount> {
+  const session = await getAdminSession();
+  if (!session) throw new Error("Your admin session has expired. Please log in again.");
+  return session;
 }

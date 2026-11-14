@@ -9,7 +9,7 @@ import { Icon } from "./icon";
 import { MetricCard } from "./metric-card";
 import { Checkbox, PageContent, PageHeading, StatusPill, Surface } from "./primitives";
 import { Select } from "./select";
-import { TenantsProvider, useTenants } from "./tenant-provider";
+import { TenantsProvider, useTenants, type PendingAccount } from "./tenant-provider";
 
 export type StatusFilter = "all" | "active" | "suspended" | "renewing";
 
@@ -21,7 +21,7 @@ const filterOptions: { value: StatusFilter; label: string }[] = [
 ];
 
 const rowGrid =
-  "md:grid-cols-[18px_minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,0.9fr)_88px] lg:grid-cols-[18px_40px_minmax(0,1.3fr)_minmax(0,1.1fr)_minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,0.9fr)_88px]";
+  "md:grid-cols-[18px_minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,0.9fr)_132px] lg:grid-cols-[18px_40px_minmax(0,1.3fr)_minmax(0,1.1fr)_minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,0.9fr)_132px]";
 
 function matchesFilter(tenant: Tenant, filter: StatusFilter, now: number) {
   if (filter === "all") return true;
@@ -45,7 +45,7 @@ function StatusBadge({ tenant }: { tenant: Tenant }) {
 }
 
 function RowActions({ tenant }: { tenant: Tenant }) {
-  const { openTenant, sendReminders, now } = useTenants();
+  const { openTenant, openDelete, sendReminders, now } = useTenants();
   const due = isRenewingSoon(tenant, now);
   const iconButton =
     "flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40";
@@ -69,14 +69,23 @@ function RowActions({ tenant }: { tenant: Tenant }) {
       >
         <Icon name="more" weight="fill" className="size-6" />
       </button>
+      <button
+        type="button"
+        aria-label={`Delete ${tenant.name}`}
+        title="Delete account"
+        onClick={() => openDelete(tenant.id)}
+        className={cn(iconButton, "text-danger")}
+      >
+        <Icon name="trash" className="size-5" />
+      </button>
     </div>
   );
 }
 
 function MobileActions({ tenant }: { tenant: Tenant }) {
-  const { openTenant, sendReminders, now } = useTenants();
+  const { openTenant, openDelete, sendReminders, now } = useTenants();
   return (
-    <div className="grid grid-cols-2 gap-2 border-t border-hairline pt-3">
+    <div className="grid grid-cols-3 gap-2 border-t border-hairline pt-3">
       <AdminButton
         variant="outline"
         size="xs"
@@ -88,12 +97,15 @@ function MobileActions({ tenant }: { tenant: Tenant }) {
       <AdminButton variant="outline" size="xs" onClick={() => openTenant(tenant.id)}>
         Manage
       </AdminButton>
+      <AdminButton variant="danger" size="xs" onClick={() => openDelete(tenant.id)}>
+        Delete
+      </AdminButton>
     </div>
   );
 }
 
 function TenantsContent({ initialFilter }: { initialFilter: StatusFilter }) {
-  const { tenants, showResult, openBulkAccess, sendReminders, now } = useTenants();
+  const { tenants, pending, openPending, showResult, openBulkAccess, sendReminders, now } = useTenants();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<StatusFilter>(initialFilter);
   const [selected, setSelected] = useState<string[]>([]);
@@ -197,6 +209,39 @@ function TenantsContent({ initialFilter }: { initialFilter: StatusFilter }) {
           onClick={() => toggle("suspended")}
         />
       </div>
+
+      {pending.length > 0 ? (
+        <Surface className="flex flex-col gap-3">
+          <div className="flex items-center gap-2.5">
+            <Icon name="verified" className="size-[18px] text-glyph" />
+            <h2 className="text-base font-semibold leading-[23px] text-body">Pending approval</h2>
+            <span className="rounded-full bg-warn-bg px-2.5 py-1 text-[11px] font-semibold leading-4 text-warn-fg">{pending.length}</span>
+          </div>
+          <ul className="flex flex-col">
+            {pending.map((item) => (
+              <li key={item.id} className="flex flex-col gap-3 border-t border-hairline py-3 first:border-t-0 md:flex-row md:items-center md:justify-between">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold leading-5">{item.business}</p>
+                  <p className="truncate text-xs leading-[18px] text-muted">
+                    {item.owner} · {item.email} · {item.plan} · {item.reference}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <AdminButton size="xs" onClick={() => openPending("approve", item.id)}>
+                    Approve
+                  </AdminButton>
+                  <AdminButton variant="outline" size="xs" onClick={() => openPending("reject", item.id)}>
+                    Reject
+                  </AdminButton>
+                  <AdminButton variant="danger" size="xs" onClick={() => openPending("delete", item.id)}>
+                    Delete
+                  </AdminButton>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Surface>
+      ) : null}
 
       <Surface className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -391,18 +436,20 @@ function TenantsContent({ initialFilter }: { initialFilter: StatusFilter }) {
 export function TenantsScreen({
   initialFilter = "all",
   tenants,
+  pending = [],
   plans,
   now,
   mailConfigured,
 }: {
   initialFilter?: StatusFilter;
   tenants: Tenant[];
+  pending?: PendingAccount[];
   plans: PlanSummary[];
   now: number;
   mailConfigured: boolean;
 }) {
   return (
-    <TenantsProvider tenants={tenants} plans={plans} now={now} mailConfigured={mailConfigured}>
+    <TenantsProvider tenants={tenants} pending={pending} plans={plans} now={now} mailConfigured={mailConfigured}>
       <TenantsContent initialFilter={initialFilter} />
     </TenantsProvider>
   );

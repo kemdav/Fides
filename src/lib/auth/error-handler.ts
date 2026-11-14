@@ -4,6 +4,8 @@ export const AUTH_ERROR_MESSAGES = {
   PENDING: "Your application is still under review. You will be able to log in once an administrator approves it.",
   REJECTED: "Your application was not approved. Please contact Fides support for more information.",
   SUSPENDED: "This account is suspended. Please contact Fides support.",
+  EMAIL_NOT_CONFIRMED: "Please verify your email address first. Check your inbox for the confirmation link, then log in again.",
+  NOT_OWNER: "This sign-in is for business owners only. Staff and administrators cannot log in here.",
   NO_ACCOUNT: "No approved business account was found for this login.",
   EXPIRED_RESET_LINK: "This password reset link is invalid or has expired. Please request a new one.",
   DEFAULT_ERROR: "We could not sign you in. Please try again.",
@@ -15,6 +17,9 @@ export function mapAuthError(error: { code?: string; message?: string; status?: 
   const message = (error.message ?? "").toLowerCase();
   if (error.status === 429 || code.includes("rate_limit") || message.includes("rate limit")) {
     return AUTH_ERROR_MESSAGES.RATE_LIMITED;
+  }
+  if (code === "email_not_confirmed" || message.includes("email not confirmed")) {
+    return AUTH_ERROR_MESSAGES.EMAIL_NOT_CONFIRMED;
   }
   if (code === "invalid_credentials" || message.includes("invalid login credentials")) {
     return AUTH_ERROR_MESSAGES.INVALID_CREDENTIALS;

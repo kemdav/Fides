@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { createContext, useContext, useState, useTransition, type ReactNode } from "react";
-import { accessAction, deleteAction, planAction, remindAction, resendAction } from "@/app/(admin)/admin/actions";
+import { accessAction, approveAction, deleteAction, planAction, rejectAction, remindAction, resendAction } from "@/app/(admin)/admin/actions";
 import { isRenewingSoon, type PlanSummary, type Tenant, type TenantAccess } from "@/lib/admin/tenants";
 import { AdminModal } from "./admin-modal";
 import {
@@ -14,22 +14,30 @@ import {
   type BulkAccessMode,
   type TenantChange,
 } from "./tenant-dialogs";
-import { ResultDialog } from "./verification-dialogs";
+import { ApproveDialog, DeleteApplicationDialog, RejectDialog, ResultDialog } from "./verification-dialogs";
+
+export type PendingAccount = { id: string; business: string; owner: string; email: string; plan: string; reference: string; submittedAt: string };
 
 type DialogState =
   | { type: "tenant"; id: string }
   | { type: "suspend"; id: string }
   | { type: "delete"; id: string }
+  | { type: "pending-approve"; id: string }
+  | { type: "pending-reject"; id: string }
+  | { type: "pending-delete"; id: string }
   | { type: "schedule"; id: string; plan: string; access: TenantAccess }
   | { type: "bulk"; mode: BulkAccessMode; ids: string[]; onApplied?: () => void }
   | { type: "result"; title: string; message: string };
 
 type TenantsContextValue = {
   tenants: Tenant[];
+  pending: PendingAccount[];
   plans: PlanSummary[];
   now: number;
   mailConfigured: boolean;
   busy: boolean;
+  openDelete: (id: string) => void;
+  openPending: (action: "approve" | "reject" | "delete", id: string) => void;
   openTenant: (id: string) => void;
   openBulkAccess: (mode: BulkAccessMode, ids: string[], onApplied?: () => void) => void;
   sendReminders: (ids: string[]) => void;
@@ -46,12 +54,14 @@ export function useTenants() {
 
 export function TenantsProvider({
   tenants,
+  pending = [],
   plans,
   now,
   mailConfigured,
   children,
 }: {
   tenants: Tenant[];
+  pending?: PendingAccount[];
   plans: PlanSummary[];
   now: number;
   mailConfigured: boolean;
@@ -63,6 +73,8 @@ export function TenantsProvider({
 
   const close = () => setDialog(null);
   const tenantFor = (id: string) => tenants.find((tenant) => tenant.id === id);
+  const pendingFor = (id: string) => pending.find((item) => item.id === id);
+  const currentPending = dialog && dialog.type.startsWith("pending-") ? pendingFor((dialog as { id: string }).id) : undefined;
   const current = dialog && (dialog.type === "tenant" || dialog.type === "suspend" || dialog.type === "schedule" || dialog.type === "delete")
     ? tenantFor(dialog.id)
     : undefined;
@@ -106,10 +118,14 @@ export function TenantsProvider({
     <TenantsContext.Provider
       value={{
         tenants,
+        pending,
         plans,
         now,
         mailConfigured,
         busy,
+        openDelete: (id) => setDialog({ type: "delete", id }),
+        openPending: (action, id) =>
+          setDialog(action === "approve" ? { type: "pending-approve", id } : action === "reject" ? { type: "pending-reject", id } : { type: "pending-delete", id }),
         openTenant: (id) => setDialog({ type: "tenant", id }),
         openBulkAccess: (mode, ids, onApplied) => setDialog({ type: "bulk", mode, ids, onApplied }),
         sendReminders: (ids) => {
@@ -174,6 +190,33 @@ export function TenantsProvider({
             onConfirm={(reason) =>
               setAccess(dialog.ids, dialog.mode === "suspend" ? "suspended" : "active", reason, "Tenant changes saved", dialog.onApplied)
             }
+          />
+        ) : null}
+        {dialog?.type === "pending-approve" && currentPending ? (
+          <ApproveDialog
+            business={currentPending.business}
+            busy={busy}
+            onCancel={close}
+            onConfirm={() => startTransition(async () => report(await approveAction(currentPending.id), "Merchant approved"))}
+          />
+        ) : null}
+        {dialog?.type === "pending-reject" && currentPending ? (
+          <RejectDialog
+            business={currentPending.business}
+            email={currentPending.email}
+            busy={busy}
+            onCancel={close}
+            onConfirm={(reasons, custom) =>
+              startTransition(async () => report(await rejectAction(currentPending.id, reasons, custom), "Submission rejected"))
+            }
+          />
+        ) : null}
+        {dialog?.type === "pending-delete" && currentPending ? (
+          <DeleteApplicationDialog
+            business={currentPending.business}
+            busy={busy}
+            onCancel={close}
+            onConfirm={() => startTransition(async () => report(await deleteAction(currentPending.id), "Account deleted"))}
           />
         ) : null}
         {dialog?.type === "result" ? (

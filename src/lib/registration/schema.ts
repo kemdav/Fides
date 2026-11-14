@@ -20,6 +20,36 @@ export function isStrongPassword(value: string): boolean {
   return checks.length && checks.mixedCase && checks.unique;
 }
 
+const PHONE_FORMAT_MESSAGE =
+  "Enter a valid Philippine mobile number: 11 digits starting with 09 (e.g. 09171234567), or +63 followed by 10 digits.";
+
+/**
+ * Validates a Philippine mobile number.
+ * Accepted: 09XXXXXXXXX (exactly 11 digits) or +63 9XXXXXXXXX (country code + 10 digits).
+ * Spaces, dashes and parentheses are ignored. Letters are rejected.
+ */
+export function phoneProblem(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return "Phone number is required.";
+  if (/[a-z]/i.test(trimmed)) return "Phone number can only contain digits. Letters are not allowed.";
+  if (/[^\d\s()+-]/.test(trimmed)) return "Phone number can only contain digits, spaces, dashes and a leading +.";
+  const compact = trimmed.replace(/[\s()-]/g, "");
+  if (compact.includes("+") && !compact.startsWith("+")) return PHONE_FORMAT_MESSAGE;
+  if (compact.startsWith("+")) {
+    return /^\+639\d{9}$/.test(compact) ? null : PHONE_FORMAT_MESSAGE;
+  }
+  if (compact.length > 11) return "Phone number is too long. Use exactly 11 digits (e.g. 09171234567).";
+  if (compact.length < 11) return "Phone number is too short. Use exactly 11 digits (e.g. 09171234567).";
+  return /^09\d{9}$/.test(compact) ? null : PHONE_FORMAT_MESSAGE;
+}
+
+/** Canonical storage form: +639XXXXXXXXX */
+export function normalizePhone(value: string): string {
+  const compact = value.trim().replace(/[\s()-]/g, "");
+  if (compact.startsWith("+")) return compact;
+  return `+63${compact.slice(1)}`;
+}
+
 const text = (label: string, max = 120) =>
   z
     .string()
@@ -35,8 +65,11 @@ const base = z.object({
   phone: z
     .string()
     .trim()
-    .min(1, "Phone number is required.")
-    .regex(/^\+?[\d\s()-]{7,20}$/, "Enter a valid phone number."),
+    .superRefine((value, ctx) => {
+      const problem = phoneProblem(value);
+      if (problem) ctx.addIssue({ code: "custom", message: problem });
+    })
+    .transform((value) => (phoneProblem(value) ? value : normalizePhone(value))),
   password: z
     .string()
     .min(1, "Password is required.")

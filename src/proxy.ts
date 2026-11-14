@@ -15,7 +15,12 @@ export const config = {
   matcher: [
     /*
      * Run on every request except static assets and PWA files.
+     *
+     * `api/applications` is excluded on purpose: it receives the registration
+     * documents (up to 7 files x 5 MB). The proxy buffers request bodies and
+     * caps them at 10 MB by default, which would truncate those uploads. The
+     * route does not need a session or tenant header.
      */
-    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|offline.html|robots.txt|sitemap.xml|llms.txt|opengraph-image|icons/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|offline.html|robots.txt|sitemap.xml|llms.txt|opengraph-image|icons/|api/applications|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

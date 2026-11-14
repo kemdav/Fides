@@ -1,13 +1,15 @@
 import type { ReactNode } from "react";
 import { AdminNav } from "./admin-nav";
+import type { PendingSummary } from "@/lib/applications/service";
 import { AdminTopbar } from "./admin-topbar";
+import { NotificationBell } from "./notification-bell";
 
 type AdminIdentity = {
   name: string;
   role: string;
 };
 
-export function AdminShell({ identity, children }: { identity: AdminIdentity; children: ReactNode }) {
+export function AdminShell({ identity, pending, children }: { identity: AdminIdentity; pending: PendingSummary; children: ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col bg-powder text-ink lg:flex-row">
       <aside className="sticky top-0 hidden h-dvh w-[248px] shrink-0 flex-col gap-3 border-r border-line bg-white p-5 lg:flex">
@@ -24,9 +26,14 @@ export function AdminShell({ identity, children }: { identity: AdminIdentity; ch
         </div>
       </aside>
 
-      <AdminTopbar identity={identity} />
+      <AdminTopbar identity={identity} pending={pending} />
 
-      <div className="min-w-0 flex-1">{children}</div>
+      <div className="min-w-0 flex-1">
+        <div className="sticky top-0 z-40 hidden items-center justify-end gap-1 bg-powder px-6 py-2 lg:flex">
+          <NotificationBell pending={pending} poll />
+        </div>
+        {children}
+      </div>
     </div>
   );
 }
