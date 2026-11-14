@@ -54,19 +54,26 @@ export function MetricCard({
         {badge}
       </div>
       {miniChart ? (
-        <div className="mt-auto flex min-h-10 items-center gap-5">
-          <div className="flex h-10 items-end gap-1.5" aria-hidden>
-            {[20, 32, 40, 32, 54, 40, 32].map((height, index) => (
+        <div className="mt-auto flex min-h-8 items-center gap-2 sm:min-h-10 sm:gap-5">
+          <div className="flex h-8 shrink-0 items-end gap-1 sm:h-10 sm:gap-1.5" aria-hidden>
+            {[
+              "h-3 sm:h-4",
+              "h-5 sm:h-6",
+              "h-6 sm:h-8",
+              "h-5 sm:h-6",
+              "h-8 sm:h-10",
+              "h-6 sm:h-8",
+              "h-5 sm:h-6",
+            ].map((height, index) => (
               <span
                 key={`${height}-${index}`}
-                className={`w-3 rounded-[3px] ${index === 4 ? "bg-burnt" : "bg-sky"}`}
-                style={{ height }}
+                className={`w-1.5 rounded-[3px] sm:w-2 ${height} ${index === 4 ? "bg-burnt" : "bg-sky"}`}
               />
             ))}
           </div>
           <p
             className={cn(
-              "max-w-[150px] text-[13px] leading-[14px]",
+              "min-w-0 flex-1 text-[10px] leading-[13px] sm:text-[13px] sm:leading-[14px]",
               featured ? "text-white" : "text-muted",
             )}
           >

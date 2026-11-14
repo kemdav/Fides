@@ -345,12 +345,12 @@ export function OverviewView({
 
               {/* Bar Chart (QA #1: dynamic chart heights) */}
               <div className="pt-4">
-                <div className="h-60 w-full flex items-end justify-between gap-4 px-3 border-b border-hairline">
+                <div className="h-60 w-full flex items-end justify-between gap-0 px-0 border-b border-hairline sm:gap-4 sm:px-3">
                   {stats.map((item) => (
                     <div key={item.day} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end group">
-                      <div className="w-full flex items-end justify-center gap-1.5 h-52">
+                      <div className="w-full flex items-end justify-center gap-0 h-52 sm:gap-1.5">
                         <div
-                          className="w-7 bg-burnt rounded-t-sm transition-all duration-300 relative min-h-[4px]"
+                          className="w-4 bg-burnt rounded-t-sm transition-all duration-300 relative min-h-[4px] sm:w-7"
                           style={{ height: `${item.booked > 0 ? (item.booked / maxVal) * 100 : 4}%` }}
                         >
                           <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-semibold text-subtle">
@@ -358,7 +358,7 @@ export function OverviewView({
                           </span>
                         </div>
                         <div
-                          className="w-7 bg-sky rounded-t-sm transition-all duration-300 relative min-h-[4px]"
+                          className="w-4 bg-sky rounded-t-sm transition-all duration-300 relative min-h-[4px] sm:w-7"
                           style={{ height: `${item.completed > 0 ? (item.completed / maxVal) * 100 : 4}%` }}
                         >
                           <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-semibold text-subtle">
@@ -366,7 +366,7 @@ export function OverviewView({
                           </span>
                         </div>
                       </div>
-                      <span className="text-sm text-muted font-medium">{item.day}</span>
+                      <span className="text-[11px] text-muted font-medium sm:text-sm">{item.day}</span>
                     </div>
                   ))}
                 </div>
