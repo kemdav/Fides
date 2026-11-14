@@ -60,7 +60,7 @@ export const documentFieldName = (key: DocumentKey) => `doc_${key}`;
 export const DOCUMENT_BUCKET = "application-documents";
 
 export const FILE_LIMITS = {
-  documentBytes: 5 * 1024 * 1024,
+  documentBytes: 50 * 1024 * 1024,
   documentTypes: ["application/pdf", "image/jpeg", "image/png"],
   logoBytes: 2 * 1024 * 1024,
   logoTypes: ["image/jpeg", "image/png", "image/webp"],

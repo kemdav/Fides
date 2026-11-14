@@ -74,8 +74,12 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" data-scroll-behavior="smooth"
-      className={`${mulish.variable} ${ovo.variable} scroll-smooth`}>
+    <html
+      lang="en"
+      data-scroll-behavior="smooth"
+      className={`${mulish.variable} ${ovo.variable} scroll-smooth`}
+      suppressHydrationWarning
+    >
       <body className="min-h-dvh bg-white font-sans text-neutral-900 antialiased">
         {children}
         <Suspense fallback={null}>

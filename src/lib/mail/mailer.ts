@@ -149,32 +149,69 @@ async function sendWithEdgeFunction(message: MailMessage): Promise<MailResult> {
 
 /* -------------------------------------------------------------------- SMTP */
 
-let cachedTransporter: Transporter | null = null;
+let cachedTransporter: { key: string; transporter: Transporter } | null = null;
+
+/**
+ * The transporter is cached per configuration, so editing .env.local (host, user, app password)
+ * takes effect without a stale connection. Timeouts keep a dead connection from hanging a request,
+ * and IPv4 is forced because many networks resolve smtp.gmail.com to an unreachable IPv6 address,
+ * which made sends hang or fail silently.
+ */
+function getSmtpTransporter(): Transporter {
+  const env = getServerEnv();
+  const pass = env.SMTP_PASS?.replace(/\s+/g, "");
+  const key = [env.SMTP_HOST, env.SMTP_PORT, env.SMTP_SECURE, env.SMTP_USER, pass].join("|");
+  if (cachedTransporter?.key === key) return cachedTransporter.transporter;
+  const transporter = nodemailer.createTransport({
+    host: env.SMTP_HOST,
+    port: env.SMTP_PORT,
+    secure: env.SMTP_SECURE,
+    requireTLS: !env.SMTP_SECURE,
+    family: 4,
+    connectionTimeout: 15_000,
+    greetingTimeout: 15_000,
+    socketTimeout: 30_000,
+    // Google shows app passwords as "abcd efgh ijkl mnop"; the spaces are not part of the password.
+    auth: env.SMTP_USER ? { user: env.SMTP_USER, pass } : undefined,
+  } as Parameters<typeof nodemailer.createTransport>[0]);
+  cachedTransporter = { key, transporter };
+  return transporter;
+}
 
 async function sendWithSmtp(message: MailMessage): Promise<MailResult> {
   const env = getServerEnv();
   if (!env.SMTP_HOST || !env.MAIL_FROM_EMAIL) throw new MailNotConfiguredError();
-  cachedTransporter ??= nodemailer.createTransport({
-    host: env.SMTP_HOST,
-    port: env.SMTP_PORT,
-    secure: env.SMTP_SECURE,
-    // Google shows app passwords as "abcd efgh ijkl mnop"; the spaces are not part of the password.
-    auth: env.SMTP_USER ? { user: env.SMTP_USER, pass: env.SMTP_PASS?.replace(/\s+/g, "") } : undefined,
-  });
 
-  const info = await cachedTransporter.sendMail({
-    from: fromAddress("smtp"),
-    to: message.to,
-    subject: message.subject,
-    html: message.html,
-    text: message.text,
-    replyTo: message.replyTo,
-    attachments: message.attachments,
-  });
+  let info;
+  try {
+    info = await getSmtpTransporter().sendMail({
+      from: fromAddress("smtp"),
+      to: message.to,
+      subject: message.subject,
+      html: message.html,
+      text: message.text,
+      replyTo: message.replyTo,
+      attachments: message.attachments,
+    });
+  } catch (error) {
+    cachedTransporter = null; // drop a broken connection so the next send starts fresh
+    throw new Error(describeSmtpError(error));
+  }
   const accepted = (info.accepted ?? []).map((entry) => String(entry));
   const rejected = (info.rejected ?? []).map((entry) => String(entry));
   if (accepted.length === 0) throw new Error("The mail server did not accept the recipient address.");
   return { id: info.messageId ?? null, accepted, rejected };
+}
+
+function describeSmtpError(error: unknown): string {
+  const err = error as { code?: string; responseCode?: number; message?: string };
+  if (err?.code === "EAUTH" || err?.responseCode === 535) {
+    return "Gmail rejected the SMTP login. Create a new app password at myaccount.google.com/apppasswords and update SMTP_PASS in .env.local (2-Step Verification must be on).";
+  }
+  if (err?.code === "ETIMEDOUT" || err?.code === "ECONNECTION" || err?.code === "ESOCKET" || err?.code === "EDNS") {
+    return `Could not reach the mail server (${err.code}). Check the network/firewall allows outbound port 587 (or 465 with SMTP_SECURE=true).`;
+  }
+  return err?.message ?? "Unknown SMTP error.";
 }
 
 export async function sendMail(message: MailMessage): Promise<MailResult> {

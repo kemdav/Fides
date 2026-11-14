@@ -17,7 +17,7 @@ export const config = {
      * Run on every request except static assets and PWA files.
      *
      * `api/applications` is excluded on purpose: it receives the registration
-     * documents (up to 7 files x 5 MB). The proxy buffers request bodies and
+     * documents (up to 7 files x 50 MB). The proxy buffers request bodies and
      * caps them at 10 MB by default, which would truncate those uploads. The
      * route does not need a session or tenant header.
      */

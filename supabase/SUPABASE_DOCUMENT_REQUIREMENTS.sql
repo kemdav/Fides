@@ -8,7 +8,7 @@
 --   2. public.application_documents    one row per (application, document type),
 --                                      linked to the applicant (user_id) and to
 --                                      the file in Storage (storage_path)
---   3. storage bucket "application-documents"  (PRIVATE, 5 MB, PDF/JPG/PNG)
+--   3. storage bucket "application-documents"  (PRIVATE, 50 MB, PDF/JPG/PNG)
 --   4. Row Level Security + storage policies
 --   5. public.missing_required_documents(application_id)  helper
 --
@@ -115,7 +115,7 @@ begin
   ) then
     alter table public.application_documents
       add constraint application_documents_size_check
-      check (size_bytes is null or (size_bytes >= 0 and size_bytes <= 5242880)) not valid;
+      check (size_bytes is null or (size_bytes >= 0 and size_bytes <= 52428800)) not valid;
   end if;
 
   if not exists (
@@ -207,7 +207,7 @@ values (
   'application-documents',
   'application-documents',
   false,
-  5242880,
+  52428800,
   array['application/pdf', 'image/jpeg', 'image/png']
 )
 on conflict (id) do update
