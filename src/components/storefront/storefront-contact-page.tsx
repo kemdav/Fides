@@ -39,7 +39,7 @@ export function StorefrontContactPage({
 
   const [state, formAction, isPending] = useActionState(
     submitContactForm,
-    initialState
+    initialState,
   );
 
   function handleFormSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -64,8 +64,9 @@ export function StorefrontContactPage({
               <span className="block">A little more care.</span>
             </h1>
             <p className="mt-5 max-w-[565px] text-sm/6 text-muted sm:text-base/7">
-              Have a question about our services or your visit? Tell us what&apos;s
-              on your mind. We&apos;re here to help you find the care that feels right for you.
+              Have a question about our services or your visit? Tell us
+              what&apos;s on your mind. We&apos;re here to help you find the
+              care that feels right for you.
             </p>
           </div>
           <div className="relative aspect-[1.55/1] overflow-hidden rounded-lg">
@@ -180,7 +181,9 @@ export function StorefrontContactPage({
                   </ul>
                 )}
                 {topicError && (
-                  <p className="mt-1 text-sm text-burnt">Please choose a service or topic.</p>
+                  <p className="mt-1 text-sm text-burnt">
+                    Please choose a service or topic.
+                  </p>
                 )}
               </div>
               <label className="text-base/6 text-ink sm:col-span-2">
@@ -194,8 +197,8 @@ export function StorefrontContactPage({
                 />
               </label>
               <p className="text-sm/6 text-muted sm:col-span-2">
-                Please share only what&apos;s needed for your enquiry. Avoid including
-                sensitive personal or payment information.
+                Please share only what&apos;s needed for your enquiry. Avoid
+                including sensitive personal or payment information.
               </p>
               <div className="sm:col-span-2">
                 <button
@@ -228,23 +231,41 @@ export function StorefrontContactPage({
             {/* Dynamic tenant contact details card */}
             {(email || phone || address) && (
               <div className="mb-8 rounded-lg border border-[#e2e8f0] bg-powder/70 p-6">
-                <h3 className="font-display text-xl text-ink">Direct Details</h3>
+                <h3 className="font-display text-xl text-ink">
+                  Direct Details
+                </h3>
                 <div className="mt-4 space-y-3">
                   {email && (
                     <div>
-                      <span className="block text-xs font-bold uppercase tracking-wider text-burnt">Email</span>
-                      <a href={`mailto:${email}`} className="text-sm font-medium text-ink hover:underline">{email}</a>
+                      <span className="block text-xs font-bold uppercase tracking-wider text-burnt">
+                        Email
+                      </span>
+                      <a
+                        href={`mailto:${email}`}
+                        className="text-sm font-medium text-ink hover:underline"
+                      >
+                        {email}
+                      </a>
                     </div>
                   )}
                   {phone && (
                     <div>
-                      <span className="block text-xs font-bold uppercase tracking-wider text-burnt">Phone</span>
-                      <a href={`tel:${phone}`} className="text-sm font-medium text-ink hover:underline">{phone}</a>
+                      <span className="block text-xs font-bold uppercase tracking-wider text-burnt">
+                        Phone
+                      </span>
+                      <a
+                        href={`tel:${phone}`}
+                        className="text-sm font-medium text-ink hover:underline"
+                      >
+                        {phone}
+                      </a>
                     </div>
                   )}
                   {address && (
                     <div>
-                      <span className="block text-xs font-bold uppercase tracking-wider text-burnt">Location</span>
+                      <span className="block text-xs font-bold uppercase tracking-wider text-burnt">
+                        Location
+                      </span>
                       <p className="text-sm font-medium text-ink">{address}</p>
                     </div>
                   )}
@@ -252,17 +273,34 @@ export function StorefrontContactPage({
               </div>
             )}
 
-            <p className="text-xs font-bold uppercase tracking-wider text-burnt">A little guidance</p>
-            <h2 className="mt-3 font-display text-2xl text-ink">Not sure where to start?</h2>
-            <p className="mt-4">A few details can help us understand what you need.</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-burnt">
+              A little guidance
+            </p>
+            <h2 className="mt-3 font-display text-2xl text-ink">
+              Not sure where to start?
+            </h2>
+            <p className="mt-4">
+              A few details can help us understand what you need.
+            </p>
             {[
-              ["Finding the right service", "Share what you’re looking for or how you’d like to feel. We can help you explore your options."],
-              ["Questions about your visit", "Let us know which service you have in mind, along with any preferences or questions."],
-              ["An existing appointment", "Include the name used for your booking, the service, and your appointment details so we have the context."],
+              [
+                "Finding the right service",
+                "Share what you’re looking for or how you’d like to feel. We can help you explore your options.",
+              ],
+              [
+                "Questions about your visit",
+                "Let us know which service you have in mind, along with any preferences or questions.",
+              ],
+              [
+                "An existing appointment",
+                "Include the name used for your booking, the service, and your appointment details so we have the context.",
+              ],
             ].map(([title, description]) => (
               <div key={title} className="mt-6 border-t border-line pt-4">
                 <span className="block h-px w-10 bg-burnt" />
-                <h3 className="mt-3 text-base font-semibold text-ink">{title}</h3>
+                <h3 className="mt-3 text-base font-semibold text-ink">
+                  {title}
+                </h3>
                 <p className="mt-2">{description}</p>
               </div>
             ))}
@@ -273,7 +311,9 @@ export function StorefrontContactPage({
       <section className="bg-powder">
         <div className="mx-auto flex max-w-[1440px] flex-col gap-5 px-5 py-8 sm:px-8 sm:py-10 lg:flex-row lg:items-center lg:justify-between lg:px-[90px] lg:py-12">
           <div>
-            <h2 className="font-display text-3xl text-ink">Ready for a little time for yourself?</h2>
+            <h2 className="font-display text-3xl text-ink">
+              Ready for a little time for yourself?
+            </h2>
             <p className="mt-3 max-w-[560px] text-base/7 text-muted">
               No need to send an enquiry to book. Explore our services,
               <span className="block">
@@ -282,10 +322,19 @@ export function StorefrontContactPage({
             </p>
           </div>
           <div className="flex gap-3">
-            <a href={servicesHref} className={buttonClasses({ variant: "brand-outline", size: "lg" })}>
+            <a
+              href={servicesHref}
+              className={buttonClasses({
+                variant: "brand-outline",
+                size: "lg",
+              })}
+            >
               View Services
             </a>
-            <a href={servicesHref} className={buttonClasses({ variant: "brand", size: "lg" })}>
+            <a
+              href={servicesHref}
+              className={buttonClasses({ variant: "brand", size: "lg" })}
+            >
               Book An Appointment
             </a>
           </div>
