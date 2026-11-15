@@ -1,8 +1,7 @@
 -- ============================================================================
 -- Fides — Customer Inquiries Table & RLS Policies
--- Migration: 00012_inquiries.sql
 -- Purpose: Store customer messages sent via the public provider contact form
---          and restrict dashboard visibility to tenant members and platform admins.
+--          and restrict dashboard visibility to authorized tenant members.
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -46,43 +45,52 @@ CREATE POLICY inquiries_insert_public
     WITH CHECK (true);
 
 -- ----------------------------------------------------------------------------
--- 4. RLS Policy: Tenant Members & Platform Admin SELECT
--- Restricts viewing inquiries to members belonging to that tenant or platform admins.
+-- 4. RLS Policy: Tenant Members SELECT
+-- Restricts viewing inquiries to members belonging to that specific tenant.
 -- ----------------------------------------------------------------------------
 
-DROP POLICY IF EXISTS inquiries_select_tenant_member_or_admin ON public.inquiries;
-CREATE POLICY inquiries_select_tenant_member_or_admin
+DROP POLICY IF EXISTS inquiries_select_tenant_member ON public.inquiries;
+CREATE POLICY inquiries_select_tenant_member
     ON public.inquiries
     FOR SELECT
     TO authenticated
     USING (
-        public.is_platform_admin()
-        OR tenant_id = public.get_my_tenant_id()
-    );
-
--- Optional: Allow tenant owners/admins to update or delete inquiries (e.g. mark as resolved/archive)
-DROP POLICY IF EXISTS inquiries_modify_tenant_admin ON public.inquiries;
-CREATE POLICY inquiries_modify_tenant_admin
-    ON public.inquiries
-    FOR ALL
-    TO authenticated
-    USING (
-        public.is_platform_admin()
-        OR (
-            tenant_id = public.get_my_tenant_id()
-            AND public.current_profile_role() IN ('owner', 'admin')
-        )
-    )
-    WITH CHECK (
-        public.is_platform_admin()
-        OR (
-            tenant_id = public.get_my_tenant_id()
-            AND public.current_profile_role() IN ('owner', 'admin')
+        EXISTS (
+            SELECT 1 
+            FROM public.tenant_memberships 
+            WHERE tenant_memberships.tenant_id = inquiries.tenant_id 
+            AND tenant_memberships.profile_id = auth.uid()
         )
     );
 
 -- ----------------------------------------------------------------------------
--- 5. Privileges
+-- 5. RLS Policy: Tenant Members UPDATE/DELETE
+-- Allows tenant members to update or delete inquiries (e.g. mark as resolved)
+-- ----------------------------------------------------------------------------
+DROP POLICY IF EXISTS inquiries_modify_tenant_member ON public.inquiries;
+CREATE POLICY inquiries_modify_tenant_member
+    ON public.inquiries
+    FOR ALL
+    TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 
+            FROM public.tenant_memberships 
+            WHERE tenant_memberships.tenant_id = inquiries.tenant_id 
+            AND tenant_memberships.profile_id = auth.uid()
+        )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 
+            FROM public.tenant_memberships 
+            WHERE tenant_memberships.tenant_id = inquiries.tenant_id 
+            AND tenant_memberships.profile_id = auth.uid()
+        )
+    );
+
+-- ----------------------------------------------------------------------------
+-- 6. Privileges
 -- ----------------------------------------------------------------------------
 
 GRANT SELECT, INSERT ON public.inquiries TO anon, authenticated;

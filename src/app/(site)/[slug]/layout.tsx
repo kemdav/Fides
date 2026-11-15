@@ -1,7 +1,10 @@
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { getTenantBySlug } from "@/lib/supabase/queries";
-import { TenantProvider, type TenantContextValue } from "@/providers/tenant-provider";
+import {
+  TenantProvider,
+  type TenantContextValue,
+} from "@/providers/tenant-provider";
 
 interface TenantLayoutProps {
   children: ReactNode;
@@ -14,6 +17,8 @@ export default async function TenantLayout({
 }: TenantLayoutProps) {
   const { slug } = await params;
   const tenant = await getTenantBySlug(slug);
+
+  console.log("FETCHED TENANT:", tenant);
 
   // If the tenant does not exist or is not active, trigger 404
   if (!tenant || tenant.status !== "active") {
@@ -46,5 +51,7 @@ export default async function TenantLayout({
     show_opening_hours: tenant.show_opening_hours,
   };
 
-  return <TenantProvider tenant={tenantContextValue}>{children}</TenantProvider>;
+  return (
+    <TenantProvider tenant={tenantContextValue}>{children}</TenantProvider>
+  );
 }
