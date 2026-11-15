@@ -14,6 +14,7 @@ export { StorefrontAbout } from "./storefront-about";
 export type { StorefrontAboutProps } from "./storefront-about";
 
 export { StorefrontAboutPage } from "./storefront-about-page";
+export type { StorefrontAboutPageProps } from "./storefront-about-page";
 
 export { StorefrontFooter } from "./storefront-footer";
 export type { StorefrontFooterProps } from "./storefront-footer";
@@ -25,3 +26,4 @@ export { ServicesList } from "./services-list";
 export type { ServicesListProps } from "./services-list";
 
 export { StorefrontContactPage } from "./storefront-contact-page";
+export type { StorefrontContactPageProps } from "./storefront-contact-page";
