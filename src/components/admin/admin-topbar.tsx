@@ -2,7 +2,9 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import type { PendingSummary } from "@/lib/applications/service";
 import { AdminNav } from "./admin-nav";
+import { NotificationBell } from "./notification-bell";
 
 type AdminIdentity = {
   name: string;
@@ -39,7 +41,7 @@ function Identity({ identity }: { identity: AdminIdentity }) {
 const iconButton =
   "flex size-11 flex-col items-center justify-center gap-1.5 rounded-lg text-burnt transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40";
 
-export function AdminTopbar({ identity }: { identity: AdminIdentity }) {
+export function AdminTopbar({ identity, pending }: { identity: AdminIdentity; pending: PendingSummary }) {
   const [open, setOpen] = useState(false);
   const menuId = useId();
   const toggleRef = useRef<HTMLButtonElement>(null);
@@ -82,6 +84,8 @@ export function AdminTopbar({ identity }: { identity: AdminIdentity }) {
           <div className="hidden min-w-0 md:block">
             <Identity identity={identity} />
           </div>
+          <div className="ml-auto flex items-center gap-1 md:ml-0">
+            <NotificationBell pending={pending} />
           <button
             ref={toggleRef}
             type="button"
@@ -95,6 +99,7 @@ export function AdminTopbar({ identity }: { identity: AdminIdentity }) {
             <span className="h-0.5 w-6 rounded bg-current" />
             <span className="h-0.5 w-6 rounded bg-current" />
           </button>
+          </div>
         </div>
 
         <div className="hidden px-4 pb-2 sm:px-6 md:block">

@@ -7,7 +7,7 @@ export const plans: Plan[] = [
   {
     name: "Starter",
     price: "₱499",
-    billed: "₱499 billed yearly",
+    billed: "Billed monthly",
     description:
       "Get started with essential tools to manage your services and bookings. Ideal for new providers building their business.",
     features: [
@@ -33,10 +33,10 @@ export const plans: Plan[] = [
   {
     name: "Professional",
     price: "₱1,299",
-    billed: "₱499 billed yearly",
+    billed: "Billed monthly",
     description:
-      "Unlock poweful tools to grow your bookings and streamline your daily operations. Ideal for growing providers ready to expand their reach.",
-    includes: "(Includes all Basic Tier features, plus:)",
+      "Unlock powerful tools to grow your bookings and streamline your daily operations. Ideal for growing providers ready to expand their reach.",
+    includes: "(Includes all Starter features, plus:)",
     features: [
       "24/7 AI Booking Assistant",
       "Automated Email Reminders",
@@ -56,7 +56,7 @@ export const plans: Plan[] = [
   {
     name: "Business",
     price: "₱3,999",
-    billed: "₱499 billed yearly",
+    billed: "Billed monthly",
     description:
       "Take your business further with advanced tools for teams, locations, and operations. Ideal for established providers ready to scale.",
     includes: "(Includes all Professional Tier features, plus:)",
@@ -90,14 +90,14 @@ export function Pricing() {
           plan to support your next step.
         </SectionHeading>
 
-        <div className="mt-10 flex flex-col items-center gap-10 text-left sm:mt-[83px] lg:flex-row lg:items-start lg:justify-between lg:gap-10">
-          <Reveal from="up" className="w-full max-w-[391px] lg:mt-[83px]">
+        <div className="mt-10 flex flex-col items-center gap-10 text-left sm:mt-[83px] xl:flex-row xl:items-start xl:justify-between xl:gap-10">
+          <Reveal from="up" className="w-full max-w-[391px] xl:mt-[83px]">
             <PlanCard plan={starter} />
           </Reveal>
           <Reveal from="up" delay={140} className="w-full max-w-[422px]">
             <PlanCard plan={professional} />
           </Reveal>
-          <Reveal from="up" delay={280} className="w-full max-w-[393px] lg:mt-[83px]">
+          <Reveal from="up" delay={280} className="w-full max-w-[393px] xl:mt-[83px]">
             <PlanCard plan={business} />
           </Reveal>
         </div>

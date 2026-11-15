@@ -3,10 +3,11 @@
 import { useId, useState, type FormEvent } from "react";
 import {
   accessOptions,
-  planOptions,
+  formatPrice,
   REASON_MAX,
   REASON_MIN,
   validReason,
+  type PlanSummary,
   type Tenant,
   type TenantAccess,
 } from "@/lib/admin/tenants";
@@ -15,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { AdminButton } from "./admin-button";
 import { Icon } from "./icon";
 import { Select } from "./select";
+import { useTenants } from "./tenant-provider";
 import { ConfirmationCard, FormCard } from "./verification-dialogs";
 
 const selectLabel = "text-sm";
@@ -78,23 +80,34 @@ function ReasonField({
 
 export type TenantChange = { plan: string; access: TenantAccess; reason: string };
 
+function usePlanOptions(): { value: string; label: string; detail: string }[] {
+  const { plans } = useTenants();
+  return plans.map((plan: PlanSummary) => ({ value: plan.code, label: plan.name, detail: `${formatPrice(plan.price)}/month` }));
+}
+
 export function TenantDialog({
   tenant,
   onClose,
   onSuspend,
   onSave,
+  onResend,
+  onDelete,
 }: {
   tenant: Tenant;
   onClose: () => void;
   onSuspend: () => void;
   onSave: (change: TenantChange) => void;
+  onResend: () => void;
+  onDelete: () => void;
 }) {
-  const [plan, setPlan] = useState(tenant.plan);
+  const planOptions = usePlanOptions();
+  const { mailConfigured, busy } = useTenants();
+  const [plan, setPlan] = useState(tenant.planCode);
   const [access, setAccess] = useState<TenantAccess>(tenant.access);
   const [reason, setReason] = useState("");
   const [showError, setShowError] = useState(false);
   const reviewing = tenant.access === "suspended";
-  const changed = plan !== tenant.plan || access !== tenant.access;
+  const changed = plan !== tenant.planCode || access !== tenant.access;
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -116,12 +129,12 @@ export function TenantDialog({
           labelClassName={selectLabel}
           value={plan}
           onChange={setPlan}
-          options={[...planOptions]}
+          options={planOptions}
         />
         <Notice>
           {reviewing
-            ? `$${tenant.price}/month currently. Account access changes apply immediately.`
-            : `$${tenant.price}/month currently. Plan changes apply at the next renewal.`}
+            ? `${formatPrice(tenant.price)}/month currently. Account access changes apply immediately.`
+            : `${formatPrice(tenant.price)}/month currently. New pricing applies from the next billing date.`}
         </Notice>
         {reviewing ? (
           <>
@@ -135,6 +148,24 @@ export function TenantDialog({
             <ReasonField value={reason} onChange={setReason} showError={showError} />
           </>
         ) : null}
+        <div className="flex flex-wrap items-center gap-[10px] text-xs leading-[18px]">
+          <button
+            type="button"
+            onClick={onResend}
+            disabled={busy || !mailConfigured}
+            title={mailConfigured ? undefined : "Email delivery is not configured"}
+            className="rounded font-semibold text-burnt underline underline-offset-2 hover:text-burnt-dark disabled:text-glyph disabled:no-underline"
+          >
+            Resend approval email
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            className="rounded font-semibold text-danger underline underline-offset-2 hover:text-danger-dark"
+          >
+            Delete account
+          </button>
+        </div>
         <div className={cn("flex flex-wrap items-center gap-[10px]", reviewing ? "justify-end" : "justify-between")}>
           {reviewing ? (
             <AdminButton variant="outline" className="min-w-[100px]" onClick={onClose}>
@@ -259,6 +290,7 @@ export function SchedulePlanDialog({
   onCancel: () => void;
   onConfirm: (plan: string, reason: string) => void;
 }) {
+  const planOptions = usePlanOptions();
   const [plan, setPlan] = useState(initialPlan);
   const [reason, setReason] = useState("");
   const [showError, setShowError] = useState(false);
@@ -274,7 +306,7 @@ export function SchedulePlanDialog({
 
   return (
     <form onSubmit={submit} noValidate>
-      <ConfirmationCard icon="status-warning" title="Plan change at renewal">
+      <ConfirmationCard icon="status-warning" title="Change subscription plan">
         <p className="text-center text-sm leading-[21px] text-muted">
           {tenant.reference} · {tenant.email}
         </p>
@@ -283,19 +315,46 @@ export function SchedulePlanDialog({
           labelClassName={selectLabel}
           value={plan}
           onChange={setPlan}
-          options={[...planOptions]}
+          options={planOptions}
         />
         <ReasonField value={reason} onChange={setReason} showError={showError} autoFocus />
-        <Notice>New pricing starts at the next renewal. There is no immediate charge.</Notice>
+        <Notice>The new plan is recorded now and its pricing applies from the next billing date.</Notice>
         <div className="flex flex-wrap items-center justify-center gap-3">
           <AdminButton variant="outline" className="min-w-[100px]" onClick={onCancel}>
             Cancel
           </AdminButton>
           <AdminButton type="submit" className="min-w-[125px]">
-            Schedule Plan
+            Change Plan
           </AdminButton>
         </div>
       </ConfirmationCard>
     </form>
+  );
+}
+
+export function DeleteTenantDialog({
+  tenant,
+  onCancel,
+  onConfirm,
+}: {
+  tenant: Tenant;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const { busy } = useTenants();
+  return (
+    <ConfirmationCard icon="status-danger" title="Delete account?">
+      <p className="text-center text-sm leading-[21px] text-muted">
+        Permanently delete {tenant.name} and the login for {tenant.email}. All of its registration records will be removed. This cannot be undone.
+      </p>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <AdminButton variant="outline" className="min-w-[100px]" onClick={onCancel}>
+          Cancel
+        </AdminButton>
+        <AdminButton variant="danger" className="min-w-[147px]" onClick={onConfirm} disabled={busy} autoFocus>
+          Delete account
+        </AdminButton>
+      </div>
+    </ConfirmationCard>
   );
 }

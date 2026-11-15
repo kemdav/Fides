@@ -103,10 +103,10 @@ export function Header() {
               Contact Us
             </Link>
             <Link
-              href={landingLinks.signup}
+              href={landingLinks.login}
               className={buttonClasses({ variant: "brand", size: "cta" })}
             >
-              Sign up
+              Login
             </Link>
           </div>
         </div>
@@ -166,11 +166,11 @@ export function Header() {
               Contact Us
             </Link>
             <Link
-              href={landingLinks.signup}
+              href={landingLinks.login}
               onClick={() => setOpen(false)}
               className={buttonClasses({ variant: "brand", size: "cta" })}
             >
-              Sign up
+              Login
             </Link>
           </div>
         </div>

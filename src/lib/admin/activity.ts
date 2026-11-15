@@ -1,3 +1,5 @@
+import { DAY_MS } from "@/lib/billing";
+
 export type ActivityCategory = "verification" | "account" | "pricing";
 
 export type ActivityEvent = {
@@ -7,54 +9,11 @@ export type ActivityEvent = {
   actor: string;
   action: string;
   category: ActivityCategory;
-  daysAgo: number;
-  time: string;
+  createdAt: string;
   before: string;
   after: string;
   reason: string;
 };
-
-export const activityEvents: ActivityEvent[] = [
-  {
-    id: "olive-oak-approved",
-    title: "Olive & Oak Spa approved",
-    business: "Olive & Oak Spa",
-    actor: "Alex Laurent",
-    action: "Verification completed",
-    category: "verification",
-    daysAgo: 0,
-    time: "09:42",
-    before: "Pending",
-    after: "Approved",
-    reason: "Business registration and owner identity validated.",
-  },
-  {
-    id: "form-movement-changes",
-    title: "Form Movement needs updated documents",
-    business: "Form Movement",
-    actor: "Alex Laurent",
-    action: "Changes requested",
-    category: "verification",
-    daysAgo: 1,
-    time: "15:18",
-    before: "Pending",
-    after: "Changes requested",
-    reason: "Business permit was unreadable and the owner identification did not match the registration.",
-  },
-  {
-    id: "aura-suspended",
-    title: "Aura Skin Clinic suspended",
-    business: "Aura Skin Clinic",
-    actor: "Alex Laurent",
-    action: "Billing review",
-    category: "account",
-    daysAgo: 1,
-    time: "11:06",
-    before: "Active",
-    after: "Suspended",
-    reason: "Payment failed after repeated billing attempts.",
-  },
-];
 
 export const categoryOptions = [
   { value: "all", label: "All actions" },
@@ -73,33 +32,45 @@ export const dateOptions = [
 export type CategoryFilter = (typeof categoryOptions)[number]["value"];
 export type DateFilter = (typeof dateOptions)[number]["value"];
 
-export function formatEventTime(event: ActivityEvent): string {
-  const day = event.daysAgo === 0 ? "Today" : event.daysAgo === 1 ? "Yesterday" : `${event.daysAgo} days ago`;
-  return `${day}, ${event.time}`;
+function startOfDay(value: number): number {
+  const date = new Date(value);
+  date.setHours(0, 0, 0, 0);
+  return date.getTime();
+}
+
+export function daysAgo(event: ActivityEvent, now: number): number {
+  return Math.round((startOfDay(now) - startOfDay(Date.parse(event.createdAt))) / DAY_MS);
+}
+
+export function formatEventTime(event: ActivityEvent, now: number): string {
+  const ago = daysAgo(event, now);
+  const day = ago === 0 ? "Today" : ago === 1 ? "Yesterday" : `${ago} days ago`;
+  const time = new Date(event.createdAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+  return `${day}, ${time}`;
 }
 
 export function filterEvents(
   events: ActivityEvent[],
-  { query, category, date }: { query: string; category: CategoryFilter; date: DateFilter }
+  { query, category, date }: { query: string; category: CategoryFilter; date: DateFilter },
+  now: number
 ): ActivityEvent[] {
   const needle = query.trim().toLowerCase();
   return events.filter((event) => {
     if (category !== "all" && event.category !== category) return false;
-    if (date === "today" && event.daysAgo !== 0) return false;
-    if (date === "yesterday" && event.daysAgo !== 1) return false;
-    if (date === "week" && event.daysAgo > 7) return false;
+    const ago = daysAgo(event, now);
+    if (date === "today" && ago !== 0) return false;
+    if (date === "yesterday" && ago !== 1) return false;
+    if (date === "week" && ago > 7) return false;
     if (!needle) return true;
-    return [event.title, event.business, event.action, event.actor].some((value) =>
-      value.toLowerCase().includes(needle)
-    );
+    return [event.title, event.business, event.action, event.actor].some((value) => value.toLowerCase().includes(needle));
   });
 }
 
-export function eventsToCsv(events: ActivityEvent[]): string {
+export function eventsToCsv(events: ActivityEvent[], now: number): string {
   const escape = (value: string) => `"${value.replace(/"/g, '""')}"`;
   const header = ["Event", "Business", "Actor", "Action", "When", "Before", "After", "Reason"];
   const rows = events.map((event) =>
-    [event.title, event.business, event.actor, event.action, formatEventTime(event), event.before, event.after, event.reason]
+    [event.title, event.business, event.actor, event.action, formatEventTime(event, now), event.before, event.after, event.reason]
       .map(escape)
       .join(",")
   );

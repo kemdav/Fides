@@ -22,8 +22,11 @@ function normalizeEnvValue(
   const trimmed = value.trim();
   if (trimmed === "") return undefined;
 
-  // Unfilled placeholder, e.g. "<gemini-api-key>" or "<smtp-password>".
-  if (/^<.+>$/.test(trimmed)) return undefined;
+  // Unfilled placeholder, e.g. "<gemini-api-key>" or "https://<project-ref>.supabase.co".
+  if (/<[^<>]+>/.test(trimmed)) return undefined;
+
+  // Unfilled Resend placeholder from the setup guide: re_xxxxxxxxx
+  if (key === "RESEND_API_KEY" && /^re_x+$/i.test(trimmed)) return undefined;
 
   // Reserved example domains, e.g. "smtp.example.com".
   if (key.endsWith("_HOST") && /(^|\.)example\.(com|org|net)$/i.test(trimmed)) {
@@ -82,65 +85,67 @@ export const publicEnv = {
     ) ?? "localhost:3000",
 } as const;
 
-/** Coerces `undefined` / `""` / numeric strings into a positive integer. */
-const coercePositiveInt = (fallback: number) =>
-  z
-    .unknown()
-    .transform((value) => {
-      if (value === undefined || value === null || value === "") return fallback;
-      const parsed = typeof value === "number" ? value : Number(value);
-      return Number.isFinite(parsed) ? parsed : fallback;
-    })
-    .pipe(z.number().int().positive());
+const toPositiveInt = (value: string | undefined, fallback: number): number => {
+  if (value === undefined) return fallback;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+};
 
-/** Coerces common truthy strings ("true", "1") into a boolean. */
-const coerceBoolean = (fallback: boolean) =>
-  z.unknown().transform((value) => {
-    if (value === undefined || value === null || value === "") return fallback;
-    return value === true || value === "true" || value === "1";
-  });
+const toBoolean = (value: string | undefined, fallback: boolean): boolean => {
+  if (value === undefined) return fallback;
+  return value === "true" || value === "1";
+};
 
-const serverEnvSchema = z.object({
-  // Secrets whose presence is validated by the integration that needs them.
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
-  SUPABASE_JWT_SECRET: z.string().min(1).optional(),
-  GEMINI_API_KEY: z.string().min(1).optional(),
-
-  // Gemini configuration.
-  GEMINI_MODEL: z.string().min(1).default("gemini-2.0-flash"),
-  AI_CONCIERGE_TIMEOUT_MS: coercePositiveInt(3000),
-
-  // SMTP configuration.
-  SMTP_HOST: z.string().min(1).optional(),
-  SMTP_PORT: coercePositiveInt(587),
-  SMTP_SECURE: coerceBoolean(false),
-  SMTP_USER: z.string().min(1).optional(),
-  SMTP_PASS: z.string().min(1).optional(),
-  MAIL_FROM_NAME: z.string().min(1).default("Fides"),
-  MAIL_FROM_EMAIL: z.string().min(1).optional(),
-});
+const serverEnvSchema = z
+  .object({
+    SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
+    SUPABASE_SECRET_KEY: z.string().min(1).optional(),
+    SUPABASE_JWT_SECRET: z.string().min(1).optional(),
+    ADMIN_PORTAL_PUBLIC_ACCESS: z.string().optional(),
+    GEMINI_API_KEY: z.string().min(1).optional(),
+    GEMINI_MODEL: z.string().min(1).default("gemini-2.0-flash"),
+    AI_CONCIERGE_TIMEOUT_MS: z.string().optional(),
+    // Email delivery. Resend is the default transport when RESEND_API_KEY is set.
+    RESEND_API_KEY: z.string().min(1).optional(),
+    MAIL_TRANSPORT: z.enum(["resend", "edge", "smtp"]).optional(),
+    FIDES_EMAIL_FUNCTION_SECRET: z.string().min(16).optional(),
+    PASSWORD_RESET_SECRET: z.string().min(16).optional(),
+    SMTP_HOST: z.string().min(1).optional(),
+    SMTP_PORT: z.string().optional(),
+    SMTP_SECURE: z.string().optional(),
+    SMTP_USER: z.string().min(1).optional(),
+    SMTP_PASS: z.string().min(1).optional(),
+    MAIL_FROM_NAME: z.string().min(1).default("Fides"),
+    MAIL_FROM_EMAIL: z.string().min(1).optional(),
+    // Sandbox helper: while MAIL_FROM_EMAIL is Resend's test sender (or unset), every email is
+    // redirected to this address (your own Resend account email) so the flows can be tested
+    // end to end before a domain is verified. Ignored once a real sender is configured.
+    MAIL_TEST_RECIPIENT: z.string().email().optional(),
+  })
+  .transform((env) => ({
+    ...env,
+    ADMIN_PORTAL_PUBLIC_ACCESS: toBoolean(env.ADMIN_PORTAL_PUBLIC_ACCESS, false),
+    AI_CONCIERGE_TIMEOUT_MS: toPositiveInt(env.AI_CONCIERGE_TIMEOUT_MS, 3000),
+    SMTP_PORT: toPositiveInt(env.SMTP_PORT, 587),
+    SMTP_SECURE: toBoolean(env.SMTP_SECURE, false),
+  }));
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
 
 let cachedServerEnv: ServerEnv | null = null;
 
-/**
- * Parses and caches server-only environment variables. Called lazily by server
- * integrations (AI, mailer, admin client) so it is never evaluated during the
- * client bundle or a plain type-check.
- */
 export function getServerEnv(): ServerEnv {
-  cachedServerEnv ??= serverEnvSchema.parse(normalizeEnv(process.env));
-  return cachedServerEnv;
+  if (process.env.NODE_ENV === "production") {
+    cachedServerEnv ??= serverEnvSchema.parse(normalizeEnv(process.env));
+    return cachedServerEnv;
+  }
+  return serverEnvSchema.parse(normalizeEnv(process.env));
 }
 
-/** Reads a required server env var, throwing a descriptive error when absent. */
 export function requireServerEnv(key: keyof ServerEnv): string {
   const value = getServerEnv()[key];
   if (value === undefined || value === "") {
-    throw new Error(
-      `Missing required server environment variable: ${key}. See .env.example.`
-    );
+    throw new Error(`Missing required server environment variable: ${key}. See .env.example.`);
   }
   return String(value);
 }

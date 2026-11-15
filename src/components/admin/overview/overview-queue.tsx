@@ -1,13 +1,14 @@
 "use client";
 
-import { sampleSubmissions } from "@/lib/admin/verification";
+import type { Submission } from "@/lib/admin/verification";
 import { ReviewQueue } from "../review-queue";
 
-export function OverviewQueue() {
+export function OverviewQueue({ submissions, now }: { submissions: Submission[]; now: number }) {
   return (
     <ReviewQueue
       title="Verification queue"
-      submissions={sampleSubmissions}
+      submissions={submissions}
+      now={now}
       hrefFor={(submission) => `/admin/verification?submission=${submission.id}`}
     />
   );

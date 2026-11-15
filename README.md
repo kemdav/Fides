@@ -106,3 +106,22 @@ Feature development: onboarding & verification, availability engine, booking and
 walk-in flows, calendar, AI concierge prompts, notifications, reporting/BIR
 exports, and Figma token mapping.
 
+
+## Email setup (Resend + Supabase)
+
+The app sends three emails through [Resend](https://resend.com): **account request submitted**, **account approved**
+(with a login link) and the **forgot-password code** (4 characters, valid 10 minutes).
+
+1. Create an API key in Resend (key name `FIDES-Development`) and put it in `.env.local` as `RESEND_API_KEY`
+   (see `.env.example`). Never commit it.
+2. Set `MAIL_FROM_EMAIL`. `onboarding@resend.dev` is a test sender that only delivers to your own Resend account
+   email. To email real applicants, verify a domain at <https://resend.com/domains> and use an address on it.
+3. Set `NEXT_PUBLIC_SITE_URL` to the public URL: the "log in" link in the approval email is built from it.
+4. Run `supabase/migrations/00013_password_reset_codes.sql` in the Supabase SQL Editor (forgot-password codes).
+5. Check delivery: `npm run email:test` (sends to Resend's `delivered@resend.dev`) or `npm run email:test -- you@example.com`.
+6. Optional Edge Function (`supabase/functions/send-fides-email`): set `MAIL_TRANSPORT=edge` and
+   `FIDES_EMAIL_FUNCTION_SECRET`, then
+   `npx supabase secrets set RESEND_API_KEY=... FIDES_EMAIL_FUNCTION_SECRET=... MAIL_FROM_EMAIL=...` and
+   `npx supabase functions deploy send-fides-email --no-verify-jwt`.
+7. Supabase Auth emails (confirm / invite / reset / magic link): paste the templates from
+   `supabase/email-templates/README.md` and, to send them via Resend, configure custom SMTP as described there.

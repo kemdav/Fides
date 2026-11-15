@@ -1,100 +1,28 @@
-/**
- * Standard user-facing error messages for authentication and multi-tenant routing.
- */
 export const AUTH_ERROR_MESSAGES = {
   INVALID_CREDENTIALS: "Invalid email or password.",
-  DUPLICATE_REGISTRATION: "An account with this email already exists. Log in instead.",
-  UNVERIFIED_EMAIL: "Please check your inbox to verify your email address before signing in.",
   RATE_LIMITED: "Too many login attempts. Please wait a few minutes before trying again.",
-  EXPIRED_RESET_LINK: "Your password reset link has expired or is invalid. Please request a fresh link.",
-  TENANT_MISMATCH: "You do not have access to this business dashboard.",
-  SUSPENDED_BUSINESS: "This business account is temporarily suspended. Please contact platform support.",
-  UNAUTHORIZED_ROLE: "Access Denied: You do not have permission to view this page.",
-  DEFAULT_ERROR: "An authentication error occurred. Please try again.",
+  PENDING: "Your application is still under review. You will be able to log in once an administrator approves it.",
+  REJECTED: "Your application was not approved. Please contact Fides support for more information.",
+  SUSPENDED: "This account is suspended. Please contact Fides support.",
+  EMAIL_NOT_CONFIRMED: "Please verify your email address first. Check your inbox for the confirmation link, then log in again.",
+  NOT_OWNER: "This sign-in is for business owners only. Staff and administrators cannot log in here.",
+  NO_ACCOUNT: "No approved business account was found for this login.",
+  EXPIRED_RESET_LINK: "This password reset link is invalid or has expired. Please request a new one.",
+  DEFAULT_ERROR: "We could not sign you in. Please try again.",
 } as const;
 
-export interface SupabaseAuthErrorLike {
-  code?: string;
-  message?: string;
-  status?: number;
-  name?: string;
-}
-
-/**
- * Maps Supabase Auth error objects, HTTP status codes, or error strings
- * to user-friendly, security-hardened messages.
- */
-export function mapAuthError(error: unknown): string {
-  if (!error) {
-    return AUTH_ERROR_MESSAGES.DEFAULT_ERROR;
-  }
-
-  const err = (typeof error === "string" ? { message: error } : error) as SupabaseAuthErrorLike;
-  const code = (err.code || "").toLowerCase();
-  const message = (err.message || "").toLowerCase();
-  const status = err.status;
-
-  // Rate Limiting: HTTP 429 or Supabase rate-limit error codes
-  if (
-    status === 429 ||
-    code === "over_request_rate_limit" ||
-    code === "over_email_send_rate_limit" ||
-    message.includes("rate limit") ||
-    message.includes("too many requests")
-  ) {
+export function mapAuthError(error: { code?: string; message?: string; status?: number } | null | undefined): string {
+  if (!error) return AUTH_ERROR_MESSAGES.DEFAULT_ERROR;
+  const code = (error.code ?? "").toLowerCase();
+  const message = (error.message ?? "").toLowerCase();
+  if (error.status === 429 || code.includes("rate_limit") || message.includes("rate limit")) {
     return AUTH_ERROR_MESSAGES.RATE_LIMITED;
   }
-
-  // Invalid Credentials: map invalid_grant / invalid_credentials to generic message
-  if (
-    code === "invalid_credentials" ||
-    code === "invalid_grant" ||
-    message.includes("invalid login credentials") ||
-    message.includes("invalid_grant") ||
-    message.includes("invalid email or password")
-  ) {
+  if (code === "email_not_confirmed" || message.includes("email not confirmed")) {
+    return AUTH_ERROR_MESSAGES.EMAIL_NOT_CONFIRMED;
+  }
+  if (code === "invalid_credentials" || message.includes("invalid login credentials")) {
     return AUTH_ERROR_MESSAGES.INVALID_CREDENTIALS;
   }
-
-  // Unconfirmed / Unverified Email
-  if (
-    code === "email_not_confirmed" ||
-    message.includes("email not confirmed") ||
-    message.includes("email address is not verified")
-  ) {
-    return AUTH_ERROR_MESSAGES.UNVERIFIED_EMAIL;
-  }
-
-  // Duplicate Registration: existing email signup
-  if (
-    code === "user_already_exists" ||
-    message.includes("user already registered") ||
-    message.includes("already registered") ||
-    message.includes("an account with this email already exists")
-  ) {
-    return AUTH_ERROR_MESSAGES.DUPLICATE_REGISTRATION;
-  }
-
-  // Expired or Malformed Password Reset Link / OTP
-  if (
-    code === "otp_expired" ||
-    code === "bad_jwt" ||
-    code === "token_expired" ||
-    message.includes("token has expired") ||
-    message.includes("link is invalid or has expired") ||
-    message.includes("otp expired")
-  ) {
-    return AUTH_ERROR_MESSAGES.EXPIRED_RESET_LINK;
-  }
-
-  // Multi-tenant specific codes
-  if (code === "tenant_mismatch" || message.includes("no access to this business dashboard")) {
-    return AUTH_ERROR_MESSAGES.TENANT_MISMATCH;
-  }
-
-  if (code === "tenant_suspended" || message.includes("temporarily suspended")) {
-    return AUTH_ERROR_MESSAGES.SUSPENDED_BUSINESS;
-  }
-
-  return err.message || AUTH_ERROR_MESSAGES.DEFAULT_ERROR;
+  return AUTH_ERROR_MESSAGES.DEFAULT_ERROR;
 }

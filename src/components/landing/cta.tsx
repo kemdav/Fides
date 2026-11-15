@@ -22,9 +22,12 @@ export function Cta() {
           </SectionHeading>
           <Link
             href={landingLinks.signup}
-            className={buttonClasses({ variant: "brand", size: "cta", className: "mt-8 lg:mt-10" })}
+            className={buttonClasses({ variant: "brand", size: "cta", className: "group mt-8 shadow-[0_10px_24px_-8px_rgb(195_80_0/0.65)] ring-4 ring-burnt/20 hover:-translate-y-0.5 lg:mt-10" })}
           >
             Create an Account
+            <svg viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="size-5 transition-transform duration-300 group-hover:translate-x-1">
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
           </Link>
         </Reveal>
 

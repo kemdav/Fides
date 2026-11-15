@@ -2,7 +2,6 @@
 
 import { useId, useMemo, useState } from "react";
 import {
-  activityEvents,
   categoryOptions,
   dateOptions,
   eventsToCsv,
@@ -24,7 +23,7 @@ type DialogState = { type: "event"; event: ActivityEvent } | { type: "exported" 
 
 const filterLabel = "text-xs font-semibold leading-[18px]";
 
-export function ActivityLog() {
+export function ActivityLog({ events: allEvents, now }: { events: ActivityEvent[]; now: number }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<CategoryFilter>("all");
   const [date, setDate] = useState<DateFilter>("all");
@@ -32,12 +31,12 @@ export function ActivityLog() {
   const searchId = useId();
 
   const events = useMemo(
-    () => filterEvents(activityEvents, { query, category, date }),
-    [query, category, date]
+    () => filterEvents(allEvents, { query, category, date }, now),
+    [allEvents, query, category, date, now]
   );
 
   function exportLog() {
-    const blob = new Blob([eventsToCsv(events)], { type: "text/csv;charset=utf-8" });
+    const blob = new Blob([eventsToCsv(events, now)], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -109,7 +108,7 @@ export function ActivityLog() {
         </div>
         {events.length === 0 ? (
           <p role="status" className="py-6 text-sm text-muted">
-            No activity matches your filters.
+            {allEvents.length === 0 ? "No activity has been recorded yet." : "No activity matches your filters."}
           </p>
         ) : (
           <ul className="flex flex-col gap-1">
@@ -126,7 +125,7 @@ export function ActivityLog() {
                     <span className="text-sm leading-[21px] text-muted">
                       {event.actor} · {event.action}
                     </span>
-                    <span className="text-xs leading-[18px] text-muted">{formatEventTime(event)}</span>
+                    <span className="text-xs leading-[18px] text-muted">{formatEventTime(event, now)}</span>
                   </span>
                 </button>
               </li>
@@ -136,7 +135,7 @@ export function ActivityLog() {
       </Surface>
 
       <AdminModal open={dialog !== null} onClose={close}>
-        {dialog?.type === "event" ? <ActivityDetailsDialog event={dialog.event} onClose={close} /> : null}
+        {dialog?.type === "event" ? <ActivityDetailsDialog event={dialog.event} now={now} onClose={close} /> : null}
         {dialog?.type === "exported" ? (
           <ResultDialog
             title="Export requested"

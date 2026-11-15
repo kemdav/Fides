@@ -7,8 +7,7 @@ const privatePaths = [
   "/api/",
   "/auth/",
   "/login",
-  "/reset-password",
-  "/reset-request",
+  "/register",
 ];
 
 const aiCrawlers = [

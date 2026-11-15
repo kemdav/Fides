@@ -25,7 +25,7 @@ export function PlanCard({ plan }: { plan: Plan }) {
   const card = (
     <article
       className={cn(
-        "group relative flex w-full max-w-[391px] flex-col px-[35px] pb-[51px] pt-10 lg:min-h-[927px]",
+        "group relative flex w-full max-w-[391px] flex-col px-[35px] pb-[51px] pt-10 xl:min-h-[927px]",
         featured
           ? "text-white"
           : "text-ink transition-[translate] duration-500 ease-out hover:-translate-y-2 motion-reduce:transition-none motion-reduce:hover:translate-y-0"

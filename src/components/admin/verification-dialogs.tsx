@@ -1,14 +1,7 @@
 "use client";
 
 import { useId, useState, type FormEvent, type ReactNode } from "react";
-import {
-  changeRequirements,
-  formatSubmittedOn,
-  REASON_MAX,
-  REASON_MIN,
-  type Submission,
-  type SubmissionDocument,
-} from "@/lib/admin/verification";
+import { CUSTOM_REASON_MAX, REJECTION_REASONS, composeRejectionReason } from "@/lib/admin/rejection";
 import { cn } from "@/lib/utils";
 import { AdminButton } from "./admin-button";
 import { Icon } from "./icon";
@@ -75,21 +68,23 @@ export function ApproveDialog({
   business,
   onCancel,
   onConfirm,
+  busy = false,
 }: {
   business: string;
   onCancel: () => void;
   onConfirm: () => void;
+  busy?: boolean;
 }) {
   return (
     <ConfirmationCard icon="status-info" title="Approve merchant?">
       <p className="text-center text-sm leading-[21px] text-muted">
-        Approving {business} activates their Business account. This decision will be recorded.
+        Approving {business} activates their Business account and sends an approval email with a login link. This decision will be recorded.
       </p>
       <div className="flex flex-wrap items-center justify-center gap-3">
         <AdminButton variant="outline" className="min-w-[100px]" onClick={onCancel}>
           Cancel
         </AdminButton>
-        <AdminButton onClick={onConfirm} className="min-w-[147px]" autoFocus>
+        <AdminButton onClick={onConfirm} disabled={busy} className="min-w-[147px]" autoFocus>
           Confirm approval
         </AdminButton>
       </div>
@@ -99,69 +94,103 @@ export function ApproveDialog({
 
 export function RejectDialog({
   business,
+  email,
   onCancel,
   onConfirm,
+  busy = false,
 }: {
   business: string;
+  email?: string;
   onCancel: () => void;
-  onConfirm: (reason: string) => void;
+  onConfirm: (reasons: string[], custom: string) => void;
+  busy?: boolean;
 }) {
-  const fieldId = useId();
+  const customId = useId();
   const errorId = useId();
-  const [reason, setReason] = useState("");
+  const [step, setStep] = useState<"choose" | "confirm">("choose");
+  const [reasons, setReasons] = useState<string[]>([]);
+  const [custom, setCustom] = useState("");
   const [showError, setShowError] = useState(false);
-  const trimmed = reason.trim();
-  const valid = trimmed.length >= REASON_MIN && trimmed.length <= REASON_MAX;
+  const summary = composeRejectionReason(reasons, custom);
+  const valid = summary.length > 0;
 
-  function submit(event: FormEvent) {
+  function toggle(reason: string) {
+    setReasons((current) => (current.includes(reason) ? current.filter((item) => item !== reason) : [...current, reason]));
+  }
+
+  function next(event: FormEvent) {
     event.preventDefault();
     if (!valid) {
       setShowError(true);
       return;
     }
-    onConfirm(trimmed);
+    setStep("confirm");
+  }
+
+  if (step === "confirm") {
+    return (
+      <ConfirmationCard icon="status-danger" title="Reject and remove this account?">
+        <p className="text-center text-sm leading-[21px] text-muted">
+          {business} will be emailed the reason below{email ? ` at ${email}` : ""}, with a link to create a new account. Their account, documents and images
+          will then be permanently deleted. This cannot be undone.
+        </p>
+        <p className="rounded-lg bg-danger-bg px-4 py-3 text-sm leading-[21px] text-danger-dark">
+          <span className="font-semibold">Reason: </span>
+          {summary}
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <AdminButton variant="outline" className="min-w-[100px]" onClick={() => setStep("choose")} disabled={busy}>
+            Back
+          </AdminButton>
+          <AdminButton variant="danger" className="min-w-[147px]" onClick={() => onConfirm(reasons, custom)} disabled={busy} autoFocus>
+            {busy ? "Rejecting…" : "Reject & send email"}
+          </AdminButton>
+        </div>
+      </ConfirmationCard>
+    );
   }
 
   return (
-    <form onSubmit={submit} noValidate>
+    <form onSubmit={next} noValidate>
       <ConfirmationCard icon="status-danger" title="Reject submission">
         <p className="text-center text-sm leading-[21px] text-muted">
-          Record why {business} cannot be approved. This closes the current submission.
+          Choose why {business} cannot be approved. The applicant is emailed the reason and can register again.
         </p>
-        <label htmlFor={fieldId} className="text-sm leading-5">
-          Rejection Reason<span className="text-danger">*</span>
+        <fieldset className="flex flex-col gap-2">
+          <legend className="mb-1 text-sm leading-5">
+            Rejection reasons<span className="text-danger">*</span>
+          </legend>
+          {REJECTION_REASONS.map((reason) => (
+            <Checkbox key={reason} checked={reasons.includes(reason)} onChange={() => toggle(reason)} label={reason} />
+          ))}
+        </fieldset>
+        <label htmlFor={customId} className="text-sm leading-5">
+          Custom reason <span className="text-muted">(optional if a reason is selected)</span>
         </label>
         <textarea
-          id={fieldId}
-          value={reason}
-          onChange={(event) => setReason(event.target.value)}
-          maxLength={REASON_MAX}
+          id={customId}
+          value={custom}
+          onChange={(event) => setCustom(event.target.value)}
+          maxLength={CUSTOM_REASON_MAX}
           rows={3}
-          autoFocus
           aria-invalid={showError && !valid}
           aria-describedby={errorId}
-          placeholder="Explain why this submission is rejected"
+          placeholder="Add details the applicant should know"
           className={cn(
             "w-full resize-y rounded-lg border bg-white px-4 py-3 text-base font-semibold leading-6 placeholder:font-semibold placeholder:text-ink/50",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 focus-visible:border-burnt",
             showError && !valid ? "border-danger" : "border-glyph"
           )}
         />
-        <p
-          id={errorId}
-          role={showError && !valid ? "alert" : undefined}
-          className={cn("text-center text-xs leading-[18px]", showError && !valid ? "text-danger" : "text-muted")}
-        >
-          {showError && !valid
-            ? `Enter a clear reason between ${REASON_MIN} and ${REASON_MAX} characters before recording the decision.`
-            : "Reason required · Stored with the decision"}
+        <p id={errorId} role={showError && !valid ? "alert" : undefined} className={cn("text-center text-xs leading-[18px]", showError && !valid ? "text-danger" : "text-muted")}>
+          {showError && !valid ? "Select at least one reason or write a custom reason." : "Included in the email · Stored in the activity log"}
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3">
           <AdminButton variant="outline" className="min-w-[100px]" onClick={onCancel}>
             Cancel
           </AdminButton>
           <AdminButton variant="danger" type="submit" className="min-w-[147px]">
-            Confirm Rejection
+            Continue
           </AdminButton>
         </div>
       </ConfirmationCard>
@@ -169,135 +198,51 @@ export function RejectDialog({
   );
 }
 
-export function RequestChangesDialog({
-  submission,
-  onClose,
-  onSend,
-}: {
-  submission: Submission;
-  onClose: () => void;
-  onSend: (requirementIds: string[]) => void;
-}) {
-  const errorId = useId();
-  const [selected, setSelected] = useState<string[]>([]);
-  const [showError, setShowError] = useState(false);
-
-  const chosen = changeRequirements.filter((item) => selected.includes(item.id));
-  const message = chosen.length
-    ? [
-        `Hello ${submission.owner},`,
-        `We reviewed the verification submission for ${submission.business} and need the following updates:`,
-        chosen.map((item) => `• ${item.message}`).join("\n"),
-        "Your account remains pending until the updated documents are received.",
-      ].join("\n\n")
-    : "Select the requirements that need updating.";
-
-  function toggle(id: string, checked: boolean) {
-    setSelected((current) => (checked ? [...current, id] : current.filter((item) => item !== id)));
-    setShowError(false);
-  }
-
-  function submit(event: FormEvent) {
-    event.preventDefault();
-    if (!selected.length) {
-      setShowError(true);
-      return;
-    }
-    onSend(selected);
-  }
-
-  return (
-    <form onSubmit={submit} noValidate>
-      <FormCard title="Request updated documents" onClose={onClose}>
-        <p className="text-sm leading-[21px] text-muted">
-          Tell {submission.business} exactly what they need to update. Their account remains pending.
-        </p>
-        <fieldset aria-describedby={showError ? errorId : undefined} className="flex flex-col gap-3">
-          <legend className="mb-3 text-sm leading-[1.5] text-muted">
-            Missing or incomplete requirements · Select all that apply
-          </legend>
-          {changeRequirements.map((item) => (
-            <Checkbox
-              key={item.id}
-              tone="brand"
-              checked={selected.includes(item.id)}
-              onChange={(checked) => toggle(item.id, checked)}
-              label={<span className="text-muted">{item.label}</span>}
-              className="w-full py-1 gap-3"
-            />
-          ))}
-          {showError ? (
-            <p id={errorId} role="alert" className="text-xs leading-[18px] text-danger">
-              Select at least one requirement before sending the request.
-            </p>
-          ) : null}
-        </fieldset>
-        <div className="flex flex-col gap-2">
-          <p className="text-sm leading-[1.5] text-muted">Message to tenant</p>
-          <div
-            aria-live="polite"
-            className="max-h-[220px] overflow-y-auto whitespace-pre-line rounded-[10px] border border-hairline bg-mist/50 p-4 text-sm leading-[22px] text-muted [scrollbar-width:thin]"
-          >
-            {message}
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center justify-end gap-[10px]">
-          <AdminButton variant="outline" className="min-w-[100px]" onClick={onClose}>
-            Cancel
-          </AdminButton>
-          <AdminButton type="submit" className="min-w-[119px]">
-            Send request
-          </AdminButton>
-        </div>
-      </FormCard>
-    </form>
-  );
-}
-
-export function DocumentDialog({
-  submission,
-  document,
-  onClose,
-}: {
-  submission: Submission;
-  document: SubmissionDocument;
-  onClose: () => void;
-}) {
-  return (
-    <FormCard title={document.label} onClose={onClose}>
-      <p className="text-sm leading-[21px] text-muted">
-        {submission.business} · {submission.reference} · Submitted {formatSubmittedOn(submission)}
-      </p>
-      <div className="flex h-[180px] items-center justify-center rounded-[10px] border border-dashed border-line bg-[#fafafa] p-5 text-sm">
-        Sample {document.label}
-      </div>
-      <div className="flex flex-wrap items-center justify-end gap-[10px]">
-        <AdminButton variant="outline" className="min-w-[100px]" onClick={onClose}>
-          Cancel
-        </AdminButton>
-        <AdminButton className="min-w-[135px]" onClick={onClose} autoFocus>
-          Done Reviewing
-        </AdminButton>
-      </div>
-    </FormCard>
-  );
-}
-
 export function ResultDialog({
   title,
   message,
   onDone,
+  failed = false,
 }: {
   title: string;
   message: string;
   onDone: () => void;
+  failed?: boolean;
 }) {
   return (
-    <ConfirmationCard icon="status-success" title={title}>
+    <ConfirmationCard icon={failed ? "status-error" : "status-success"} title={title}>
       <p className="text-center text-sm leading-[21px]">{message}</p>
       <div className="flex justify-center">
         <AdminButton size="md" className="min-w-[147px]" onClick={onDone} autoFocus>
           Done
+        </AdminButton>
+      </div>
+    </ConfirmationCard>
+  );
+}
+
+export function DeleteApplicationDialog({
+  business,
+  onCancel,
+  onConfirm,
+  busy = false,
+}: {
+  business: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+  busy?: boolean;
+}) {
+  return (
+    <ConfirmationCard icon="status-danger" title="Delete this record?">
+      <p className="text-center text-sm leading-[21px] text-muted">
+        Permanently delete {business}: the owner login, all registration records, uploaded documents and images. The email address can then be used to register again. This cannot be undone.
+      </p>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <AdminButton variant="outline" className="min-w-[100px]" onClick={onCancel}>
+          Cancel
+        </AdminButton>
+        <AdminButton variant="danger" className="min-w-[147px]" onClick={onConfirm} disabled={busy} autoFocus>
+          Delete permanently
         </AdminButton>
       </div>
     </ConfirmationCard>

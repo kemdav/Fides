@@ -18,3 +18,5 @@ export type { CardProps } from "./card";
 
 export { Modal } from "./modal";
 export type { ModalProps } from "./modal";
+export { PasswordInput } from "./password-input";
+export type { PasswordInputProps } from "./password-input";

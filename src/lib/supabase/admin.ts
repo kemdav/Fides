@@ -1,53 +1,27 @@
+import "server-only";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { publicEnv, requireServerEnv } from "@/lib/env";
+import { getServerEnv, publicEnv } from "@/lib/env";
 import type { Database } from "@/types/database.types";
 
-/**
- * Service-role Supabase client.
- *
- * Bypasses Row Level Security, so it must only be imported by server-only code
- * (route handlers, server actions, scheduled jobs) that performs its own
- * authorization — never by anything running in the browser.
- *
- * Throws if SUPABASE_SERVICE_ROLE_KEY is not defined.
- */
-export function createAdminClient(): SupabaseClient<Database> {
-  return createSupabaseClient<Database>(
-    publicEnv.supabaseUrl,
-    requireServerEnv("SUPABASE_SERVICE_ROLE_KEY"),
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    }
-  );
+export type AdminClient = SupabaseClient<Database>;
+
+export function getAdminClient(): AdminClient | null {
+  const env = getServerEnv();
+  const secret = env.SUPABASE_SECRET_KEY ?? env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!secret || !publicEnv.supabaseUrl) return null;
+
+  return createSupabaseClient<Database>(publicEnv.supabaseUrl, secret, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
 }
 
-/**
- * Safe accessor for the service-role client.
- * Returns null if the service role key is not configured or is a placeholder.
- */
-export function getAdminClient(): SupabaseClient<Database> | null {
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-  if (
-    !serviceKey ||
-    serviceKey.startsWith("<") ||
-    !publicEnv.supabaseUrl ||
-    publicEnv.supabaseUrl.startsWith("<")
-  ) {
-    return null;
+export function createAdminClient(): AdminClient {
+  const client = getAdminClient();
+  if (!client) {
+    throw new Error(
+      "Supabase server credentials are missing. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY in .env.local, then restart the dev server. Also check .env.local for duplicate lines or leftover <placeholder> values."
+    );
   }
-
-  try {
-    return createSupabaseClient<Database>(publicEnv.supabaseUrl, serviceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
-  } catch {
-    return null;
-  }
+  return client;
 }
