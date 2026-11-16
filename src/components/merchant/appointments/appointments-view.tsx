@@ -106,6 +106,8 @@ const CAL_START_HOUR = 8;  // 8:00 AM
 const CAL_END_HOUR   = 20; // 8:00 PM
 const HOURS = Array.from({ length: CAL_END_HOUR - CAL_START_HOUR }, (_, i) => CAL_START_HOUR + i);
 
+const EMPTY_APPOINTMENTS: AppointmentItem[] = [];
+
 // ─── component ──────────────────────────────────────────────────────────────
 
 export function AppointmentsView({
@@ -116,7 +118,7 @@ export function AppointmentsView({
   awaitingCount = 0,
   checkedInCount = 0,
   completedTodayCount = 0,
-  initialItems = [],
+  initialItems = EMPTY_APPOINTMENTS,
   basePath = "",
 }: AppointmentsViewProps) {
   const router = useRouter();

@@ -17,7 +17,7 @@ interface MerchantSidebarProps {
 const manageItems: { label: string; icon: IconName; suffix?: string }[] = [
   { label: "Overview", icon: "grid" },
   { label: "Appointments", icon: "calendar", suffix: "/appointments" },
-  { label: "Walk-ins", icon: "users" },
+  { label: "Walk-ins", icon: "users", suffix: "/walk-ins" },
   { label: "QR check-in", icon: "qr-code" },
   { label: "Customers", icon: "users" },
   { label: "Services", icon: "layers" },
@@ -36,19 +36,40 @@ export function MerchantSidebar({
 }: MerchantSidebarProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const isDashboard = pathname.includes("/dashboard");
   const dashboardPath = `${basePath}/dashboard`;
   const displayName = userName || userEmail;
-  const isActive = (suffix?: string) =>
-    suffix ? pathname.startsWith(`${dashboardPath}${suffix}`) : pathname === dashboardPath;
+
+  const isActive = (suffix?: string) => {
+    if (!suffix) {
+      return isDashboard ? pathname === dashboardPath : pathname === "/overview";
+    }
+    return isDashboard
+      ? pathname.startsWith(`${dashboardPath}${suffix}`)
+      : pathname === suffix;
+  };
 
   const renderItem = (item: (typeof manageItems)[number], configuration = false) => {
-    const href = item.suffix
-      ? `${dashboardPath}${item.suffix}`
-      : configuration
-        ? `${dashboardPath}/settings/website`
-        : dashboardPath;
-    const active = configuration ? pathname.startsWith(href) : isActive(item.suffix);
-    const available = item.label === "Overview" || item.label === "Appointments" || configuration;
+    const href = isDashboard
+      ? item.suffix
+        ? `${dashboardPath}${item.suffix}`
+        : configuration
+          ? `${dashboardPath}/settings/website`
+          : dashboardPath
+      : item.suffix
+        ? item.suffix
+        : configuration
+          ? "/website-settings"
+          : "/overview";
+
+    const active = configuration
+      ? (isDashboard ? pathname.startsWith(`${dashboardPath}/settings/website`) : pathname === "/website-settings")
+      : isActive(item.suffix);
+    const available =
+      item.label === "Overview" ||
+      item.label === "Appointments" ||
+      item.label === "Walk-ins" ||
+      configuration;
 
     if (!available) {
       return (

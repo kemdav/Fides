@@ -23,7 +23,7 @@ export function PageHeading({
   description,
   actions,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   description: string;
   actions?: ReactNode;
@@ -31,7 +31,7 @@ export function PageHeading({
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-3">
       <div className="flex min-w-0 flex-col gap-1">
-        <p className="text-xs leading-[18px] tracking-[1.2px] text-muted">{eyebrow}</p>
+        {eyebrow ? <p className="text-xs leading-[18px] tracking-[1.2px] text-muted">{eyebrow}</p> : null}
         <h1 className="font-display text-[28px] leading-[38px] sm:text-[32px] sm:leading-[42px]">{title}</h1>
         <p className="max-w-[780px] text-sm leading-[21px] text-muted">{description}</p>
       </div>

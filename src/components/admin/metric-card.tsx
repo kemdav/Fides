@@ -6,7 +6,7 @@ import { interactiveRing } from "./primitives";
 
 type MetricCardProps = {
   label: string;
-  value: number;
+  value: number | string;
   caption: string;
   icon: IconName;
   progress: number;

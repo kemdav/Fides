@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import { createAppointmentBookingAction } from "@/app/actions/appointments";
+import { addToWaitlistAction } from "@/app/actions/waitlist";
+import { ConfirmationDialog } from "@/components/merchant/walk-ins/confirmation-dialog";
 import {
   CalendarPicker,
   Listbox,
@@ -34,6 +36,7 @@ interface WalkInModalProps {
   tenantId?: string;
   onClose: () => void;
   onCreated: (result: WalkInResult) => void;
+  onAddedToWaitlist?: (entry: { id: string; customer: string; service: string; staff: string; time: string }) => void;
   showToast: (message: string) => void;
 }
 
@@ -46,6 +49,7 @@ export function WalkInModal({
   tenantId,
   onClose,
   onCreated,
+  onAddedToWaitlist,
   showToast,
 }: WalkInModalProps) {
   const [customer, setCustomer] = React.useState("");
@@ -59,9 +63,82 @@ export function WalkInModal({
   const [sendInvitation, setSendInvitation] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [confirmation, setConfirmation] = React.useState<"appointment" | "waitlist" | null>(null);
+
+  const handleAddToWaitlist = async () => {
+    if (!customer.trim()) {
+      setError("Customer name is required to add to the waiting list.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const selectedServiceName = service.split(" · ")[0];
+      if (tenantId) {
+        const result = await addToWaitlistAction({
+          guestName: customer.trim(),
+          guestPhone: phone.trim() || undefined,
+          serviceName: selectedServiceName,
+          staffName: staff,
+          notes: notes.trim() || undefined,
+          tenantIdParam: tenantId,
+        });
+
+        if (!result.success) {
+          setError(result.error);
+          return;
+        }
+
+        if (!result.data) {
+          setError("Failed to add to waiting list.");
+          return;
+        }
+
+        onAddedToWaitlist?.({
+          id: result.data.id,
+          customer: customer.trim(),
+          service: selectedServiceName,
+          staff,
+          time: result.data.time,
+        });
+      } else {
+        onAddedToWaitlist?.({
+          id: `wait-${Date.now()}`,
+          customer: customer.trim(),
+          service: selectedServiceName,
+          staff,
+          time: new Intl.DateTimeFormat("en-US", {
+            timeZone: "Asia/Manila",
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+          }).format(new Date()),
+        });
+      }
+
+      setConfirmation("waitlist");
+    } catch (cause: unknown) {
+      setError(cause instanceof Error ? cause.message : "Failed to add to waiting list.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   React.useEffect(() => {
     if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
+  React.useEffect(() => {
+    if (!isOpen) {
+      setConfirmation(null);
+      return;
+    }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setCustomer("");
     setEmail("");
@@ -73,9 +150,38 @@ export function WalkInModal({
     setNotes("");
     setSendInvitation(false);
     setError(null);
+    setConfirmation(null);
   }, [isOpen]);
 
   if (!isOpen) return null;
+
+  if (confirmation === "appointment") {
+    return (
+      <ConfirmationDialog
+        isOpen={true}
+        title="Walk-in appointment created"
+        description="The available slot is reserved without displacing an existing booking."
+        onDone={() => {
+          setConfirmation(null);
+          onClose();
+        }}
+      />
+    );
+  }
+
+  if (confirmation === "waitlist") {
+    return (
+      <ConfirmationDialog
+        isOpen={true}
+        title="Added to waiting list"
+        description="The customer is waiting for an available staff member and resource."
+        onDone={() => {
+          setConfirmation(null);
+          onClose();
+        }}
+      />
+    );
+  }
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -115,8 +221,7 @@ export function WalkInModal({
         status: "Confirmed",
         startsAt: result.data.starts_at,
       });
-      showToast(`Walk-in appointment created for ${result.data.customerName}`);
-      onClose();
+      setConfirmation("appointment");
     } catch (submissionError: unknown) {
       setError(submissionError instanceof Error ? submissionError.message : "Failed to create walk-in appointment.");
     } finally {
@@ -223,7 +328,12 @@ export function WalkInModal({
           <p className="text-xs tracking-wide text-muted">Existing scheduled bookings are protected. If a slot becomes unavailable, use the waiting list.</p>
 
           <div className="flex flex-col-reverse items-stretch justify-between gap-3 border-t border-hairline pt-4 sm:flex-row sm:items-center">
-            <button type="button" onClick={() => showToast("Waiting-list action is available after selecting an open slot.")} className="h-10 rounded-md border-2 border-burnt px-3 text-sm font-semibold text-burnt hover:bg-mist">
+            <button
+              type="button"
+              onClick={handleAddToWaitlist}
+              disabled={isSubmitting}
+              className="h-10 rounded-md border-2 border-burnt px-3 text-sm font-semibold text-burnt hover:bg-mist disabled:opacity-60"
+            >
               Add to waiting list
             </button>
             <button type="submit" disabled={isSubmitting} className="h-10 rounded-md bg-burnt px-6 text-sm font-semibold text-white hover:bg-burnt/90 disabled:opacity-60">
