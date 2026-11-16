@@ -739,7 +739,7 @@ export function OverviewView({
             service: result.service,
             staff: result.staff,
             source: result.source,
-            status: "Confirmed",
+            status: result.status,
             startsAt: result.startsAt,
           };
           setAppointments((prev) => [newRow, ...prev]);
@@ -760,7 +760,7 @@ export function OverviewView({
             service: result.service,
             staff: result.staff,
             source: "Walk-In",
-            status: "Confirmed",
+            status: result.status,
             startsAt: result.startsAt,
           };
           setAppointments((prev) => [newRow, ...prev]);

@@ -144,16 +144,7 @@ export async function createAppointmentBookingAction({
   }
 
   if (!tenantId) {
-    const { data: firstTenant } = await supabase
-      .from("tenants")
-      .select("id")
-      .limit(1)
-      .single();
-    tenantId = firstTenant?.id;
-  }
-
-  if (!tenantId) {
-    return { success: false, error: "No active business tenant found." };
+    return { success: false, error: "No active business tenant found or unauthorized." };
   }
 
   const cleanCustomerName = customerName?.trim();
@@ -271,10 +262,12 @@ export async function createAppointmentBookingAction({
     }
   }
 
-  const startDate = new Date(`${bookingDateStr}T12:00:00Z`);
-  startDate.setUTCHours(hour, minute, 0, 0);
-  const startsAt = startDate.toISOString();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const startsAt = `${bookingDateStr}T${pad(hour)}:${pad(minute)}:00+08:00`;
+  const startDate = new Date(startsAt);
   const endsAt = new Date(startDate.getTime() + serviceDurationMinutes * 60 * 1000).toISOString();
+
+  const initialStatus: AppointmentStatusEnum = source === "walk_in" ? "checked_in" : "confirmed";
 
   // 5. Insert into public.appointments
   const { data: apptRow, error: apptErr } = await supabase
@@ -285,7 +278,7 @@ export async function createAppointmentBookingAction({
       staff_id: staffId,
       starts_at: startsAt,
       ends_at: endsAt,
-      status: "confirmed",
+      status: initialStatus,
       source: source || "online",
       total_cents: servicePriceCents,
       notes: notes || null,

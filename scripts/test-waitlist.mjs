@@ -11,6 +11,12 @@ import {
   assignWaitlistSlotAction,
   getStaffBusySlotsAction,
 } from "../src/app/actions/waitlist";
+import {
+  addToWaitlistSchema,
+  assignWaitlistSlotSchema,
+  cancelWaitlistEntrySchema,
+  createDirectWalkInSchema,
+} from "../src/lib/validations/waitlist";
 
 test("getManilaDateISO returns YYYY-MM-DD format", () => {
   const iso = getManilaDateISO(new Date("2026-10-21T02:00:00Z"));
@@ -52,7 +58,7 @@ test("assignWaitlistSlotAction requires entry id and valid startsAt", async () =
   assert.equal(noEntry.success, false);
 
   const invalidDate = await assignWaitlistSlotAction({
-    waitlistEntryId: "entry-1",
+    waitlistEntryId: "b7e411ea-7279-4bc7-b82b-cf3ce3a00501",
     startsAt: "not-a-date",
   });
   assert.equal(invalidDate.success, false);
@@ -67,4 +73,42 @@ test("getStaffBusySlotsAction requires staffId and dateISO", async () => {
   if (!result.success) {
     assert.match(result.error, /Staff and date are required/i);
   }
+});
+
+test("addToWaitlistSchema enforces non-blank guestName", () => {
+  const invalid = addToWaitlistSchema.safeParse({ guestName: "   " });
+  assert.equal(invalid.success, false);
+
+  const valid = addToWaitlistSchema.safeParse({ guestName: "Mia Garcia" });
+  assert.equal(valid.success, true);
+});
+
+test("assignWaitlistSlotSchema requires UUID for entry and valid startsAt", () => {
+  const invalid = assignWaitlistSlotSchema.safeParse({
+    waitlistEntryId: "not-a-uuid",
+    startsAt: "",
+  });
+  assert.equal(invalid.success, false);
+
+  const valid = assignWaitlistSlotSchema.safeParse({
+    waitlistEntryId: "b7e411ea-7279-4bc7-b82b-cf3ce3a00501",
+    startsAt: "2026-10-21T10:45:00+08:00",
+  });
+  assert.equal(valid.success, true);
+});
+
+test("createDirectWalkInSchema validates email and customerName", () => {
+  const invalidEmail = createDirectWalkInSchema.safeParse({
+    customerName: "Paolo Santos",
+    customerEmail: "not-an-email",
+    startsAt: "2026-10-21T10:45:00+08:00",
+  });
+  assert.equal(invalidEmail.success, false);
+
+  const valid = createDirectWalkInSchema.safeParse({
+    customerName: "Paolo Santos",
+    customerEmail: "paolo@example.com",
+    startsAt: "2026-10-21T10:45:00+08:00",
+  });
+  assert.equal(valid.success, true);
 });

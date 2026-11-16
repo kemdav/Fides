@@ -27,7 +27,7 @@ export interface WalkInResult {
   service: string;
   staff: string;
   source: "Walk-In";
-  status: "Confirmed";
+  status: "Check In" | "Confirmed";
   startsAt: string;
 }
 
@@ -218,7 +218,7 @@ export function WalkInModal({
         service: result.data.serviceName,
         staff: result.data.staffName,
         source: "Walk-In",
-        status: "Confirmed",
+        status: "Check In",
         startsAt: result.data.starts_at,
       });
       setConfirmation("appointment");

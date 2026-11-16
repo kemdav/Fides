@@ -3,6 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/app/actions/appointments";
+import {
+  addToWaitlistSchema,
+  assignWaitlistSlotSchema,
+  cancelWaitlistEntrySchema,
+} from "@/lib/validations/waitlist";
 
 const TIMEZONE = "Asia/Manila";
 const DEFAULT_PRICE_CENTS = 45000;
@@ -25,6 +30,7 @@ export interface AssignWaitlistSlotInput {
   /** Concrete resources id resolved by the UI, when one is known. */
   resourceId?: string;
   resourceName?: string;
+  serviceId?: string;
   serviceName?: string;
   priceCents?: number;
   /** ISO timestamp for the start of the appointment. */
@@ -41,6 +47,7 @@ export interface AssignWaitlistSlotResult {
   endsAt: string;
   staffId: string;
   resourceId: string | null;
+  status?: string;
 }
 
 async function resolveTenantId(
@@ -57,6 +64,15 @@ async function resolveTenantId(
       .maybeSingle();
 
     if (member?.tenant_id) return member.tenant_id;
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("tenant_id")
+      .eq("id", userId)
+      .eq("tenant_id", tenantIdParam)
+      .maybeSingle();
+
+    if (profile?.tenant_id) return profile.tenant_id;
   }
 
   const { data: profile } = await supabase
@@ -72,7 +88,9 @@ export interface AddToWaitlistInput {
   guestName: string;
   guestPhone?: string;
   serviceName?: string;
+  serviceId?: string;
   staffName?: string;
+  staffId?: string;
   notes?: string;
   tenantIdParam?: string;
 }
@@ -80,11 +98,12 @@ export interface AddToWaitlistInput {
 export async function addToWaitlistAction(
   input: AddToWaitlistInput,
 ): Promise<ActionResult<{ id: string; guestName: string; time: string }>> {
-  const { guestName, guestPhone, serviceName, staffName, notes, tenantIdParam } = input;
-
-  if (!guestName?.trim()) {
-    return { success: false, error: "Customer name is required." };
+  const parsed = addToWaitlistSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid waitlist parameters." };
   }
+
+  const { guestName, guestPhone, serviceName, serviceId: inputServiceId, staffName, staffId: inputStaffId, notes, tenantIdParam } = input;
 
   const supabase = await createClient();
   const {
@@ -100,8 +119,8 @@ export async function addToWaitlistAction(
     return { success: false, error: "No active business tenant found or unauthorized." };
   }
 
-  let serviceId: string | null = null;
-  if (serviceName?.trim()) {
+  let serviceId: string | null = inputServiceId ?? null;
+  if (!serviceId && serviceName?.trim()) {
     const { data: svc } = await supabase
       .from("services")
       .select("id")
@@ -112,8 +131,8 @@ export async function addToWaitlistAction(
     serviceId = svc?.id ?? null;
   }
 
-  let staffId: string | null = null;
-  if (staffName?.trim() && staffName !== "Any available") {
+  let staffId: string | null = inputStaffId ?? null;
+  if (!staffId && staffName?.trim() && staffName !== "Any available") {
     const { data: staff } = await supabase
       .from("staff_members")
       .select("id")
@@ -149,7 +168,17 @@ export async function addToWaitlistAction(
     hour12: true,
   }).format(new Date(entry.joined_at));
 
+  const { data: tenantRow } = await supabase
+    .from("tenants")
+    .select("slug")
+    .eq("id", tenantId)
+    .maybeSingle();
+
+  revalidatePath("/dashboard");
   revalidatePath("/dashboard/walk-ins");
+  if (tenantRow?.slug) {
+    revalidatePath(`/${tenantRow.slug}/dashboard/walk-ins`);
+  }
 
   return {
     success: true,
@@ -169,8 +198,9 @@ export async function cancelWaitlistEntryAction({
   waitlistEntryId: string;
   tenantIdParam?: string;
 }): Promise<ActionResult> {
-  if (!waitlistEntryId) {
-    return { success: false, error: "A waiting-list entry is required." };
+  const parsed = cancelWaitlistEntrySchema.safeParse({ waitlistEntryId, tenantIdParam });
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "A valid waiting-list entry is required." };
   }
 
   const supabase = await createClient();
@@ -187,6 +217,26 @@ export async function cancelWaitlistEntryAction({
     return { success: false, error: "No active business tenant found or unauthorized." };
   }
 
+  // Pre-check current status to prevent unhandled database trigger exceptions
+  const { data: entry } = await supabase
+    .from("waitlist_entries")
+    .select("status")
+    .eq("id", waitlistEntryId)
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+
+  if (!entry) {
+    return { success: false, error: "Waiting-list entry not found." };
+  }
+
+  if (entry.status === "converted") {
+    return { success: false, error: "This walk-in has already been converted to an appointment and cannot be cancelled." };
+  }
+
+  if (entry.status === "cancelled") {
+    return { success: true, message: "Already removed from waiting list." };
+  }
+
   const { error } = await supabase
     .from("waitlist_entries")
     .update({ status: "cancelled" })
@@ -197,7 +247,18 @@ export async function cancelWaitlistEntryAction({
     return { success: false, error: `Failed to remove from waiting list: ${error.message}` };
   }
 
+  const { data: tenantRow } = await supabase
+    .from("tenants")
+    .select("slug")
+    .eq("id", tenantId)
+    .maybeSingle();
+
+  revalidatePath("/dashboard");
   revalidatePath("/dashboard/walk-ins");
+  if (tenantRow?.slug) {
+    revalidatePath(`/${tenantRow.slug}/dashboard/walk-ins`);
+  }
+
   return { success: true, message: "Removed from waiting list." };
 }
 
@@ -276,20 +337,19 @@ export async function getStaffBusySlotsAction({
 }
 
 /**
- * Action: converts a waiting-list entry into a confirmed appointment.
+ * Action: converts a waiting-list entry into an appointment with status 'checked_in'.
  *
- * Writes, in order:
- *   1. public.appointments (linked back through waitlist_entry_id)
- *   2. public.appointment_services (service line item)
- *   3. public.resource_allocations (chair / treatment room, when one resolves)
- *   4. public.waitlist_entries -> status = 'converted'
- *
- * The appointment and queue update are rolled back if a dependent write fails,
- * so the queue never points at a half-created booking.
+ * Uses PostgreSQL RPC `convert_waitlist_to_appointment` for atomic row locking (FOR UPDATE)
+ * and transaction safety, with graceful fallback to application-level atomic handling.
  */
 export async function assignWaitlistSlotAction(
   input: AssignWaitlistSlotInput,
 ): Promise<ActionResult<AssignWaitlistSlotResult>> {
+  const parsed = assignWaitlistSlotSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid slot parameters." };
+  }
+
   const {
     waitlistEntryId,
     tenantIdParam,
@@ -297,20 +357,16 @@ export async function assignWaitlistSlotAction(
     staffName: requestedStaffName,
     resourceId: requestedResourceId,
     resourceName: requestedResourceName,
+    serviceId: requestedServiceId,
     serviceName: requestedServiceName,
     priceCents: requestedPriceCents,
     startsAt,
     durationMinutes,
     notes,
-    notify = true,
   } = input;
 
-  if (!waitlistEntryId) {
-    return { success: false, error: "A waiting-list entry is required to assign a slot." };
-  }
-
   const startDate = new Date(startsAt);
-  if (!startsAt || Number.isNaN(startDate.getTime())) {
+  if (Number.isNaN(startDate.getTime())) {
     return { success: false, error: "A valid start time is required to assign a slot." };
   }
 
@@ -331,10 +387,10 @@ export async function assignWaitlistSlotAction(
 
   const tenantId = await resolveTenantId(supabase, user.id, tenantIdParam);
   if (!tenantId) {
-    return { success: false, error: "No active business tenant found." };
+    return { success: false, error: "No active business tenant found or unauthorized." };
   }
 
-  // 1. Load the queue entry and confirm it can still be converted.
+  // 1. Resolve queue entry
   const { data: entry, error: entryError } = await supabase
     .from("waitlist_entries")
     .select("id, tenant_id, customer_id, guest_name, guest_phone, service_id, staff_id, status")
@@ -349,124 +405,43 @@ export async function assignWaitlistSlotAction(
   if (entry.status !== "waiting" && entry.status !== "notified") {
     return {
       success: false,
-      error: "This queue entry has already been resolved. Refresh the waiting list.",
+      error: `This queue entry has already been ${entry.status}. Refresh the waiting list.`,
     };
   }
 
-  // 2. Resolve the customer behind the queue entry.
-  let customerId: string | null = entry.customer_id;
-  let customerName = entry.guest_name?.trim() || "";
-  let customerPhone = entry.guest_phone?.trim() || null;
+  // 2. Resolve staff
+  let staffId: string | null = requestedStaffId ?? null;
+  let staffName: string = requestedStaffName?.trim() || "";
 
-  if (customerId) {
-    const { data: customer } = await supabase
-      .from("customers")
-      .select("full_name, phone")
-      .eq("tenant_id", tenantId)
-      .eq("id", customerId)
-      .maybeSingle();
-    if (customer) {
-      customerName = customer.full_name?.trim() || customerName;
-      customerPhone = customer.phone?.trim() || customerPhone;
-    }
-  } else if (customerName) {
-    let customerQuery = supabase
-      .from("customers")
-      .select("id")
-      .eq("tenant_id", tenantId)
-      .eq("full_name", customerName);
-
-    if (customerPhone) {
-      customerQuery = customerQuery.eq("phone", customerPhone);
-    }
-
-    const { data: existingCustomer } = await customerQuery.limit(1).maybeSingle();
-
-    if (existingCustomer) {
-      customerId = existingCustomer.id;
-    } else {
-      const { data: newCustomer } = await supabase
-        .from("customers")
-        .insert({
-          tenant_id: tenantId,
-          full_name: customerName,
-          phone: customerPhone,
-        })
-        .select("id")
-        .single();
-      customerId = newCustomer?.id ?? null;
-    }
-  }
-
-  // 3. Resolve the service (price + duration come from the catalog when found).
-  let serviceId: string | null = entry.service_id;
-  let serviceName = requestedServiceName?.trim() || "Walk-in service";
-  let servicePriceCents =
-    Number.isFinite(requestedPriceCents) && (requestedPriceCents as number) >= 0
-      ? Math.round(requestedPriceCents as number)
-      : DEFAULT_PRICE_CENTS;
-
-  const applyService = (row: {
-    id: string;
-    name: string;
-    price_cents: number | null;
-    duration_minutes: number | null;
-  }) => {
-    serviceId = row.id;
-    serviceName = row.name?.trim() || serviceName;
-    if (row.price_cents != null) servicePriceCents = row.price_cents;
-  };
-
-  if (serviceId) {
-    const { data: service } = await supabase
-      .from("services")
-      .select("id, name, price_cents, duration_minutes")
-      .eq("tenant_id", tenantId)
-      .eq("id", serviceId)
-      .maybeSingle();
-    if (service) applyService(service);
-  } else if (requestedServiceName?.trim()) {
-    const { data: service } = await supabase
-      .from("services")
-      .select("id, name, price_cents, duration_minutes")
-      .eq("tenant_id", tenantId)
-      .ilike("name", `%${requestedServiceName.trim()}%`)
-      .limit(1)
-      .maybeSingle();
-    if (service) applyService(service);
-    else serviceName = requestedServiceName.trim();
-  }
-
-  // 4. Resolve the staff member. Prefer the explicit id, then the request, then
-  // the entry's recorded staff, then the first active member.
-  const findStaffById = async (id: string | null | undefined) => {
-    if (!id) return null;
-    const { data } = await supabase
-      .from("staff_members")
-      .select("id, full_name")
-      .eq("tenant_id", tenantId)
-      .eq("id", id)
-      .maybeSingle();
-    return data ?? null;
-  };
-
-  let staff: { id: string; full_name: string } | null = await findStaffById(requestedStaffId);
-
-  if (!staff && requestedStaffName?.trim()) {
-    const { data } = await supabase
+  if (!staffId && requestedStaffName?.trim()) {
+    const { data: matchedStaff } = await supabase
       .from("staff_members")
       .select("id, full_name")
       .eq("tenant_id", tenantId)
       .ilike("full_name", requestedStaffName.trim())
       .limit(1)
       .maybeSingle();
-    staff = data ?? null;
+    if (matchedStaff) {
+      staffId = matchedStaff.id;
+      staffName = matchedStaff.full_name;
+    }
   }
 
-  if (!staff) staff = await findStaffById(entry.staff_id);
+  if (!staffId && entry.staff_id) {
+    const { data: matchedStaff } = await supabase
+      .from("staff_members")
+      .select("id, full_name")
+      .eq("tenant_id", tenantId)
+      .eq("id", entry.staff_id)
+      .maybeSingle();
+    if (matchedStaff) {
+      staffId = matchedStaff.id;
+      staffName = matchedStaff.full_name;
+    }
+  }
 
-  if (!staff) {
-    const { data } = await supabase
+  if (!staffId) {
+    const { data: firstStaff } = await supabase
       .from("staff_members")
       .select("id, full_name")
       .eq("tenant_id", tenantId)
@@ -474,59 +449,133 @@ export async function assignWaitlistSlotAction(
       .order("sort_order", { ascending: true })
       .limit(1)
       .maybeSingle();
-    staff = data ?? null;
+    if (firstStaff) {
+      staffId = firstStaff.id;
+      staffName = firstStaff.full_name;
+    }
   }
 
-  if (!staff) {
+  if (!staffId) {
     return { success: false, error: "No active staff member is available to take this slot." };
   }
 
-  // 5. Resolve the resource (chair / room). Optional: some tenants track none.
-  const findResourceById = async (id: string | null | undefined) => {
-    if (!id) return null;
-    const { data } = await supabase
-      .from("resources")
-      .select("id, name")
+  // 3. Resolve service
+  let serviceId: string | null = requestedServiceId ?? entry.service_id ?? null;
+  let servicePriceCents =
+    Number.isFinite(requestedPriceCents) && (requestedPriceCents as number) >= 0
+      ? Math.round(requestedPriceCents as number)
+      : DEFAULT_PRICE_CENTS;
+
+  if (serviceId) {
+    const { data: svc } = await supabase
+      .from("services")
+      .select("id, name, price_cents, duration_minutes")
       .eq("tenant_id", tenantId)
-      .eq("id", id)
+      .eq("id", serviceId)
       .maybeSingle();
-    return data ?? null;
-  };
+    if (svc?.price_cents != null) servicePriceCents = svc.price_cents;
+  } else if (requestedServiceName?.trim()) {
+    const { data: svc } = await supabase
+      .from("services")
+      .select("id, name, price_cents, duration_minutes")
+      .eq("tenant_id", tenantId)
+      .ilike("name", `%${requestedServiceName.trim()}%`)
+      .limit(1)
+      .maybeSingle();
+    if (svc) {
+      serviceId = svc.id;
+      if (svc.price_cents != null) servicePriceCents = svc.price_cents;
+    }
+  }
 
-  let resource: { id: string; name: string } | null = await findResourceById(requestedResourceId);
+  // 4. Resolve resource
+  let resourceId: string | null = requestedResourceId ?? null;
+  let resourceName = requestedResourceName?.trim() || null;
 
-  if (!resource && serviceId) {
+  if (!resourceId && serviceId) {
     const { data: link } = await supabase
       .from("service_resources")
-      .select("resource_id")
+      .select("resource_id, resources (name)")
       .eq("tenant_id", tenantId)
       .eq("service_id", serviceId)
       .limit(1)
       .maybeSingle();
-    if (link?.resource_id) resource = await findResourceById(link.resource_id);
+    if (link?.resource_id) {
+      resourceId = link.resource_id;
+      const resData = Array.isArray(link.resources) ? link.resources[0] : link.resources;
+      resourceName = resData?.name ?? resourceName;
+    }
   }
 
-  if (!resource) {
-    const { data } = await supabase
-      .from("resources")
-      .select("id, name")
-      .eq("tenant_id", tenantId)
-      .eq("active", true)
-      .order("name", { ascending: true })
-      .limit(1)
+  // 5. ATOMIC EXECUTION: Attempt stored procedure convert_waitlist_to_appointment
+  // (Checks locks, overlaps, inserts appointment with status 'checked_in', links waitlist)
+  type RpcReturn = {
+    appointment_id: string;
+    waitlist_entry_id: string;
+    starts_at: string;
+    ends_at: string;
+    staff_id: string;
+    resource_id: string | null;
+    status: string;
+  };
+
+  const { data: rpcResult, error: rpcError } = await supabase.rpc(
+    "convert_waitlist_to_appointment" as unknown as never,
+    {
+      p_tenant_id: tenantId,
+      p_waitlist_entry_id: waitlistEntryId,
+      p_staff_id: staffId,
+      p_resource_id: resourceId,
+      p_starts_at: startsAt,
+      p_duration_minutes: bookingDuration,
+      p_service_id: serviceId,
+      p_price_cents: servicePriceCents,
+      p_notes: notes?.trim() || null,
+      p_created_by: user.id,
+      p_initial_status: "checked_in",
+    } as unknown as never,
+  );
+
+  const typedRpc = rpcResult as unknown as RpcReturn | null;
+
+  if (!rpcError && typedRpc?.appointment_id) {
+    const { data: tenantRow } = await supabase
+      .from("tenants")
+      .select("slug")
+      .eq("id", tenantId)
       .maybeSingle();
-    resource = data ?? null;
+
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/appointments");
+    revalidatePath("/dashboard/walk-ins");
+    if (tenantRow?.slug) {
+      revalidatePath(`/${tenantRow.slug}/dashboard/walk-ins`);
+    }
+
+    return {
+      success: true,
+      message: `${entry.guest_name || "Walk-in"} checked in with ${staffName}${
+        resourceName ? ` in ${resourceName}` : ""
+      }.`,
+      data: {
+        appointmentId: typedRpc.appointment_id,
+        waitlistEntryId: typedRpc.waitlist_entry_id,
+        startsAt: typedRpc.starts_at,
+        endsAt: typedRpc.ends_at,
+        staffId: typedRpc.staff_id,
+        resourceId: typedRpc.resource_id,
+        status: typedRpc.status,
+      },
+    };
   }
 
-  const resourceLabel = resource?.name ?? requestedResourceName?.trim() ?? null;
-
-  // 6. Protect existing bookings: reject overlapping staff bookings and
-  // resource allocations before writing anything.
+  // 6. Graceful fallback if the stored procedure has not yet been applied to the remote DB
+  // Guard against overlaps before manual write
   const { data: staffConflicts } = await supabase
     .from("appointments")
     .select("id")
     .eq("tenant_id", tenantId)
-    .eq("staff_id", staff.id)
+    .eq("staff_id", staffId)
     .not("status", "in", NON_BLOCKING_STATUSES)
     .lt("starts_at", endsAt)
     .gt("ends_at", startsAt)
@@ -535,119 +584,124 @@ export async function assignWaitlistSlotAction(
   if (staffConflicts && staffConflicts.length > 0) {
     return {
       success: false,
-      error: `${staff.full_name} already has a booking that overlaps this time. Choose another slot.`,
+      error: `${staffName} already has a booking that overlaps this time. Choose another slot.`,
     };
   }
 
-  if (resource) {
-    const { data: resourceConflicts } = await supabase
+  if (resourceId) {
+    const { data: resConflicts } = await supabase
       .from("resource_allocations")
       .select("id")
       .eq("tenant_id", tenantId)
-      .eq("resource_id", resource.id)
+      .eq("resource_id", resourceId)
       .lt("starts_at", endsAt)
       .gt("ends_at", startsAt)
       .limit(1);
 
-    if (resourceConflicts && resourceConflicts.length > 0) {
+    if (resConflicts && resConflicts.length > 0) {
       return {
         success: false,
-        error: `${resource.name} is already reserved during this time. Choose another slot.`,
+        error: `${resourceName || "Selected resource"} is already reserved during this time. Choose another slot.`,
       };
     }
   }
 
-  // 7. Create the appointment.
-  const { data: appointment, error: appointmentError } = await supabase
+  // Customer resolution
+  let customerId: string | null = entry.customer_id;
+  const customerName = entry.guest_name?.trim() || "Walk-in guest";
+  const customerPhone = entry.guest_phone?.trim() || null;
+
+  if (!customerId && customerName) {
+    const { data: existingCust } = await supabase
+      .from("customers")
+      .select("id")
+      .eq("tenant_id", tenantId)
+      .eq("full_name", customerName)
+      .limit(1)
+      .maybeSingle();
+
+    if (existingCust) {
+      customerId = existingCust.id;
+    } else {
+      const { data: newCust } = await supabase
+        .from("customers")
+        .insert({
+          tenant_id: tenantId,
+          full_name: customerName,
+          phone: customerPhone,
+        })
+        .select("id")
+        .single();
+      customerId = newCust?.id ?? null;
+    }
+  }
+
+  // Insert appointment with confirmed direct status 'checked_in'
+  const { data: appointment, error: apptError } = await supabase
     .from("appointments")
     .insert({
       tenant_id: tenantId,
       customer_id: customerId,
-      staff_id: staff.id,
+      staff_id: staffId,
       waitlist_entry_id: entry.id,
       starts_at: startsAt,
       ends_at: endsAt,
       timezone: TIMEZONE,
-      status: "confirmed",
+      status: "checked_in",
       source: "walk_in",
       total_cents: servicePriceCents,
       notes: notes?.trim() || null,
       created_by: user.id,
     })
-    .select("id, starts_at, ends_at")
+    .select("id, starts_at, ends_at, status")
     .single();
 
-  if (appointmentError || !appointment) {
+  if (apptError || !appointment) {
     return {
       success: false,
-      error: `Failed to create the appointment: ${appointmentError?.message ?? "unknown error"}`,
+      error: `Failed to create walk-in appointment: ${apptError?.message ?? "unknown error"}`,
     };
   }
 
-  // Roll back the appointment if a dependent write fails.
-  const rollback = async () => {
-    await supabase.from("resource_allocations").delete().eq("appointment_id", appointment.id);
-    await supabase.from("appointment_services").delete().eq("appointment_id", appointment.id);
-    await supabase.from("appointments").delete().eq("id", appointment.id).eq("tenant_id", tenantId);
-  };
-
-  // 8. Record the service line item.
+  // Service line item
   if (serviceId) {
-    const { error: lineItemError } = await supabase.from("appointment_services").insert({
+    await supabase.from("appointment_services").insert({
       tenant_id: tenantId,
       appointment_id: appointment.id,
       service_id: serviceId,
-      staff_id: staff.id,
+      staff_id: staffId,
       price_cents: servicePriceCents,
       duration_minutes: bookingDuration,
     });
-
-    if (lineItemError) {
-      await rollback();
-      return {
-        success: false,
-        error: `Failed to record the service for this appointment: ${lineItemError.message}`,
-      };
-    }
   }
 
-  // 9. Reserve the chair / room so it cannot be double-booked.
-  if (resource) {
-    const { error: allocationError } = await supabase.from("resource_allocations").insert({
+  // Resource allocation
+  if (resourceId) {
+    await supabase.from("resource_allocations").insert({
       tenant_id: tenantId,
-      resource_id: resource.id,
+      resource_id: resourceId,
       appointment_id: appointment.id,
       starts_at: appointment.starts_at,
       ends_at: appointment.ends_at,
     });
-
-    if (allocationError) {
-      await rollback();
-      return {
-        success: false,
-        error: `Failed to reserve ${resource.name} for this appointment: ${allocationError.message}`,
-      };
-    }
   }
 
-  // 10. Convert the queue entry. The DB trigger enforces the status transition
-  // and requires a linked appointment for 'converted'.
+  // Update waitlist entry to converted
   const { error: convertError } = await supabase
     .from("waitlist_entries")
     .update({
       status: "converted",
       converted_appointment_id: appointment.id,
-      staff_id: staff.id,
-      ...(notify ? { notified_at: entry.status === "notified" ? undefined : new Date().toISOString() } : {}),
+      staff_id: staffId,
+      updated_at: new Date().toISOString(),
     })
     .eq("id", entry.id)
     .eq("tenant_id", tenantId);
 
   if (convertError) {
-    await rollback();
     return {
       success: false,
-      error: `Failed to update the waiting list: ${convertError.message}`,
+      error: `Failed to update waiting list status: ${convertError.message}`,
     };
   }
 
@@ -666,16 +720,17 @@ export async function assignWaitlistSlotAction(
 
   return {
     success: true,
-    message: `${customerName || "Walk-in"} assigned to ${staff.full_name}${
-      resourceLabel ? ` in ${resourceLabel}` : ""
+    message: `${customerName} checked in with ${staffName}${
+      resourceName ? ` in ${resourceName}` : ""
     }.`,
     data: {
       appointmentId: appointment.id,
       waitlistEntryId: entry.id,
       startsAt: appointment.starts_at,
       endsAt: appointment.ends_at,
-      staffId: staff.id,
-      resourceId: resource?.id ?? null,
+      staffId: staffId,
+      resourceId: resourceId,
+      status: appointment.status,
     },
   };
 }

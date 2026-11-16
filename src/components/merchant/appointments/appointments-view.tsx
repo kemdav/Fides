@@ -986,7 +986,7 @@ export function AppointmentsView({
             service: result.service,
             staff: result.staff,
             source: "Walk-In",
-            status: "Confirmed",
+            status: result.status,
             startsAt: result.startsAt,
           }, ...prev]);
         }}
