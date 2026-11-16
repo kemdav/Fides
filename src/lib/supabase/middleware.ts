@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { publicEnv } from "@/lib/env";
+import { cloudPublicEnv, cloudSupabaseConfigured, publicEnv } from "@/lib/env";
 import { TENANT_HEADER } from "@/lib/tenant/constants";
 import { resolveTenantFromHostname } from "@/lib/tenant/get-tenant";
 
@@ -28,32 +28,48 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
 
   let response = NextResponse.next({ request: { headers: requestHeaders } });
 
-  if (!publicEnv.supabaseUrl || !publicEnv.supabaseKey) return response;
+  const databases = [
+    ...(cloudSupabaseConfigured ? [{ url: cloudPublicEnv.supabaseUrl, key: cloudPublicEnv.supabaseKey }] : []),
+    ...(publicEnv.supabaseUrl && publicEnv.supabaseKey && publicEnv.supabaseUrl !== cloudPublicEnv.supabaseUrl
+      ? [{ url: publicEnv.supabaseUrl, key: publicEnv.supabaseKey }]
+      : []),
+  ];
+  if (databases.length === 0) return response;
 
   const pathname = request.nextUrl.pathname;
   const isProtected = PROTECTED_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
   if (!isProtected && !request.cookies.getAll().some((cookie) => cookie.name.startsWith("sb-"))) return response;
 
-  const supabase = createServerClient(publicEnv.supabaseUrl, publicEnv.supabaseKey, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
+  const refreshedCookies = new Map<string, { name: string; value: string; options?: Record<string, unknown> }>();
+  let authenticated = false;
+  for (const database of databases) {
+    const supabase = createServerClient(database.url, database.key, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet, headers) {
+          for (const { name, value, options } of cookiesToSet) {
+            request.cookies.set(name, value);
+            refreshedCookies.set(name, { name, value, options });
+          }
+          response = NextResponse.next({ request: { headers: requestHeaders } });
+          for (const cookie of refreshedCookies.values()) {
+            response.cookies.set(cookie.name, cookie.value, cookie.options);
+          }
+          for (const [key, value] of Object.entries(headers)) response.headers.set(key, value);
+        },
       },
-      setAll(cookiesToSet, headers) {
-        for (const { name, value } of cookiesToSet) request.cookies.set(name, value);
-        response = NextResponse.next({ request: { headers: requestHeaders } });
-        for (const { name, value, options } of cookiesToSet) response.cookies.set(name, value, options);
-        for (const [key, value] of Object.entries(headers)) response.headers.set(key, value);
-      },
-    },
-  });
+    });
 
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (user && !error) {
+      authenticated = true;
+      break;
+    }
+  }
 
-  if ((!user || error) && isProtected) {
+  if (!authenticated && isProtected) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return redirectWithCookies(loginUrl, response, request, true);

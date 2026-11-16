@@ -25,12 +25,39 @@ tenant isolation enforced at the database layer.
 
 ```bash
 npm install
-cp .env.example .env.local   # then fill in real values
+cp .env.example .env.local   # then fill in the secrets (see "Environment" below)
 npm run dev
 ```
 
 The app boots without any environment values (integrations simply report
 misconfiguration at request time), so you can explore the structure first.
+
+## Environment: Supabase Cloud and Docker (one file)
+
+`.env.local` holds the values for **both** databases and one switch at the top:
+
+```
+FIDES_DB=CLOUD     # Supabase Cloud project
+FIDES_DB=DOCKER    # Supabase in Docker Desktop (npx supabase start)
+```
+
+`FIDES_DB` selects the active storefront and tenant database. Registration, password reset, and admin application
+review always use the Cloud project configured in section 2 of `.env.local`; keep those Cloud credentials filled
+even when `FIDES_DB=DOCKER`. Restart `npm run dev` after changing values. `.env.local` is git-ignored; never commit
+the Cloud secret key or Gmail app password.
+
+### Database schema
+
+`supabase/migrations` is the source of truth. Cloud must have the account application, document, and password reset
+tables; Docker must have the tenant/storefront schema. They no longer need to be switched together.
+
+- **Docker:** `npx supabase start` then `npx supabase db reset` (applies migrations + `seed.sql`).
+- **Cloud:** `npm run db:cloud-sql` regenerates `supabase/cloud-sync.sql`; paste the whole file into
+  Supabase Dashboard → SQL Editor → Run. It is idempotent, so run it again whenever a new migration is added.
+  (`seed.sql` is never part of it — it creates test users with a known password.)
+
+When you add a migration, give it the next free number — two files must never share a version prefix
+(the Supabase CLI rejects duplicates).
 
 ## Scripts
 
@@ -107,21 +134,18 @@ walk-in flows, calendar, AI concierge prompts, notifications, reporting/BIR
 exports, and Figma token mapping.
 
 
-## Email setup (Resend + Supabase)
+## Email setup
 
-The app sends three emails through [Resend](https://resend.com): **account request submitted**, **account approved**
-(with a login link) and the **forgot-password code** (4 characters, valid 10 minutes).
+The app sends submission, approval, rejection, and password-reset emails through the configured mail transport.
+For local development, `.env.example` uses Gmail SMTP (an app password is required; the sender must match `SMTP_USER`).
 
-1. Create an API key in Resend (key name `FIDES-Development`) and put it in `.env.local` as `RESEND_API_KEY`
-   (see `.env.example`). Never commit it.
-2. Set `MAIL_FROM_EMAIL`. `onboarding@resend.dev` is a test sender that only delivers to your own Resend account
-   email. To email real applicants, verify a domain at <https://resend.com/domains> and use an address on it.
-3. Set `NEXT_PUBLIC_SITE_URL` to the public URL: the "log in" link in the approval email is built from it.
-4. Run `supabase/migrations/00013_password_reset_codes.sql` in the Supabase SQL Editor (forgot-password codes).
-5. Check delivery: `npm run email:test` (sends to Resend's `delivered@resend.dev`) or `npm run email:test -- you@example.com`.
-6. Optional Edge Function (`supabase/functions/send-fides-email`): set `MAIL_TRANSPORT=edge` and
+1. Set `NEXT_PUBLIC_SITE_URL` to the public URL; approval emails use it for the login link.
+2. Run `npm run email:check` for read-only checks. To send a real test through the configured transport, pass an
+   explicit recipient with `npm run email:test -- you@example.com` (SMTP and Edge never send to a default address).
+3. Optional Resend: set `MAIL_TRANSPORT=resend`, `RESEND_API_KEY`, and a verified `MAIL_FROM_EMAIL` domain.
+4. Optional Edge Function (`supabase/functions/send-fides-email`): set `MAIL_TRANSPORT=edge` and
    `FIDES_EMAIL_FUNCTION_SECRET`, then
    `npx supabase secrets set RESEND_API_KEY=... FIDES_EMAIL_FUNCTION_SECRET=... MAIL_FROM_EMAIL=...` and
    `npx supabase functions deploy send-fides-email --no-verify-jwt`.
-7. Supabase Auth emails (confirm / invite / reset / magic link): paste the templates from
+5. Supabase Auth emails (confirm / invite / reset / magic link): paste the templates from
    `supabase/email-templates/README.md` and, to send them via Resend, configure custom SMTP as described there.

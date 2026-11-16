@@ -15,6 +15,16 @@ NULL,
 '#FBF8F3',
 '#231F1A',
 '#C96E4B'
+),
+(
+'66666666-6666-4666-8666-666666666666',
+'Aura Studio & Spa',
+'aura-wellness',
+'active',
+NULL,
+'#FBF8F3',
+'#231F1A',
+'#C35000'
 )
 ON CONFLICT (id) DO UPDATE SET
 name = EXCLUDED.name,
@@ -95,7 +105,6 @@ NOW(),
 ''
 )
 ON CONFLICT (id) DO NOTHING;
-@
 -- 3. Seed Auth Identities (required by Supabase GoTrue email login)
 INSERT INTO auth.identities (
 id,
@@ -155,7 +164,8 @@ tenant_id = EXCLUDED.tenant_id;
 INSERT INTO public.tenant_memberships (tenant_id, profile_id, role)
 VALUES
 ('11111111-1111-4111-8111-111111111111', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'owner'),
-('11111111-1111-4111-8111-111111111111', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'staff')
+('11111111-1111-4111-8111-111111111111', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'staff'),
+('66666666-6666-4666-8666-666666666666', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'owner')
 ON CONFLICT (tenant_id, profile_id) DO UPDATE SET
 role = EXCLUDED.role;
 
@@ -197,6 +207,75 @@ VALUES (
 TRUE
 )
 ON CONFLICT (tenant_id) DO NOTHING;
+
+INSERT INTO public.tenant_settings (
+tenant_id,
+display_name,
+about,
+headline,
+supporting_message,
+business_category,
+business_email,
+phone_number,
+street_address,
+city_province,
+postal_code
+)
+VALUES (
+'66666666-6666-4666-8666-666666666666',
+'Aura Studio & Spa',
+'A tranquil sanctuary for mindful wellness.',
+'A little time for yourself.',
+'Thoughtful care, experienced specialists, and easy online booking.',
+'Beauty & wellness',
+'hello@aura-wellness.test',
+'+63 917 555 0143',
+'142 Leviste Street, Salcedo Village',
+'Makati, Metro Manila',
+'1227'
+)
+ON CONFLICT (tenant_id) DO UPDATE SET
+display_name = EXCLUDED.display_name,
+about = EXCLUDED.about,
+headline = EXCLUDED.headline,
+supporting_message = EXCLUDED.supporting_message,
+business_category = EXCLUDED.business_category,
+business_email = EXCLUDED.business_email,
+phone_number = EXCLUDED.phone_number,
+street_address = EXCLUDED.street_address,
+city_province = EXCLUDED.city_province,
+postal_code = EXCLUDED.postal_code;
+
+INSERT INTO public.account_applications (
+id,
+user_id,
+full_name,
+email,
+phone,
+status,
+plan_code,
+terms_accepted_at,
+consent_accepted_at,
+approved_at,
+tenant_id
+)
+VALUES (
+'77777777-7777-4777-8777-777777777777',
+'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+'Maria Santos',
+'owner@bellavita.com',
+'+63 917 555 0143',
+'approved',
+'starter',
+NOW(),
+NOW(),
+NOW(),
+'66666666-6666-4666-8666-666666666666'
+)
+ON CONFLICT (user_id) DO UPDATE SET
+status = EXCLUDED.status,
+approved_at = EXCLUDED.approved_at,
+tenant_id = EXCLUDED.tenant_id;
 
 -- 6. Services
 INSERT INTO public.services (id, tenant_id, name, slug, duration_minutes, price_cents, active)

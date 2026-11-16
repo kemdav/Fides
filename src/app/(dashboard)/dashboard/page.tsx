@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getDashboardProfile } from "@/lib/applications/service";
-import { createClient } from "@/lib/supabase/server";
+import { getAccountSession } from "@/lib/supabase/account-session";
 import { DashboardApp } from "./dashboard-app";
 
 export const metadata: Metadata = {
@@ -9,13 +9,10 @@ export const metadata: Metadata = {
 };
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const session = await getAccountSession();
+  if (!session) redirect("/login");
 
-  const profile = await getDashboardProfile(user.id);
+  const profile = await getDashboardProfile(session.user.id, session.admin);
   if (!profile) redirect("/login");
 
   return (

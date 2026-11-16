@@ -59,9 +59,11 @@ export async function getTenantBySlug(slug: string): Promise<TenantData | null> 
     .eq("slug", slug)
     .maybeSingle();
 
-  if (error || !data) {
-    return null;
+  if (error) {
+    console.error("[getTenantBySlug] Failed to load tenant.", { slug, error });
+    throw error;
   }
+  if (!data) return null;
 
   const settings = Array.isArray(data.tenant_settings)
     ? data.tenant_settings[0]

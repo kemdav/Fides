@@ -712,7 +712,7 @@ values
 on conflict (code) do nothing;
 
 insert into public.tier_features (tier_id, feature_key, enabled, limit_value)
-select id, 'appointments', true, null from public.subscription_tiers where code = 'basic'
+select id, 'appointments', true, null::integer from public.subscription_tiers where code = 'basic'
 union all select id, 'staff', true, 5 from public.subscription_tiers where code = 'basic'
 union all select id, 'locations', true, 1 from public.subscription_tiers where code = 'basic'
 union all select id, 'custom_domain', false, null from public.subscription_tiers where code = 'basic'
@@ -720,7 +720,7 @@ union all select id, 'api_access', false, null from public.subscription_tiers wh
 on conflict (tier_id, feature_key) do nothing;
 
 insert into public.tier_features (tier_id, feature_key, enabled, limit_value)
-select id, 'appointments', true, null from public.subscription_tiers where code = 'business'
+select id, 'appointments', true, null::integer from public.subscription_tiers where code = 'business'
 union all select id, 'staff', true, 25 from public.subscription_tiers where code = 'business'
 union all select id, 'locations', true, 3 from public.subscription_tiers where code = 'business'
 union all select id, 'custom_domain', true, null from public.subscription_tiers where code = 'business'
@@ -729,7 +729,7 @@ union all select id, 'analytics', true, null from public.subscription_tiers wher
 on conflict (tier_id, feature_key) do nothing;
 
 insert into public.tier_features (tier_id, feature_key, enabled, limit_value)
-select id, 'appointments', true, null from public.subscription_tiers where code = 'enterprise'
+select id, 'appointments', true, null::integer from public.subscription_tiers where code = 'enterprise'
 union all select id, 'staff', true, null from public.subscription_tiers where code = 'enterprise'
 union all select id, 'locations', true, null from public.subscription_tiers where code = 'enterprise'
 union all select id, 'custom_domain', true, null from public.subscription_tiers where code = 'enterprise'

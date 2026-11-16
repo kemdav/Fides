@@ -85,6 +85,39 @@ export const publicEnv = {
     ) ?? "localhost:3000",
 } as const;
 
+const activeDatabaseIsCloud =
+  process.env.FIDES_DB === "CLOUD" ||
+  (!process.env.FIDES_DB &&
+    publicEnv.supabaseUrl !== "" &&
+    !/^https?:\/\/(localhost|127\.0\.0\.1)(:|\/)/i.test(publicEnv.supabaseUrl));
+
+export const cloudPublicEnv = {
+  supabaseUrl:
+    normalizeEnvValue("CLOUD_SUPABASE_URL", process.env.CLOUD_SUPABASE_URL) ??
+    (activeDatabaseIsCloud ? publicEnv.supabaseUrl : ""),
+  supabaseKey:
+    normalizeEnvValue("CLOUD_SUPABASE_PUBLISHABLE_KEY", process.env.CLOUD_SUPABASE_PUBLISHABLE_KEY) ??
+    normalizeEnvValue("CLOUD_SUPABASE_PUBLIC_KEY", process.env.CLOUD_SUPABASE_PUBLIC_KEY) ??
+    normalizeEnvValue("CLOUD_SUPABASE_ANON_KEY", process.env.CLOUD_SUPABASE_ANON_KEY) ??
+    (activeDatabaseIsCloud ? publicEnv.supabaseKey : ""),
+} as const;
+
+export const cloudSupabaseConfigured = Boolean(cloudPublicEnv.supabaseUrl && cloudPublicEnv.supabaseKey);
+
+/**
+ * Dev-time guard for the `FIDES_DB` switch in `.env.local` (CLOUD | DOCKER).
+ * A typo such as `Cloud` expands every Supabase variable to an empty string, which would otherwise
+ * surface later as a vague "supabaseUrl is required" error.
+ */
+if (typeof window === "undefined" && process.env.NODE_ENV !== "production") {
+  const target = process.env.FIDES_DB;
+  if (target && target !== "CLOUD" && target !== "DOCKER") {
+    console.warn(`[env] FIDES_DB="${target}" is not valid. Set FIDES_DB=CLOUD or FIDES_DB=DOCKER (capital letters) in .env.local.`);
+  } else if (target && (!publicEnv.supabaseUrl || !publicEnv.supabaseKey)) {
+    console.warn(`[env] FIDES_DB=${target} but its Supabase URL / key are empty. Fill the ${target}_SUPABASE_* values in .env.local.`);
+  }
+}
+
 const toPositiveInt = (value: string | undefined, fallback: number): number => {
   if (value === undefined) return fallback;
   const parsed = Number(value);
@@ -101,6 +134,8 @@ const serverEnvSchema = z
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
     SUPABASE_SECRET_KEY: z.string().min(1).optional(),
     SUPABASE_JWT_SECRET: z.string().min(1).optional(),
+    CLOUD_SUPABASE_SECRET_KEY: z.string().min(1).optional(),
+    CLOUD_SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
     ADMIN_PORTAL_PUBLIC_ACCESS: z.string().optional(),
     GEMINI_API_KEY: z.string().min(1).optional(),
     GEMINI_MODEL: z.string().min(1).default("gemini-2.0-flash"),
@@ -124,6 +159,10 @@ const serverEnvSchema = z
   })
   .transform((env) => ({
     ...env,
+    CLOUD_SUPABASE_SECRET_KEY:
+      env.CLOUD_SUPABASE_SECRET_KEY ??
+      env.CLOUD_SUPABASE_SERVICE_ROLE_KEY ??
+      (activeDatabaseIsCloud ? env.SUPABASE_SECRET_KEY ?? env.SUPABASE_SERVICE_ROLE_KEY : undefined),
     ADMIN_PORTAL_PUBLIC_ACCESS: toBoolean(env.ADMIN_PORTAL_PUBLIC_ACCESS, false),
     AI_CONCIERGE_TIMEOUT_MS: toPositiveInt(env.AI_CONCIERGE_TIMEOUT_MS, 3000),
     SMTP_PORT: toPositiveInt(env.SMTP_PORT, 587),

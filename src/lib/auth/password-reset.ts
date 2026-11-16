@@ -4,7 +4,7 @@ import { getServerEnv } from "@/lib/env";
 import { sendPasswordResetCodeEmail } from "@/lib/mail/emails";
 import { isMailConfigured } from "@/lib/mail/mailer";
 import { isStrongPassword } from "@/lib/registration/schema";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createCloudAdminClient as createAdminClient } from "@/lib/supabase/admin";
 
 /** No 0/O/1/I so a code read from an email is hard to mistype. 32^4 ≈ 1 million codes. */
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -17,7 +17,7 @@ export class ResetError extends Error {}
 
 function secret(): string {
   const env = getServerEnv();
-  const value = env.PASSWORD_RESET_SECRET ?? env.SUPABASE_SECRET_KEY ?? env.SUPABASE_SERVICE_ROLE_KEY;
+  const value = env.PASSWORD_RESET_SECRET ?? env.CLOUD_SUPABASE_SECRET_KEY ?? env.SUPABASE_SECRET_KEY ?? env.SUPABASE_SERVICE_ROLE_KEY;
   if (!value) throw new ResetError("Password reset is not configured on the server.");
   return value;
 }

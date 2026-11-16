@@ -2,7 +2,7 @@ import "server-only";
 import { nextBillingDate } from "@/lib/billing";
 import { isMailConfigured } from "@/lib/mail/mailer";
 import { sendApprovalEmail, sendBillingReminderEmail, sendRejectionEmail, sendSubmissionEmail } from "@/lib/mail/emails";
-import { createAdminClient, type AdminClient } from "@/lib/supabase/admin";
+import { createCloudAdminClient as createAdminClient, type AdminClient } from "@/lib/supabase/admin";
 import {
   ALL_DOCUMENTS,
   DOCUMENT_BUCKET,
@@ -1017,16 +1017,14 @@ export type AccountAccess =
   | { ok: true; applicationId: string; tenantId: string | null }
   | { ok: false; reason: "none" | "pending" | "rejected" | "suspended" };
 
-export async function getAccountAccess(userId: string): Promise<AccountAccess> {
-  const admin = createAdminClient();
+export async function getAccountAccess(userId: string, admin = createAdminClient()): Promise<AccountAccess> {
   const { data } = await admin.from("account_applications").select("id, status, tenant_id").eq("user_id", userId).maybeSingle();
   if (!data) return { ok: false, reason: "none" };
   if (data.status === "approved") return { ok: true, applicationId: data.id, tenantId: data.tenant_id };
   return { ok: false, reason: data.status };
 }
 
-export async function getDashboardProfile(userId: string) {
-  const admin = createAdminClient();
+export async function getDashboardProfile(userId: string, admin = createAdminClient()) {
   const { data: app } = await admin.from("account_applications").select("*").eq("user_id", userId).maybeSingle();
   if (!app) return null;
   const [business, plan] = await Promise.all([

@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
+    "db:cloud-sql": "node scripts/build-cloud-sql.mjs",
     "email:test": "node scripts/send-test-email.mjs",
     "email:check": "node scripts/check-email-setup.mjs"
   },

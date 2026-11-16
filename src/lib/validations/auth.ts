@@ -20,7 +20,16 @@ export function loginFieldErrors(error: z.ZodError): LoginFieldErrors {
 export function safeRedirect(value: unknown): string {
   const fallback = "/dashboard";
   if (typeof value !== "string") return fallback;
-  if (!value.startsWith("/dashboard") || value.startsWith("//") || value.includes("\\")) return fallback;
+  if (!value.startsWith("/") || value.startsWith("//") || value.includes("\\")) return fallback;
+
+  const pathname = value.split(/[?#]/, 1)[0];
+  const isPlatformDashboard = /^\/dashboard(?:\/[a-z0-9-]+)*\/?$/.test(pathname);
+  const isTenantDashboard =
+    /^\/[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\/dashboard(?:\/[a-z0-9-]+)*\/?$/.test(
+      pathname
+    );
+  if (!isPlatformDashboard && !isTenantDashboard) return fallback;
+
   return value;
 }
 
