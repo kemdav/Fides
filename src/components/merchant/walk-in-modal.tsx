@@ -193,33 +193,41 @@ export function WalkInModal({
     setIsSubmitting(true);
     setError(null);
     try {
-      const result = await createAppointmentBookingAction({
-        customerName: customer.trim(),
-        customerEmail: email.trim() || undefined,
-        customerPhone: phone.trim(),
-        serviceName: service.split(" · ")[0],
-        staffName: staff,
-        date,
-        time,
-        source: "walk_in",
-        notes: notes.trim() || undefined,
-        tenantIdParam: tenantId,
-      });
+      let createdId = `walkin-preview-${Date.now()}`;
+      let startsAtISO = new Date().toISOString();
 
-      if (!result.success || !result.data) {
-        setError(("error" in result && result.error) || "Failed to create walk-in appointment.");
-        return;
+      if (tenantId) {
+        const result = await createAppointmentBookingAction({
+          customerName: customer.trim(),
+          customerEmail: email.trim() || undefined,
+          customerPhone: phone.trim(),
+          serviceName: service.split(" · ")[0],
+          staffName: staff,
+          date,
+          time,
+          source: "walk_in",
+          notes: notes.trim() || undefined,
+          tenantIdParam: tenantId,
+        });
+
+        if (!result.success || !result.data) {
+          setError(("error" in result && result.error) || "Failed to create walk-in appointment.");
+          return;
+        }
+
+        createdId = result.data.id;
+        startsAtISO = result.data.starts_at;
       }
 
       onCreated({
-        id: result.data.id,
+        id: createdId,
         time,
-        customer: result.data.customerName,
-        service: result.data.serviceName,
-        staff: result.data.staffName,
+        customer: customer.trim(),
+        service: service.split(" · ")[0],
+        staff,
         source: "Walk-In",
         status: "Check In",
-        startsAt: result.data.starts_at,
+        startsAt: startsAtISO,
       });
       setConfirmation("appointment");
     } catch (submissionError: unknown) {
