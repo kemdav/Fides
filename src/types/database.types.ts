@@ -1872,6 +1872,23 @@ type DatabaseCore = {
         Args: Record<PropertyKey, never>;
         Returns: Database["public"]["Enums"]["app_role"];
       };
+      get_merchant_overview_metrics: {
+        Args: {
+          p_current_end: string;
+          p_current_start: string;
+          p_previous_end: string;
+          p_previous_start: string;
+          p_tenant_id: string;
+        };
+        Returns: {
+          active_customer_count: number;
+          average_order_value_cents: number;
+          booking_count: number;
+          customer_growth_percent: number;
+          revenue_change_percent: number;
+          revenue_cents: number;
+        }[];
+      };
       get_my_tenant_id: { Args: Record<PropertyKey, never>; Returns: string };
       is_platform_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
       match_services: {

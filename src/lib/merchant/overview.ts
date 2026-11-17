@@ -1,0 +1,314 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/database.types";
+import type { AppointmentRow, DayChartStat } from "@/components/merchant/overview/overview-view";
+
+type MerchantClient = SupabaseClient<Database>;
+
+const EXCLUDED_APPOINTMENT_STATUSES = ["cancelled", "rejected", "expired", "no_show"] as const;
+const DEFAULT_TIMEZONE = "Asia/Manila";
+
+export interface OverviewMetrics {
+  revenueCents: number;
+  revenueChangePercent: number;
+  bookingCount: number;
+  activeCustomerCount: number;
+  customerGrowthPercent: number;
+  averageOrderValueCents: number;
+}
+
+export interface OverviewData {
+  metrics: OverviewMetrics;
+  chartStats: DayChartStat[];
+  todayAppointments: AppointmentRow[];
+  calendarAppointments: AppointmentRow[];
+  timezone: string;
+}
+
+export interface TransactionPageRequest {
+  tenantId: string;
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  status?: Database["public"]["Enums"]["payment_status"];
+  sort?: "paid_at" | "amount_cents" | "status";
+  direction?: "asc" | "desc";
+}
+
+export interface TransactionRow {
+  id: string;
+  amountCents: number;
+  currency: string;
+  status: Database["public"]["Enums"]["payment_status"];
+  method: Database["public"]["Enums"]["payment_method"];
+  reference: string | null;
+  paidAt: string | null;
+  customerName: string;
+  appointmentId: string | null;
+}
+
+export interface TransactionPage {
+  rows: TransactionRow[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+function assertDateRange(start: Date, end: Date): void {
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start >= end) {
+    throw new Error("Invalid merchant overview date range.");
+  }
+}
+
+function getTimezoneParts(date: Date, timezone: string): Record<string, number> {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+
+  return Object.fromEntries(
+    parts
+      .filter((part) => part.type !== "literal")
+      .map((part) => [part.type, Number(part.value)])
+  );
+}
+
+/**
+ * Converts a calendar date in the tenant timezone to an instant. The second
+ * pass accounts for DST transitions when the initial offset crosses a boundary.
+ */
+export function zonedDateToUtc(date: string, timezone: string, endOfDay = false): Date {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!match) throw new Error(`Invalid calendar date: ${date}`);
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = endOfDay ? 24 : 0;
+  const nominal = Date.UTC(year, month - 1, day, hour);
+  let candidate = new Date(nominal);
+
+  for (let pass = 0; pass < 2; pass += 1) {
+    const local = getTimezoneParts(candidate, timezone);
+    const localAsUtc = Date.UTC(
+      local.year,
+      local.month - 1,
+      local.day,
+      local.hour,
+      local.minute,
+      local.second
+    );
+    candidate = new Date(nominal - (localAsUtc - candidate.getTime()));
+  }
+
+  return candidate;
+}
+
+function dateKeyInTimezone(value: string, timezone: string): string {
+  const parts = getTimezoneParts(new Date(value), timezone);
+  return `${parts.year}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
+}
+
+function getWeekStart(date: Date, timezone: string): string {
+  const key = dateKeyInTimezone(date.toISOString(), timezone);
+  const [year, month, day] = key.split("-").map(Number);
+  const localDate = new Date(Date.UTC(year, month - 1, day));
+  const offset = localDate.getUTCDay() === 0 ? -6 : 1 - localDate.getUTCDay();
+  localDate.setUTCDate(localDate.getUTCDate() + offset);
+  return `${localDate.getUTCFullYear()}-${String(localDate.getUTCMonth() + 1).padStart(2, "0")}-${String(localDate.getUTCDate()).padStart(2, "0")}`;
+}
+
+function addDays(date: string, days: number): string {
+  const next = new Date(`${date}T00:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next.toISOString().slice(0, 10);
+}
+
+function asOne<T>(value: T | T[] | null): T | null {
+  return Array.isArray(value) ? value[0] ?? null : value;
+}
+
+function toAppointmentRow(
+  appointment: {
+    id: string;
+    starts_at: string;
+    source: Database["public"]["Enums"]["booking_source"];
+    status: Database["public"]["Enums"]["appointment_status"];
+    customers: { full_name: string } | { full_name: string }[] | null;
+    staff_members: { full_name: string } | { full_name: string }[] | null;
+    appointment_services:
+      | { services: { name: string } | { name: string }[] | null }
+      | { services: { name: string } | { name: string }[] | null }[]
+      | null;
+  },
+  timezone: string
+): AppointmentRow {
+  const customer = asOne(appointment.customers);
+  const staff = asOne(appointment.staff_members);
+  const line = asOne(appointment.appointment_services);
+  const service = asOne(line?.services ?? null);
+  const labels: Record<string, AppointmentRow["status"]> = {
+    pending_approval: "Pending approval",
+    checked_in: "Check In",
+    in_service: "In service",
+    completed: "Completed",
+    cancelled: "Cancelled",
+  };
+
+  return {
+    id: appointment.id,
+    time: new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(new Date(appointment.starts_at)),
+    customer: customer?.full_name?.trim() || "Customer",
+    service: service?.name || "Signature service",
+    staff: staff?.full_name?.trim() || "Specialist",
+    source: appointment.source === "walk_in" ? "Walk-In" : "Online",
+    status: labels[appointment.status] ?? "Confirmed",
+    startsAt: appointment.starts_at,
+    rawStatus: appointment.status,
+  };
+}
+
+export async function getMerchantOverview(
+  supabase: MerchantClient,
+  tenantId: string,
+  now = new Date()
+): Promise<OverviewData> {
+  if (!tenantId) throw new Error("A tenant is required to load the merchant overview.");
+
+  const { data: tenant, error: tenantError } = await supabase
+    .from("tenants")
+    .select("timezone")
+    .eq("id", tenantId)
+    .single();
+  if (tenantError) throw new Error(`Failed to load merchant timezone: ${tenantError.message}`);
+
+  const timezone = tenant.timezone || DEFAULT_TIMEZONE;
+  const weekStart = getWeekStart(now, timezone);
+  const weekEnd = addDays(weekStart, 7);
+  const currentStart = zonedDateToUtc(weekStart, timezone);
+  const currentEnd = zonedDateToUtc(weekEnd, timezone);
+  const previousStart = new Date(currentStart);
+  previousStart.setUTCDate(previousStart.getUTCDate() - 7);
+  const previousEnd = currentStart;
+  assertDateRange(currentStart, currentEnd);
+
+  const { data: aggregate, error: aggregateError } = await supabase.rpc("get_merchant_overview_metrics", {
+    p_tenant_id: tenantId,
+    p_current_start: currentStart.toISOString(),
+    p_current_end: currentEnd.toISOString(),
+    p_previous_start: previousStart.toISOString(),
+    p_previous_end: previousEnd.toISOString(),
+  });
+  if (aggregateError) throw new Error(`Failed to load merchant metrics: ${aggregateError.message}`);
+  const metricsRow = aggregate?.[0];
+  if (!metricsRow) throw new Error("Merchant metrics query returned no result.");
+
+  const { data: appointments, error: appointmentsError } = await supabase
+    .from("appointments")
+    .select(`
+      id, starts_at, source, status,
+      customers (full_name),
+      staff_members (full_name),
+      appointment_services (services (name))
+    `)
+    .eq("tenant_id", tenantId)
+    .gte("starts_at", currentStart.toISOString())
+    .lt("starts_at", currentEnd.toISOString())
+    .order("starts_at", { ascending: true });
+  if (appointmentsError) throw new Error(`Failed to load merchant appointments: ${appointmentsError.message}`);
+
+  const rows = (appointments ?? []).map((appointment) =>
+    toAppointmentRow(appointment, timezone)
+  );
+  const todayKey = dateKeyInTimezone(now.toISOString(), timezone);
+  const todayAppointments = rows.filter(
+    (appointment) => appointment.startsAt && dateKeyInTimezone(appointment.startsAt, timezone) === todayKey
+  );
+  const chartStats: DayChartStat[] = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(`${weekStart}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + index);
+    const key = date.toISOString().slice(0, 10);
+    const dayRows = rows.filter(
+      (appointment) => appointment.startsAt && dateKeyInTimezone(appointment.startsAt, timezone) === key
+    );
+    return {
+      day: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][date.getUTCDay()],
+      booked: dayRows.filter(
+        (row) =>
+          row.rawStatus !== "cancelled" &&
+          row.rawStatus !== "rejected" &&
+          row.rawStatus !== "expired" &&
+          row.rawStatus !== "no_show"
+      ).length,
+      completed: dayRows.filter((row) => row.rawStatus === "completed").length,
+    };
+  });
+
+  return {
+    metrics: {
+      revenueCents: Number(metricsRow.revenue_cents),
+      revenueChangePercent: Number(metricsRow.revenue_change_percent),
+      bookingCount: Number(metricsRow.booking_count),
+      activeCustomerCount: Number(metricsRow.active_customer_count),
+      customerGrowthPercent: Number(metricsRow.customer_growth_percent),
+      averageOrderValueCents: Number(metricsRow.average_order_value_cents),
+    },
+    chartStats,
+    todayAppointments,
+    calendarAppointments: rows,
+    timezone,
+  };
+}
+
+export async function getMerchantTransactions(
+  supabase: MerchantClient,
+  request: TransactionPageRequest
+): Promise<TransactionPage> {
+  const page = Math.max(1, Math.floor(request.page ?? 1));
+  const pageSize = Math.min(100, Math.max(1, Math.floor(request.pageSize ?? 25)));
+  const sort = request.sort ?? "paid_at";
+  const direction = request.direction ?? "desc";
+  const sortColumn = { paid_at: "paid_at", amount_cents: "amount_cents", status: "status" }[sort];
+  const search = request.search?.trim();
+
+  let query = supabase
+    .from("payments")
+    .select("id, amount_cents, currency, status, method, reference, paid_at, customer_id, appointment_id, customers (full_name)", {
+      count: "exact",
+    })
+    .eq("tenant_id", request.tenantId)
+    .order(sortColumn, { ascending: direction === "asc", nullsFirst: false })
+    .order("id", { ascending: direction === "asc" });
+
+  if (request.status) query = query.eq("status", request.status);
+  if (search) query = query.ilike("reference", `%${search.replace(/[%_]/g, "")}%`);
+
+  const from = (page - 1) * pageSize;
+  const { data, count, error } = await query.range(from, from + pageSize - 1);
+  if (error) throw new Error(`Failed to load merchant transactions: ${error.message}`);
+
+  const rows = (data ?? []).map((row) => ({
+    id: row.id,
+    amountCents: row.amount_cents,
+    currency: row.currency,
+    status: row.status,
+    method: row.method,
+    reference: row.reference,
+    paidAt: row.paid_at,
+    customerName: asOne(row.customers)?.full_name?.trim() || "Customer",
+    appointmentId: row.appointment_id,
+  }));
+  const total = count ?? 0;
+  return { rows, page, pageSize, total, totalPages: Math.ceil(total / pageSize) };
+}
