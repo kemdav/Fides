@@ -4,7 +4,6 @@ import type { AppointmentRow, DayChartStat } from "@/components/merchant/overvie
 
 type MerchantClient = SupabaseClient<Database>;
 
-const EXCLUDED_APPOINTMENT_STATUSES = ["cancelled", "rejected", "expired", "no_show"] as const;
 const DEFAULT_TIMEZONE = "Asia/Manila";
 
 export interface OverviewMetrics {
@@ -134,6 +133,70 @@ function asOne<T>(value: T | T[] | null): T | null {
   return Array.isArray(value) ? value[0] ?? null : value;
 }
 
+function percentageChange(current: number, previous: number): number {
+  if (previous === 0) return current === 0 ? 0 : 100;
+  return Number((((current - previous) / previous) * 100).toFixed(2));
+}
+
+async function getMetricsFromTables(
+  supabase: MerchantClient,
+  tenantId: string,
+  currentStart: Date,
+  currentEnd: Date,
+  previousStart: Date,
+  previousEnd: Date
+): Promise<OverviewMetrics> {
+  const [currentPayments, previousPayments, currentAppointments, previousAppointments] =
+    await Promise.all([
+      supabase.from("payments").select("amount_cents").eq("tenant_id", tenantId)
+        .eq("status", "paid").gte("paid_at", currentStart.toISOString()).lt("paid_at", currentEnd.toISOString()),
+      supabase.from("payments").select("amount_cents").eq("tenant_id", tenantId)
+        .eq("status", "paid").gte("paid_at", previousStart.toISOString()).lt("paid_at", previousEnd.toISOString()),
+      supabase.from("appointments").select("customer_id, status").eq("tenant_id", tenantId)
+        .gte("starts_at", currentStart.toISOString()).lt("starts_at", currentEnd.toISOString()),
+      supabase.from("appointments").select("customer_id, status").eq("tenant_id", tenantId)
+        .gte("starts_at", previousStart.toISOString()).lt("starts_at", previousEnd.toISOString()),
+    ]);
+
+  const queryError = [
+    currentPayments.error,
+    previousPayments.error,
+    currentAppointments.error,
+    previousAppointments.error,
+  ].find(Boolean);
+  if (queryError) throw new Error(`Failed to load merchant metrics: ${queryError.message}`);
+
+  const currentRevenue = (currentPayments.data ?? []).reduce(
+    (sum, payment) => sum + payment.amount_cents,
+    0
+  );
+  const previousRevenue = (previousPayments.data ?? []).reduce(
+    (sum, payment) => sum + payment.amount_cents,
+    0
+  );
+  const validBooking = (status: Database["public"]["Enums"]["appointment_status"]) =>
+    status !== "cancelled" && status !== "rejected" && status !== "expired" && status !== "no_show";
+  const currentBookings = (currentAppointments.data ?? []).filter((row) => validBooking(row.status));
+  const previousBookings = (previousAppointments.data ?? []).filter((row) => validBooking(row.status));
+  const currentCustomers = new Set(
+    currentBookings.map((row) => row.customer_id).filter((id): id is string => Boolean(id))
+  );
+  const previousCustomers = new Set(
+    previousBookings.map((row) => row.customer_id).filter((id): id is string => Boolean(id))
+  );
+
+  return {
+    revenueCents: currentRevenue,
+    revenueChangePercent: percentageChange(currentRevenue, previousRevenue),
+    bookingCount: currentBookings.length,
+    activeCustomerCount: currentCustomers.size,
+    customerGrowthPercent: percentageChange(currentCustomers.size, previousCustomers.size),
+    averageOrderValueCents: currentPayments.data?.length
+      ? Math.round(currentRevenue / currentPayments.data.length)
+      : 0,
+  };
+}
+
 function toAppointmentRow(
   appointment: {
     id: string;
@@ -175,6 +238,7 @@ function toAppointmentRow(
     source: appointment.source === "walk_in" ? "Walk-In" : "Online",
     status: labels[appointment.status] ?? "Confirmed",
     startsAt: appointment.starts_at,
+    calendarDate: dateKeyInTimezone(appointment.starts_at, timezone),
     rawStatus: appointment.status,
   };
 }
@@ -210,9 +274,38 @@ export async function getMerchantOverview(
     p_previous_start: previousStart.toISOString(),
     p_previous_end: previousEnd.toISOString(),
   });
-  if (aggregateError) throw new Error(`Failed to load merchant metrics: ${aggregateError.message}`);
-  const metricsRow = aggregate?.[0];
-  if (!metricsRow) throw new Error("Merchant metrics query returned no result.");
+  let metrics: OverviewMetrics;
+  if (aggregateError) {
+    const functionMissing = aggregateError.message.includes(
+      "Could not find the function public.get_merchant_overview_metrics"
+    );
+    if (!functionMissing) {
+      throw new Error(`Failed to load merchant metrics: ${aggregateError.message}`);
+    }
+
+    console.warn(
+      "Merchant overview aggregate function is unavailable; using bounded table queries. Apply migration 00016_merchant_overview.sql to enable the optimized RPC."
+    );
+    metrics = await getMetricsFromTables(
+      supabase,
+      tenantId,
+      currentStart,
+      currentEnd,
+      previousStart,
+      previousEnd
+    );
+  } else {
+    const metricsRow = aggregate?.[0];
+    if (!metricsRow) throw new Error("Merchant metrics query returned no result.");
+    metrics = {
+      revenueCents: Number(metricsRow.revenue_cents),
+      revenueChangePercent: Number(metricsRow.revenue_change_percent),
+      bookingCount: Number(metricsRow.booking_count),
+      activeCustomerCount: Number(metricsRow.active_customer_count),
+      customerGrowthPercent: Number(metricsRow.customer_growth_percent),
+      averageOrderValueCents: Number(metricsRow.average_order_value_cents),
+    };
+  }
 
   const { data: appointments, error: appointmentsError } = await supabase
     .from("appointments")
@@ -256,14 +349,7 @@ export async function getMerchantOverview(
   });
 
   return {
-    metrics: {
-      revenueCents: Number(metricsRow.revenue_cents),
-      revenueChangePercent: Number(metricsRow.revenue_change_percent),
-      bookingCount: Number(metricsRow.booking_count),
-      activeCustomerCount: Number(metricsRow.active_customer_count),
-      customerGrowthPercent: Number(metricsRow.customer_growth_percent),
-      averageOrderValueCents: Number(metricsRow.average_order_value_cents),
-    },
+    metrics,
     chartStats,
     todayAppointments,
     calendarAppointments: rows,

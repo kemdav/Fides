@@ -21,6 +21,7 @@ export interface AppointmentRow {
   source: "Online" | "Walk-In";
   status: "Confirmed" | "Pending approval" | "Check In" | "In service" | "Completed" | "Cancelled";
   startsAt?: string;
+  calendarDate?: string;
   rawStatus?: string;
 }
 
@@ -42,6 +43,11 @@ export interface OverviewViewProps {
   checkedInCount?: number;
   completedVisitsCount?: number;
   revenueTotal?: number;
+  revenueChangePercent?: number;
+  bookingCount?: number;
+  activeCustomerCount?: number;
+  customerGrowthPercent?: number;
+  averageOrderValue?: number;
   chartStats?: DayChartStat[];
   todayActivity?: { time: string; customer: string; service: string }[];
   initialRows?: AppointmentRow[];
@@ -76,6 +82,11 @@ export function OverviewView({
   checkedInCount = 0,
   completedVisitsCount = 0,
   revenueTotal = 0,
+  revenueChangePercent = 0,
+  bookingCount = 0,
+  activeCustomerCount = 0,
+  customerGrowthPercent = 0,
+  averageOrderValue = 0,
   chartStats = [],
   initialRows = EMPTY_APPOINTMENTS,
   calendarAppointments = EMPTY_APPOINTMENTS,
@@ -217,7 +228,7 @@ export function OverviewView({
     calendarMonth.getMonth() + 1
   ).padStart(2, "0")}-${String(activeCalendarDay).padStart(2, "0")}`;
   const activeCalendarAppointments = calendarAppointments.filter(
-    (appointment) => appointment.startsAt?.slice(0, 10) === activeCalendarDateKey
+    (appointment) => appointment.calendarDate === activeCalendarDateKey
   );
   const activeCompletedAppointments = activeCalendarAppointments.filter(
     (appointment) => appointment.status === "Completed"
@@ -290,33 +301,33 @@ export function OverviewView({
           <div className="grid grid-cols-2 gap-5 xl:grid-cols-4">
             <MetricCard
               featured
-              label="Today's appointments"
-              value={todayCount}
-              caption={`Your schedule at a glance`}
+              label="Total revenue"
+              value={revenueTotal}
+              caption={`${revenueChangePercent >= 0 ? "+" : ""}${revenueChangePercent.toFixed(1)}% vs previous week`}
               icon="calendar"
-              progress={todayCount > 0 ? Math.min(100, Math.round((confirmedCount / todayCount) * 100)) : 0}
+              progress={Math.min(100, Math.max(0, 50 + revenueChangePercent / 2))}
             />
             <MetricCard
-              label="Pending approvals"
-              value={pendingCount}
-              caption={`${pendingCount} ${pendingCount === 1 ? "request is" : "requests are"} waiting for your approval`}
+              label="Total bookings"
+              value={bookingCount}
+              caption={`${todayCount} today · ${confirmedCount} confirmed · ${pendingCount} pending`}
               icon="clock"
-              progress={35}
+              progress={bookingCount > 0 ? Math.min(100, Math.round((completedVisitsCount / bookingCount) * 100)) : 0}
               miniChart
             />
             <MetricCard
-              label="Checked-in customers"
-              value={checkedInCount}
-              caption={`${checkedInCount === 1 ? "Customer" : "Customers"} ready for their appointments`}
+              label="Active customers"
+              value={activeCustomerCount}
+              caption={`${customerGrowthPercent >= 0 ? "+" : ""}${customerGrowthPercent.toFixed(1)}% vs previous week · ${checkedInCount} checked in`}
               icon="users"
-              progress={todayCount > 0 ? Math.min(100, Math.round((checkedInCount / todayCount) * 100)) : 0}
+              progress={Math.min(100, Math.max(0, 50 + customerGrowthPercent / 2))}
             />
             <MetricCard
-              label="Completed revenue"
-              value={revenueTotal}
-              caption={`${completedVisitsCount === 1 ? "Visit" : "Visits"} completed today`}
+              label="Average order value"
+              value={averageOrderValue}
+              caption={`${completedVisitsCount} completed today`}
               icon="card"
-              progress={75}
+              progress={averageOrderValue > 0 ? 100 : 0}
             />
           </div>
 

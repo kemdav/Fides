@@ -84,3 +84,5 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.get_merchant_overview_metrics(UUID, TIMESTAMPTZ, TIMESTAMPTZ, TIMESTAMPTZ, TIMESTAMPTZ)
 TO authenticated;
+
+NOTIFY pgrst, 'reload schema';

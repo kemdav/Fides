@@ -69,6 +69,11 @@ export default async function MerchantDashboardPage({
       checkedInCount={checkedInToday}
       completedVisitsCount={completedToday}
       revenueTotal={Math.round(overview.metrics.revenueCents / 100)}
+      revenueChangePercent={overview.metrics.revenueChangePercent}
+      bookingCount={overview.metrics.bookingCount}
+      activeCustomerCount={overview.metrics.activeCustomerCount}
+      customerGrowthPercent={overview.metrics.customerGrowthPercent}
+      averageOrderValue={Math.round(overview.metrics.averageOrderValueCents / 100)}
       chartStats={overview.chartStats}
       todayActivity={rows.slice(0, 4).map((row) => ({
         time: row.time,

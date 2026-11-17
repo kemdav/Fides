@@ -712,31 +712,31 @@ values
 on conflict (code) do nothing;
 
 insert into public.tier_features (tier_id, feature_key, enabled, limit_value)
-select id, 'appointments', true, null from public.subscription_tiers where code = 'basic'
+select id, 'appointments', true, null::integer from public.subscription_tiers where code = 'basic'
 union all select id, 'staff', true, 5 from public.subscription_tiers where code = 'basic'
 union all select id, 'locations', true, 1 from public.subscription_tiers where code = 'basic'
-union all select id, 'custom_domain', false, null from public.subscription_tiers where code = 'basic'
-union all select id, 'api_access', false, null from public.subscription_tiers where code = 'basic'
+union all select id, 'custom_domain', false, null::integer from public.subscription_tiers where code = 'basic'
+union all select id, 'api_access', false, null::integer from public.subscription_tiers where code = 'basic'
 on conflict (tier_id, feature_key) do nothing;
 
 insert into public.tier_features (tier_id, feature_key, enabled, limit_value)
-select id, 'appointments', true, null from public.subscription_tiers where code = 'business'
+select id, 'appointments', true, null::integer from public.subscription_tiers where code = 'business'
 union all select id, 'staff', true, 25 from public.subscription_tiers where code = 'business'
 union all select id, 'locations', true, 3 from public.subscription_tiers where code = 'business'
-union all select id, 'custom_domain', true, null from public.subscription_tiers where code = 'business'
-union all select id, 'api_access', true, null from public.subscription_tiers where code = 'business'
-union all select id, 'analytics', true, null from public.subscription_tiers where code = 'business'
+union all select id, 'custom_domain', true, null::integer from public.subscription_tiers where code = 'business'
+union all select id, 'api_access', true, null::integer from public.subscription_tiers where code = 'business'
+union all select id, 'analytics', true, null::integer from public.subscription_tiers where code = 'business'
 on conflict (tier_id, feature_key) do nothing;
 
 insert into public.tier_features (tier_id, feature_key, enabled, limit_value)
-select id, 'appointments', true, null from public.subscription_tiers where code = 'enterprise'
-union all select id, 'staff', true, null from public.subscription_tiers where code = 'enterprise'
-union all select id, 'locations', true, null from public.subscription_tiers where code = 'enterprise'
-union all select id, 'custom_domain', true, null from public.subscription_tiers where code = 'enterprise'
-union all select id, 'api_access', true, null from public.subscription_tiers where code = 'enterprise'
-union all select id, 'analytics', true, null from public.subscription_tiers where code = 'enterprise'
-union all select id, 'white_label', true, null from public.subscription_tiers where code = 'enterprise'
-union all select id, 'dedicated_support', true, null from public.subscription_tiers where code = 'enterprise'
+select id, 'appointments', true, null::integer from public.subscription_tiers where code = 'enterprise'
+union all select id, 'staff', true, null::integer from public.subscription_tiers where code = 'enterprise'
+union all select id, 'locations', true, null::integer from public.subscription_tiers where code = 'enterprise'
+union all select id, 'custom_domain', true, null::integer from public.subscription_tiers where code = 'enterprise'
+union all select id, 'api_access', true, null::integer from public.subscription_tiers where code = 'enterprise'
+union all select id, 'analytics', true, null::integer from public.subscription_tiers where code = 'enterprise'
+union all select id, 'white_label', true, null::integer from public.subscription_tiers where code = 'enterprise'
+union all select id, 'dedicated_support', true, null::integer from public.subscription_tiers where code = 'enterprise'
 on conflict (tier_id, feature_key) do nothing;
 
 COMMIT;
