@@ -98,9 +98,9 @@ console.log("\n3. Supabase tables");
 if (!placeholder(supabaseUrl) && !placeholder(secretKey)) {
   const db = createClient(supabaseUrl, secretKey, { auth: { persistSession: false, autoRefreshToken: false } });
   for (const [table, fix, column] of [
-    ["account_applications", "run supabase/fides_account_setup.sql in the SQL Editor", "*"],
-    ["application_documents", "run supabase/migrations/00012_application_documents.sql", "user_id"],
-    ["password_reset_codes", "run supabase/migrations/00013_password_reset_codes.sql (forgot-password needs it)", "*"],
+    ["account_applications", "run supabase/migrations/AUTH/00012_account_applications.sql in the SQL Editor", "*"],
+    ["application_documents", "run supabase/migrations/AUTH/00013_application_documents.sql", "user_id"],
+    ["password_reset_codes", "run supabase/migrations/AUTH/00015_password_reset_codes.sql (forgot-password needs it)", "*"],
   ]) {
     const { error } = await db.from(table).select(column, { head: true, count: "exact" }).limit(1);
     if (!error) ok(`Table ${table} exists.`);

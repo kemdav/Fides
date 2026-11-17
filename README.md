@@ -104,7 +104,7 @@ public/                    PWA manifest, service worker, offline shell, icons
   dashboard, and the admin portal. `src/proxy.ts` (Next.js 16's replacement for
   `middleware.ts`) resolves the tenant from the request hostname using the
   wildcard subdomain strategy and forwards it via the `x-fides-tenant` header.
-- **Tenant isolation.** `supabase/migrations/00001_baseline.sql` enables
+- **Tenant isolation.** `supabase/migrations/AUTH/00001_baseline.sql` enables
   PostgreSQL Row Level Security on `tenants`, `profiles`, and
   `tenant_memberships`, with policies driven by tenant claims in the JWT.
 - **Sessions.** Supabase sessions are cookie-based; the proxy refreshes tokens
