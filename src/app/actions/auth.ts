@@ -36,7 +36,11 @@ export async function login(_previous: LoginState, formData: FormData): Promise<
 
   // Only business owners may enter through this surface (not staff, receptionists or admins).
   const admin = createAdminClient();
-  const { data: profile } = await admin.from("profiles").select("role").eq("id", data.user.id).maybeSingle();
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("role, tenant_id")
+    .eq("id", data.user.id)
+    .maybeSingle();
   if (profile && profile.role !== "owner") {
     await supabase.auth.signOut();
     return { error: AUTH_ERROR_MESSAGES.NOT_OWNER, email };
@@ -54,8 +58,54 @@ export async function login(_previous: LoginState, formData: FormData): Promise<
     return { error: message, email };
   }
 
+  const requestedRedirect = safeRedirect(formData.get("redirect"));
+  let target = requestedRedirect;
+
+  let tenantSlug: string | null = null;
+  if (profile?.tenant_id) {
+    const { data: tenant } = await createAdminClient()
+      .from("tenants")
+      .select("slug")
+      .eq("id", profile.tenant_id)
+      .maybeSingle();
+    tenantSlug = tenant?.slug ?? null;
+  }
+
+  if (!tenantSlug && !requestedRedirect.match(/^\/[a-z0-9-]+\/dashboard(?:\/appointments)?$/)) {
+    await supabase.auth.signOut();
+    return { error: AUTH_ERROR_MESSAGES.NO_ACCOUNT, email };
+  }
+
+  if (tenantSlug) {
+    const canonicalOverview = `/${tenantSlug}/dashboard`;
+    const canonicalAppointments = `/${tenantSlug}/dashboard/appointments`;
+    if (
+      requestedRedirect === "/dashboard" ||
+      requestedRedirect.startsWith("/dashboard/") ||
+      requestedRedirect === "/tenant-dashboard" ||
+      requestedRedirect === "/overview" ||
+      requestedRedirect === "/appointments"
+    ) {
+      target = requestedRedirect.endsWith("/appointments") ||
+        requestedRedirect === "/appointments"
+        ? canonicalAppointments
+        : canonicalOverview;
+    } else if (
+      requestedRedirect === canonicalOverview ||
+      requestedRedirect === canonicalAppointments
+    ) {
+      target = requestedRedirect;
+    } else if (requestedRedirect.match(/^\/[a-z0-9-]+\/dashboard(?:\/appointments)?$/)) {
+      target = requestedRedirect.startsWith(`/${tenantSlug}/dashboard`)
+        ? requestedRedirect
+        : canonicalOverview;
+    } else {
+      target = canonicalOverview;
+    }
+  }
+
   revalidatePath("/", "layout");
-  redirect(safeRedirect(formData.get("redirect")));
+  redirect(target);
 }
 
 export async function logout(): Promise<void> {
