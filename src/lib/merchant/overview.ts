@@ -262,6 +262,17 @@ export async function getMerchantOverview(
   const weekEnd = addDays(weekStart, 7);
   const currentStart = zonedDateToUtc(weekStart, timezone);
   const currentEnd = zonedDateToUtc(weekEnd, timezone);
+  const todayParts = dateKeyInTimezone(now.toISOString(), timezone).split("-").map(Number);
+  const localMonth = new Date(Date.UTC(todayParts[0], todayParts[1] - 1, 1));
+  const nextMonth = new Date(Date.UTC(localMonth.getUTCFullYear(), localMonth.getUTCMonth() + 1, 1));
+  const calendarStart = zonedDateToUtc(
+    `${localMonth.getUTCFullYear()}-${String(localMonth.getUTCMonth() + 1).padStart(2, "0")}-01`,
+    timezone
+  );
+  const calendarEnd = zonedDateToUtc(
+    `${nextMonth.getUTCFullYear()}-${String(nextMonth.getUTCMonth() + 1).padStart(2, "0")}-01`,
+    timezone
+  );
   const previousStart = new Date(currentStart);
   previousStart.setUTCDate(previousStart.getUTCDate() - 7);
   const previousEnd = currentStart;
@@ -284,7 +295,7 @@ export async function getMerchantOverview(
     }
 
     console.warn(
-      "Merchant overview aggregate function is unavailable; using bounded table queries. Apply migration 00016_merchant_overview.sql to enable the optimized RPC."
+      "Merchant overview aggregate function is unavailable; using bounded table queries. Apply migration 00019_merchant_overview.sql to enable the optimized RPC."
     );
     metrics = await getMetricsFromTables(
       supabase,
@@ -316,8 +327,8 @@ export async function getMerchantOverview(
       appointment_services (services (name))
     `)
     .eq("tenant_id", tenantId)
-    .gte("starts_at", currentStart.toISOString())
-    .lt("starts_at", currentEnd.toISOString())
+    .gte("starts_at", calendarStart.toISOString())
+    .lt("starts_at", calendarEnd.toISOString())
     .order("starts_at", { ascending: true });
   if (appointmentsError) throw new Error(`Failed to load merchant appointments: ${appointmentsError.message}`);
 
