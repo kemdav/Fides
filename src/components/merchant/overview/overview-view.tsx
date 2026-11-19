@@ -11,6 +11,7 @@ import { PageContent, PageHeading, StatusPill, Surface } from "@/components/admi
 import { updateAppointmentStatusAction } from "@/app/actions/appointments";
 import { NewAppointmentModal, type NewAppointmentResult } from "@/components/merchant/new-appointment-modal";
 import { WalkInModal, type WalkInResult } from "@/components/merchant/walk-in-modal";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export interface AppointmentRow {
   id: string;
@@ -29,6 +30,7 @@ export interface DayChartStat {
   day: string;
   booked: number;
   completed: number;
+  isToday?: boolean;
 }
 
 export interface OverviewViewProps {
@@ -48,6 +50,7 @@ export interface OverviewViewProps {
   activeCustomerCount?: number;
   customerGrowthPercent?: number;
   averageOrderValue?: number;
+  initialPeriod?: "Today" | "This Week" | "This Month";
   chartStats?: DayChartStat[];
   todayActivity?: { time: string; customer: string; service: string }[];
   initialRows?: AppointmentRow[];
@@ -87,6 +90,7 @@ export function OverviewView({
   activeCustomerCount = 0,
   customerGrowthPercent = 0,
   averageOrderValue = 0,
+  initialPeriod = "This Week",
   chartStats = [],
   initialRows = EMPTY_APPOINTMENTS,
   calendarAppointments = EMPTY_APPOINTMENTS,
@@ -98,7 +102,7 @@ export function OverviewView({
 
   const [filterStatus, setFilterStatus] = React.useState<string>("All");
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
-  const [period, setPeriod] = React.useState<string>("This Week");
+  const [period, setPeriod] = React.useState(initialPeriod);
   const [isPeriodOpen, setIsPeriodOpen] = React.useState(false);
   const [activeMenuId, setActiveMenuId] = React.useState<string | null>(null);
   const [cancelTarget, setCancelTarget] = React.useState<AppointmentRow | null>(null);
@@ -201,6 +205,82 @@ export function OverviewView({
           { day: "Sun", booked: 0, completed: 0 },
         ];
   const maxVal = Math.max(1, ...stats.map((s) => Math.max(s.booked, s.completed)));
+  const lineMaxVal = Math.max(1, ...stats.map((s) => Math.max(s.booked, s.completed)));
+  const lineWidth = 720;
+  const lineHeight = 280;
+  const lineLeft = 44; // space for y-axis labels
+  const lineRight = 16;
+  const lineTop = 16;
+  const lineBottom = 40; // space for x-axis labels + "Today" sub-label
+  const chartWidth = lineWidth - lineLeft - lineRight;
+  const chartHeight = lineHeight - lineTop - lineBottom;
+
+  // Compute nice y-axis ticks
+  const yTickCount = 5;
+  const rawStep = lineMaxVal / (yTickCount - 1);
+  const niceStep = rawStep <= 1 ? 1 : Math.ceil(rawStep);
+  const niceMax = niceStep * (yTickCount - 1);
+  const yTicks = Array.from({ length: yTickCount }, (_, i) => i * niceStep);
+
+  const linePointCoords = (key: "booked" | "completed") =>
+    stats.map((item, index) => {
+      const x =
+        stats.length === 1
+          ? lineLeft + chartWidth / 2
+          : lineLeft + (index / (stats.length - 1)) * chartWidth;
+      const y =
+        lineTop +
+        chartHeight -
+        (item[key] / niceMax) * chartHeight;
+      return { x, y };
+    });
+
+  const smoothPath = (points: { x: number; y: number }[]) => {
+    if (points.length < 2) return "";
+    let d = `M ${points[0].x},${points[0].y}`;
+    for (let i = 1; i < points.length; i++) {
+      const prev = points[i - 1];
+      const curr = points[i];
+      const cpx = (prev.x + curr.x) / 2;
+      d += ` C ${cpx},${prev.y} ${cpx},${curr.y} ${curr.x},${curr.y}`;
+    }
+    return d;
+  };
+
+  const areaPath = (points: { x: number; y: number }[]) => {
+    if (points.length < 2) return "";
+    const baseline = lineTop + chartHeight;
+    let d = `M ${points[0].x},${baseline} L ${points[0].x},${points[0].y}`;
+    for (let i = 1; i < points.length; i++) {
+      const prev = points[i - 1];
+      const curr = points[i];
+      const cpx = (prev.x + curr.x) / 2;
+      d += ` C ${cpx},${prev.y} ${cpx},${curr.y} ${curr.x},${curr.y}`;
+    }
+    d += ` L ${points[points.length - 1].x},${baseline} Z`;
+    return d;
+  };
+
+  const [hoveredPoint, setHoveredPoint] = React.useState<{
+    day: string;
+    booked: number;
+    completed: number;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  const linePoints = (key: "booked" | "completed") =>
+    stats.map((item, index) => {
+      const x =
+        stats.length === 1
+          ? lineWidth / 2
+          : 12 + (index / (stats.length - 1)) * (lineWidth - 24);
+      const y =
+        lineHeight -
+        12 -
+        (item[key] / lineMaxVal) * (lineHeight - 24);
+      return `${x},${y}`;
+    }).join(" ");
   const today = new Date();
   const currentMonthLabel = calendarMonth.toLocaleDateString("en-US", {
     month: "long",
@@ -259,7 +339,7 @@ export function OverviewView({
                   <button
                     type="button"
                     onClick={() => setIsPeriodOpen(!isPeriodOpen)}
-                    className="h-12 rounded-lg border-2 border-outline bg-white px-4 text-sm font-semibold text-ink flex items-center gap-3 hover:bg-mist transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
+                    className="h-12 w-36 rounded-lg border-2 border-outline bg-white px-4 text-sm font-semibold text-ink flex items-center justify-between gap-3 hover:bg-mist transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
                   >
                     <span>{period}</span>
                     <Icon name="chevron-down" className="size-4 text-glyph" />
@@ -270,7 +350,13 @@ export function OverviewView({
                         <button
                           key={p}
                           type="button"
-                          onClick={() => { setPeriod(p); setIsPeriodOpen(false); }}
+                          onClick={() => {
+                            setPeriod(p as typeof initialPeriod);
+                            setIsPeriodOpen(false);
+                            setHoveredPoint(null);
+                            router.push(`${basePath}/dashboard?period=${encodeURIComponent(p)}`);
+                            router.refresh();
+                          }}
                           className={`w-full text-left px-4 py-2.5 hover:bg-mist ${period === p ? "text-burnt font-semibold" : "text-body"}`}
                         >
                           {p}
@@ -334,7 +420,7 @@ export function OverviewView({
           {/* Middle Section: Appointment statistics & Calendar */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
             {/* Appointment statistics (7 cols) */}
-            <Surface className="lg:col-span-7 min-h-[390px] h-full space-y-6">
+            <Surface className="lg:col-span-7 min-h-[440px] h-full space-y-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Icon name="chart" className="size-5 text-glyph" />
@@ -354,33 +440,250 @@ export function OverviewView({
                 </div>
               </div>
 
-              {/* Bar Chart (QA #1: dynamic chart heights) */}
-              <div className="pt-4">
-                <div className="h-60 w-full flex items-end justify-between gap-0 px-0 border-b border-hairline sm:gap-4 sm:px-3">
-                  {stats.map((item) => (
-                    <div key={item.day} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end group">
-                      <div className="w-full flex items-end justify-center gap-0 h-52 sm:gap-1.5">
-                        <div
-                          className="w-4 bg-burnt rounded-t-sm transition-all duration-300 relative min-h-[4px] sm:w-7"
-                          style={{ height: `${item.booked > 0 ? (item.booked / maxVal) * 100 : 4}%` }}
-                        >
-                          <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-semibold text-subtle">
-                            {item.booked}
-                          </span>
-                        </div>
-                        <div
-                          className="w-4 bg-sky rounded-t-sm transition-all duration-300 relative min-h-[4px] sm:w-7"
-                          style={{ height: `${item.completed > 0 ? (item.completed / maxVal) * 100 : 4}%` }}
-                        >
-                          <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-semibold text-subtle">
-                            {item.completed}
-                          </span>
-                        </div>
+              {/* Appointment analytics */}
+              <div className="pt-4 transition-all duration-300">
+                {period === "This Month" ? (
+                  <div className="relative w-full h-[280px]" onMouseLeave={() => setHoveredPoint(null)}>
+                    <svg
+                      viewBox={`0 0 ${lineWidth} ${lineHeight}`}
+                      className="h-[280px] w-full overflow-visible"
+                      role="img"
+                      aria-label="Daily appointment analytics for this month"
+                      preserveAspectRatio="none"
+                    >
+                      <defs>
+                        <linearGradient id="bookedGrad" x1="0" x2="0" y1="0" y2="1">
+                          <stop offset="0%" stopColor="#C35000" stopOpacity="0.18" />
+                          <stop offset="100%" stopColor="#C35000" stopOpacity="0" />
+                        </linearGradient>
+                        <linearGradient id="completedGrad" x1="0" x2="0" y1="0" y2="1">
+                          <stop offset="0%" stopColor="#82AFC2" stopOpacity="0.15" />
+                          <stop offset="100%" stopColor="#82AFC2" stopOpacity="0" />
+                        </linearGradient>
+                      </defs>
+
+                      {/* Y-axis gridlines and labels */}
+                      {yTicks.map((tick) => {
+                        const y = lineTop + chartHeight - (tick / niceMax) * chartHeight;
+                        return (
+                          <g key={tick}>
+                            <line
+                              x1={lineLeft}
+                              x2={lineWidth - lineRight}
+                              y1={y}
+                              y2={y}
+                              stroke="#EDECE8"
+                              strokeWidth="1"
+                            />
+                            <text
+                              x={lineLeft - 8}
+                              y={y + 4}
+                              textAnchor="end"
+                              className="fill-subtle text-[11px] font-medium"
+                            >
+                              {tick}
+                            </text>
+                          </g>
+                        );
+                      })}
+
+                      {/* Today vertical indicator */}
+                      {(() => {
+                        const todayIndex = stats.findIndex((s) => Number(s.day) === today.getDate());
+                        if (todayIndex < 0) return null;
+                        const todayX =
+                          stats.length === 1
+                            ? lineLeft + chartWidth / 2
+                            : lineLeft + (todayIndex / (stats.length - 1)) * chartWidth;
+                        return (
+                          <line
+                            x1={todayX}
+                            x2={todayX}
+                            y1={lineTop}
+                            y2={lineTop + chartHeight}
+                            stroke="#C35000"
+                            strokeWidth="1"
+                            strokeDasharray="4 3"
+                            opacity="0.35"
+                          />
+                        );
+                      })()}
+
+                      {/* Gradient area fills */}
+                      <path d={areaPath(linePointCoords("booked"))} fill="url(#bookedGrad)" />
+                      <path d={areaPath(linePointCoords("completed"))} fill="url(#completedGrad)" />
+
+                      {/* Smooth curve lines */}
+                      <path
+                        d={smoothPath(linePointCoords("booked"))}
+                        fill="none"
+                        stroke="#C35000"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d={smoothPath(linePointCoords("completed"))}
+                        fill="none"
+                        stroke="#82AFC2"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+
+                      {/* Data point dots */}
+                      {linePointCoords("booked").map((pt, idx) => (
+                        <circle
+                          key={`b-${idx}`}
+                          cx={pt.x}
+                          cy={pt.y}
+                          r={hoveredPoint?.day === stats[idx].day ? 5 : 3}
+                          fill="#C35000"
+                          stroke="white"
+                          strokeWidth="2"
+                          className="transition-all duration-150"
+                        />
+                      ))}
+                      {linePointCoords("completed").map((pt, idx) => (
+                        <circle
+                          key={`c-${idx}`}
+                          cx={pt.x}
+                          cy={pt.y}
+                          r={hoveredPoint?.day === stats[idx].day ? 5 : 3}
+                          fill="#82AFC2"
+                          stroke="white"
+                          strokeWidth="2"
+                          className="transition-all duration-150"
+                        />
+                      ))}
+
+                      {/* X-axis day labels */}
+                      {stats.map((item, index) => {
+                        const x =
+                          stats.length === 1
+                            ? lineLeft + chartWidth / 2
+                            : lineLeft + (index / (stats.length - 1)) * chartWidth;
+                        const isToday = Number(item.day) === today.getDate();
+                        // Show every other day, plus first, last, and today
+                        const showLabel =
+                          index === 0 ||
+                          index === stats.length - 1 ||
+                          isToday ||
+                          (index % 2 === 0);
+                        return showLabel ? (
+                          <g key={item.day}>
+                            <text
+                              x={x}
+                              y={lineHeight - 14}
+                              textAnchor="middle"
+                              className={`text-[11px] font-medium ${isToday ? "fill-burnt" : "fill-subtle"}`}
+                            >
+                              {item.day}
+                            </text>
+                            {isToday && (
+                              <text
+                                x={x}
+                                y={lineHeight - 2}
+                                textAnchor="middle"
+                                className="fill-burnt text-[10px] font-semibold"
+                              >
+                                Today
+                              </text>
+                            )}
+                          </g>
+                        ) : null;
+                      })}
+
+                      {/* Invisible hover hit areas for tooltip */}
+                      {stats.map((item, index) => {
+                        const coords = linePointCoords("booked");
+                        const pt = coords[index];
+                        const sliceWidth = stats.length === 1 ? chartWidth : chartWidth / (stats.length - 1);
+                        return (
+                          <rect
+                            key={`hover-${index}`}
+                            x={pt.x - sliceWidth / 2}
+                            y={lineTop}
+                            width={sliceWidth}
+                            height={chartHeight}
+                            fill="transparent"
+                            onMouseEnter={() => {
+                              const bookedPt = linePointCoords("booked")[index];
+                              setHoveredPoint({
+                                day: item.day,
+                                booked: item.booked,
+                                completed: item.completed,
+                                x: bookedPt.x,
+                                y: Math.min(
+                                  linePointCoords("booked")[index].y,
+                                  linePointCoords("completed")[index].y
+                                ),
+                              });
+                            }}
+                            onMouseLeave={() => setHoveredPoint(null)}
+                          />
+                        );
+                      })}
+                    </svg>
+
+                    {/* Floating Tooltip */}
+                    {hoveredPoint && (
+                      <div
+                        className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg border border-hairline bg-white px-3 py-2 shadow-lg text-xs"
+                        style={{
+                          left: `${(hoveredPoint.x / lineWidth) * 100}%`,
+                          top: `${(hoveredPoint.y / lineHeight) * 100}%`,
+                        }}
+                      >
+                        <p className="font-semibold text-ink mb-1">
+                          Day {hoveredPoint.day}
+                        </p>
+                        <p className="flex items-center gap-1.5">
+                          <span className="inline-block size-2 rounded-full bg-burnt" />
+                          <span className="text-muted">Booked:</span>{" "}
+                          <span className="font-semibold text-ink">{hoveredPoint.booked}</span>
+                        </p>
+                        <p className="flex items-center gap-1.5">
+                          <span className="inline-block size-2 rounded-full bg-sky" />
+                          <span className="text-muted">Completed:</span>{" "}
+                          <span className="font-semibold text-ink">{hoveredPoint.completed}</span>
+                        </p>
                       </div>
-                      <span className="text-[11px] text-muted font-medium sm:text-sm">{item.day}</span>
-                    </div>
-                  ))}
-                </div>
+                    )}
+
+                  </div>
+                ) : (
+                  <div className="h-[280px] w-full flex items-end justify-between gap-0 px-0 border-b border-hairline sm:gap-4 sm:px-3">
+                    {stats.map((item) => (
+                      <div
+                        key={item.day}
+                        className={`flex-1 flex flex-col items-center gap-1.5 h-full justify-end group ${item.isToday ? "rounded-t-lg bg-burnt/[0.04]" : ""}`}
+                      >
+                        <div className="w-full flex items-end justify-center gap-0 h-60 sm:gap-1.5">
+                          <div
+                            className="w-4 bg-burnt rounded-t-sm transition-all duration-300 relative min-h-[4px] sm:w-7"
+                            style={{ height: `${item.booked > 0 ? (item.booked / maxVal) * 100 : 4}%` }}
+                          >
+                            <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-semibold text-subtle">
+                              {item.booked}
+                            </span>
+                          </div>
+                          <div
+                            className="w-4 bg-sky rounded-t-sm transition-all duration-300 relative min-h-[4px] sm:w-7"
+                            style={{ height: `${item.completed > 0 ? (item.completed / maxVal) * 100 : 4}%` }}
+                          >
+                            <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-semibold text-subtle">
+                              {item.completed}
+                            </span>
+                          </div>
+                        </div>
+                        <span className={`text-[11px] font-medium sm:text-sm ${item.isToday ? "rounded-full bg-burnt px-2 text-white" : "text-muted"}`}>
+                          {item.day}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </Surface>
 
@@ -533,7 +836,7 @@ export function OverviewView({
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="size-3.5 text-glyph" aria-hidden>
                       <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
                     </svg>
-                    <span>Filter {filterStatus !== "All" ? `(${filterStatus})` : ""}</span>
+                    <span>Filter</span>
                     <Icon name="chevron-down" className="size-3.5 text-glyph" />
                   </button>
                   {isFilterOpen && (
@@ -551,15 +854,37 @@ export function OverviewView({
                     </div>
                   )}
                 </div>
+                {filterStatus !== "All" && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-burnt/10 px-2.5 py-1 text-xs font-semibold text-burnt">
+                    {filterStatus}
+                    <button
+                      type="button"
+                      onClick={() => setFilterStatus("All")}
+                      className="flex size-4 items-center justify-center rounded-full hover:bg-burnt/20 transition-colors"
+                      aria-label="Clear filter"
+                    >
+                      <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2} className="size-2.5" aria-hidden>
+                        <line x1="2" y1="2" x2="10" y2="10" />
+                        <line x1="10" y1="2" x2="2" y2="10" />
+                      </svg>
+                    </button>
+                  </span>
+                )}
               </div>
             </div>
 
             {/* Mobile appointment cards */}
             <div className="md:hidden divide-y divide-hairline">
               {filtered.length === 0 ? (
-                <p className="px-5 py-8 text-center text-xs text-subtle">
-                  No appointments scheduled for today.
-                </p>
+                <EmptyState
+                  compact
+                  title={searchQuery || filterStatus !== "All"
+                    ? "No appointments match your search."
+                    : "No appointments scheduled."}
+                  description={searchQuery || filterStatus !== "All"
+                    ? "Try a different name, service, staff member, or status."
+                    : "New bookings will appear here automatically."}
+                />
               ) : (
                 filtered.map((row) => {
                   const isExpanded = expandedAppointmentId === row.id;
@@ -621,14 +946,22 @@ export function OverviewView({
                     <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Staff</th>
                     <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Source</th>
                     <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Status</th>
-                    <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide text-right">Action</th>
+                    <th className="w-24 px-6 py-4 text-[11px] leading-4 uppercase tracking-wide text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-hairline">
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-5 py-8 text-center text-xs text-subtle">
-                        No appointments scheduled for today.
+                      <td colSpan={7} className="px-5 py-2">
+                        <EmptyState
+                          compact
+                          title={searchQuery || filterStatus !== "All"
+                            ? "No appointments match your search."
+                            : "No appointments scheduled."}
+                          description={searchQuery || filterStatus !== "All"
+                            ? "Try a different name, service, staff member, or status."
+                            : "New bookings will appear here automatically."}
+                        />
                       </td>
                     </tr>
                   ) : (
@@ -646,11 +979,11 @@ export function OverviewView({
                         <td className="px-6 py-4">
                           <AppointmentStatusPill status={row.status} />
                         </td>
-                        <td className="px-6 py-4 text-right relative">
+                        <td className="w-24 px-6 py-4 text-right align-middle">
                           <button
                             type="button"
                             onClick={() => setActiveMenuId(activeMenuId === row.id ? null : row.id)}
-                            className="flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 text-glyph"
+                            className="ml-auto flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 text-glyph"
                           >
                             <Icon name="more" weight="fill" className="size-5" />
                           </button>

@@ -23,6 +23,8 @@ export interface OverviewData {
   timezone: string;
 }
 
+export type OverviewPeriod = "Today" | "This Week" | "This Month";
+
 export interface TransactionPageRequest {
   tenantId: string;
   page?: number;
@@ -246,7 +248,8 @@ function toAppointmentRow(
 export async function getMerchantOverview(
   supabase: MerchantClient,
   tenantId: string,
-  now = new Date()
+  now = new Date(),
+  period: OverviewPeriod = "This Week"
 ): Promise<OverviewData> {
   if (!tenantId) throw new Error("A tenant is required to load the merchant overview.");
 
@@ -260,9 +263,37 @@ export async function getMerchantOverview(
   const timezone = tenant.timezone || DEFAULT_TIMEZONE;
   const weekStart = getWeekStart(now, timezone);
   const weekEnd = addDays(weekStart, 7);
-  const currentStart = zonedDateToUtc(weekStart, timezone);
-  const currentEnd = zonedDateToUtc(weekEnd, timezone);
-  const todayParts = dateKeyInTimezone(now.toISOString(), timezone).split("-").map(Number);
+  const todayKey = dateKeyInTimezone(now.toISOString(), timezone);
+  const todayParts = todayKey.split("-").map(Number);
+  let currentStart: Date;
+  let currentEnd: Date;
+  let previousStart: Date;
+  let previousEnd: Date;
+
+  if (period === "Today") {
+    const tomorrow = addDays(todayKey, 1);
+    const yesterday = addDays(todayKey, -1);
+    currentStart = zonedDateToUtc(todayKey, timezone);
+    currentEnd = zonedDateToUtc(tomorrow, timezone);
+    previousStart = zonedDateToUtc(yesterday, timezone);
+    previousEnd = currentStart;
+  } else if (period === "This Month") {
+    const monthStartKey = `${todayParts[0]}-${String(todayParts[1]).padStart(2, "0")}-01`;
+    const nextMonth = new Date(Date.UTC(todayParts[0], todayParts[1], 1));
+    const previousMonth = new Date(Date.UTC(todayParts[0], todayParts[1] - 2, 1));
+    const monthEndKey = `${nextMonth.getUTCFullYear()}-${String(nextMonth.getUTCMonth() + 1).padStart(2, "0")}-01`;
+    const previousMonthStartKey = `${previousMonth.getUTCFullYear()}-${String(previousMonth.getUTCMonth() + 1).padStart(2, "0")}-01`;
+    currentStart = zonedDateToUtc(monthStartKey, timezone);
+    currentEnd = zonedDateToUtc(monthEndKey, timezone);
+    previousStart = zonedDateToUtc(previousMonthStartKey, timezone);
+    previousEnd = currentStart;
+  } else {
+    currentStart = zonedDateToUtc(weekStart, timezone);
+    currentEnd = zonedDateToUtc(weekEnd, timezone);
+    previousStart = new Date(currentStart);
+    previousStart.setUTCDate(previousStart.getUTCDate() - 7);
+    previousEnd = currentStart;
+  }
   const localMonth = new Date(Date.UTC(todayParts[0], todayParts[1] - 1, 1));
   const nextMonth = new Date(Date.UTC(localMonth.getUTCFullYear(), localMonth.getUTCMonth() + 1, 1));
   const calendarStart = zonedDateToUtc(
@@ -273,9 +304,6 @@ export async function getMerchantOverview(
     `${nextMonth.getUTCFullYear()}-${String(nextMonth.getUTCMonth() + 1).padStart(2, "0")}-01`,
     timezone
   );
-  const previousStart = new Date(currentStart);
-  previousStart.setUTCDate(previousStart.getUTCDate() - 7);
-  const previousEnd = currentStart;
   assertDateRange(currentStart, currentEnd);
 
   const { data: aggregate, error: aggregateError } = await supabase.rpc("get_merchant_overview_metrics", {
@@ -335,29 +363,86 @@ export async function getMerchantOverview(
   const rows = (appointments ?? []).map((appointment) =>
     toAppointmentRow(appointment, timezone)
   );
-  const todayKey = dateKeyInTimezone(now.toISOString(), timezone);
+  const { data: periodAppointments, error: periodAppointmentsError } = await supabase
+    .from("appointments")
+    .select(`
+      id, starts_at, source, status,
+      customers (full_name),
+      staff_members (full_name),
+      appointment_services (services (name))
+    `)
+    .eq("tenant_id", tenantId)
+    .gte("starts_at", currentStart.toISOString())
+    .lt("starts_at", currentEnd.toISOString())
+    .order("starts_at", { ascending: true });
+  if (periodAppointmentsError) {
+    throw new Error(`Failed to load period appointments: ${periodAppointmentsError.message}`);
+  }
+
+  const periodRows = (periodAppointments ?? []).map((appointment) =>
+    toAppointmentRow(appointment, timezone)
+  );
+  const { data: weekAppointments, error: weekAppointmentsError } = await supabase
+    .from("appointments")
+    .select(`
+      id, starts_at, source, status,
+      customers (full_name),
+      staff_members (full_name),
+      appointment_services (services (name))
+    `)
+    .eq("tenant_id", tenantId)
+    .gte("starts_at", zonedDateToUtc(weekStart, timezone).toISOString())
+    .lt("starts_at", zonedDateToUtc(weekEnd, timezone).toISOString())
+    .order("starts_at", { ascending: true });
+  if (weekAppointmentsError) {
+    throw new Error(`Failed to load weekly chart appointments: ${weekAppointmentsError.message}`);
+  }
+  const weekSourceRows = (weekAppointments ?? []).map((appointment) =>
+    toAppointmentRow(appointment, timezone)
+  );
   const todayAppointments = rows.filter(
     (appointment) => appointment.startsAt && dateKeyInTimezone(appointment.startsAt, timezone) === todayKey
   );
-  const chartStats: DayChartStat[] = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(`${weekStart}T00:00:00Z`);
-    date.setUTCDate(date.getUTCDate() + index);
-    const key = date.toISOString().slice(0, 10);
-    const dayRows = rows.filter(
-      (appointment) => appointment.startsAt && dateKeyInTimezone(appointment.startsAt, timezone) === key
-    );
-    return {
-      day: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][date.getUTCDay()],
-      booked: dayRows.filter(
-        (row) =>
-          row.rawStatus !== "cancelled" &&
-          row.rawStatus !== "rejected" &&
-          row.rawStatus !== "expired" &&
-          row.rawStatus !== "no_show"
-      ).length,
-      completed: dayRows.filter((row) => row.rawStatus === "completed").length,
-    };
-  });
+  let chartStats: DayChartStat[];
+  if (period === "This Month") {
+    const daysInMonth = new Date(Date.UTC(todayParts[0], todayParts[1], 0)).getUTCDate();
+    chartStats = Array.from({ length: daysInMonth }, (_, index) => {
+      const dayNumber = index + 1;
+      const dayRows = periodRows.filter((row) => {
+        if (!row.startsAt) return false;
+        const [year, month, day] = dateKeyInTimezone(row.startsAt, timezone).split("-").map(Number);
+        return year === todayParts[0] && month === todayParts[1] && day === dayNumber;
+      });
+      return {
+        day: String(dayNumber),
+        booked: dayRows.filter((row) =>
+          row.rawStatus !== "cancelled" && row.rawStatus !== "rejected" &&
+          row.rawStatus !== "expired" && row.rawStatus !== "no_show"
+        ).length,
+        completed: dayRows.filter((row) => row.rawStatus === "completed").length,
+      };
+    });
+  } else {
+    chartStats = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(`${weekStart}T00:00:00Z`);
+      date.setUTCDate(date.getUTCDate() + index);
+      const key = date.toISOString().slice(0, 10);
+      const dayRows = weekSourceRows.filter(
+        (appointment) => appointment.startsAt && dateKeyInTimezone(appointment.startsAt, timezone) === key
+      );
+      const dateKey = date.toISOString().slice(0, 10);
+      return {
+        day: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][date.getUTCDay()],
+        isToday: period === "Today" && dateKey === todayKey,
+        booked: dayRows.filter(
+          (row) =>
+            row.rawStatus !== "cancelled" && row.rawStatus !== "rejected" &&
+            row.rawStatus !== "expired" && row.rawStatus !== "no_show"
+        ).length,
+        completed: dayRows.filter((row) => row.rawStatus === "completed").length,
+      };
+    });
+  }
 
   return {
     metrics,

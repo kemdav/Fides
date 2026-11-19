@@ -4,26 +4,43 @@ import {
   OverviewView,
 } from "@/components/merchant/overview/overview-view";
 import { getMerchantOverview } from "@/lib/merchant/overview";
+import type { OverviewPeriod } from "@/lib/merchant/overview";
 import { createClient } from "@/lib/supabase/server";
 
 interface MerchantDashboardPageProps {
   params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ period?: string }>;
 }
 
 export async function generateMetadata({
   params,
 }: MerchantDashboardPageProps): Promise<Metadata> {
   const { slug } = await params;
+  const supabase = await createClient();
+  const { data: tenant } = await supabase
+    .from("tenants")
+    .select("name")
+    .eq("slug", slug)
+    .maybeSingle();
+  const title = tenant?.name?.trim()
+    ? `${tenant.name.trim()} Dashboard`
+    : "Merchant Dashboard";
   return {
-    title: `${slug} Merchant Workspace`,
+    title,
     description: "Manage appointments, walk-ins, customers, and daily operations.",
   };
 }
 
 export default async function MerchantDashboardPage({
   params,
+  searchParams,
 }: MerchantDashboardPageProps) {
   const { slug } = await params;
+  const { period: periodParam } = (await searchParams) ?? {};
+  const period: OverviewPeriod =
+    periodParam === "Today" || periodParam === "This Month"
+      ? periodParam
+      : "This Week";
   const supabase = await createClient();
   const {
     data: { user },
@@ -44,7 +61,7 @@ export default async function MerchantDashboardPage({
     .eq("id", user.id)
     .single();
 
-  const overview = await getMerchantOverview(supabase, tenant.id);
+  const overview = await getMerchantOverview(supabase, tenant.id, new Date(), period);
   const rows = overview.todayAppointments;
   const completedToday = rows.filter((row) => row.rawStatus === "completed").length;
   const checkedInToday = rows.filter((row) =>
@@ -74,6 +91,7 @@ export default async function MerchantDashboardPage({
       activeCustomerCount={overview.metrics.activeCustomerCount}
       customerGrowthPercent={overview.metrics.customerGrowthPercent}
       averageOrderValue={Math.round(overview.metrics.averageOrderValueCents / 100)}
+      initialPeriod={period}
       chartStats={overview.chartStats}
       todayActivity={rows.slice(0, 4).map((row) => ({
         time: row.time,
