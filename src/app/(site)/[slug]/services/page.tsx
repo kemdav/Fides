@@ -44,6 +44,26 @@ export default async function ServicesPage({ params }: ServicesPageProps) {
   }
 
   const { tenant, services: dbServices } = data;
+
+  console.log(
+    "\n[Storefront Services] Fetched data from DB:",
+    JSON.stringify(
+      {
+        tenant: tenant.name,
+        slug: tenant.slug,
+        totalServices: dbServices.length,
+        services: dbServices.map((s) => ({
+          name: s.name,
+          priceCents: s.priceCents,
+          durationMinutes: s.durationMinutes,
+          category: s.categoryName,
+        })),
+      },
+      null,
+      2
+    )
+  );
+
   const businessName = tenant.displayName?.trim() || tenant.name;
   const nav = getStorefrontNav(slug);
 

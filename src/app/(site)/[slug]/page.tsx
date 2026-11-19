@@ -51,6 +51,27 @@ export default async function StorefrontPage({ params }: StorefrontPageProps) {
   }
 
   const { tenant, featuredServices, staff } = data;
+
+  console.log(
+    "\n[Storefront Home] Fetched data from DB:",
+    JSON.stringify(
+      {
+        tenant: tenant.name,
+        slug: tenant.slug,
+        featuredServicesCount: featuredServices.length,
+        services: featuredServices.map((s) => ({
+          name: s.name,
+          priceCents: s.priceCents,
+          category: s.categoryName,
+        })),
+        staffCount: staff.length,
+        staff: staff.map((m) => m.fullName),
+      },
+      null,
+      2
+    )
+  );
+
   const businessName = tenant.displayName?.trim() || tenant.name;
   const nav = getStorefrontNav(slug);
 
