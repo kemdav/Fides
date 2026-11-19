@@ -5,15 +5,12 @@ import {
   StorefrontFooter,
   ServicesList,
 } from "@/components/storefront";
+import { getStorefrontNav } from "@/components/storefront/storefront-data";
+import { ALL_SERVICES } from "@/components/storefront/storefront-data";
 import {
-  getStorefrontNav,
-  ALL_SERVICES,
-} from "@/components/storefront/storefront-data";
-import {
-  getTenantBySlug,
-  getServicesByTenantId,
-  toServiceCardData,
-} from "@/lib/supabase/queries";
+  getStorefrontServicesData,
+  toStorefrontServiceCard,
+} from "@/lib/storefront";
 
 interface ServicesPageProps {
   params: Promise<{ slug: string }>;
@@ -23,9 +20,9 @@ export async function generateMetadata({
   params,
 }: ServicesPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const tenant = await getTenantBySlug(slug);
+  const data = await getStorefrontServicesData(slug);
   const businessName =
-    tenant?.display_name?.trim() || tenant?.name || "Storefront";
+    data?.tenant.displayName?.trim() || data?.tenant.name || "Storefront";
 
   return {
     title: `${businessName} – Services`,
@@ -40,20 +37,20 @@ export async function generateMetadata({
 
 export default async function ServicesPage({ params }: ServicesPageProps) {
   const { slug } = await params;
-  const tenant = await getTenantBySlug(slug);
+  const data = await getStorefrontServicesData(slug);
 
-  if (!tenant || tenant.status !== "active") {
+  if (!data) {
     notFound();
   }
 
-  const businessName = tenant.display_name?.trim() || tenant.name;
+  const { tenant, services: dbServices } = data;
+  const businessName = tenant.displayName?.trim() || tenant.name;
   const nav = getStorefrontNav(slug);
 
-  // Fetch all active services for this tenant from Supabase
-  const dbServices = await getServicesByTenantId(tenant.id);
+  // Map DB services to card format, fall back to demo data if none exist
   const services =
     dbServices.length > 0
-      ? dbServices.map((service) => toServiceCardData(service, slug))
+      ? dbServices.map((s) => toStorefrontServiceCard(s, slug))
       : ALL_SERVICES;
 
   return (
