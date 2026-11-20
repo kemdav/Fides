@@ -19,7 +19,6 @@ const columns = [
     title: "Get Started",
     links: [
       { label: "Create an Account", href: landingLinks.signup },
-      { label: "Log in", href: landingLinks.login },
     ],
   },
   {
@@ -48,14 +47,13 @@ function ArrowIcon({ className }: { className?: string }) {
   );
 }
 
-function FooterLink({ href, children, strong }: { href: string; children: ReactNode; strong?: boolean }) {
+function FooterLink({ href, children }: { href: string; children: ReactNode }) {
   return (
     <Link
       href={href}
       className={cn(
         "group inline-flex items-center gap-2 text-lg/6 transition-[translate] sm:text-xl/6 duration-300 ease-out hover:translate-x-1",
-        "motion-reduce:transition-none motion-reduce:hover:translate-x-0",
-        strong && "rounded-full bg-white px-4 py-1.5 font-semibold text-burnt"
+        "motion-reduce:transition-none motion-reduce:hover:translate-x-0"
       )}
     >
       <span className="relative">
@@ -91,7 +89,7 @@ export function Footer() {
                   <ul className="mt-6 flex flex-col gap-4">
                     {column.links.map((link) => (
                       <li key={link.label}>
-                        <FooterLink href={link.href} strong={link.label === "Create an Account"}>{link.label}</FooterLink>
+                        <FooterLink href={link.href}>{link.label}</FooterLink>
                       </li>
                     ))}
                   </ul>
