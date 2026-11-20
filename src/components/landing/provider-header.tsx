@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { buttonClasses } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { MobileMenu } from "./mobile-menu";
 
 export const navLinks = [
   { label: "Home", href: "/" },
@@ -168,45 +169,17 @@ export function ProviderHeader({
       </div>
 
       {open && (
-        <div
+        <MobileMenu
           id="mobile-menu"
-          className="absolute inset-x-0 top-full rounded-b-2xl border border-burnt/30 bg-powder px-4 pb-6 pt-2 shadow-[0_8px_16px_-8px_rgb(0_0_0/0.15)] sm:px-8 lg:hidden"
-        >
-          <nav aria-label="Mobile" className="flex flex-col">
-            {navLinks.map((link) => {
-              const active = isLinkActive(link.href);
-              return (
-                <Link
-                  key={link.label}
-                  href={resolveHref(link.href)}
-                  onClick={() => setOpen(false)}
-                  className={cn(
-                    "py-3 text-base/6 font-semibold hover:text-burnt-dark",
-                    active ? "text-burnt-dark" : "text-muted"
-                  )}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
-          </nav>
-          <div className="mt-4 flex gap-3">
-            <Link
-              href={resolvedContactHref}
-              onClick={() => setOpen(false)}
-              className={buttonClasses({ variant: "brand-outline", size: "cta" })}
-            >
-              Contact Us
-            </Link>
-            <Link
-              href={resolvedBookHref}
-              onClick={() => setOpen(false)}
-              className={buttonClasses({ variant: "brand", size: "cta" })}
-            >
-              Book Now
-            </Link>
-          </div>
-        </div>
+          brand={tenantName}
+          homeHref={resolveHref("/")}
+          links={navLinks.map((link) => ({ label: link.label, href: resolveHref(link.href), active: isLinkActive(link.href) }))}
+          actions={[
+            { label: "Contact Us", href: resolvedContactHref, variant: "brand-outline" },
+            { label: "Book Now", href: resolvedBookHref, variant: "brand" },
+          ]}
+          onClose={() => setOpen(false)}
+        />
       )}
     </header>
   );

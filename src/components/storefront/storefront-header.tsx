@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { buttonClasses } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { MobileMenu } from "@/components/landing/mobile-menu";
 
 export type StorefrontNav = { label: string; href: string };
 
@@ -167,49 +168,18 @@ export function StorefrontHeader({
         </button>
       </div>
 
-      {/* Mobile menu */}
       {open && (
-        <div
+        <MobileMenu
           id="storefront-mobile-menu"
-          className="absolute inset-x-0 top-full rounded-b-2xl border border-burnt/30 bg-powder px-5 pb-6 pt-2 shadow-[0_8px_16px_-8px_rgb(0_0_0/0.15)] sm:px-8 lg:hidden"
-        >
-          <nav aria-label="Mobile" className="flex flex-col">
-            {navLinks.map((link) => (
-              <Link
-                key={link.label}
-                href={link.href}
-                onClick={() => setOpen(false)}
-                className={cn(
-                  "py-3 text-base/6 font-semibold hover:text-burnt-dark",
-                  activeHref === link.href
-                    ? "text-burnt-dark"
-                    : "text-muted"
-                )}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-          <div className="mt-4 flex gap-3">
-            <Link
-              href={contactHref}
-              onClick={() => setOpen(false)}
-              className={buttonClasses({
-                variant: "brand-outline",
-                size: "md",
-              })}
-            >
-              Contact Us
-            </Link>
-            <Link
-              href={bookHref}
-              onClick={() => setOpen(false)}
-              className={buttonClasses({ variant: "brand", size: "md" })}
-            >
-              Book Now
-            </Link>
-          </div>
-        </div>
+          brand={businessName}
+          homeHref={homeHref}
+          links={navLinks.map((link) => ({ label: link.label, href: link.href, active: activeHref === link.href }))}
+          actions={[
+            { label: "Contact Us", href: contactHref, variant: "brand-outline" },
+            { label: "Book Now", href: bookHref, variant: "brand" },
+          ]}
+          onClose={() => setOpen(false)}
+        />
       )}
     </header>
   );
