@@ -7,15 +7,12 @@ import {
   StorefrontAbout,
   StorefrontFooter,
 } from "@/components/storefront";
+import { getStorefrontNav } from "@/components/storefront/storefront-data";
+import { ALL_SERVICES } from "@/components/storefront/storefront-data";
 import {
-  getStorefrontNav,
-  ALL_SERVICES,
-} from "@/components/storefront/storefront-data";
-import {
-  getTenantBySlug,
-  getServicesByTenantId,
-  toServiceCardData,
-} from "@/lib/supabase/queries";
+  getStorefrontHomeData,
+  toStorefrontServiceCard,
+} from "@/lib/storefront";
 
 interface StorefrontPageProps {
   params: Promise<{ slug: string }>;
@@ -25,20 +22,20 @@ export async function generateMetadata({
   params,
 }: StorefrontPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const tenant = await getTenantBySlug(slug);
+  const data = await getStorefrontHomeData(slug);
   const businessName =
-    tenant?.display_name?.trim() || tenant?.name || "Storefront";
+    data?.tenant.displayName?.trim() || data?.tenant.name || "Storefront";
 
   return {
     title: `${businessName} – Home`,
     description:
-      tenant?.supporting_message ||
+      data?.tenant.supportingMessage ||
       `Browse and book services at ${businessName}`,
     robots: { index: true, follow: true },
     openGraph: {
       title: `${businessName} – Home`,
       description:
-        tenant?.supporting_message ||
+        data?.tenant.supportingMessage ||
         `Browse and book services at ${businessName}`,
       type: "website",
     },
@@ -47,28 +44,49 @@ export async function generateMetadata({
 
 export default async function StorefrontPage({ params }: StorefrontPageProps) {
   const { slug } = await params;
-  const tenant = await getTenantBySlug(slug);
+  const data = await getStorefrontHomeData(slug);
 
-  if (!tenant || tenant.status !== "active") {
+  if (!data) {
     notFound();
   }
 
-  const businessName = tenant.display_name?.trim() || tenant.name;
+  const { tenant, featuredServices, staff } = data;
+
+  console.log(
+    "\n[Storefront Home] Fetched data from DB:",
+    JSON.stringify(
+      {
+        tenant: tenant.name,
+        slug: tenant.slug,
+        featuredServicesCount: featuredServices.length,
+        services: featuredServices.map((s) => ({
+          name: s.name,
+          priceCents: s.priceCents,
+          category: s.categoryName,
+        })),
+        staffCount: staff.length,
+        staff: staff.map((m) => m.fullName),
+      },
+      null,
+      2
+    )
+  );
+
+  const businessName = tenant.displayName?.trim() || tenant.name;
   const nav = getStorefrontNav(slug);
 
-  // Fetch tenant services from Supabase for the featured services section
-  const dbServices = await getServicesByTenantId(tenant.id);
+  // Map DB services to card format, fall back to demo data if no services exist
   const services =
-    dbServices.length > 0
-      ? dbServices.slice(0, 3).map((service) => toServiceCardData(service, slug))
+    featuredServices.length > 0
+      ? featuredServices.map((s) => toStorefrontServiceCard(s, slug))
       : ALL_SERVICES.slice(0, 3);
 
   const heroHeading = tenant.headline || "A little time for yourself.";
   const heroSubtitle =
-    tenant.supporting_message ||
+    tenant.supportingMessage ||
     "Thoughtful care, experienced specialists, and easy online booking. Choose a service and find a time that works for you.";
   const heroImageSrc =
-    tenant.cover_photo_url || "/images/storefront/hero Image.png";
+    tenant.coverPhotoUrl || "/images/storefront/hero Image.png";
 
   const aboutDescription =
     tenant.about ||
