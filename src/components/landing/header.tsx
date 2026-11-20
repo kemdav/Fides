@@ -1,19 +1,29 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { buttonClasses } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { MobileMenu } from "./mobile-menu";
 import { landingLinks, navLinks } from "./links";
+
+const actions = [
+  { label: "Contact Us", href: landingLinks.contact, variant: "brand-outline" },
+  { label: "Get Started", href: landingLinks.getStarted, variant: "brand" },
+] as const;
 
 export function Header() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [active, setActive] = useState<string>(navLinks[0].id);
 
+  const onHome = usePathname() === "/";
+
   useEffect(() => {
     const onScroll = () => {
       setScrolled(window.scrollY > 8);
+      if (!onHome) return setActive("");
 
       const offset = window.innerHeight * 0.35;
       let current: string = navLinks[0].id;
@@ -26,7 +36,7 @@ export function Header() {
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  }, [onHome]);
 
   useEffect(() => {
     if (!open) return;
@@ -51,129 +61,67 @@ export function Header() {
   }, [open]);
 
   return (
-    <header
-      className={cn(
-        "sticky top-0 z-50 bg-powder transition-shadow duration-300",
-        scrolled && "shadow-[0_2px_12px_rgb(0_0_0/0.08)]"
-      )}
-    >
-      <div
-        className={cn(
-          "mx-auto flex max-w-[1440px] items-center justify-between px-4 transition-[height] duration-300 sm:px-8 lg:px-[81px]",
-          scrolled ? "h-16 lg:h-[88px]" : "h-20 lg:h-[120px]"
-        )}
-      >
-        <Link
-          href={landingLinks.home}
-          className="px-2 font-display text-4xl leading-[normal] text-burnt lg:px-[23px] lg:text-[40px]"
-        >
+    <header className={cn("sticky top-0 z-50 h-16 bg-powder transition-shadow duration-300 lg:h-[88px]", scrolled && "shadow-[0_2px_12px_rgb(0_0_0/0.08)]")}>
+      <div className="mx-auto flex h-full max-w-[1440px] items-center justify-between px-4 sm:px-8 lg:px-[81px]">
+        <Link href={landingLinks.home} onClick={() => setOpen(false)} className="font-display text-4xl leading-none text-burnt lg:text-[40px]">
           Fides
         </Link>
 
-        <div className="hidden items-center gap-[59px] lg:flex">
-          <nav aria-label="Primary" className="flex items-center gap-5">
+        <div className="hidden items-center gap-10 lg:flex">
+          <nav aria-label="Primary" className="flex items-center gap-1">
             {navLinks.map((link) => (
               <Link
                 key={link.label}
                 href={link.href}
                 aria-current={link.id === active ? "location" : undefined}
                 className={cn(
-                  "flex flex-col items-center rounded-t px-4 pt-2 text-base/6 font-semibold transition-colors",
+                  "relative px-4 py-2 text-base/6 font-semibold transition-colors",
                   link.id === active ? "text-burnt-dark" : "text-muted hover:text-burnt-dark"
                 )}
               >
                 {link.label}
-                <span aria-hidden className="relative mt-2 h-[3px] w-full">
-                  <span className="absolute inset-x-0 bottom-0 h-px bg-line" />
-                  <span
-                    className={cn(
-                      "absolute inset-x-0 bottom-0 h-[3px] origin-center rounded-sm bg-burnt-dark transition-transform duration-300 ease-out",
-                      link.id === active ? "scale-x-100" : "scale-x-0"
-                    )}
-                  />
-                </span>
+                <span
+                  aria-hidden
+                  className={cn(
+                    "absolute inset-x-4 -bottom-0.5 h-[3px] origin-center rounded-sm bg-burnt-dark transition-transform duration-300 ease-out",
+                    link.id === active ? "scale-x-100" : "scale-x-0"
+                  )}
+                />
               </Link>
             ))}
           </nav>
-          <div className="flex items-center gap-5">
-            <Link
-              href={landingLinks.contact}
-              className={buttonClasses({ variant: "brand-outline", size: "cta" })}
-            >
-              Contact Us
-            </Link>
-            <Link
-              href={landingLinks.login}
-              className={buttonClasses({ variant: "brand", size: "cta" })}
-            >
-              Login
-            </Link>
+          <div className="flex items-center gap-3">
+            {actions.map((action) => (
+              <Link key={action.label} href={action.href} className={buttonClasses({ variant: action.variant, size: "cta" })}>
+                {action.label}
+              </Link>
+            ))}
           </div>
         </div>
 
         <button
           type="button"
-          aria-label="Toggle menu"
+          aria-label={open ? "Close menu" : "Open menu"}
           aria-expanded={open}
           aria-controls="mobile-menu"
           onClick={() => setOpen((value) => !value)}
-          className="flex size-11 flex-col items-center justify-center gap-1.5 rounded-lg text-burnt lg:hidden"
+          className="flex size-11 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg text-burnt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 lg:hidden"
         >
-          <span
-            className={cn(
-              "h-0.5 w-6 rounded bg-current transition-[translate,rotate,opacity] duration-300 ease-out motion-reduce:transition-none",
-              open && "translate-y-2 rotate-45"
-            )}
-          />
-          <span
-            className={cn(
-              "h-0.5 w-6 rounded bg-current transition-[translate,rotate,opacity] duration-300 ease-out motion-reduce:transition-none",
-              open && "opacity-0"
-            )}
-          />
-          <span
-            className={cn(
-              "h-0.5 w-6 rounded bg-current transition-[translate,rotate,opacity] duration-300 ease-out motion-reduce:transition-none",
-              open && "-translate-y-2 -rotate-45"
-            )}
-          />
+          <span className={cn("h-0.5 w-6 rounded bg-current transition-[translate,rotate,opacity] duration-300 ease-out motion-reduce:transition-none", open && "translate-y-2 rotate-45")} />
+          <span className={cn("h-0.5 w-6 rounded bg-current transition-[translate,rotate,opacity] duration-300 ease-out motion-reduce:transition-none", open && "opacity-0")} />
+          <span className={cn("h-0.5 w-6 rounded bg-current transition-[translate,rotate,opacity] duration-300 ease-out motion-reduce:transition-none", open && "-translate-y-2 -rotate-45")} />
         </button>
       </div>
 
       {open && (
-        <div id="mobile-menu" className="absolute inset-x-0 top-full rounded-b-2xl border border-burnt/30 bg-powder px-4 pb-6 pt-2 shadow-[0_8px_16px_-8px_rgb(0_0_0/0.15)] sm:px-8 lg:hidden">
-          <nav aria-label="Mobile" className="flex flex-col">
-            {navLinks.map((link) => (
-              <Link
-                key={link.label}
-                href={link.href}
-                onClick={() => setOpen(false)}
-                className={cn(
-                  "py-3 text-base/6 font-semibold hover:text-burnt-dark",
-                  link.id === active ? "text-burnt-dark" : "text-muted"
-                )}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-          <div className="mt-4 flex gap-3">
-            <Link
-              href={landingLinks.contact}
-              onClick={() => setOpen(false)}
-              className={buttonClasses({ variant: "brand-outline", size: "cta" })}
-            >
-              Contact Us
-            </Link>
-            <Link
-              href={landingLinks.login}
-              onClick={() => setOpen(false)}
-              className={buttonClasses({ variant: "brand", size: "cta" })}
-            >
-              Login
-            </Link>
-          </div>
-        </div>
+        <MobileMenu
+          id="mobile-menu"
+          brand="Fides"
+          homeHref={landingLinks.home}
+          links={navLinks.map((link) => ({ label: link.label, href: link.href, active: link.id === active }))}
+          actions={[...actions]}
+          onClose={() => setOpen(false)}
+        />
       )}
     </header>
   );
