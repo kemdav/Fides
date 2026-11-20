@@ -90,7 +90,7 @@ export function MerchantSidebar({
       )}
 
       <aside className={cn(
-        "fixed bottom-0 left-0 top-0 z-50 flex w-[248px] shrink-0 flex-col gap-[clamp(4px,1vh,12px)] overflow-hidden border-r border-[#EDECE8] bg-white p-4 transition-transform duration-200 lg:sticky lg:z-10 lg:flex lg:h-dvh",
+        "fixed bottom-0 left-0 top-0 z-50 flex w-full shrink-0 lg:w-[248px] flex-col gap-[clamp(4px,1vh,12px)] overflow-hidden border-r border-[#EDECE8] bg-white p-4 transition-transform duration-200 lg:sticky lg:z-10 lg:flex lg:h-dvh",
         mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"
       )}>
         <div className="flex shrink-0 items-start justify-between border-b border-[#EDECE8] pb-4">
