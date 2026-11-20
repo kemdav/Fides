@@ -7,8 +7,8 @@ import { timingSafeEqual } from "node:crypto";
  * This is the single place where administrator credentials live.
  * To add, remove or change an admin, edit the list below and restart the server.
  *
- * The login page (/login) checks these first; a match opens the Admin page,
- * anything else continues through the normal Supabase business-owner login.
+ * Only the admin login page (/admin/login) checks these; a match opens the Admin page.
+ * The general login (/login) never accepts them.
  */
 export type AdminAccount = {
   id: string;

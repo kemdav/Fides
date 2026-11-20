@@ -6,7 +6,7 @@ import { getAdminSession } from "./session";
 /** Admin pages: signed-in local admin required, otherwise back to the login page. */
 export async function requireAdminPortal(): Promise<AdminAccount> {
   const session = await getAdminSession();
-  if (!session) redirect("/login");
+  if (!session) redirect("/admin/login");
   return session;
 }
 

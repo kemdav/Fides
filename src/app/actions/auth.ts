@@ -2,8 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createAdminSession, clearAdminSession } from "@/lib/admin/session";
-import { verifyAdminCredentials } from "@/lib/admin/local-accounts";
+import { clearAdminSession } from "@/lib/admin/session";
 import { getAccountAccess } from "@/lib/applications/service";
 import { AUTH_ERROR_MESSAGES, mapAuthError } from "@/lib/auth/error-handler";
 import { createClient } from "@/lib/supabase/server";
@@ -14,14 +13,6 @@ export type LoginState = { error: string | null; email: string; fieldErrors?: Lo
 
 export async function login(_previous: LoginState, formData: FormData): Promise<LoginState> {
   const email = String(formData.get("email") ?? "");
-
-  // Local admin accounts (see lib/admin/local-accounts.ts) bypass Supabase and go to the Admin page.
-  const adminAccount = verifyAdminCredentials(email, String(formData.get("password") ?? ""));
-  if (adminAccount) {
-    await createAdminSession(adminAccount);
-    revalidatePath("/", "layout");
-    redirect("/admin");
-  }
 
   const parsed = loginSchema.safeParse({ email, password: formData.get("password") });
   if (!parsed.success) {
