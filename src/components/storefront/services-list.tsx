@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ServiceCard, type ServiceCardData } from "./service-card";
 import { SearchInput } from "./search-input";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export interface ServicesListProps {
   /** All services available for this tenant. */
@@ -64,23 +64,11 @@ export function ServicesList({
         </div>
 
         {filtered.length === 0 && (
-          <div className="flex flex-1 items-center justify-center py-12">
-            <div className="flex max-w-sm flex-col items-center text-center">
-              <Image
-                src="/images/landing/fox-hero.svg"
-                alt=""
-                width={112}
-                height={112}
-                className="mb-5 h-24 w-24 object-contain opacity-70"
-              />
-              <p className="font-display text-2xl text-ink">
-                No services match your search.
-              </p>
-              <p className="mt-2 text-base/6 text-muted">
-                Try a different service name or category.
-              </p>
-            </div>
-          </div>
+          <EmptyState
+            title="No services match your search."
+            description="Try a different service name or category."
+            className="flex-1"
+          />
         )}
 
         {/* Bottom helper row */}

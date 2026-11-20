@@ -158,7 +158,51 @@ VALUES
 ON CONFLICT (tenant_id, profile_id) DO UPDATE SET
 role = EXCLUDED.role;
 
--- 5. Tenant Settings
+-- 5. Approved Account Application
+INSERT INTO public.account_applications (
+id,
+reference_code,
+user_id,
+full_name,
+email,
+phone,
+status,
+plan_code,
+terms_accepted_at,
+consent_accepted_at,
+submitted_at,
+reviewed_at,
+reviewed_by,
+approved_at,
+decided_at,
+tenant_id
+)
+VALUES (
+'66666666-6666-4666-8666-666666666601',
+'FID-1001',
+'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+'Maria Santos',
+'owner@bellavita.com',
+'+63 917 555 0143',
+'approved',
+'starter',
+NOW(),
+NOW(),
+NOW(),
+NOW(),
+'Local seed',
+NOW(),
+NOW(),
+'11111111-1111-4111-8111-111111111111'
+)
+ON CONFLICT (user_id) DO UPDATE SET
+status = 'approved',
+reviewed_at = NOW(),
+approved_at = NOW(),
+decided_at = NOW(),
+tenant_id = '11111111-1111-4111-8111-111111111111';
+
+-- 6. Tenant Settings
 INSERT INTO public.tenant_settings (
 tenant_id,
 dominant_color,
