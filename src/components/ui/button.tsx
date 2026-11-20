@@ -29,8 +29,8 @@ const sizeClasses: Record<ButtonSize, string> = {
   sm: "h-8 rounded-md px-3 text-sm font-medium",
   md: "h-10 rounded-md px-4 text-sm font-medium",
   lg: "h-12 rounded-md px-6 text-base font-medium",
-  cta: "rounded-lg px-[18px] py-[14px] text-lg/7 font-semibold",
-  pill: "rounded-[32px] px-[18px] py-[14px] text-lg/7 font-semibold",
+  cta: "rounded-lg px-5 py-3 text-base/6 font-semibold",
+  pill: "rounded-[32px] px-5 py-3 text-base/6 font-semibold",
 };
 
 type ButtonClassOptions = {
