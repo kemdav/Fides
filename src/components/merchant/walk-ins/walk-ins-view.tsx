@@ -37,7 +37,21 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
   const [openStaffMenuId, setOpenStaffMenuId] = React.useState<string | null>(
     null,
   );
+  const [menuPos, setMenuPos] = React.useState<{
+    top?: number;
+    bottom?: number;
+    right: number;
+  } | null>(null);
   const [toast, setToast] = React.useState<string | null>(null);
+
+  const computeMenuPos = (el: HTMLElement) => {
+    const rect = el.getBoundingClientRect();
+    const right = window.innerWidth - rect.right;
+    const openUpward = window.innerHeight - rect.bottom < 180;
+    return openUpward
+      ? { bottom: window.innerHeight - rect.top + 6, right }
+      : { top: rect.bottom + 6, right };
+  };
 
   const showToast = React.useCallback((message: string) => {
     setToast(message);
@@ -89,14 +103,21 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
     };
   }, [data.tenantId, refreshData]);
 
-  // Close row dropdown menus on outside click
+  // Close row dropdown menus on outside click, scroll, or resize
   React.useEffect(() => {
     const closeMenus = () => {
       setOpenRowMenuId(null);
       setOpenStaffMenuId(null);
+      setMenuPos(null);
     };
     window.addEventListener("click", closeMenus);
-    return () => window.removeEventListener("click", closeMenus);
+    window.addEventListener("scroll", closeMenus, true);
+    window.addEventListener("resize", closeMenus);
+    return () => {
+      window.removeEventListener("click", closeMenus);
+      window.removeEventListener("scroll", closeMenus, true);
+      window.removeEventListener("resize", closeMenus);
+    };
   }, []);
 
   const filteredQueue = React.useMemo(() => {
@@ -117,6 +138,7 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
     status: "notified" | "cancelled" | "expired",
   ) => {
     setOpenRowMenuId(null);
+    setMenuPos(null);
     const res = await updateWaitlistStatusAction({
       tenantId: data.tenantId,
       entryId: entry.id,
@@ -132,12 +154,14 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
 
   const openQuickWalkInForStaff = (member: WalkInStaffOption) => {
     setOpenStaffMenuId(null);
+    setMenuPos(null);
     setDefaultModalStaffId(member.id);
     setWalkInOpen(true);
   };
 
   const assignFirstWaitingToStaff = (member: WalkInStaffOption) => {
     setOpenStaffMenuId(null);
+    setMenuPos(null);
     const eligible =
       data.waitingList.find(
         (w) => !w.requestedStaffId || w.requestedStaffId === member.id,
@@ -342,30 +366,37 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
                     <td className="py-3.5 pr-4 text-ink">
                       {item.estimatedWaitMinutes} min
                     </td>
-                    <td className="relative py-3.5 text-right">
+                    <td className="py-3.5 text-right">
                       <button
                         type="button"
                         aria-label={`Actions for ${item.customerName}`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setOpenRowMenuId((prev) =>
-                            prev === item.id ? null : item.id,
-                          );
+                          if (openRowMenuId === item.id) {
+                            setOpenRowMenuId(null);
+                            setMenuPos(null);
+                            return;
+                          }
+                          setOpenStaffMenuId(null);
+                          setMenuPos(computeMenuPos(e.currentTarget));
+                          setOpenRowMenuId(item.id);
                         }}
                         className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-mist hover:text-ink"
                       >
                         •••
                       </button>
 
-                      {openRowMenuId === item.id && (
+                      {openRowMenuId === item.id && menuPos && (
                         <div
                           onClick={(e) => e.stopPropagation()}
-                          className="absolute right-0 top-11 z-20 w-48 rounded-lg border border-hairline bg-white py-1 text-left shadow-lg"
+                          style={menuPos}
+                          className="fixed z-50 w-48 rounded-lg border border-hairline bg-white py-1 text-left shadow-lg"
                         >
                           <button
                             type="button"
                             onClick={() => {
                               setOpenRowMenuId(null);
+                              setMenuPos(null);
                               setAssignPreselectStaffId(undefined);
                               setAssigningEntry(item);
                             }}
@@ -457,25 +488,31 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
                     <td className="py-3.5 pr-4 text-ink">
                       {member.nextAvailableLabel}
                     </td>
-                    <td className="relative py-3.5 text-right">
+                    <td className="py-3.5 text-right">
                       <button
                         type="button"
                         aria-label={`Actions for ${member.fullName}`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setOpenStaffMenuId((prev) =>
-                            prev === member.id ? null : member.id,
-                          );
+                          if (openStaffMenuId === member.id) {
+                            setOpenStaffMenuId(null);
+                            setMenuPos(null);
+                            return;
+                          }
+                          setOpenRowMenuId(null);
+                          setMenuPos(computeMenuPos(e.currentTarget));
+                          setOpenStaffMenuId(member.id);
                         }}
                         className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-mist hover:text-ink"
                       >
                         •••
                       </button>
 
-                      {openStaffMenuId === member.id && (
+                      {openStaffMenuId === member.id && menuPos && (
                         <div
                           onClick={(e) => e.stopPropagation()}
-                          className="absolute right-0 top-11 z-20 w-52 rounded-lg border border-hairline bg-white py-1 text-left shadow-lg"
+                          style={menuPos}
+                          className="fixed z-50 w-52 rounded-lg border border-hairline bg-white py-1 text-left shadow-lg"
                         >
                           {data.waitingList.length > 0 && (
                             <button
