@@ -60,40 +60,64 @@ async function resolveOrCreateCustomer(
 ): Promise<string | null> {
   const cleanName = fullName.trim();
   const cleanPhone = phone?.trim() || null;
+  const cleanEmail = email?.trim() || null;
 
+  // 1. Reuse existing customer only if BOTH phone and name match
   if (cleanPhone) {
-    const { data: byPhone } = await supabase
+    const { data: exactMatch } = await supabase
       .from("customers")
       .select("id")
       .eq("tenant_id", tenantId)
       .eq("phone", cleanPhone)
+      .ilike("full_name", cleanName)
       .limit(1)
       .maybeSingle();
-    if (byPhone?.id) return byPhone.id;
+
+    if (exactMatch?.id) return exactMatch.id;
+  } else {
+    const { data: byName } = await supabase
+      .from("customers")
+      .select("id")
+      .eq("tenant_id", tenantId)
+      .ilike("full_name", cleanName)
+      .limit(1)
+      .maybeSingle();
+
+    if (byName?.id) return byName.id;
   }
 
-  const { data: byName } = await supabase
-    .from("customers")
-    .select("id")
-    .eq("tenant_id", tenantId)
-    .ilike("full_name", cleanName)
-    .limit(1)
-    .maybeSingle();
-
-  if (byName?.id) return byName.id;
-
-  const { data: created } = await supabase
+  // 2. Otherwise create a new customer with the exact inputted name
+  const { data: created, error: insertError } = await supabase
     .from("customers")
     .insert({
       tenant_id: tenantId,
       full_name: cleanName,
-      email: email?.trim() || null,
+      email: cleanEmail,
       phone: cleanPhone,
     })
     .select("id")
     .single();
 
-  return created?.id ?? null;
+  if (created?.id) return created.id;
+
+  // 3. Fallback if a unique phone constraint rejects duplicate phone numbers
+  if (insertError?.code === "23505" && cleanPhone) {
+    const { data: existing } = await supabase
+      .from("customers")
+      .update({
+        full_name: cleanName,
+        ...(cleanEmail ? { email: cleanEmail } : {}),
+      })
+      .eq("tenant_id", tenantId)
+      .eq("phone", cleanPhone)
+      .select("id")
+      .limit(1)
+      .maybeSingle();
+
+    if (existing?.id) return existing.id;
+  }
+
+  return null;
 }
 
 /**

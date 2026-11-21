@@ -40,6 +40,15 @@ function formatPeso(cents: number): string {
   return `₱${Math.round(cents / 100).toLocaleString("en-PH")}`;
 }
 
+function getTodayManilaDate(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
 export function WalkInModal({
   isOpen,
   tenantId,
@@ -62,7 +71,7 @@ export function WalkInModal({
   const [phone, setPhone] = React.useState("");
   const [serviceId, setServiceId] = React.useState("");
   const [staffId, setStaffId] = React.useState(defaultStaffId ?? "any");
-  const [date, setDate] = React.useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = React.useState(getTodayManilaDate);
   const [time, setTime] = React.useState("10:45 AM");
   const [notes, setNotes] = React.useState("");
   const [sendInvitation, setSendInvitation] = React.useState(false);
@@ -92,7 +101,7 @@ export function WalkInModal({
     setCustomer("");
     setEmail("");
     setPhone("");
-    setDate(new Date().toISOString().slice(0, 10));
+    setDate(getTodayManilaDate());
     setTime("10:45 AM");
     setNotes("");
     setSendInvitation(false);
