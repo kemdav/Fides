@@ -8,8 +8,8 @@ import { AdminButton } from "@/components/admin/admin-button";
 import { MetricCard } from "@/components/admin/metric-card";
 import { PageContent, PageHeading, StatusPill, Surface } from "@/components/admin/primitives";
 import { EmptyState } from "@/components/ui/empty-state";
+import { InviteStaffModal } from "./invite-staff-modal";
 import {
-  addStaffMemberAction,
   updateStaffMemberAction,
   toggleStaffActiveAction,
   deleteStaffMemberAction,
@@ -44,6 +44,8 @@ interface StaffViewProps {
   commissionThisMonth?: number;
   initialItems?: StaffItem[];
   basePath?: string;
+  services?: { id: string; name: string }[];
+  staffLimit?: number | null;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -67,135 +69,24 @@ function getInitials(name: string): string {
 
 const EMPTY_ITEMS: StaffItem[] = [];
 
-// ─── Add Staff Modal ────────────────────────────────────────────────────────
-
-function AddStaffModal({
-  isOpen,
-  tenantId,
-  onClose,
-  onCreated,
-  showToast,
-}: {
-  isOpen: boolean;
-  tenantId?: string;
-  onClose: () => void;
-  onCreated: (item: StaffItem) => void;
-  showToast: (msg: string) => void;
-}) {
-  const [fullName, setFullName] = React.useState("");
-  const [title, setTitle] = React.useState("");
-  const [saving, setSaving] = React.useState(false);
-
-  if (!isOpen) return null;
-
-  const handleSave = async () => {
-    if (!fullName.trim()) {
-      showToast("Full name is required.");
-      return;
-    }
-    setSaving(true);
-    try {
-      const res = await addStaffMemberAction({
-        tenantId: tenantId ?? "",
-        fullName: fullName.trim(),
-        title: title.trim() || undefined,
-      });
-      if (!res.success) {
-        showToast(res.error || "Failed to add staff.");
-        return;
-      }
-      onCreated({
-        id: res.id!,
-        fullName: fullName.trim(),
-        email: "Not provided",
-        title: title.trim(),
-        role: "staff",
-        roleLabel: "Service Staff",
-        servicesDisplay: "No services assigned",
-        serviceNames: "",
-        commissionDisplay: "No commission",
-        active: true,
-        sortOrder: 0,
-        createdAt: new Date().toISOString(),
-      });
-      showToast(`${fullName.trim()} added successfully.`);
-      setFullName("");
-      setTitle("");
-      onClose();
-    } catch {
-      showToast("Failed to add staff.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-      <div className="relative w-full max-w-md rounded-[10px] bg-white p-6 shadow-2xl border border-line">
-        <h3 className="font-display text-[22px] leading-tight text-ink">Add Staff Member</h3>
-        <p className="mt-1 text-sm text-muted">Create a new team member for your business.</p>
-        <div className="mt-5 space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-subtle mb-1">Full name *</label>
-            <input
-              type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="e.g. Elena Cruz"
-              className="w-full h-11 rounded-lg border border-hairline bg-white px-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-burnt/40"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-subtle mb-1">Title / role</label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Senior Stylist"
-              className="w-full h-11 rounded-lg border border-hairline bg-white px-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-burnt/40"
-            />
-          </div>
-        </div>
-        <div className="mt-5 flex items-center justify-end gap-2.5">
-          <AdminButton variant="outline" size="xs" onClick={onClose} disabled={saving}>Cancel</AdminButton>
-          <AdminButton variant="primary" size="xs" onClick={handleSave} disabled={saving}>
-            {saving ? "Adding…" : "Add Member"}
-          </AdminButton>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Edit Staff Modal ───────────────────────────────────────────────────────
 
 function EditStaffModal({
-  isOpen,
   tenantId,
   staff,
   onClose,
   onUpdated,
   showToast,
 }: {
-  isOpen: boolean;
   tenantId?: string;
-  staff: StaffItem | null;
+  staff: StaffItem;
   onClose: () => void;
   onUpdated: (item: StaffItem) => void;
   showToast: (msg: string) => void;
 }) {
-  const [fullName, setFullName] = React.useState("");
-  const [title, setTitle] = React.useState("");
+  const [fullName, setFullName] = React.useState(staff.fullName);
+  const [title, setTitle] = React.useState(staff.title);
   const [saving, setSaving] = React.useState(false);
-
-  React.useEffect(() => {
-    if (staff) {
-      setFullName(staff.fullName);
-      setTitle(staff.title);
-    }
-  }, [staff]);
-
-  if (!isOpen || !staff) return null;
 
   const handleSave = async () => {
     if (!fullName.trim()) {
@@ -266,12 +157,14 @@ export function StaffView({
   commissionThisMonth = 0,
   initialItems = EMPTY_ITEMS,
   basePath = "",
+  services = [],
+  staffLimit,
 }: StaffViewProps) {
   const router = useRouter();
   const [items, setItems] = React.useState<StaffItem[]>(initialItems);
-  const prevInitialItemsRef = React.useRef(initialItems);
-  if (prevInitialItemsRef.current !== initialItems) {
-    prevInitialItemsRef.current = initialItems;
+  const [previousInitialItems, setPreviousInitialItems] = React.useState(initialItems);
+  if (previousInitialItems !== initialItems) {
+    setPreviousInitialItems(initialItems);
     setItems(initialItems);
   }
 
@@ -282,13 +175,11 @@ export function StaffView({
 
   // Filter panel state
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
-  const [rolesExpanded, setRolesExpanded] = React.useState(true);
-  const [sortExpanded, setSortExpanded] = React.useState(true);
   const [roleFilter, setRoleFilter] = React.useState("All team members");
   const [sortBy, setSortBy] = React.useState("Public Display order");
 
   // Modal states
-  const [isAddOpen, setIsAddOpen] = React.useState(false);
+  const [isInviteOpen, setIsInviteOpen] = React.useState(false);
   const [editTarget, setEditTarget] = React.useState<StaffItem | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<StaffItem | null>(null);
 
@@ -314,7 +205,7 @@ export function StaffView({
         case "Active Accounts":
           matchesRole = item.active;
           break;
-        case "Invited &Expired":
+        case "Invited & Expired":
           matchesRole = false; // No invitation system yet
           break;
         case "Deactivated Accounts":
@@ -380,7 +271,7 @@ export function StaffView({
     <div className="flex min-h-dvh flex-col bg-powder text-ink lg:h-dvh lg:flex-row lg:overflow-hidden">
       <MerchantSidebar businessName={businessName} userName={userName} userEmail={userEmail} userRole={userRole} basePath={basePath} />
 
-      <div className="min-w-0 flex-1 lg:h-dvh lg:overflow-y-auto">
+      <div className="min-w-0 flex-1 lg:h-dvh lg:overflow-y-auto lg:[scrollbar-gutter:stable]">
         <PageContent>
           {/* ── Page Heading ─────────────────────────────────────────────── */}
           <PageHeading
@@ -389,7 +280,7 @@ export function StaffView({
             description="Manage team access, service eligibility, invitations, and commission rules."
             actions={
               <div className="flex flex-wrap items-center gap-2">
-                <AdminButton variant="primary" size="sm" onClick={() => setIsAddOpen(true)}>
+                <AdminButton variant="primary" size="sm" onClick={() => setIsInviteOpen(true)}>
                   + Invite Staff
                 </AdminButton>
                 <AdminButton variant="outline" size="sm">
@@ -433,43 +324,49 @@ export function StaffView({
             />
           </div>
 
-          {/* ── Main Staff Register Surface ───────────────────────────────── */}
-          <Surface className="overflow-hidden !p-0">
+          {/* ── Main Staff Roster Surface ───────────────────────────────── */}
+          <Surface className="!p-0">
             {/* ── Controls Bar ───────────────────────────────────────────── */}
             <div className="p-4 sm:p-6 border-b border-hairline flex flex-wrap items-center justify-between gap-4">
               {/* Left: title */}
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
                   <Icon name="users" className="size-5 text-glyph" />
-                  <h2 className="text-base font-semibold leading-6 text-ink">Staff Register</h2>
+                  <h2 className="text-base font-semibold leading-6 text-ink">Staff Roster</h2>
                 </div>
               </div>
 
               {/* Right: search + filter */}
-              <div className="flex flex-wrap items-center gap-2.5">
+              <div className="flex w-full items-center gap-2.5 sm:w-auto">
                 {/* Search */}
-                <div className="relative">
+                <div className="relative min-w-0 flex-1">
                   <input
                     type="text"
-                    placeholder="Search customer or service"
+                    aria-label="Search staff or service"
+                    placeholder="Search staff or service"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="h-11 pl-10 pr-3 rounded-lg border border-hairline bg-white text-sm text-ink focus:outline-none focus:ring-2 focus:ring-burnt/40 w-48 sm:w-60 transition-shadow"
+                    className="h-11 w-full rounded-lg border border-hairline bg-white pl-10 pr-3 text-sm text-ink transition-shadow focus:outline-none focus:ring-2 focus:ring-burnt/40 sm:w-60"
                   />
                   <Icon name="search" className="size-4 text-glyph absolute left-3 top-3 pointer-events-none" />
                 </div>
-
                 {/* Filter button + dropdown */}
-                <div className="relative">
+                <div className="relative shrink-0">
                   <button
                     type="button"
+                    aria-expanded={isFilterOpen}
                     onClick={() => setIsFilterOpen(!isFilterOpen)}
                     className={`h-11 rounded-lg border px-3 text-sm font-semibold text-ink hover:bg-mist flex items-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${isFilterOpen ? "border-burnt bg-white" : "border-hairline bg-white"}`}
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="size-3.5 text-glyph" aria-hidden>
                       <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
                     </svg>
-                    <span>Filter</span>
+                    <span className="relative">
+                      Filter
+                      {(hasActiveFilter || sortBy !== "Public Display order") && (
+                        <span className="absolute -right-1.5 top-0 size-1.5 rounded-full bg-burnt" aria-label="Filter settings applied" />
+                      )}
+                    </span>
                     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} className={`size-3.5 text-glyph transition-transform ${isFilterOpen ? "rotate-180" : ""}`} aria-hidden>
                       <path d="M4 6l4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
@@ -478,74 +375,64 @@ export function StaffView({
                   {/* Filter dropdown panel */}
                   {isFilterOpen && (
                     <div className="absolute right-0 mt-1 w-56 rounded-[10px] bg-white border border-hairline shadow-lg z-20 text-sm overflow-hidden">
-                      {/* Roles section */}
-                      <div className="border-b border-hairline">
-                        <button
-                          type="button"
-                          onClick={() => setRolesExpanded(!rolesExpanded)}
-                          className="w-full flex items-center justify-between px-4 py-2.5 text-xs font-semibold text-subtle uppercase tracking-wide hover:bg-mist"
-                        >
-                          <span>Roles</span>
-                          <span className="text-base leading-none text-glyph">{rolesExpanded ? "−" : "+"}</span>
-                        </button>
-                        {rolesExpanded && (
-                          <div className="pb-2">
-                            {["All team members", "Active Accounts", "Invited &Expired", "Deactivated Accounts", "Service Staff only"].map((opt) => (
-                              <button
-                                key={opt}
-                                type="button"
-                                onClick={() => setRoleFilter(opt)}
-                                className={`w-full text-left px-4 py-2 hover:bg-mist transition-colors ${roleFilter === opt ? "text-burnt font-semibold" : "text-body"}`}
-                              >
-                                {opt}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Sort section */}
-                      <div>
-                        <button
-                          type="button"
-                          onClick={() => setSortExpanded(!sortExpanded)}
-                          className="w-full flex items-center justify-between px-4 py-2.5 text-xs font-semibold text-subtle uppercase tracking-wide hover:bg-mist"
-                        >
-                          <span>Sort</span>
-                          <span className="text-base leading-none text-glyph">{sortExpanded ? "−" : "+"}</span>
-                        </button>
-                        {sortExpanded && (
-                          <div className="pb-2">
-                            {["Name A-Z", "Public Display order"].map((opt) => (
-                              <button
-                                key={opt}
-                                type="button"
-                                onClick={() => setSortBy(opt)}
-                                className={`w-full text-left px-4 py-2 hover:bg-mist transition-colors ${sortBy === opt ? "text-burnt font-semibold" : "text-body"}`}
-                              >
-                                {opt}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                      <details className="group border-b border-hairline">
+                        <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-subtle hover:bg-mist [&::-webkit-details-marker]:hidden">
+                          Roles
+                          <span aria-hidden="true" className="group-open:hidden">+</span>
+                          <span aria-hidden="true" className="hidden group-open:inline">−</span>
+                        </summary>
+                        <div className="pb-2">
+                          {["All team members", "Active Accounts", "Invited & Expired", "Deactivated Accounts", "Service Staff only"].map((opt) => (
+                            <button
+                              key={opt}
+                              type="button"
+                              aria-pressed={roleFilter === opt}
+                              onClick={() => setRoleFilter(opt)}
+                              className={`w-full px-4 py-2 text-left hover:bg-mist ${roleFilter === opt ? "font-semibold text-burnt" : "text-body"}`}
+                            >
+                              {opt}
+                            </button>
+                          ))}
+                        </div>
+                      </details>
+                      <details className="group">
+                        <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-subtle hover:bg-mist [&::-webkit-details-marker]:hidden">
+                          Sort
+                          <span aria-hidden="true" className="group-open:hidden">+</span>
+                          <span aria-hidden="true" className="hidden group-open:inline">−</span>
+                        </summary>
+                        <div className="pb-2">
+                          {["Name A-Z", "Public Display order"].map((opt) => (
+                            <button
+                              key={opt}
+                              type="button"
+                              aria-pressed={sortBy === opt}
+                              onClick={() => setSortBy(opt)}
+                              className={`w-full px-4 py-2 text-left hover:bg-mist ${sortBy === opt ? "font-semibold text-burnt" : "text-body"}`}
+                            >
+                              {opt}
+                            </button>
+                          ))}
+                        </div>
+                      </details>
                     </div>
                   )}
                 </div>
 
-                {/* Active filter badge */}
-                {hasActiveFilter && (
-                  <span className="inline-flex items-center gap-1 rounded-md bg-burnt/10 px-2 py-1 text-xs font-semibold text-burnt">
-                    {roleFilter}
-                    <button type="button" onClick={() => setRoleFilter("All team members")} className="ml-0.5 hover:text-burnt-dark" aria-label="Clear filter">×</button>
-                  </span>
-                )}
               </div>
             </div>
 
             {/* ── Desktop table headers ────────────────────────────────────── */}
-            <div className="hidden overflow-x-auto md:block">
-              <table className="w-full text-left text-sm">
+            <div className="hidden md:block">
+              <table className="w-full table-fixed text-left text-sm">
+                <colgroup>
+                  <col className="w-[26%]" />
+                  <col className="w-[17%]" />
+                  <col className="w-[17%]" />
+                  <col className="w-[16%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[12%]" />
+                </colgroup>
                 <thead className="bg-mist border-b border-hairline text-subtle font-semibold">
                   <tr>
                     <th className="px-5 py-3 text-[11px] leading-4 uppercase tracking-wide">Team Member / Email</th>
@@ -553,7 +440,7 @@ export function StaffView({
                     <th className="px-5 py-3 text-[11px] leading-4 uppercase tracking-wide">Services</th>
                     <th className="px-5 py-3 text-[11px] leading-4 uppercase tracking-wide">Commission</th>
                     <th className="px-5 py-3 text-[11px] leading-4 uppercase tracking-wide">Status / Shift</th>
-                    <th className="px-5 py-3 text-[11px] leading-4 uppercase tracking-wide text-right">Action</th>
+                    <th className="pl-2 pr-4 py-3 text-[11px] leading-4 uppercase tracking-wide">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-hairline">
@@ -586,7 +473,7 @@ export function StaffView({
                         {/* Role / Public Title */}
                         <td className="px-5 py-3.5">
                           <p className="font-semibold text-ink">{row.roleLabel}</p>
-                          <p className="text-xs text-muted">{row.title || "—"}</p>
+                          <p className="break-words text-xs text-muted">{row.title || "—"}</p>
                         </td>
 
                         {/* Services */}
@@ -613,11 +500,13 @@ export function StaffView({
                         </td>
 
                         {/* Action */}
-                        <td className="px-5 py-3.5 text-right relative">
+                        <td className="pl-2 pr-4 py-3.5 relative">
                           <button
                             type="button"
+                            aria-label={`Actions for ${row.fullName}`}
+                            aria-expanded={activeMenuId === row.id}
                             onClick={() => setActiveMenuId(activeMenuId === row.id ? null : row.id)}
-                            className="flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 text-glyph ml-auto"
+                            className="flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 text-glyph"
                           >
                             <Icon name="more" weight="fill" className="size-5" />
                           </button>
@@ -707,24 +596,26 @@ export function StaffView({
         </PageContent>
       </div>
 
-      {/* ── Add Staff Modal ────────────────────────────────────────────────── */}
-      <AddStaffModal
-        isOpen={isAddOpen}
-        tenantId={tenantId}
-        onClose={() => setIsAddOpen(false)}
-        onCreated={(item) => setItems((prev) => [item, ...prev])}
-        showToast={showToast}
-      />
+      {isInviteOpen && (
+        <InviteStaffModal
+          onClose={() => setIsInviteOpen(false)}
+          seatsUsed={activeMembers + pendingInvitations}
+          staffLimit={staffLimit}
+          services={services}
+        />
+      )}
 
       {/* ── Edit Staff Modal ───────────────────────────────────────────────── */}
-      <EditStaffModal
-        isOpen={!!editTarget}
-        tenantId={tenantId}
-        staff={editTarget}
-        onClose={() => setEditTarget(null)}
-        onUpdated={(updated) => setItems((prev) => prev.map((s) => (s.id === updated.id ? updated : s)))}
-        showToast={showToast}
-      />
+      {editTarget && (
+        <EditStaffModal
+          key={editTarget.id}
+          tenantId={tenantId}
+          staff={editTarget}
+          onClose={() => setEditTarget(null)}
+          onUpdated={(updated) => setItems((prev) => prev.map((s) => (s.id === updated.id ? updated : s)))}
+          showToast={showToast}
+        />
+      )}
 
       {/* ── Toast ──────────────────────────────────────────────────────────── */}
       {toastMessage && (

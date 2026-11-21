@@ -232,6 +232,24 @@ export default async function StaffPage({ params }: StaffPageProps) {
   const activeMembers = staffItems.filter((s) => s.active).length;
   const onShiftToday = activeMembers; // Approximate: same as active for now
   const pendingInvitations = 0; // No invitation system yet
+  let staffLimit: number | null | undefined;
+  if (adminClient) {
+    const { data: application } = await adminClient
+      .from("account_applications")
+      .select("plan_code")
+      .eq("tenant_id", tenant.id)
+      .eq("status", "approved")
+      .maybeSingle();
+
+    if (application) {
+      const { data: plan } = await adminClient
+        .from("subscription_plans")
+        .select("staff_limit")
+        .eq("code", application.plan_code)
+        .maybeSingle();
+      staffLimit = plan?.staff_limit;
+    }
+  }
 
   return (
     <StaffView
@@ -252,6 +270,8 @@ export default async function StaffPage({ params }: StaffPageProps) {
       activeMembers={activeMembers}
       onShiftToday={onShiftToday}
       pendingInvitations={pendingInvitations}
+      staffLimit={staffLimit}
+      services={allServices ?? []}
       commissionThisMonth={commissionThisMonth}
       initialItems={staffItems}
     />
