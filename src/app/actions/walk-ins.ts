@@ -22,11 +22,12 @@ export type WalkInActionResult<T = unknown> =
 const MANILA_OFFSET = "+08:00";
 
 function revalidateWalkInPaths() {
-  revalidatePath("/walk-ins");
+  revalidatePath("/dashboard/walk-ins");
+  revalidatePath("/(site)/[slug]/dashboard/walk-ins", "page");
+  revalidatePath("/(site)/[slug]/dashboard/appointments", "page");
+  revalidatePath("/(site)/[slug]/dashboard", "page");
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/appointments");
-  revalidatePath("/appointments");
-  revalidatePath("/overview");
 }
 
 function parseRpcError(message?: string): {
