@@ -11,7 +11,7 @@ set search_path = ''
 as $$
 declare
   target_profile uuid;
-  current_role public.app_role;
+  v_current_role public.app_role;
 begin
   if not exists (
     select 1 from public.tenant_memberships
@@ -24,10 +24,10 @@ begin
   where tenant_id = p_tenant_id and id = p_staff_id for update;
   if not found then raise exception 'Staff member not found.'; end if;
 
-  select role into current_role from public.tenant_memberships
+  select role into v_current_role from public.tenant_memberships
   where tenant_id = p_tenant_id and profile_id = target_profile for update;
-  if p_role is distinct from coalesce(current_role, 'staff'::public.app_role) then
-    if current_role is null or current_role in ('owner', 'admin')
+  if p_role is distinct from coalesce(v_current_role, 'staff'::public.app_role) then
+    if v_current_role is null or v_current_role in ('owner', 'admin')
       or target_profile = p_actor_id or p_role not in ('staff', 'receptionist') then
       raise exception 'This dashboard role cannot be changed.';
     end if;

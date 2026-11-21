@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { EditStaffModal } from "./edit-staff-modal";
+import { ManageStaffModal, type ManagedStaff } from "./manage-staff-modal";
 import { useRouter } from "next/navigation";
 import { MerchantSidebar } from "../merchant-sidebar";
 import { Icon } from "@/components/admin/icon";
@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { InviteStaffModal } from "./invite-staff-modal";
 import { RoleAccessModal } from "./role-access-modal";
 import {
+  loadStaffEditorAction,
   toggleStaffActiveAction,
   deleteStaffMemberAction,
 } from "@/app/actions/staff";
@@ -111,13 +112,29 @@ export function StaffView({
   // Modal states
   const [isInviteOpen, setIsInviteOpen] = React.useState(false);
   const [isRoleAccessOpen, setIsRoleAccessOpen] = React.useState(false);
-  const [editTarget, setEditTarget] = React.useState<StaffItem | null>(null);
+  const [editTarget, setEditTarget] = React.useState<ManagedStaff | null>(null);
+  const [loadingEditId, setLoadingEditId] = React.useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<StaffItem | null>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 2500);
   };
+
+  async function openEditor(staffId: string) {
+    if (!tenantId || loadingEditId) return;
+    setActiveMenuId(null);
+    setLoadingEditId(staffId);
+    try {
+      const staff = await loadStaffEditorAction(tenantId, staffId);
+      if (staff) setEditTarget(staff);
+      else showToast("Staff details are unavailable.");
+    } catch {
+      showToast("Staff details could not be loaded. Try again.");
+    } finally {
+      setLoadingEditId(null);
+    }
+  }
 
   // ── Filter + sort logic ───────────────────────────────────────────────────
 
@@ -445,6 +462,7 @@ export function StaffView({
                             type="button"
                             aria-label={`Actions for ${row.fullName}`}
                             aria-expanded={activeMenuId === row.id}
+                            aria-busy={loadingEditId === row.id}
                             onClick={() => setActiveMenuId(activeMenuId === row.id ? null : row.id)}
                             className="relative z-10 mx-auto flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 text-glyph"
                           >
@@ -452,7 +470,9 @@ export function StaffView({
                           </button>
                           {activeMenuId === row.id && (
                             <div className="absolute right-4 mt-1 w-44 rounded-[10px] bg-white border border-hairline shadow-lg py-1 z-30 text-left text-sm">
-                              <button type="button" onClick={() => { setEditTarget(row); setActiveMenuId(null); }} className="w-full text-left px-4 py-2 hover:bg-mist text-body">Edit details</button>
+                              {canViewProfiles && (
+                                <button type="button" disabled={Boolean(loadingEditId)} onClick={() => openEditor(row.id)} className="w-full px-4 py-2 text-left text-body hover:bg-mist disabled:opacity-50">Edit details</button>
+                              )}
                               <button type="button" onClick={() => handleToggleActive(row)} className="w-full text-left px-4 py-2 hover:bg-mist text-body">{row.active ? "Deactivate" : "Activate"}</button>
                               <button type="button" onClick={() => { setDeleteTarget(row); setActiveMenuId(null); }} className="w-full text-left px-4 py-2 hover:bg-danger-bg text-danger font-medium">Remove member</button>
                             </div>
@@ -521,7 +541,11 @@ export function StaffView({
                             </div>
                           )}
                           <div className="flex flex-wrap gap-2 border-t border-hairline pt-3">
-                            <AdminButton size="xs" variant="outline" onClick={() => setEditTarget(row)}>Edit</AdminButton>
+                            {canViewProfiles && (
+                              <AdminButton size="xs" variant="outline" disabled={Boolean(loadingEditId)} onClick={() => openEditor(row.id)}>
+                                {loadingEditId === row.id ? "Loading…" : "Edit details"}
+                              </AdminButton>
+                            )}
                             <AdminButton size="xs" variant="outline" onClick={() => handleToggleActive(row)}>
                               {row.active ? "Deactivate" : "Activate"}
                             </AdminButton>
@@ -557,14 +581,19 @@ export function StaffView({
       )}
 
       {/* ── Edit Staff Modal ───────────────────────────────────────────────── */}
-      {editTarget && (
-        <EditStaffModal
+      {loadingEditId && <p role="status" className="sr-only">Loading staff details…</p>}
+      {editTarget && tenantId && (
+        <ManageStaffModal
           key={editTarget.id}
           tenantId={tenantId}
+          basePath={basePath}
           staff={editTarget}
           onClose={() => setEditTarget(null)}
-          onUpdated={(updated) => setItems((prev) => prev.map((s) => (s.id === updated.id ? updated : s)))}
-          showToast={showToast}
+          onSaved={() => {
+            setEditTarget(null);
+            showToast("Staff changes saved.");
+            router.refresh();
+          }}
         />
       )}
 

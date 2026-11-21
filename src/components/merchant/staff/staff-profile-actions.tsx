@@ -44,8 +44,8 @@ export function StaffProfileActions({ tenantId, basePath, staff }: StaffProfileA
   return (
     <div>
       <div className="flex flex-wrap gap-2">
-        <AdminButton variant="outline" size="xs" onClick={() => { setMessage(""); setEditing(true); }}>Edit Staff</AdminButton>
-        <AdminButton variant={staff.active ? "danger" : "outline-accent"} size="xs" onClick={() => {
+        <AdminButton variant="primary" size="xs" aria-haspopup="dialog" onClick={() => { setMessage(""); setEditing(true); }}>Edit Staff</AdminButton>
+        <AdminButton variant="outline" size="xs" aria-haspopup="dialog" onClick={() => {
           setMessage("");
           setError("");
           setConfirming(true);

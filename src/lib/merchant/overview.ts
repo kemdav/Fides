@@ -232,7 +232,7 @@ export function toAppointmentRow(
       timeZone: timezone,
       hour: "2-digit",
       minute: "2-digit",
-      hour12: false,
+      hourCycle: "h23",
     }).format(new Date(appointment.starts_at)),
     customer: customer?.full_name?.trim() || "Customer",
     service: service?.name || "Signature service",

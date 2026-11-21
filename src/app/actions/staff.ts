@@ -3,7 +3,107 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminClient } from "@/lib/supabase/admin";
+import { publicEnv } from "@/lib/env";
+import { canDeliverVerificationLinks, sendMail } from "@/lib/mail/mailer";
+import { getStaffProfile } from "@/lib/merchant/staff-profile";
 import { z } from "zod";
+
+const staffEditorKey = z.object({ tenantId: z.uuid(), staffId: z.uuid() });
+
+export async function loadStaffEditorAction(tenantId: string, staffId: string) {
+  if (!staffEditorKey.safeParse({ tenantId, staffId }).success) return null;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const [{ data: membership }, { data: tenant }] = await Promise.all([
+    supabase.from("tenant_memberships").select("role")
+      .eq("tenant_id", tenantId).eq("profile_id", user.id).maybeSingle(),
+    supabase.from("tenants").select("timezone").eq("id", tenantId).maybeSingle(),
+  ]);
+  if (!tenant || (membership?.role !== "owner" && membership?.role !== "admin")) return null;
+
+  const profile = await getStaffProfile(tenantId, staffId, tenant.timezone, user.id);
+  return profile?.managedStaff ?? null;
+}
+
+const staffEmailChangeSchema = z.object({
+  tenantId: z.uuid(),
+  staffId: z.uuid(),
+  email: z.string().trim().toLowerCase().max(254).pipe(z.email()),
+});
+
+export async function requestStaffEmailChangeAction(input: z.input<typeof staffEmailChangeSchema>): Promise<StaffActionResult> {
+  const parsed = staffEmailChangeSchema.safeParse(input);
+  if (!parsed.success) return { success: false, error: "Enter a valid new email address." };
+  const { tenantId, staffId, email } = parsed.data;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: "Sign in to request an email change." };
+
+  const { data: membership } = await supabase.from("tenant_memberships").select("role")
+    .eq("tenant_id", tenantId).eq("profile_id", user.id).maybeSingle();
+  if (membership?.role !== "owner" && membership?.role !== "admin") {
+    return { success: false, error: "You do not have permission to manage staff." };
+  }
+
+  const admin = getAdminClient();
+  if (!admin || !canDeliverVerificationLinks()) {
+    return { success: false, error: "Verification email delivery is unavailable." };
+  }
+
+  try {
+    const { data: staff } = await admin.from("staff_members").select("profile_id")
+      .eq("tenant_id", tenantId).eq("id", staffId).maybeSingle();
+    if (!staff?.profile_id) return { success: false, error: "This staff member has no linked sign-in account." };
+    const { data: targetMembership } = await admin.from("tenant_memberships").select("profile_id")
+      .eq("tenant_id", tenantId).eq("profile_id", staff.profile_id).maybeSingle();
+    if (!targetMembership) return { success: false, error: "This staff member has no linked sign-in account." };
+
+    const { data: { user: account } } = await admin.auth.admin.getUserById(staff.profile_id);
+    const currentEmail = account?.email;
+    if (!currentEmail || !account.email_confirmed_at) {
+      return { success: false, error: "The current sign-in email must be verified first." };
+    }
+    if (currentEmail.toLowerCase() === email) {
+      return { success: false, error: "Enter an address different from the current email." };
+    }
+    const settings = await fetch(`${publicEnv.supabaseUrl.replace(/\/$/, "")}/auth/v1/settings`, {
+      headers: { apikey: publicEnv.supabaseKey },
+      cache: "no-store",
+    });
+    if (!settings.ok || (await settings.json()).mailer_autoconfirm !== false) {
+      return { success: false, error: "Secure email confirmation is unavailable." };
+    }
+
+    const reservation = await admin.rpc("reserve_staff_email_change", { p_profile_id: account.id });
+    if (reservation.error) return { success: false, error: "Secure email confirmation is unavailable." };
+    if (!reservation.data) return { success: false, error: "Wait two minutes before requesting another email change." };
+
+    const options = { redirectTo: new URL("/login", publicEnv.siteUrl).toString() };
+    const current = await admin.auth.admin.generateLink({ type: "email_change_current", email: currentEmail, newEmail: email, options });
+    if (current.error) {
+      return { success: false, error: current.error.code === "email_exists"
+        ? "That email address is already in use." : "Could not start a secure email change." };
+    }
+    const next = await admin.auth.admin.generateLink({ type: "email_change_new", email: currentEmail, newEmail: email, options });
+    if (next.error) return { success: false, error: "Could not generate the new email verification link." };
+
+    await sendMail({
+      to: currentEmail,
+      subject: "Approve your Fides email change",
+      text: `An email change to ${email} was requested for your Fides account. If you approve, open this link:\n\n${current.data.properties.action_link}\n\nIf you did not expect this request, ignore this email.`,
+    });
+    await sendMail({
+      to: email,
+      subject: "Verify your new Fides email address",
+      text: `Verify this address for your Fides account:\n\n${next.data.properties.action_link}\n\nThe current address must also approve the change before the new address becomes active.`,
+    });
+    return { success: true };
+  } catch {
+    return { success: false, error: "Verification emails could not be sent. Please try again later." };
+  }
+}
 
 const staffProfileSchema = z.object({
   tenantId: z.uuid(),
@@ -67,6 +167,9 @@ export async function saveStaffProfileAction(form: FormData): Promise<StaffActio
   });
   if (error) {
     if (imagePath) await bucket.remove([imagePath]);
+    if (error.code === "PGRST202" || error.code === "42703") {
+      return { success: false, error: "Saving this profile requires the latest staff management database migration." };
+    }
     return { success: false, error: error.message };
   }
 

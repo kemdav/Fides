@@ -1,5 +1,7 @@
 "use client";
 
+import { fieldOutlineClasses } from "@/components/admin/fields";
+
 import * as React from "react";
 import { createAppointmentBookingAction } from "@/app/actions/appointments";
 import {
@@ -38,7 +40,7 @@ interface WalkInModalProps {
 }
 
 function fieldClassName() {
-  return "h-11 w-full rounded-lg border border-[#aeb6c0] bg-white px-3 text-sm text-ink outline-none transition focus:border-burnt focus:ring-2 focus:ring-burnt/20";
+  return `${fieldOutlineClasses} h-11 w-full px-3 text-sm text-ink`;
 }
 
 export function WalkInModal({
@@ -213,7 +215,7 @@ export function WalkInModal({
 
           <label className="block text-sm font-medium text-body">
             Notes <span className="font-normal">(optional)</span>
-            <textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Add customer requests or service notes..." className="mt-1.5 min-h-10 w-full resize-y rounded-lg border border-[#aeb6c0] px-3 py-2 text-sm text-ink outline-none focus:border-burnt focus:ring-2 focus:ring-burnt/20" />
+            <textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Add customer requests or service notes..." className={`${fieldOutlineClasses} mt-1.5 min-h-10 w-full resize-y px-3 py-2 text-sm text-ink`} />
           </label>
 
           <label className="flex items-center gap-2 text-xs text-muted">

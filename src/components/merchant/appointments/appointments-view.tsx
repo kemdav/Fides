@@ -55,11 +55,11 @@ function AppointmentStatusPill({ status }: { status: AppointmentItem["status"] }
 
 /** Parse "10:30 AM" → minutes-since-midnight */
 function parseTimeToMinutes(timeStr: string): number {
-  const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  const match = timeStr.match(/^(\d{1,2}):(\d{2})(?:\s*(AM|PM))?$/i);
   if (!match) return 0;
   let h = parseInt(match[1], 10);
   const m = parseInt(match[2], 10);
-  const period = match[3].toUpperCase();
+  const period = match[3]?.toUpperCase();
   if (period === "PM" && h !== 12) h += 12;
   if (period === "AM" && h === 12) h = 0;
   return h * 60 + m;
@@ -108,7 +108,6 @@ function statusColors(status: AppointmentItem["status"]) {
 const HOUR_HEIGHT = 64; // px per hour slot
 const CAL_START_HOUR = 8;  // 8:00 AM
 const CAL_END_HOUR   = 20; // 8:00 PM
-const HOURS = Array.from({ length: CAL_END_HOUR - CAL_START_HOUR }, (_, i) => CAL_START_HOUR + i);
 
 const EMPTY_ITEMS: AppointmentItem[] = [];
 
@@ -124,20 +123,23 @@ export function AppointmentsView({
   completedTodayCount = 0,
   initialItems = EMPTY_ITEMS,
   basePath = "",
+  focusedStaffName,
 }: AppointmentsViewProps) {
   const router = useRouter();
   const [items, setItems] = React.useState<AppointmentItem[]>(initialItems);
-  const prevInitialItemsRef = React.useRef(initialItems);
-  if (prevInitialItemsRef.current !== initialItems) {
-    prevInitialItemsRef.current = initialItems;
+  const [previousInitialItems, setPreviousInitialItems] = React.useState(initialItems);
+  if (previousInitialItems !== initialItems) {
+    setPreviousInitialItems(initialItems);
     setItems(initialItems);
   }
 
   const [searchQuery, setSearchQuery] = React.useState("");
   const [filterStatus, setFilterStatus] = React.useState<string>("All");
   const [viewMode, setViewMode] = React.useState<"list" | "calendar">("list");
-  const [calSubView, setCalSubView] = React.useState<"day" | "week" | "resources">("day");
-  const [calendarAnchor, setCalendarAnchor] = React.useState<Date>(() => new Date());
+  const [calSubView, setCalSubView] = React.useState<"day" | "week" | "resources">(focusedStaffName ? "week" : "day");
+  const [calendarAnchor, setCalendarAnchor] = React.useState<Date>(() =>
+    focusedStaffName && initialItems[0]?.calendarDate
+      ? new Date(`${initialItems[0].calendarDate}T12:00:00`) : new Date());
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [activeMenuId, setActiveMenuId] = React.useState<string | null>(null);
   const [cancelTarget, setCancelTarget] = React.useState<AppointmentItem | null>(null);
@@ -161,6 +163,21 @@ export function AppointmentsView({
     const matchesStatus = filterStatus === "All" || item.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
+
+  let startHour = CAL_START_HOUR;
+  let endHour = CAL_END_HOUR;
+  for (const item of filtered) {
+    const hour = Math.floor(parseTimeToMinutes(item.time) / 60);
+    startHour = Math.min(startHour, hour);
+    endHour = Math.max(endHour, hour + 2);
+  }
+  const hours = Array.from({ length: endHour - startHour }, (_, index) => startHour + index);
+
+  function showBookingInCalendar(date: string) {
+    setCalendarAnchor(new Date(`${date}T12:00:00`));
+    setCalSubView("day");
+    setViewMode("calendar");
+  }
 
   // ── week navigation ──────────────────────────────────────────────────────
   const weekDates = React.useMemo(() => getWeekRange(calendarAnchor), [calendarAnchor]);
@@ -228,12 +245,12 @@ export function AppointmentsView({
   // ── calendar grid helpers ─────────────────────────────────────────────────
   /**
    * For "week" view: columns = days (Mon–Sun), rows = hours.
-   * Appointment block top offset = (startMins - CAL_START_HOUR*60) / 60 * HOUR_HEIGHT
+   * Appointment block top offset is measured from the first displayed hour.
    * Appointment block height     = durationMins / 60 * HOUR_HEIGHT  (default 60 min)
    */
   const getCalendarTop = (timeStr: string): number => {
     const mins = parseTimeToMinutes(timeStr);
-    return Math.max(0, (mins - CAL_START_HOUR * 60) / 60 * HOUR_HEIGHT);
+    return Math.max(0, (mins - startHour * 60) / 60 * HOUR_HEIGHT);
   };
 
   // group filtered items by day-of-week index (0–6) for week view
@@ -242,7 +259,7 @@ export function AppointmentsView({
     for (let i = 0; i < 7; i++) map.set(i, []);
     for (const item of filtered) {
       if (!item.startsAt) continue;
-      const d = new Date(item.startsAt);
+      const d = item.calendarDate ? new Date(`${item.calendarDate}T12:00:00`) : new Date(item.startsAt);
       // find which day in this week
       for (let i = 0; i < 7; i++) {
         if (
@@ -262,9 +279,12 @@ export function AppointmentsView({
   const itemsByStaff = React.useMemo<Map<string, AppointmentItem[]>>(() => {
     const map = new Map<string, AppointmentItem[]>();
     for (const s of staffList) map.set(s, []);
-    for (const item of filtered) map.get(item.staff)?.push(item);
+    const day = focusedStaffName ? calendarAnchor.toLocaleDateString("sv-SE") : undefined;
+    for (const item of filtered) {
+      if (!day || item.calendarDate === day) map.get(item.staff)?.push(item);
+    }
     return map;
-  }, [filtered, staffList]);
+  }, [filtered, staffList, focusedStaffName, calendarAnchor]);
 
   // today date string for highlight
   const today = new Date();
@@ -399,6 +419,15 @@ export function AppointmentsView({
             {/* ═══════════════════════════════════════════════════════════════
                 CALENDAR VIEW
                ═══════════════════════════════════════════════════════════════ */}
+            {focusedStaffName && (
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-hairline bg-burnt/5 px-5 py-2.5">
+                <p className="text-sm font-medium text-ink">
+                  {items.length ? `Schedule for ${focusedStaffName}` : `No upcoming appointments for ${focusedStaffName}.`}
+                </p>
+                <AdminLinkButton href={`${basePath}/dashboard/appointments`} variant="outline-accent" size="xs">View all appointments</AdminLinkButton>
+              </div>
+            )}
+
             {viewMode === "calendar" ? (
               <div>
                 {/* Calendar sub-toolbar */}
@@ -408,14 +437,14 @@ export function AppointmentsView({
                     <button
                       type="button"
                       aria-label="Previous"
-                      onClick={() => calSubView === "day" ? shiftDay(-1) : shiftWeek(-1)}
+                      onClick={() => calSubView === "day" || (focusedStaffName && calSubView === "resources") ? shiftDay(-1) : shiftWeek(-1)}
                       className="flex size-8 items-center justify-center rounded-full border border-hairline bg-white hover:bg-mist transition-colors text-ink"
                     >
                       <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5"><path d="M10.5 3L5.5 8l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" /></svg>
                     </button>
 
                     <span className="text-sm font-semibold text-ink min-w-[220px] text-center">
-                      {calSubView === "day"
+                        {calSubView === "day" || (focusedStaffName && calSubView === "resources")
                         ? calendarAnchor.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })
                         : weekLabel
                       }
@@ -424,7 +453,7 @@ export function AppointmentsView({
                     <button
                       type="button"
                       aria-label="Next"
-                      onClick={() => calSubView === "day" ? shiftDay(1) : shiftWeek(1)}
+                      onClick={() => calSubView === "day" || (focusedStaffName && calSubView === "resources") ? shiftDay(1) : shiftWeek(1)}
                       className="flex size-8 items-center justify-center rounded-full border border-hairline bg-white hover:bg-mist transition-colors text-ink"
                     >
                       <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5"><path d="M5.5 3L10.5 8l-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" /></svg>
@@ -498,7 +527,7 @@ export function AppointmentsView({
                       <div className="relative flex" style={{ minWidth: "720px" }}>
                         {/* Time labels column */}
                         <div className="w-16 shrink-0 bg-white">
-                          {HOURS.map((h) => (
+                          {hours.map((h) => (
                             <div key={h} className="border-b border-hairline flex items-start justify-end pr-2 pt-1" style={{ height: `${HOUR_HEIGHT}px` }}>
                               <span className="text-[10px] text-subtle font-medium">
                                 {h === 12 ? "12:00" : h < 12 ? `${String(h).padStart(2,"0")}:00` : `${String(h).padStart(2,"0")}:00`}
@@ -518,11 +547,11 @@ export function AppointmentsView({
                             <div
                               key={di}
                               className={`relative flex-1 border-l border-hairline ${isToday ? "bg-burnt/[0.03]" : "bg-white"}`}
-                              style={{ height: `${HOUR_HEIGHT * HOURS.length}px` }}
+                              style={{ height: `${HOUR_HEIGHT * hours.length}px` }}
                             >
                               {/* Hour grid lines */}
-                              {HOURS.map((h) => (
-                                <div key={h} className="absolute w-full border-b border-hairline" style={{ top: `${(h - CAL_START_HOUR) * HOUR_HEIGHT}px`, height: `${HOUR_HEIGHT}px` }}>
+                              {hours.map((h) => (
+                                <div key={h} className="absolute w-full border-b border-hairline" style={{ top: `${(h - startHour) * HOUR_HEIGHT}px`, height: `${HOUR_HEIGHT}px` }}>
                                   {/* half-hour tick */}
                                   <div className="absolute w-full border-b border-dashed border-hairline" style={{ top: `${HOUR_HEIGHT / 2}px` }} />
                                 </div>
@@ -538,7 +567,7 @@ export function AppointmentsView({
                                     key={item.id}
                                     type="button"
                                     onClick={() => setPopoverItem(popoverItem?.id === item.id ? null : item)}
-                                    className={`absolute left-1 right-1 rounded-md border-l-[3px] px-2 py-1 text-left overflow-hidden shadow-sm hover:brightness-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${colors.bg} ${colors.border}`}
+                                    className={`absolute left-1 right-1 rounded-md border-l-[3px] px-2 py-1 text-left overflow-hidden shadow-sm hover:brightness-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${colors.bg} ${colors.border} ${item.staffScheduleMatch ? "ring-2 ring-inset ring-burnt" : ""}`}
                                     style={{ top: `${top}px`, height: `${height - 4}px`, zIndex: 10 }}
                                   >
                                     <p className={`text-[11px] font-bold leading-tight truncate ${colors.text}`}>{item.customer}</p>
@@ -570,7 +599,7 @@ export function AppointmentsView({
                           t.getDate()     === anchor.getDate()
                         );
                       }
-                      const d = new Date(item.startsAt);
+                      const d = item.calendarDate ? new Date(`${item.calendarDate}T12:00:00`) : new Date(item.startsAt);
                       return (
                         d.getFullYear() === calendarAnchor.getFullYear() &&
                         d.getMonth()    === calendarAnchor.getMonth() &&
@@ -608,7 +637,7 @@ export function AppointmentsView({
                       <div className="relative flex" style={{ minWidth: "480px" }}>
                         {/* Time-label column */}
                         <div className="w-16 shrink-0 bg-white select-none">
-                          {HOURS.map((h) => (
+                          {hours.map((h) => (
                             <div
                               key={h}
                               className="relative border-b border-hairline flex items-start justify-end pr-3 pt-1"
@@ -628,18 +657,18 @@ export function AppointmentsView({
                         {/* Main timeline column */}
                         <div
                           className="relative flex-1 bg-white"
-                          style={{ height: `${HOUR_HEIGHT * HOURS.length}px` }}
+                          style={{ height: `${HOUR_HEIGHT * hours.length}px` }}
                         >
                           {/* Hour + half-hour grid lines */}
-                          {HOURS.map((h) => (
+                          {hours.map((h) => (
                             <React.Fragment key={h}>
                               <div
                                 className="absolute left-0 right-0 border-t border-hairline"
-                                style={{ top: `${(h - CAL_START_HOUR) * HOUR_HEIGHT}px` }}
+                                style={{ top: `${(h - startHour) * HOUR_HEIGHT}px` }}
                               />
                               <div
                                 className="absolute left-0 right-0 border-t border-dashed border-hairline"
-                                style={{ top: `${(h - CAL_START_HOUR) * HOUR_HEIGHT + HOUR_HEIGHT / 2}px` }}
+                                style={{ top: `${(h - startHour) * HOUR_HEIGHT + HOUR_HEIGHT / 2}px` }}
                               />
                             </React.Fragment>
                           ))}
@@ -653,7 +682,7 @@ export function AppointmentsView({
                               calendarAnchor.getMonth()    === now.getMonth() &&
                               calendarAnchor.getFullYear() === now.getFullYear();
                             if (!isAnchorToday) return null;
-                            const top = (nowMins - CAL_START_HOUR * 60) / 60 * HOUR_HEIGHT;
+                            const top = (nowMins - startHour * 60) / 60 * HOUR_HEIGHT;
                             if (top < 0) return null;
                             return (
                               <div
@@ -678,7 +707,7 @@ export function AppointmentsView({
                                 key={item.id}
                                 type="button"
                                 onClick={() => setPopoverItem(popoverItem?.id === item.id ? null : item)}
-                                className={`absolute rounded-lg border-l-[3px] px-3 py-1.5 text-left overflow-hidden shadow-sm hover:brightness-95 active:scale-[0.99] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${colors.bg} ${colors.border}`}
+                                className={`absolute rounded-lg border-l-[3px] px-3 py-1.5 text-left overflow-hidden shadow-sm hover:brightness-95 active:scale-[0.99] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${colors.bg} ${colors.border} ${item.staffScheduleMatch ? "ring-2 ring-inset ring-burnt" : ""}`}
                                 style={{
                                   top:    `${top + 2}px`,
                                   height: `${height - 6}px`,
@@ -727,7 +756,7 @@ export function AppointmentsView({
                       {staffList.map((s) => (
                         <div key={s} className="flex-1 border-l border-hairline bg-white px-3 py-2 text-center" style={{ minWidth: "160px" }}>
                           <p className="text-xs font-semibold text-ink truncate">{s}</p>
-                          <p className="text-[10px] text-muted">09:00 – 17:00</p>
+                          {!focusedStaffName && <p className="text-[10px] text-muted">09:00 – 17:00</p>}
                         </div>
                       ))}
                     </div>
@@ -736,7 +765,7 @@ export function AppointmentsView({
                       <div className="relative flex" style={{ minWidth: `${staffList.length * 160 + 64}px` }}>
                         {/* Time labels */}
                         <div className="w-16 shrink-0 bg-white">
-                          {HOURS.map((h) => (
+                          {hours.map((h) => (
                             <div key={h} className="border-b border-hairline flex items-start justify-end pr-2 pt-1" style={{ height: `${HOUR_HEIGHT}px` }}>
                               <span className="text-[10px] text-subtle font-medium">{String(h).padStart(2,"0")}:00</span>
                             </div>
@@ -750,10 +779,10 @@ export function AppointmentsView({
                             <div
                               key={staffName}
                               className="relative flex-1 border-l border-hairline bg-white"
-                              style={{ height: `${HOUR_HEIGHT * HOURS.length}px`, minWidth: "160px" }}
+                              style={{ height: `${HOUR_HEIGHT * hours.length}px`, minWidth: "160px" }}
                             >
-                              {HOURS.map((h) => (
-                                <div key={h} className="absolute w-full border-b border-hairline" style={{ top: `${(h - CAL_START_HOUR) * HOUR_HEIGHT}px`, height: `${HOUR_HEIGHT}px` }}>
+                              {hours.map((h) => (
+                                <div key={h} className="absolute w-full border-b border-hairline" style={{ top: `${(h - startHour) * HOUR_HEIGHT}px`, height: `${HOUR_HEIGHT}px` }}>
                                   <div className="absolute w-full border-b border-dashed border-hairline" style={{ top: `${HOUR_HEIGHT / 2}px` }} />
                                 </div>
                               ))}
@@ -766,7 +795,7 @@ export function AppointmentsView({
                                     key={item.id}
                                     type="button"
                                     onClick={() => setPopoverItem(popoverItem?.id === item.id ? null : item)}
-                                    className={`absolute left-1 right-1 rounded-md border-l-[3px] px-2 py-1 text-left overflow-hidden shadow-sm hover:brightness-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${colors.bg} ${colors.border}`}
+                                    className={`absolute left-1 right-1 rounded-md border-l-[3px] px-2 py-1 text-left overflow-hidden shadow-sm hover:brightness-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${colors.bg} ${colors.border} ${item.staffScheduleMatch ? "ring-2 ring-inset ring-burnt" : ""}`}
                                     style={{ top: `${top}px`, height: `${height - 4}px`, zIndex: 10 }}
                                   >
                                     <p className={`text-[11px] font-bold leading-tight truncate ${colors.text}`}>{item.customer}</p>
@@ -820,12 +849,12 @@ export function AppointmentsView({
                     filtered.map((row) => {
                       const isExpanded = expandedAppointmentId === row.id;
                       return (
-                        <div key={row.id} className="px-5 py-4">
+                        <div key={row.id} className={`px-5 py-4 ${row.staffScheduleMatch ? "border-l-2 border-burnt bg-burnt/5" : ""}`}>
                           <button type="button" onClick={() => setExpandedAppointmentId(isExpanded ? null : row.id)} className="w-full text-left" aria-expanded={isExpanded}>
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <p className="truncate text-base font-semibold text-ink">{row.customer}</p>
-                                <p className="mt-1 text-sm text-muted">{row.time} · {row.service}</p>
+                                <p className="mt-1 text-sm text-muted">{row.calendarDate ? `${row.calendarDate} · ` : ""}{row.time} · {row.service}</p>
                               </div>
                               <AppointmentStatusPill status={row.status} />
                             </div>
@@ -837,6 +866,9 @@ export function AppointmentsView({
                                 <span>Source<strong className="mt-1 block text-ink">{row.source}</strong></span>
                               </div>
                               <div className="flex flex-wrap gap-2 border-t border-hairline pt-3">
+                                {row.staffScheduleMatch && row.calendarDate && (
+                                  <AdminButton size="xs" variant="outline-accent" onClick={() => showBookingInCalendar(row.calendarDate!)}>Show in calendar</AdminButton>
+                                )}
                                 {row.status !== "Confirmed" && <AdminButton size="xs" variant="primary" onClick={() => handleStatusChange(row.id, "Confirmed")}>Confirm</AdminButton>}
                                 {row.status !== "Check In"  && <AdminButton size="xs" variant="outline" onClick={() => handleStatusChange(row.id, "Check In")}>Check In</AdminButton>}
                                 <AdminButton size="xs" variant="danger" onClick={() => setCancelTarget(row)}>Cancel</AdminButton>
@@ -874,8 +906,17 @@ export function AppointmentsView({
                         </tr>
                       ) : (
                         filtered.map((row) => (
-                          <tr key={row.id} className="hover:bg-mist transition-colors">
-                            <td className="px-5 py-3.5 font-medium text-body">{row.time}</td>
+                          <tr key={row.id} className={`transition-colors ${row.staffScheduleMatch ? "bg-burnt/5 hover:bg-burnt/10" : "hover:bg-mist"}`}>
+                            <td className={`px-5 py-3.5 font-medium text-body ${row.staffScheduleMatch ? "border-l-2 border-burnt" : ""}`}>
+                              {row.time}
+                              {row.calendarDate && (row.staffScheduleMatch ? (
+                                <button type="button" className="block text-xs text-burnt hover:underline"
+                                  aria-label={`Show ${row.customer}'s appointment in the calendar on ${row.calendarDate}`}
+                                  onClick={() => showBookingInCalendar(row.calendarDate!)}>
+                                  {row.calendarDate}
+                                </button>
+                              ) : <span className="block text-xs text-muted">{row.calendarDate}</span>)}
+                            </td>
                             <td className="px-5 py-3.5 font-semibold text-ink">{row.customer}</td>
                             <td className="px-5 py-3.5 text-muted">{row.service}</td>
                             <td className="px-5 py-3.5 text-muted">{row.staff}</td>
@@ -985,6 +1026,10 @@ export function AppointmentsView({
         tenantId={tenantId}
         onClose={() => setIsNewBookingOpen(false)}
         onCreated={(result: NewAppointmentResult) => {
+          if (focusedStaffName) {
+            router.refresh();
+            return;
+          }
           setItems((prev) => [{
             id:       result.id,
             time:     result.time,
@@ -1003,6 +1048,10 @@ export function AppointmentsView({
         tenantId={tenantId}
         onClose={() => setIsWalkInOpen(false)}
         onCreated={(result: WalkInResult) => {
+          if (focusedStaffName) {
+            router.refresh();
+            return;
+          }
           setItems((prev) => [{
             id: result.id,
             time: result.time,

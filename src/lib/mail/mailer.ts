@@ -40,6 +40,13 @@ export function isMailConfigured(): boolean {
   return resolveTransport() !== null;
 }
 
+export function canDeliverVerificationLinks(): boolean {
+  const transport = resolveTransport();
+  return transport !== null && (
+    transport !== "resend" || (getServerEnv().MAIL_FROM_EMAIL ?? RESEND_TEST_SENDER) !== RESEND_TEST_SENDER
+  );
+}
+
 function fromAddress(transport: MailTransport): string {
   const env = getServerEnv();
   const email = env.MAIL_FROM_EMAIL ?? (transport === "smtp" ? undefined : RESEND_TEST_SENDER);

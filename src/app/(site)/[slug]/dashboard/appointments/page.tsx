@@ -84,6 +84,7 @@ export default async function MerchantAppointmentsPage({
       focusedStaffName={staffId ? focusedStaff.data?.full_name ?? "Selected staff member" : undefined}
       initialItems={(appointments.data ?? []).map((appointment) => ({
         ...toAppointmentRow(appointment, tenant.timezone || "Asia/Manila"),
+        ...(staffId && focusedStaff.data ? { staff: focusedStaff.data.full_name } : {}),
         staffScheduleMatch: Boolean(staffId),
       }))}
     />

@@ -2,16 +2,13 @@ import { notFound, redirect } from "next/navigation";
 import { StaffProfileActions } from "@/components/merchant/staff/staff-profile-actions";
 import { MerchantSidebar } from "@/components/merchant/merchant-sidebar";
 import { PageContent, StatusPill, Surface } from "@/components/admin/primitives";
-import { zonedDateToUtc } from "@/lib/merchant/overview";
 import { createClient } from "@/lib/supabase/server";
-import { getAdminClient } from "@/lib/supabase/admin";
 import Link from "next/link";
 import Image from "next/image";
+import { getStaffProfile, staffRoleLabels } from "@/lib/merchant/staff-profile";
 
 export const metadata = { title: "Staff Profile" };
 
-const roleLabels = { owner: "Owner", admin: "Admin", receptionist: "Receptionist", staff: "Service Staff" };
-const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
 
 export default async function StaffProfilePage({ params }: { params: Promise<{ slug: string; staffId: string }> }) {
   const { slug, staffId } = await params;
@@ -30,83 +27,28 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ s
     .eq("tenant_id", tenant.id).eq("profile_id", user.id).maybeSingle();
   if (membership?.role !== "owner" && membership?.role !== "admin") notFound();
 
-  const db = getAdminClient();
-  if (!db) throw new Error("Staff profiles require Supabase server credentials.");
-
-  const { data: staff, error: staffError } = await db.from("staff_members")
-    .select("id, full_name, title, phone, bio, image_url, profile_id, active, commission_type, commission_value")
-    .eq("tenant_id", tenant.id).eq("id", staffId).maybeSingle();
-  if (staffError) throw staffError;
-  if (!staff) notFound();
-
-  const timezone = tenant.timezone || "Asia/Manila";
-  const now = new Date();
-  const today = new Intl.DateTimeFormat("sv-SE", { timeZone: timezone, dateStyle: "short" }).format(now);
-  const monthStart = zonedDateToUtc(`${today.slice(0, 7)}-01`, timezone).toISOString();
-  const weekEnd = new Date(`${today}T00:00:00Z`);
-  weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
-  const commission = Number(staff.commission_value);
-  const results = await Promise.all([
-    db.from("staff_service_skills").select("service_id, services!inner(name, active)").eq("tenant_id", tenant.id)
-      .eq("staff_id", staff.id),
-    db.from("shifts").select("id, starts_at, ends_at, breaks(id, starts_at, ends_at)")
-      .eq("tenant_id", tenant.id).eq("staff_id", staff.id).gt("ends_at", zonedDateToUtc(today, timezone).toISOString())
-      .lt("starts_at", zonedDateToUtc(weekEnd.toISOString().slice(0, 10), timezone).toISOString())
-      .order("starts_at"),
-    commission > 0
-      ? db.from("appointment_services").select("price_cents, appointments!inner(id)")
-        .eq("tenant_id", tenant.id).eq("staff_id", staff.id).eq("appointments.status", "completed")
-        .gte("appointments.starts_at", monthStart).lte("appointments.starts_at", now.toISOString())
-      : { data: [], error: null },
+  const [profile, { data: viewer }] = await Promise.all([
+    getStaffProfile(tenant.id, staffId, tenant.timezone, user.id),
     supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
-    staff.profile_id
-      ? db.from("tenant_memberships").select("role").eq("tenant_id", tenant.id).eq("profile_id", staff.profile_id).maybeSingle()
-      : { data: null, error: null },
-    db.from("services").select("id, name").eq("tenant_id", tenant.id).eq("active", true).order("name"),
-    db.from("appointments").select("id, assigned:appointment_services()", { count: "exact", head: true })
-      .eq("tenant_id", tenant.id).gte("starts_at", now.toISOString()).neq("status", "cancelled")
-      .eq("assigned.staff_id", staff.id).or(`staff_id.eq.${staff.id},assigned.not.is.null`),
   ]);
-  for (const { error } of results) {
-    if (error) throw error;
-  }
-  const [skills, shifts, completed, viewer, staffMembership, catalog, upcoming] = results;
-  const account = staff.profile_id && staffMembership.data
-    ? (await db.auth.admin.getUserById(staff.profile_id)).data.user
-    : null;
-  const role = staffMembership.data?.role ?? "staff";
-  const phone = staff.phone ?? (account?.phone ? `+${account.phone.replace(/^\+/, "")}` : "");
-  const commissionRule = commission <= 0 ? "No commission" : staff.commission_type === "percentage"
-    ? `${commission}% of service price` : `${peso.format(commission)} per service`;
-  const accrued = (completed.data ?? []).reduce((total, { price_cents }) => total + (
-    staff.commission_type === "percentage" ? Math.round(price_cents * commission / 100) : Math.round(commission * 100)
-  ), 0);
-  const initials = staff.full_name.trim().split(/\s+/).slice(0, 2).map((word) => word[0]).join("").toUpperCase();
+  if (!profile) notFound();
+  const { managedStaff, services, shiftsThisWeek, commissionRule, timezone, formatRange } = profile;
+  const initials = managedStaff.fullName.trim().split(/\s+/).slice(0, 2).map((word) => word[0]).join("").toUpperCase();
   const contact = [
-    ["Email address", account?.email || "Not provided"],
-    ["Phone number", phone || "Not provided"],
-    ["Dashboard role", roleLabels[role]],
+    ["Email address", managedStaff.email || "Not provided"],
+    ["Phone number", managedStaff.phone || "Not provided"],
+    ["Dashboard role", managedStaff.roleLabel],
     ["Commission rule", commissionRule],
-    ["Accrued this month", commission > 0 ? peso.format(accrued / 100) : "Not applicable"],
+    ["Accrued this month", managedStaff.commissionValue > 0 ? managedStaff.earnings : "Not applicable"],
   ];
-  const shiftsThisWeek = shifts.data ?? [];
-  const services = (skills.data ?? []).filter(({ services }) => services.active)
-    .map(({ services }) => services.name).sort((a, b) => a.localeCompare(b));
-  const serviceOptions = [
-    ...(catalog.data ?? []).map(({ id, name }) => ({ value: id, label: name })),
-    ...(skills.data ?? []).filter(({ services }) => !services.active)
-      .map(({ service_id, services }) => ({ value: service_id, label: `${services.name} (inactive)` })),
-  ];
-  const shiftFormat = new Intl.DateTimeFormat("en-PH", { timeZone: timezone, weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-  const formatRange = (start: string, end: string) => shiftFormat.formatRange(new Date(start), new Date(end));
 
   return (
     <div className="flex min-h-dvh flex-col bg-powder text-ink lg:h-dvh lg:flex-row lg:overflow-hidden">
       <MerchantSidebar
         businessName={tenant.name}
-        userName={viewer.data?.full_name?.trim() || user.email?.split("@")[0] || "Merchant"}
+        userName={viewer?.full_name?.trim() || user.email?.split("@")[0] || "Merchant"}
         userEmail={user.email ?? "Merchant staff"}
-        userRole={membership.role === "owner" ? "Business owner" : roleLabels[membership.role]}
+        userRole={membership.role === "owner" ? "Business owner" : staffRoleLabels[membership.role]}
         basePath={basePath}
       />
       <div className="min-w-0 flex-1 lg:h-dvh lg:overflow-y-auto">
@@ -119,41 +61,24 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ s
             <p className="mt-1 text-sm text-muted">View staff information, service eligibility, and working hours.</p>
           </header>
 
-          <Surface className="space-y-5">
-            <div className="flex flex-wrap items-center justify-between gap-4">
+          <Surface className="overflow-hidden border border-hairline !p-0">
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-hairline bg-burnt/5 p-4 sm:p-6">
               <div className="flex min-w-0 items-center gap-4">
-                {staff.image_url ? (
-                  <Image src={staff.image_url} width={56} height={56} alt="" unoptimized className="size-14 shrink-0 rounded-full object-cover" />
+                {managedStaff.imageUrl ? (
+                  <Image src={managedStaff.imageUrl} width={56} height={56} alt="" unoptimized className="size-14 shrink-0 rounded-full object-cover" />
                 ) : (
-                  <span aria-hidden="true" className="grid size-14 shrink-0 place-items-center rounded-full bg-mist text-lg font-semibold text-burnt">{initials}</span>
+                  <span aria-hidden="true" className="grid size-14 shrink-0 place-items-center rounded-full bg-burnt/10 text-lg font-semibold text-burnt-dark">{initials}</span>
                 )}
                 <div className="min-w-0">
-                  <h2 className="break-words text-2xl font-semibold">{staff.full_name}</h2>
-                  <StatusPill tone={staff.active ? "success" : "danger"}>{staff.active ? "Active" : "Inactive"}</StatusPill>
+                  <h2 className="break-words text-2xl font-semibold">{managedStaff.fullName}</h2>
+                  <div className="mt-1.5">
+                    <StatusPill tone={managedStaff.active ? "success" : "neutral"}>{managedStaff.active ? "Active" : "Inactive"}</StatusPill>
+                  </div>
                 </div>
               </div>
-              <StaffProfileActions tenantId={tenant.id} basePath={basePath} staff={{
-                id: staff.id,
-                fullName: staff.full_name,
-                title: staff.title ?? "",
-                active: staff.active,
-                phone,
-                email: account?.email ?? "",
-                bio: staff.bio ?? "",
-                imageUrl: staff.image_url,
-                role,
-                roleLabel: roleLabels[role],
-                canChangeRole: Boolean(staffMembership.data && staff.profile_id !== user.id && (role === "staff" || role === "receptionist")),
-                services: serviceOptions,
-                serviceIds: (skills.data ?? []).map((skill) => skill.service_id),
-                commissionType: staff.commission_type,
-                commissionValue: commission,
-                earnings: peso.format(accrued / 100),
-                availability: shiftsThisWeek.length ? `${shiftsThisWeek.length} scheduled shifts in the next 7 days` : "No shifts in the next 7 days",
-                upcomingCount: upcoming.count ?? 0,
-              }} />
+              <StaffProfileActions tenantId={tenant.id} basePath={basePath} staff={managedStaff} />
             </div>
-            <dl className="grid grid-cols-2 gap-4 border-t border-hairline pt-5 sm:grid-cols-3 xl:grid-cols-5">
+            <dl className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:p-6 xl:grid-cols-5">
               {contact.map(([label, value]) => (
                 <div key={label} className="min-w-0">
                   <dt className="text-xs text-muted">{label}</dt>
@@ -163,14 +88,27 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ s
             </dl>
           </Surface>
 
-          <Surface className="space-y-3">
+          <Surface className="space-y-4 border border-hairline">
             <h2 className="text-lg font-semibold">Staff details</h2>
-            <p className="text-sm text-muted">{[staff.title, roleLabels[role], staff.bio].filter(Boolean).join(" · ")}</p>
-            <h3 className="text-sm font-semibold">Services this person can perform</h3>
-            <p className="text-sm text-body">{services.length ? services.join(" · ") : "No service assignments"}</p>
+            {(managedStaff.title || managedStaff.bio) && (
+              <div className="space-y-1">
+                {managedStaff.title && <p className="text-sm font-medium">{managedStaff.title}</p>}
+                {managedStaff.bio && <p className="whitespace-pre-wrap break-words text-sm text-muted">{managedStaff.bio}</p>}
+              </div>
+            )}
+            <div className="space-y-2 border-t border-hairline pt-4">
+              <h3 className="text-sm font-semibold">Services this person can perform</h3>
+              {services.length ? (
+                <ul className="flex flex-wrap gap-2">
+                  {services.map((service) => (
+                    <li key={service.id} className="break-words rounded-full bg-burnt/10 px-3 py-1 text-sm text-burnt-dark">{service.name}</li>
+                  ))}
+                </ul>
+              ) : <p className="text-sm text-muted">No service assignments.</p>}
+            </div>
           </Surface>
 
-          <Surface className="space-y-4">
+          <Surface className="space-y-4 border border-hairline">
             <div id="staff-working-hours">
               <h2 className="text-lg font-semibold">Working hours &amp; breaks</h2>
               <p className="mt-1 text-xs text-muted">Next 7 days · {timezone}</p>

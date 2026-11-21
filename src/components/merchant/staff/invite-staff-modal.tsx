@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AdminButton } from "@/components/admin/admin-button";
+import { fieldOutlineClasses } from "@/components/admin/fields";
 import { Icon } from "@/components/admin/icon";
 import { Modal } from "@/components/ui/modal";
 import { Listbox } from "../new-appointment-modal";
@@ -13,7 +14,7 @@ interface InviteStaffModalProps {
   services: { id: string; name: string }[];
 }
 
-const fieldClass = "h-11 w-full rounded-lg border border-hairline bg-white px-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-burnt/40";
+const fieldClass = `${fieldOutlineClasses} h-11 w-full px-3 text-sm text-ink`;
 const labelClass = "flex flex-col gap-1.5 text-sm font-medium text-ink";
 
 function RequiredMark() {

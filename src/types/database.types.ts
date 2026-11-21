@@ -1888,6 +1888,10 @@ type DatabaseCore = {
         };
         Returns: undefined;
       };
+      reserve_staff_email_change: {
+        Args: { p_profile_id: string };
+        Returns: boolean;
+      };
       current_profile_role: {
         Args: Record<PropertyKey, never>;
         Returns: Database["public"]["Enums"]["app_role"];
