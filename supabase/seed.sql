@@ -322,16 +322,35 @@ ON CONFLICT (id) DO UPDATE SET
   active = EXCLUDED.active;
 
 -- 7. Staff Members
-INSERT INTO public.staff_members (id, tenant_id, full_name, title, active, profile_id)
+INSERT INTO public.staff_members (id, tenant_id, full_name, title, active, profile_id, commission_type, commission_value, sort_order)
 VALUES
-('33333333-3333-4333-8333-333333333301', '11111111-1111-4111-8111-111111111111', 'Marco Reyes', 'Senior Stylist', TRUE, 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'),
-('33333333-3333-4333-8333-333333333302', '11111111-1111-4111-8111-111111111111', 'Elena Cruz', 'Color Specialist', TRUE, NULL),
-('33333333-3333-4333-8333-333333333303', '11111111-1111-4111-8111-111111111111', 'Sofia Lim', 'Nail & Skin Therapist', TRUE, NULL)
+('33333333-3333-4333-8333-333333333304', '11111111-1111-4111-8111-111111111111', 'Maria Santos', 'Business management', TRUE, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'fixed', 0, 0),
+('33333333-3333-4333-8333-333333333301', '11111111-1111-4111-8111-111111111111', 'Marco Reyes', 'Senior Stylist', TRUE, 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'percentage', 20, 1),
+('33333333-3333-4333-8333-333333333302', '11111111-1111-4111-8111-111111111111', 'Elena Cruz', 'Color Specialist', TRUE, NULL, 'fixed', 50, 2),
+('33333333-3333-4333-8333-333333333303', '11111111-1111-4111-8111-111111111111', 'Sofia Lim', 'Nail & Skin Therapist', TRUE, NULL, 'percentage', 15, 3)
 ON CONFLICT (id) DO UPDATE SET
   full_name = EXCLUDED.full_name,
   title = EXCLUDED.title,
   active = EXCLUDED.active,
-  profile_id = EXCLUDED.profile_id;
+  profile_id = EXCLUDED.profile_id,
+  commission_type = EXCLUDED.commission_type,
+  commission_value = EXCLUDED.commission_value,
+  sort_order = EXCLUDED.sort_order;
+
+-- 7b. Staff Service Skills
+INSERT INTO public.staff_service_skills (tenant_id, staff_id, service_id)
+VALUES
+-- Marco Reyes: Signature haircut, Balayage & gloss
+('11111111-1111-4111-8111-111111111111', '33333333-3333-4333-8333-333333333301', '22222222-2222-4222-8222-222222222201'),
+('11111111-1111-4111-8111-111111111111', '33333333-3333-4333-8333-333333333301', '22222222-2222-4222-8222-222222222202'),
+-- Elena Cruz: Signature haircut, Botanical spa manicure, Hydra facial
+('11111111-1111-4111-8111-111111111111', '33333333-3333-4333-8333-333333333302', '22222222-2222-4222-8222-222222222201'),
+('11111111-1111-4111-8111-111111111111', '33333333-3333-4333-8333-333333333302', '22222222-2222-4222-8222-222222222203'),
+('11111111-1111-4111-8111-111111111111', '33333333-3333-4333-8333-333333333302', '22222222-2222-4222-8222-222222222205'),
+-- Sofia Lim: Wellness massage, Scalp detox
+('11111111-1111-4111-8111-111111111111', '33333333-3333-4333-8333-333333333303', '22222222-2222-4222-8222-222222222204'),
+('11111111-1111-4111-8111-111111111111', '33333333-3333-4333-8333-333333333303', '22222222-2222-4222-8222-222222222206')
+ON CONFLICT (staff_id, service_id) DO NOTHING;
 
 -- 8. Customers
 INSERT INTO public.customers (id, tenant_id, full_name, email, phone)

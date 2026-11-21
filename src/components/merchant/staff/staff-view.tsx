@@ -20,13 +20,15 @@ import {
 export interface StaffItem {
   id: string;
   fullName: string;
+  email: string;
   title: string;
-  bio: string;
-  imageUrl: string;
+  role: string;
+  roleLabel: string;
+  servicesDisplay: string;
+  serviceNames: string;
+  commissionDisplay: string;
   active: boolean;
   sortOrder: number;
-  profileId: string | null;
-  role: string;
   createdAt: string;
 }
 
@@ -36,28 +38,17 @@ interface StaffViewProps {
   userEmail?: string;
   userRole?: string;
   tenantId?: string;
-  totalStaff?: number;
-  activeStaff?: number;
-  ownersCount?: number;
-  inactiveStaff?: number;
+  activeMembers?: number;
+  onShiftToday?: number;
+  pendingInvitations?: number;
+  commissionThisMonth?: number;
   initialItems?: StaffItem[];
   basePath?: string;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function RolePill({ role }: { role: string }) {
-  const toneMap: Record<string, { tone: React.ComponentProps<typeof StatusPill>["tone"]; label: string }> = {
-    owner:        { tone: "warning", label: "Owner" },
-    admin:        { tone: "info",    label: "Admin" },
-    receptionist: { tone: "success", label: "Receptionist" },
-    staff:        { tone: "neutral", label: "Staff" },
-  };
-  const { tone, label } = toneMap[role] ?? { tone: "neutral", label: role };
-  return <StatusPill tone={tone}>{label}</StatusPill>;
-}
-
-function ActiveBadge({ active }: { active: boolean }) {
+function StatusBadge({ active }: { active: boolean }) {
   return (
     <StatusPill tone={active ? "success" : "danger"}>
       {active ? "Active" : "Inactive"}
@@ -93,7 +84,6 @@ function AddStaffModal({
 }) {
   const [fullName, setFullName] = React.useState("");
   const [title, setTitle] = React.useState("");
-  const [bio, setBio] = React.useState("");
   const [saving, setSaving] = React.useState(false);
 
   if (!isOpen) return null;
@@ -109,7 +99,6 @@ function AddStaffModal({
         tenantId: tenantId ?? "",
         fullName: fullName.trim(),
         title: title.trim() || undefined,
-        bio: bio.trim() || undefined,
       });
       if (!res.success) {
         showToast(res.error || "Failed to add staff.");
@@ -118,19 +107,20 @@ function AddStaffModal({
       onCreated({
         id: res.id!,
         fullName: fullName.trim(),
+        email: "Not provided",
         title: title.trim(),
-        bio: bio.trim(),
-        imageUrl: "",
+        role: "staff",
+        roleLabel: "Service Staff",
+        servicesDisplay: "No services assigned",
+        serviceNames: "",
+        commissionDisplay: "No commission",
         active: true,
         sortOrder: 0,
-        profileId: null,
-        role: "staff",
         createdAt: new Date().toISOString(),
       });
       showToast(`${fullName.trim()} added successfully.`);
       setFullName("");
       setTitle("");
-      setBio("");
       onClose();
     } catch {
       showToast("Failed to add staff.");
@@ -165,21 +155,9 @@ function AddStaffModal({
               className="w-full h-11 rounded-lg border border-hairline bg-white px-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-burnt/40"
             />
           </div>
-          <div>
-            <label className="block text-xs font-semibold text-subtle mb-1">Bio</label>
-            <textarea
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              placeholder="Short bio or description"
-              rows={3}
-              className="w-full rounded-lg border border-hairline bg-white px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-burnt/40 resize-none"
-            />
-          </div>
         </div>
         <div className="mt-5 flex items-center justify-end gap-2.5">
-          <AdminButton variant="outline" size="xs" onClick={onClose} disabled={saving}>
-            Cancel
-          </AdminButton>
+          <AdminButton variant="outline" size="xs" onClick={onClose} disabled={saving}>Cancel</AdminButton>
           <AdminButton variant="primary" size="xs" onClick={handleSave} disabled={saving}>
             {saving ? "Adding…" : "Add Member"}
           </AdminButton>
@@ -208,14 +186,12 @@ function EditStaffModal({
 }) {
   const [fullName, setFullName] = React.useState("");
   const [title, setTitle] = React.useState("");
-  const [bio, setBio] = React.useState("");
   const [saving, setSaving] = React.useState(false);
 
   React.useEffect(() => {
     if (staff) {
       setFullName(staff.fullName);
       setTitle(staff.title);
-      setBio(staff.bio);
     }
   }, [staff]);
 
@@ -233,18 +209,12 @@ function EditStaffModal({
         tenantId: tenantId ?? "",
         fullName: fullName.trim(),
         title: title.trim() || undefined,
-        bio: bio.trim() || undefined,
       });
       if (!res.success) {
         showToast(res.error || "Failed to update.");
         return;
       }
-      onUpdated({
-        ...staff,
-        fullName: fullName.trim(),
-        title: title.trim(),
-        bio: bio.trim(),
-      });
+      onUpdated({ ...staff, fullName: fullName.trim(), title: title.trim() });
       showToast(`${fullName.trim()} updated.`);
       onClose();
     } catch {
@@ -262,36 +232,17 @@ function EditStaffModal({
         <div className="mt-5 space-y-4">
           <div>
             <label className="block text-xs font-semibold text-subtle mb-1">Full name *</label>
-            <input
-              type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="w-full h-11 rounded-lg border border-hairline bg-white px-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-burnt/40"
-            />
+            <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)}
+              className="w-full h-11 rounded-lg border border-hairline bg-white px-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-burnt/40" />
           </div>
           <div>
             <label className="block text-xs font-semibold text-subtle mb-1">Title / role</label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full h-11 rounded-lg border border-hairline bg-white px-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-burnt/40"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-subtle mb-1">Bio</label>
-            <textarea
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              rows={3}
-              className="w-full rounded-lg border border-hairline bg-white px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-burnt/40 resize-none"
-            />
+            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
+              className="w-full h-11 rounded-lg border border-hairline bg-white px-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-burnt/40" />
           </div>
         </div>
         <div className="mt-5 flex items-center justify-end gap-2.5">
-          <AdminButton variant="outline" size="xs" onClick={onClose} disabled={saving}>
-            Cancel
-          </AdminButton>
+          <AdminButton variant="outline" size="xs" onClick={onClose} disabled={saving}>Cancel</AdminButton>
           <AdminButton variant="primary" size="xs" onClick={handleSave} disabled={saving}>
             {saving ? "Saving…" : "Save Changes"}
           </AdminButton>
@@ -309,10 +260,10 @@ export function StaffView({
   userEmail = "Maria Santos",
   userRole = "Business owner",
   tenantId,
-  totalStaff = 0,
-  activeStaff = 0,
-  ownersCount = 0,
-  inactiveStaff = 0,
+  activeMembers = 0,
+  onShiftToday = 0,
+  pendingInvitations = 0,
+  commissionThisMonth = 0,
   initialItems = EMPTY_ITEMS,
   basePath = "",
 }: StaffViewProps) {
@@ -325,11 +276,16 @@ export function StaffView({
   }
 
   const [searchQuery, setSearchQuery] = React.useState("");
-  const [filterStatus, setFilterStatus] = React.useState<string>("All");
-  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [activeMenuId, setActiveMenuId] = React.useState<string | null>(null);
   const [expandedStaffId, setExpandedStaffId] = React.useState<string | null>(null);
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
+
+  // Filter panel state
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [rolesExpanded, setRolesExpanded] = React.useState(true);
+  const [sortExpanded, setSortExpanded] = React.useState(true);
+  const [roleFilter, setRoleFilter] = React.useState("All team members");
+  const [sortBy, setSortBy] = React.useState("Public Display order");
 
   // Modal states
   const [isAddOpen, setIsAddOpen] = React.useState(false);
@@ -341,21 +297,49 @@ export function StaffView({
     setTimeout(() => setToastMessage(null), 2500);
   };
 
-  // Filter logic
-  const filtered = items.filter((item) => {
-    const matchesSearch =
-      !searchQuery ||
-      item.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.role.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus =
-      filterStatus === "All" ||
-      (filterStatus === "Active" && item.active) ||
-      (filterStatus === "Inactive" && !item.active) ||
-      (filterStatus === "Owner" && item.role === "owner") ||
-      (filterStatus === "Staff" && item.role === "staff");
-    return matchesSearch && matchesStatus;
-  });
+  // ── Filter + sort logic ───────────────────────────────────────────────────
+
+  const filtered = React.useMemo(() => {
+    let result = items.filter((item) => {
+      const q = searchQuery.toLowerCase();
+      const matchesSearch =
+        !q ||
+        item.fullName.toLowerCase().includes(q) ||
+        item.title.toLowerCase().includes(q) ||
+        item.email.toLowerCase().includes(q) ||
+        item.serviceNames.toLowerCase().includes(q);
+
+      let matchesRole = true;
+      switch (roleFilter) {
+        case "Active Accounts":
+          matchesRole = item.active;
+          break;
+        case "Invited &Expired":
+          matchesRole = false; // No invitation system yet
+          break;
+        case "Deactivated Accounts":
+          matchesRole = !item.active;
+          break;
+        case "Service Staff only":
+          matchesRole = item.role === "staff";
+          break;
+        // "All team members" = default, no filter
+      }
+
+      return matchesSearch && matchesRole;
+    });
+
+    // Sort
+    if (sortBy === "Name A-Z") {
+      result = [...result].sort((a, b) => a.fullName.localeCompare(b.fullName));
+    }
+    // "Public Display order" is the natural sort_order from DB
+
+    return result;
+  }, [items, searchQuery, roleFilter, sortBy]);
+
+  // Active filter label for badge
+  const hasActiveFilter = roleFilter !== "All team members";
 
   // ── Action handlers ───────────────────────────────────────────────────────
 
@@ -365,16 +349,8 @@ export function StaffView({
     const newActive = !staff.active;
     setItems((prev) => prev.map((s) => (s.id === staff.id ? { ...s, active: newActive } : s)));
     try {
-      const res = await toggleStaffActiveAction({
-        staffId: staff.id,
-        tenantId: tenantId ?? "",
-        active: newActive,
-      });
-      if (!res.success) {
-        setItems(prevItems);
-        showToast(res.error || "Failed to update.");
-        return;
-      }
+      const res = await toggleStaffActiveAction({ staffId: staff.id, tenantId: tenantId ?? "", active: newActive });
+      if (!res.success) { setItems(prevItems); showToast(res.error || "Failed to update."); return; }
       showToast(`${staff.fullName} ${newActive ? "activated" : "deactivated"}.`);
       router.refresh();
     } catch (err: unknown) {
@@ -390,15 +366,8 @@ export function StaffView({
     const prevItems = items;
     setItems((prev) => prev.filter((s) => s.id !== target.id));
     try {
-      const res = await deleteStaffMemberAction({
-        staffId: target.id,
-        tenantId: tenantId ?? "",
-      });
-      if (!res.success) {
-        setItems(prevItems);
-        showToast(res.error || "Failed to remove.");
-        return;
-      }
+      const res = await deleteStaffMemberAction({ staffId: target.id, tenantId: tenantId ?? "" });
+      if (!res.success) { setItems(prevItems); showToast(res.error || "Failed to remove."); return; }
       showToast(`${target.fullName} removed.`);
       router.refresh();
     } catch (err: unknown) {
@@ -409,77 +378,71 @@ export function StaffView({
 
   return (
     <div className="flex min-h-dvh flex-col bg-powder text-ink lg:h-dvh lg:flex-row lg:overflow-hidden">
-      <MerchantSidebar
-        businessName={businessName}
-        userName={userName}
-        userEmail={userEmail}
-        userRole={userRole}
-        basePath={basePath}
-      />
+      <MerchantSidebar businessName={businessName} userName={userName} userEmail={userEmail} userRole={userRole} basePath={basePath} />
 
       <div className="min-w-0 flex-1 lg:h-dvh lg:overflow-y-auto">
         <PageContent>
-          {/* Page Heading */}
+          {/* ── Page Heading ─────────────────────────────────────────────── */}
           <PageHeading
             eyebrow="MERCHANT WORKSPACE"
-            title="Staff & Permissions"
-            description="Manage your team, roles, and service assignments."
+            title="Staff & permissions"
+            description="Manage team access, service eligibility, invitations, and commission rules."
             actions={
               <div className="flex flex-wrap items-center gap-2">
                 <AdminButton variant="primary" size="sm" onClick={() => setIsAddOpen(true)}>
-                  + Add Staff
+                  + Invite Staff
+                </AdminButton>
+                <AdminButton variant="outline" size="sm">
+                  Role &amp; Access
                 </AdminButton>
               </div>
             }
           />
 
-          {/* KPI Metric Cards */}
+          {/* ── KPI Metric Cards ─────────────────────────────────────────── */}
           <div className="grid grid-cols-2 gap-5 xl:grid-cols-4">
             <MetricCard
               featured
-              label="Total staff"
-              value={totalStaff}
-              caption="All team members in your business"
+              label="Active team members"
+              value={activeMembers}
+              caption="Owner, reception, and service staff"
               icon="users"
               progress={100}
             />
             <MetricCard
-              label="Active members"
-              value={activeStaff}
-              caption="Currently active and accepting bookings"
-              icon="verified"
-              iconWeight="regular"
-              progress={totalStaff > 0 ? Math.round((activeStaff / totalStaff) * 100) : 0}
-            />
-            <MetricCard
-              label="Owners / admins"
-              value={ownersCount}
-              caption="Users with full management access"
-              icon="shield"
-              progress={totalStaff > 0 ? Math.round((ownersCount / totalStaff) * 100) : 0}
-            />
-            <MetricCard
-              label="Inactive members"
-              value={inactiveStaff}
-              caption="Deactivated or on leave"
+              label="On shift today"
+              value={onShiftToday}
+              caption="View staff working hours"
               icon="clock"
-              progress={totalStaff > 0 ? Math.round((inactiveStaff / totalStaff) * 100) : 0}
+              progress={items.length > 0 ? Math.round((onShiftToday / items.length) * 100) : 0}
+            />
+            <MetricCard
+              label="Pending invitations"
+              value={pendingInvitations}
+              caption="Manage sent invitations"
+              icon="bell"
+              progress={pendingInvitations > 0 ? 50 : 0}
+            />
+            <MetricCard
+              label="Commission this month"
+              value={commissionThisMonth}
+              valuePrefix="₱"
+              caption="Completed services · This month"
+              icon="chart"
+              progress={commissionThisMonth > 0 ? 60 : 0}
             />
           </div>
 
-          {/* Main Staff Surface */}
+          {/* ── Main Staff Register Surface ───────────────────────────────── */}
           <Surface className="overflow-hidden !p-0">
-            {/* Controls Bar */}
+            {/* ── Controls Bar ───────────────────────────────────────────── */}
             <div className="p-4 sm:p-6 border-b border-hairline flex flex-wrap items-center justify-between gap-4">
-              {/* Left: title + count */}
+              {/* Left: title */}
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
                   <Icon name="users" className="size-5 text-glyph" />
-                  <h2 className="text-base font-semibold leading-6 text-ink">Team Members</h2>
+                  <h2 className="text-base font-semibold leading-6 text-ink">Staff Register</h2>
                 </div>
-                <span className="inline-flex items-center rounded-md bg-mist px-2 py-1 text-xs font-semibold leading-[18px] text-ink">
-                  {items.length} {items.length === 1 ? "member" : "members"}
-                </span>
               </div>
 
               {/* Right: search + filter */}
@@ -488,7 +451,7 @@ export function StaffView({
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder="Search by name or title"
+                    placeholder="Search customer or service"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="h-11 pl-10 pr-3 rounded-lg border border-hairline bg-white text-sm text-ink focus:outline-none focus:ring-2 focus:ring-burnt/40 w-48 sm:w-60 transition-shadow"
@@ -496,56 +459,189 @@ export function StaffView({
                   <Icon name="search" className="size-4 text-glyph absolute left-3 top-3 pointer-events-none" />
                 </div>
 
-                {/* Filter */}
+                {/* Filter button + dropdown */}
                 <div className="relative">
                   <button
                     type="button"
                     onClick={() => setIsFilterOpen(!isFilterOpen)}
-                    className="h-11 rounded-lg border border-hairline bg-white px-3 text-sm font-semibold text-ink hover:bg-mist flex items-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
+                    className={`h-11 rounded-lg border px-3 text-sm font-semibold text-ink hover:bg-mist flex items-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${isFilterOpen ? "border-burnt bg-white" : "border-hairline bg-white"}`}
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="size-3.5 text-glyph" aria-hidden>
                       <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
                     </svg>
                     <span>Filter</span>
-                    <Icon name="chevron-down" className="size-3.5 text-glyph" />
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} className={`size-3.5 text-glyph transition-transform ${isFilterOpen ? "rotate-180" : ""}`} aria-hidden>
+                      <path d="M4 6l4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
                   </button>
-                  {filterStatus !== "All" && (
-                    <span className="ml-1.5 inline-flex items-center gap-1 rounded-md bg-burnt/10 px-2 py-1 text-xs font-semibold text-burnt">
-                      {filterStatus}
-                      <button type="button" onClick={() => setFilterStatus("All")} className="ml-0.5 hover:text-burnt-dark" aria-label="Clear filter">×</button>
-                    </span>
-                  )}
+
+                  {/* Filter dropdown panel */}
                   {isFilterOpen && (
-                    <div className="absolute right-0 mt-1 w-44 rounded-[10px] bg-white border border-hairline shadow-lg py-1 z-20 text-sm">
-                      {["All", "Active", "Inactive", "Owner", "Staff"].map((s) => (
+                    <div className="absolute right-0 mt-1 w-56 rounded-[10px] bg-white border border-hairline shadow-lg z-20 text-sm overflow-hidden">
+                      {/* Roles section */}
+                      <div className="border-b border-hairline">
                         <button
-                          key={s}
                           type="button"
-                          onClick={() => {
-                            setFilterStatus(s);
-                            setIsFilterOpen(false);
-                          }}
-                          className={`w-full text-left px-4 py-2 hover:bg-mist ${filterStatus === s ? "text-burnt font-semibold" : "text-body"}`}
+                          onClick={() => setRolesExpanded(!rolesExpanded)}
+                          className="w-full flex items-center justify-between px-4 py-2.5 text-xs font-semibold text-subtle uppercase tracking-wide hover:bg-mist"
                         >
-                          {s}
+                          <span>Roles</span>
+                          <span className="text-base leading-none text-glyph">{rolesExpanded ? "−" : "+"}</span>
                         </button>
-                      ))}
+                        {rolesExpanded && (
+                          <div className="pb-2">
+                            {["All team members", "Active Accounts", "Invited &Expired", "Deactivated Accounts", "Service Staff only"].map((opt) => (
+                              <button
+                                key={opt}
+                                type="button"
+                                onClick={() => setRoleFilter(opt)}
+                                className={`w-full text-left px-4 py-2 hover:bg-mist transition-colors ${roleFilter === opt ? "text-burnt font-semibold" : "text-body"}`}
+                              >
+                                {opt}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Sort section */}
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => setSortExpanded(!sortExpanded)}
+                          className="w-full flex items-center justify-between px-4 py-2.5 text-xs font-semibold text-subtle uppercase tracking-wide hover:bg-mist"
+                        >
+                          <span>Sort</span>
+                          <span className="text-base leading-none text-glyph">{sortExpanded ? "−" : "+"}</span>
+                        </button>
+                        {sortExpanded && (
+                          <div className="pb-2">
+                            {["Name A-Z", "Public Display order"].map((opt) => (
+                              <button
+                                key={opt}
+                                type="button"
+                                onClick={() => setSortBy(opt)}
+                                className={`w-full text-left px-4 py-2 hover:bg-mist transition-colors ${sortBy === opt ? "text-burnt font-semibold" : "text-body"}`}
+                              >
+                                {opt}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
+
+                {/* Active filter badge */}
+                {hasActiveFilter && (
+                  <span className="inline-flex items-center gap-1 rounded-md bg-burnt/10 px-2 py-1 text-xs font-semibold text-burnt">
+                    {roleFilter}
+                    <button type="button" onClick={() => setRoleFilter("All team members")} className="ml-0.5 hover:text-burnt-dark" aria-label="Clear filter">×</button>
+                  </span>
+                )}
               </div>
             </div>
 
-            {/* ── Mobile cards ─────────────────────────────────────────── */}
+            {/* ── Desktop table headers ────────────────────────────────────── */}
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-mist border-b border-hairline text-subtle font-semibold">
+                  <tr>
+                    <th className="px-5 py-3 text-[11px] leading-4 uppercase tracking-wide">Team Member / Email</th>
+                    <th className="px-5 py-3 text-[11px] leading-4 uppercase tracking-wide">Role / Public Title</th>
+                    <th className="px-5 py-3 text-[11px] leading-4 uppercase tracking-wide">Services</th>
+                    <th className="px-5 py-3 text-[11px] leading-4 uppercase tracking-wide">Commission</th>
+                    <th className="px-5 py-3 text-[11px] leading-4 uppercase tracking-wide">Status / Shift</th>
+                    <th className="px-5 py-3 text-[11px] leading-4 uppercase tracking-wide text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-hairline">
+                  {filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-5 py-2">
+                        <EmptyState
+                          compact
+                          title={searchQuery || hasActiveFilter ? "No staff match your search." : "No staff members yet."}
+                          description="Add your first team member to get started."
+                        />
+                      </td>
+                    </tr>
+                  ) : (
+                    filtered.map((row) => (
+                      <tr key={row.id} className="hover:bg-mist/50 transition-colors">
+                        {/* Team Member / Email */}
+                        <td className="px-5 py-3.5">
+                          <div className="flex items-center gap-3">
+                            <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-burnt/10 text-sm font-semibold text-burnt">
+                              {getInitials(row.fullName)}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-semibold text-ink truncate">{row.fullName}</p>
+                              <p className="text-xs text-muted truncate">{row.email}</p>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Role / Public Title */}
+                        <td className="px-5 py-3.5">
+                          <p className="font-semibold text-ink">{row.roleLabel}</p>
+                          <p className="text-xs text-muted">{row.title || "—"}</p>
+                        </td>
+
+                        {/* Services */}
+                        <td className="px-5 py-3.5">
+                          <p className="text-muted">{row.servicesDisplay}</p>
+                          {row.serviceNames && (
+                            <p className="text-xs text-subtle truncate max-w-[180px]">{row.serviceNames}</p>
+                          )}
+                        </td>
+
+                        {/* Commission */}
+                        <td className="px-5 py-3.5 text-muted">{row.commissionDisplay}</td>
+
+                        {/* Status / Shift */}
+                        <td className="px-5 py-3.5">
+                          <StatusBadge active={row.active} />
+                          <p className="text-xs text-muted mt-1">
+                            {row.active
+                              ? (row.role === "owner" || row.role === "admin"
+                                ? "No service shift"
+                                : "On shift · 09:00-17:00")
+                              : "Deactivated"}
+                          </p>
+                        </td>
+
+                        {/* Action */}
+                        <td className="px-5 py-3.5 text-right relative">
+                          <button
+                            type="button"
+                            onClick={() => setActiveMenuId(activeMenuId === row.id ? null : row.id)}
+                            className="flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 text-glyph ml-auto"
+                          >
+                            <Icon name="more" weight="fill" className="size-5" />
+                          </button>
+                          {activeMenuId === row.id && (
+                            <div className="absolute right-4 mt-1 w-44 rounded-[10px] bg-white border border-hairline shadow-lg py-1 z-30 text-left text-sm">
+                              <button type="button" onClick={() => { setEditTarget(row); setActiveMenuId(null); }} className="w-full text-left px-4 py-2 hover:bg-mist text-body">Edit details</button>
+                              <button type="button" onClick={() => handleToggleActive(row)} className="w-full text-left px-4 py-2 hover:bg-mist text-body">{row.active ? "Deactivate" : "Activate"}</button>
+                              <button type="button" onClick={() => { setDeleteTarget(row); setActiveMenuId(null); }} className="w-full text-left px-4 py-2 hover:bg-danger-bg text-danger font-medium">Remove member</button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* ── Mobile cards ─────────────────────────────────────────────── */}
             <div className="md:hidden divide-y divide-hairline">
               {filtered.length === 0 ? (
                 <EmptyState
                   compact
-                  title={
-                    searchQuery || filterStatus !== "All"
-                      ? "No staff match your search."
-                      : "No staff members yet."
-                  }
+                  title={searchQuery || hasActiveFilter ? "No staff match your search." : "No staff members yet."}
                   description="Add your first team member to get started."
                 />
               ) : (
@@ -566,44 +662,32 @@ export function StaffView({
                             </div>
                             <div className="min-w-0">
                               <p className="truncate text-base font-semibold text-ink">{row.fullName}</p>
-                              <p className="mt-0.5 text-sm text-muted">{row.title || "No title"}</p>
+                              <p className="mt-0.5 text-sm text-muted">{row.roleLabel} · {row.title || "No title"}</p>
                             </div>
                           </div>
-                          <ActiveBadge active={row.active} />
+                          <StatusBadge active={row.active} />
                         </div>
                       </button>
                       {isExpanded && (
                         <div className="mt-4 space-y-3 rounded-lg bg-powder p-4 text-sm text-muted">
                           <div className="grid grid-cols-2 gap-3">
-                            <span>
-                              Role
-                              <strong className="mt-1 block text-ink capitalize">{row.role}</strong>
-                            </span>
-                            <span>
-                              Status
-                              <strong className="mt-1 block text-ink">{row.active ? "Active" : "Inactive"}</strong>
-                            </span>
+                            <span>Email<strong className="mt-1 block text-ink text-xs">{row.email}</strong></span>
+                            <span>Services<strong className="mt-1 block text-ink text-xs">{row.servicesDisplay}</strong></span>
+                            <span>Commission<strong className="mt-1 block text-ink text-xs">{row.commissionDisplay}</strong></span>
+                            <span>Status<strong className="mt-1 block text-ink text-xs">{row.active ? "Active" : "Inactive"}</strong></span>
                           </div>
-                          {row.bio && (
+                          {row.serviceNames && (
                             <div className="border-t border-hairline pt-3">
-                              <p className="text-xs text-subtle">Bio</p>
-                              <p className="text-sm text-ink mt-1">{row.bio}</p>
+                              <p className="text-xs text-subtle">Assigned services</p>
+                              <p className="text-sm text-ink mt-1">{row.serviceNames}</p>
                             </div>
                           )}
                           <div className="flex flex-wrap gap-2 border-t border-hairline pt-3">
-                            <AdminButton size="xs" variant="outline" onClick={() => setEditTarget(row)}>
-                              Edit
-                            </AdminButton>
-                            <AdminButton
-                              size="xs"
-                              variant="outline"
-                              onClick={() => handleToggleActive(row)}
-                            >
+                            <AdminButton size="xs" variant="outline" onClick={() => setEditTarget(row)}>Edit</AdminButton>
+                            <AdminButton size="xs" variant="outline" onClick={() => handleToggleActive(row)}>
                               {row.active ? "Deactivate" : "Activate"}
                             </AdminButton>
-                            <AdminButton size="xs" variant="danger" onClick={() => setDeleteTarget(row)}>
-                              Remove
-                            </AdminButton>
+                            <AdminButton size="xs" variant="danger" onClick={() => setDeleteTarget(row)}>Remove</AdminButton>
                           </div>
                         </div>
                       )}
@@ -613,114 +697,10 @@ export function StaffView({
               )}
             </div>
 
-            {/* ── Desktop table ────────────────────────────────────────── */}
-            <div className="hidden overflow-x-auto md:block">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-mist border-b border-hairline text-subtle font-semibold">
-                  <tr>
-                    {["Member", "Title", "Role", "Status", "Joined", "Action"].map((h, i) => (
-                      <th
-                        key={h}
-                        className={`px-5 py-3 text-[11px] leading-4 uppercase tracking-wide ${i === 5 ? "text-right" : ""}`}
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-hairline">
-                  {filtered.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="px-5 py-2">
-                        <EmptyState
-                          compact
-                          title={
-                            searchQuery || filterStatus !== "All"
-                              ? "No staff match your search."
-                              : "No staff members yet."
-                          }
-                          description="Add your first team member to get started."
-                        />
-                      </td>
-                    </tr>
-                  ) : (
-                    filtered.map((row) => (
-                      <tr key={row.id} className="hover:bg-mist transition-colors">
-                        <td className="px-5 py-3.5">
-                          <div className="flex items-center gap-3">
-                            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-burnt/10 text-xs font-semibold text-burnt">
-                              {getInitials(row.fullName)}
-                            </div>
-                            <span className="font-semibold text-ink">{row.fullName}</span>
-                          </div>
-                        </td>
-                        <td className="px-5 py-3.5 text-muted">{row.title || "—"}</td>
-                        <td className="px-5 py-3.5">
-                          <RolePill role={row.role} />
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <ActiveBadge active={row.active} />
-                        </td>
-                        <td className="px-5 py-3.5 text-muted">
-                          {new Date(row.createdAt).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
-                        </td>
-                        <td className="px-5 py-3.5 text-right relative">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setActiveMenuId(activeMenuId === row.id ? null : row.id)
-                            }
-                            className="flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 text-glyph ml-auto"
-                          >
-                            <Icon name="more" weight="fill" className="size-5" />
-                          </button>
-                          {activeMenuId === row.id && (
-                            <div className="absolute right-4 mt-1 w-44 rounded-[10px] bg-white border border-hairline shadow-lg py-1 z-30 text-left text-sm">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setEditTarget(row);
-                                  setActiveMenuId(null);
-                                }}
-                                className="w-full text-left px-4 py-2 hover:bg-mist text-body"
-                              >
-                                Edit details
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleToggleActive(row)}
-                                className="w-full text-left px-4 py-2 hover:bg-mist text-body"
-                              >
-                                {row.active ? "Deactivate" : "Activate"}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setDeleteTarget(row);
-                                  setActiveMenuId(null);
-                                }}
-                                className="w-full text-left px-4 py-2 hover:bg-danger-bg text-danger font-medium"
-                              >
-                                Remove member
-                              </button>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
+            {/* ── Footer ────────────────────────────────────────────────────── */}
             <div className="p-4 sm:p-6 border-t border-hairline flex flex-wrap items-center justify-between gap-3 text-xs text-muted">
               <span>
-                Showing {filtered.length} of {items.length}{" "}
-                {items.length === 1 ? "member" : "members"}
+                Emails marked &quot;Not provided&quot; need profile data. Invited identities use invitation records; they do not count as active staff.
               </span>
             </div>
           </Surface>
@@ -732,9 +712,7 @@ export function StaffView({
         isOpen={isAddOpen}
         tenantId={tenantId}
         onClose={() => setIsAddOpen(false)}
-        onCreated={(item) => {
-          setItems((prev) => [item, ...prev]);
-        }}
+        onCreated={(item) => setItems((prev) => [item, ...prev])}
         showToast={showToast}
       />
 
@@ -744,11 +722,7 @@ export function StaffView({
         tenantId={tenantId}
         staff={editTarget}
         onClose={() => setEditTarget(null)}
-        onUpdated={(updated) => {
-          setItems((prev) =>
-            prev.map((s) => (s.id === updated.id ? updated : s))
-          );
-        }}
+        onUpdated={(updated) => setItems((prev) => prev.map((s) => (s.id === updated.id ? updated : s)))}
         showToast={showToast}
       />
 
@@ -770,12 +744,8 @@ export function StaffView({
               {deleteTarget.title ? ` (${deleteTarget.title})` : ""}? This action cannot be undone.
             </p>
             <div className="mt-5 flex items-center justify-end gap-2.5">
-              <AdminButton variant="outline" size="xs" onClick={() => setDeleteTarget(null)}>
-                Keep
-              </AdminButton>
-              <AdminButton variant="danger" size="xs" onClick={handleConfirmDelete}>
-                Confirm Remove
-              </AdminButton>
+              <AdminButton variant="outline" size="xs" onClick={() => setDeleteTarget(null)}>Keep</AdminButton>
+              <AdminButton variant="danger" size="xs" onClick={handleConfirmDelete}>Confirm Remove</AdminButton>
             </div>
           </div>
         </div>
