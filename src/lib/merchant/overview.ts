@@ -199,7 +199,7 @@ async function getMetricsFromTables(
   };
 }
 
-function toAppointmentRow(
+export function toAppointmentRow(
   appointment: {
     id: string;
     starts_at: string;

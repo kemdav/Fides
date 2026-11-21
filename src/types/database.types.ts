@@ -1258,6 +1258,7 @@ type DatabaseCore = {
           full_name: string;
           id: string;
           image_url: string | null;
+          phone: string | null;
           profile_id: string | null;
           sort_order: number;
           tenant_id: string;
@@ -1274,6 +1275,7 @@ type DatabaseCore = {
           full_name: string;
           id?: string;
           image_url?: string | null;
+          phone?: string | null;
           profile_id?: string | null;
           sort_order?: number;
           tenant_id: string;
@@ -1289,6 +1291,7 @@ type DatabaseCore = {
           full_name?: string;
           id?: string;
           image_url?: string | null;
+          phone?: string | null;
           profile_id?: string | null;
           sort_order?: number;
           tenant_id?: string;
@@ -1868,6 +1871,23 @@ type DatabaseCore = {
       [_ in never]: never;
     };
     Functions: {
+      manage_staff_profile: {
+        Args: {
+          p_actor_id: string;
+          p_tenant_id: string;
+          p_staff_id: string;
+          p_full_name: string;
+          p_title: string;
+          p_phone: string | null;
+          p_bio: string;
+          p_role: Database["public"]["Enums"]["app_role"];
+          p_service_ids: string[];
+          p_commission_type: Database["public"]["Enums"]["commission_type"];
+          p_commission_value: number;
+          p_image_url: string | null;
+        };
+        Returns: undefined;
+      };
       current_profile_role: {
         Args: Record<PropertyKey, never>;
         Returns: Database["public"]["Enums"]["app_role"];

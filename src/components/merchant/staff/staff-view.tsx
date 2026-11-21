@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
+import { EditStaffModal } from "./edit-staff-modal";
 import { useRouter } from "next/navigation";
 import { MerchantSidebar } from "../merchant-sidebar";
 import { Icon } from "@/components/admin/icon";
@@ -11,7 +13,6 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { InviteStaffModal } from "./invite-staff-modal";
 import { RoleAccessModal } from "./role-access-modal";
 import {
-  updateStaffMemberAction,
   toggleStaffActiveAction,
   deleteStaffMemberAction,
 } from "@/app/actions/staff";
@@ -39,6 +40,7 @@ interface StaffViewProps {
   userEmail?: string;
   userRole?: string;
   tenantId?: string;
+  canViewProfiles?: boolean;
   activeMembers?: number;
   onShiftToday?: number;
   pendingInvitations?: number;
@@ -70,80 +72,6 @@ function getInitials(name: string): string {
 
 const EMPTY_ITEMS: StaffItem[] = [];
 
-// ─── Edit Staff Modal ───────────────────────────────────────────────────────
-
-function EditStaffModal({
-  tenantId,
-  staff,
-  onClose,
-  onUpdated,
-  showToast,
-}: {
-  tenantId?: string;
-  staff: StaffItem;
-  onClose: () => void;
-  onUpdated: (item: StaffItem) => void;
-  showToast: (msg: string) => void;
-}) {
-  const [fullName, setFullName] = React.useState(staff.fullName);
-  const [title, setTitle] = React.useState(staff.title);
-  const [saving, setSaving] = React.useState(false);
-
-  const handleSave = async () => {
-    if (!fullName.trim()) {
-      showToast("Full name is required.");
-      return;
-    }
-    setSaving(true);
-    try {
-      const res = await updateStaffMemberAction({
-        staffId: staff.id,
-        tenantId: tenantId ?? "",
-        fullName: fullName.trim(),
-        title: title.trim() || undefined,
-      });
-      if (!res.success) {
-        showToast(res.error || "Failed to update.");
-        return;
-      }
-      onUpdated({ ...staff, fullName: fullName.trim(), title: title.trim() });
-      showToast(`${fullName.trim()} updated.`);
-      onClose();
-    } catch {
-      showToast("Failed to update.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-      <div className="relative w-full max-w-md rounded-[10px] bg-white p-6 shadow-2xl border border-line">
-        <h3 className="font-display text-[22px] leading-tight text-ink">Edit Staff Member</h3>
-        <p className="mt-1 text-sm text-muted">Update {staff.fullName}&apos;s details.</p>
-        <div className="mt-5 space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-subtle mb-1">Full name *</label>
-            <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)}
-              className="w-full h-11 rounded-lg border border-hairline bg-white px-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-burnt/40" />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-subtle mb-1">Title / role</label>
-            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
-              className="w-full h-11 rounded-lg border border-hairline bg-white px-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-burnt/40" />
-          </div>
-        </div>
-        <div className="mt-5 flex items-center justify-end gap-2.5">
-          <AdminButton variant="outline" size="xs" onClick={onClose} disabled={saving}>Cancel</AdminButton>
-          <AdminButton variant="primary" size="xs" onClick={handleSave} disabled={saving}>
-            {saving ? "Saving…" : "Save Changes"}
-          </AdminButton>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Main Component ─────────────────────────────────────────────────────────
 
 export function StaffView({
@@ -152,6 +80,7 @@ export function StaffView({
   userEmail = "Maria Santos",
   userRole = "Business owner",
   tenantId,
+  canViewProfiles = false,
   activeMembers = 0,
   onShiftToday = 0,
   pendingInvitations = 0,
@@ -458,7 +387,7 @@ export function StaffView({
                     </tr>
                   ) : (
                     filtered.map((row) => (
-                      <tr key={row.id} className="hover:bg-mist/50 transition-colors">
+                      <tr key={row.id} className="relative transition-colors hover:bg-mist/50 focus-within:bg-mist/50">
                         {/* Team Member / Email */}
                         <td className="px-5 py-3.5">
                           <div className="flex items-center gap-3">
@@ -466,7 +395,16 @@ export function StaffView({
                               {getInitials(row.fullName)}
                             </div>
                             <div className="min-w-0">
-                              <p className="font-semibold text-ink truncate">{row.fullName}</p>
+                              {canViewProfiles ? (
+                                <Link
+                                  href={`${basePath}/dashboard/staff/${row.id}`}
+                                  className="block truncate font-semibold text-ink after:absolute after:inset-0 hover:text-burnt focus-visible:outline-burnt"
+                                >
+                                  {row.fullName}
+                                </Link>
+                              ) : (
+                                <p className="truncate font-semibold text-ink">{row.fullName}</p>
+                              )}
                               <p className="text-xs text-muted truncate">{row.email}</p>
                             </div>
                           </div>
@@ -508,7 +446,7 @@ export function StaffView({
                             aria-label={`Actions for ${row.fullName}`}
                             aria-expanded={activeMenuId === row.id}
                             onClick={() => setActiveMenuId(activeMenuId === row.id ? null : row.id)}
-                            className="mx-auto flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 text-glyph"
+                            className="relative z-10 mx-auto flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 text-glyph"
                           >
                             <Icon name="more" weight="fill" className="size-5" />
                           </button>
@@ -538,26 +476,35 @@ export function StaffView({
               ) : (
                 filtered.map((row) => {
                   const isExpanded = expandedStaffId === row.id;
+                  const heading = (
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-burnt/10 text-sm font-semibold text-burnt">
+                          {getInitials(row.fullName)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-base font-semibold text-ink">{row.fullName}</p>
+                          <p className="mt-0.5 text-sm text-muted">{row.roleLabel} · {row.title || "No title"}</p>
+                        </div>
+                      </div>
+                      <StatusBadge active={row.active} />
+                    </div>
+                  );
                   return (
                     <div key={row.id} className="px-5 py-4">
+                      {canViewProfiles ? (
+                        <Link href={`${basePath}/dashboard/staff/${row.id}`} className="block rounded-lg text-left focus-visible:outline-burnt">
+                          {heading}
+                        </Link>
+                      ) : heading}
                       <button
                         type="button"
                         onClick={() => setExpandedStaffId(isExpanded ? null : row.id)}
-                        className="w-full text-left"
+                        className="mt-2 text-xs font-semibold text-burnt"
                         aria-expanded={isExpanded}
+                        aria-label={`${isExpanded ? "Hide" : "Show"} details for ${row.fullName}`}
                       >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-burnt/10 text-sm font-semibold text-burnt">
-                              {getInitials(row.fullName)}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="truncate text-base font-semibold text-ink">{row.fullName}</p>
-                              <p className="mt-0.5 text-sm text-muted">{row.roleLabel} · {row.title || "No title"}</p>
-                            </div>
-                          </div>
-                          <StatusBadge active={row.active} />
-                        </div>
+                        {isExpanded ? "Hide details" : "Show details"}
                       </button>
                       {isExpanded && (
                         <div className="mt-4 space-y-3 rounded-lg bg-powder p-4 text-sm text-muted">

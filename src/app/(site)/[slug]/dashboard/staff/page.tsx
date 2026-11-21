@@ -266,6 +266,7 @@ export default async function StaffPage({ params }: StaffPageProps) {
           : profile?.role || "Staff"
       }
       tenantId={tenant.id}
+      canViewProfiles={["owner", "admin"].includes(roleMap.get(user.id) ?? "")}
       basePath={`/${slug}`}
       activeMembers={activeMembers}
       onShiftToday={onShiftToday}

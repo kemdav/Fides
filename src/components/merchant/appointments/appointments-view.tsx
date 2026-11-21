@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { MerchantSidebar } from "../merchant-sidebar";
 import { Icon } from "@/components/admin/icon";
-import { AdminButton } from "@/components/admin/admin-button";
+import { AdminButton, AdminLinkButton } from "@/components/admin/admin-button";
 import { MetricCard } from "@/components/admin/metric-card";
 import { PageContent, PageHeading, StatusPill, Surface } from "@/components/admin/primitives";
 import { updateAppointmentStatusAction } from "@/app/actions/appointments";
@@ -21,6 +21,8 @@ export interface AppointmentItem {
   source: "Online" | "Walk-In";
   status: "Confirmed" | "Check In" | "Pending approval" | "In service" | "Completed" | "Cancelled";
   startsAt?: string;
+  calendarDate?: string;
+  staffScheduleMatch?: boolean;
 }
 
 interface AppointmentsViewProps {
@@ -33,6 +35,7 @@ interface AppointmentsViewProps {
   completedTodayCount?: number;
   initialItems?: AppointmentItem[];
   basePath?: string;
+  focusedStaffName?: string;
 }
 
 // ─── helpers ────────────────────────────────────────────────────────────────
