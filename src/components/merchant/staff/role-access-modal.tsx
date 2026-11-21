@@ -1,4 +1,5 @@
 import { Icon } from "@/components/admin/icon";
+import { AdminButton } from "@/components/admin/admin-button";
 import { Modal } from "@/components/ui/modal";
 
 const capabilities = [
@@ -15,7 +16,7 @@ const capabilities = [
   ["Website & booking settings", "Manage", "No access", "No access"],
 ] as const;
 
-const cellClass = "border-b border-hairline py-3.5 pr-4 text-left";
+const cellClass = "border-b border-hairline px-3 py-3 text-left align-top sm:px-4";
 
 export function RoleAccessModal({ onClose }: { onClose: () => void }) {
   return (
@@ -27,18 +28,18 @@ export function RoleAccessModal({ onClose }: { onClose: () => void }) {
       className="m-auto w-[calc(100%-2rem)] max-w-5xl overflow-hidden rounded-[14px] border border-line bg-white p-0 text-ink shadow-2xl backdrop:backdrop-blur-xs"
     >
       <div className="flex max-h-[min(92dvh,calc(100dvh-2rem))] flex-col">
-        <header className="flex shrink-0 items-start justify-between gap-3 px-4 pb-2 pt-5 sm:px-6 sm:pt-6">
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-hairline bg-powder px-4 py-4 sm:px-6">
           <div>
             <h2 id="role-access-title" className="font-display text-[26px] leading-[34px]">
               Dashboard roles &amp; permissions
             </h2>
-            <p className="mt-1 text-xs text-muted">Roles are fixed. This matrix is read-only.</p>
+            <p className="mt-1 text-sm text-muted">Compare what each dashboard role can access. Role permissions are fixed.</p>
           </div>
           <button
             type="button"
             aria-label="Close"
             onClick={onClose}
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-glyph hover:bg-mist hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-ink hover:bg-burnt/10 focus-visible:outline-burnt"
           >
             <Icon name="close" className="size-5" />
           </button>
@@ -48,16 +49,16 @@ export function RoleAccessModal({ onClose }: { onClose: () => void }) {
           role="region"
           aria-label="Permissions by role"
           tabIndex={0}
-          className="min-h-0 overflow-auto px-4 outline-offset-[-2px] sm:px-6"
+          className="min-h-0 overflow-auto outline-offset-[-2px] focus-visible:outline-burnt"
         >
-          <table className="w-full min-w-[38rem] table-fixed border-separate border-spacing-0 text-xs text-body">
+          <table className="w-full min-w-[38rem] table-fixed border-separate border-spacing-0 text-sm text-body">
             <colgroup>
               <col className="w-[34%]" />
               <col className="w-[22%]" />
               <col className="w-[22%]" />
               <col className="w-[22%]" />
             </colgroup>
-            <thead className="sticky top-0 bg-white text-ink">
+            <thead className="sticky top-0 bg-mist text-ink">
               <tr>
                 {["Capability", "Owner", "Receptionist", "Service Staff"].map((heading) => (
                   <th key={heading} scope="col" className={`${cellClass} font-semibold`}>{heading}</th>
@@ -66,19 +67,20 @@ export function RoleAccessModal({ onClose }: { onClose: () => void }) {
             </thead>
             <tbody>
               {capabilities.map(([capability, owner, receptionist, staff]) => (
-                <tr key={capability}>
-                  <th scope="row" className={`${cellClass} font-normal`}>{capability}</th>
-                  <td className={cellClass}>{owner}</td>
-                  <td className={cellClass}>{receptionist}</td>
-                  <td className={cellClass}>{staff}</td>
+                <tr key={capability} className="even:bg-mist/60">
+                  <th scope="row" className={`${cellClass} font-medium text-ink`}>{capability}</th>
+                  {[owner, receptionist, staff].map((permission, index) => (
+                    <td key={index} className={`${cellClass} ${permission.startsWith("No ") ? "text-muted" : ""}`}>{permission}</td>
+                  ))}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
 
-        <footer className="shrink-0 px-4 py-4 text-xs text-muted sm:px-6 sm:pb-6">
-          Role mapping for tenant roles — Owner → owner, Receptionist → receptionist, Service Staff → staff.
+        <footer className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-hairline bg-mist px-4 py-4 sm:px-6">
+          <p className="text-xs text-muted">Role mapping for tenant roles — Owner → owner, Receptionist → receptionist, Service Staff → staff.</p>
+          <AdminButton variant="primary" size="xs" className="ml-auto" onClick={onClose}>Done</AdminButton>
         </footer>
       </div>
     </Modal>

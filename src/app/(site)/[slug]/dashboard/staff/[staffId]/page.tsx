@@ -76,7 +76,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ s
                   </div>
                 </div>
               </div>
-              <StaffProfileActions tenantId={tenant.id} basePath={basePath} staff={managedStaff} />
+              <StaffProfileActions tenantId={tenant.id} basePath={basePath} staff={managedStaff} lastOwnerProtected={profile.lastOwnerProtected} />
             </div>
             <dl className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:p-6 xl:grid-cols-5">
               {contact.map(([label, value]) => (

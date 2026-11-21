@@ -12,9 +12,9 @@ import { PageContent, PageHeading, StatusPill, Surface } from "@/components/admi
 import { EmptyState } from "@/components/ui/empty-state";
 import { InviteStaffModal } from "./invite-staff-modal";
 import { RoleAccessModal } from "./role-access-modal";
+import { StaffStatusDialog } from "./staff-status-dialog";
 import {
   loadStaffEditorAction,
-  toggleStaffActiveAction,
   deleteStaffMemberAction,
 } from "@/app/actions/staff";
 
@@ -115,6 +115,7 @@ export function StaffView({
   const [editTarget, setEditTarget] = React.useState<ManagedStaff | null>(null);
   const [loadingEditId, setLoadingEditId] = React.useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<StaffItem | null>(null);
+  const [statusTarget, setStatusTarget] = React.useState<StaffItem | null>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -182,20 +183,9 @@ export function StaffView({
 
   // ── Action handlers ───────────────────────────────────────────────────────
 
-  const handleToggleActive = async (staff: StaffItem) => {
+  const openStatusDialog = (staff: StaffItem) => {
     setActiveMenuId(null);
-    const prevItems = items;
-    const newActive = !staff.active;
-    setItems((prev) => prev.map((s) => (s.id === staff.id ? { ...s, active: newActive } : s)));
-    try {
-      const res = await toggleStaffActiveAction({ staffId: staff.id, tenantId: tenantId ?? "", active: newActive });
-      if (!res.success) { setItems(prevItems); showToast(res.error || "Failed to update."); return; }
-      showToast(`${staff.fullName} ${newActive ? "activated" : "deactivated"}.`);
-      router.refresh();
-    } catch (err: unknown) {
-      setItems(prevItems);
-      showToast(err instanceof Error ? err.message : "Failed to update.");
-    }
+    setStatusTarget(staff);
   };
 
   const handleConfirmDelete = async () => {
@@ -473,7 +463,7 @@ export function StaffView({
                               {canViewProfiles && (
                                 <button type="button" disabled={Boolean(loadingEditId)} onClick={() => openEditor(row.id)} className="w-full px-4 py-2 text-left text-body hover:bg-mist disabled:opacity-50">Edit details</button>
                               )}
-                              <button type="button" onClick={() => handleToggleActive(row)} className="w-full text-left px-4 py-2 hover:bg-mist text-body">{row.active ? "Deactivate" : "Activate"}</button>
+                              <button type="button" aria-haspopup="dialog" onClick={() => openStatusDialog(row)} className="w-full text-left px-4 py-2 hover:bg-mist text-body">{row.active ? "Deactivate" : "Activate"}</button>
                               <button type="button" onClick={() => { setDeleteTarget(row); setActiveMenuId(null); }} className="w-full text-left px-4 py-2 hover:bg-danger-bg text-danger font-medium">Remove member</button>
                             </div>
                           )}
@@ -546,7 +536,7 @@ export function StaffView({
                                 {loadingEditId === row.id ? "Loading…" : "Edit details"}
                               </AdminButton>
                             )}
-                            <AdminButton size="xs" variant="outline" onClick={() => handleToggleActive(row)}>
+                            <AdminButton size="xs" variant="outline" aria-haspopup="dialog" onClick={() => openStatusDialog(row)}>
                               {row.active ? "Deactivate" : "Activate"}
                             </AdminButton>
                             <AdminButton size="xs" variant="danger" onClick={() => setDeleteTarget(row)}>Remove</AdminButton>
@@ -595,6 +585,19 @@ export function StaffView({
             router.refresh();
           }}
         />
+      )}
+
+      {statusTarget && tenantId && (
+        <StaffStatusDialog tenantId={tenantId} staff={statusTarget}
+          lastOwnerProtected={statusTarget.active && statusTarget.role === "owner"
+            && !items.some((staff) => staff.id !== statusTarget.id && staff.active && staff.role === "owner")}
+          onClose={() => setStatusTarget(null)}
+          onChanged={(active) => {
+            setItems((current) => current.map((staff) => staff.id === statusTarget.id ? { ...staff, active } : staff));
+            showToast(`${statusTarget.fullName} ${active ? "activated" : "deactivated"}.`);
+            setStatusTarget(null);
+            router.refresh();
+          }} />
       )}
 
       {/* ── Toast ──────────────────────────────────────────────────────────── */}

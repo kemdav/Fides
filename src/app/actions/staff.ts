@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { publicEnv } from "@/lib/env";
 import { canDeliverVerificationLinks, sendMail } from "@/lib/mail/mailer";
-import { getStaffProfile } from "@/lib/merchant/staff-profile";
+import { getStaffProfile, isLastActiveStaffOwner } from "@/lib/merchant/staff-profile";
 import { z } from "zod";
 
 const staffEditorKey = z.object({ tenantId: z.uuid(), staffId: z.uuid() });
@@ -180,6 +180,7 @@ export async function saveStaffProfileAction(form: FormData): Promise<StaffActio
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface StaffActionResult {
+  lastOwnerProtected?: boolean;
   success: boolean;
   error?: string;
   id?: string;
@@ -279,6 +280,18 @@ export async function updateStaffMemberAction(
       return { success: false, error: "Nothing to update." };
     }
 
+    if (input.active === false) {
+      const { data: membership } = await supabase.from("tenant_memberships").select("role")
+        .eq("tenant_id", input.tenantId).eq("profile_id", user.id).maybeSingle();
+      const admin = getAdminClient();
+      if (!admin || (membership?.role !== "owner" && membership?.role !== "admin")) {
+        return { success: false, error: "Staff status could not be changed." };
+      }
+      if (await isLastActiveStaffOwner(admin, input.tenantId, input.staffId)) {
+        return { success: false, lastOwnerProtected: true };
+      }
+    }
+
     const { data, error } = await supabase
       .from("staff_members")
       .update(updates)
@@ -288,6 +301,9 @@ export async function updateStaffMemberAction(
       .maybeSingle();
 
     if (error) {
+      if (error.code === "P0001" && error.message === "LAST_ACTIVE_STAFF_OWNER") {
+        return { success: false, lastOwnerProtected: true };
+      }
       console.error("[updateStaffMemberAction]", error);
       return { success: false, error: error.message };
     }

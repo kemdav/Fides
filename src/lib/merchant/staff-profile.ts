@@ -1,11 +1,24 @@
 import "server-only";
 import type { ManagedStaff } from "@/components/merchant/staff/manage-staff-modal";
-import { getAdminClient } from "@/lib/supabase/admin";
+import { getAdminClient, type AdminClient } from "@/lib/supabase/admin";
 import { zonedDateToUtc } from "@/lib/merchant/overview";
 
 export const staffRoleLabels = { owner: "Owner", admin: "Admin", receptionist: "Receptionist", staff: "Service Staff" };
 const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
 const staffProfileColumns = "id, full_name, title, bio, image_url, profile_id, active, commission_type, commission_value";
+
+export async function isLastActiveStaffOwner(db: AdminClient, tenantId: string, staffId: string) {
+  const { data: owners, error: ownersError } = await db.from("tenant_memberships").select("profile_id")
+    .eq("tenant_id", tenantId).eq("role", "owner");
+  if (ownersError) throw ownersError;
+  if (!owners?.length) return false;
+
+  const { data: activeOwners, error } = await db.from("staff_members").select("id")
+    .eq("tenant_id", tenantId).eq("active", true)
+    .in("profile_id", owners.map(({ profile_id }) => profile_id)).limit(2);
+  if (error) throw error;
+  return activeOwners?.length === 1 && activeOwners[0].id === staffId;
+}
 
 // Callers must verify the viewer manages this tenant before loading private profile data.
 export async function getStaffProfile(tenantId: string, staffId: string, tenantTimezone: string | null, viewerId: string) {
@@ -105,5 +118,6 @@ export async function getStaffProfile(tenantId: string, staffId: string, tenantT
     availability,
     upcomingCount: upcoming.count ?? 0,
   };
-  return { managedStaff, services, shiftsThisWeek, commissionRule, timezone, formatRange };
+  const lastOwnerProtected = staff.active && role === "owner" && await isLastActiveStaffOwner(db, tenantId, staff.id);
+  return { managedStaff, services, shiftsThisWeek, commissionRule, timezone, formatRange, lastOwnerProtected };
 }
