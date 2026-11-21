@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
-import {
-  OverviewView,
-  type AppointmentRow,
-  type DayChartStat,
-} from "@/components/merchant/overview/overview-view";
+import { OverviewView } from "@/components/merchant/overview/overview-view";
+import { getMerchantOverview } from "@/lib/merchant/overview";
+import type { OverviewPeriod } from "@/lib/merchant/overview";
 import { createClient } from "@/lib/supabase/server";
 import {
   formatTimeManila,
@@ -20,40 +18,52 @@ import {
 
 interface MerchantDashboardPageProps {
   params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ period?: string }>;
 }
 
 export async function generateMetadata({
   params,
 }: MerchantDashboardPageProps): Promise<Metadata> {
   const { slug } = await params;
+  const supabase = await createClient();
+  const { data: tenant } = await supabase
+    .from("tenants")
+    .select("name")
+    .eq("slug", slug)
+    .maybeSingle();
+  const title = tenant?.name?.trim()
+    ? `${tenant.name.trim()} Dashboard`
+    : "Merchant Dashboard";
   return {
-    title: `${slug} Merchant Workspace`,
-    description: "Manage appointments, walk-ins, customers, and daily operations.",
+    title,
+    description:
+      "Manage appointments, walk-ins, customers, and daily operations.",
   };
 }
 
 export default async function MerchantDashboardPage({
   params,
+  searchParams,
 }: MerchantDashboardPageProps) {
   const { slug } = await params;
+  const { period: periodParam } = (await searchParams) ?? {};
+  const period: OverviewPeriod =
+    periodParam === "Today" || periodParam === "This Month"
+      ? periodParam
+      : "This Week";
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect(`/login?redirect=/${slug}/dashboard`);
-  }
+  if (!user) redirect(`/login?redirect=/${slug}/dashboard`);
 
-  const { data: tenant } = await supabase
+  const { data: tenant, error: tenantError } = await supabase
     .from("tenants")
     .select("id, name")
     .eq("slug", slug)
     .single();
-
-  if (!tenant) {
-    notFound();
-  }
+  if (tenantError || !tenant) notFound();
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -71,7 +81,9 @@ export default async function MerchantDashboardPage({
   const isTenantMember =
     Boolean(membership) ||
     (profile?.tenant_id === tenant.id &&
-      ["owner", "admin", "receptionist", "staff"].includes(profile?.role || ""));
+      ["owner", "admin", "receptionist", "staff"].includes(
+        profile?.role || "",
+      ));
 
   if (!isTenantMember) {
     notFound();
@@ -83,102 +95,58 @@ export default async function MerchantDashboardPage({
       ? "Business owner"
       : userRole.charAt(0).toUpperCase() + userRole.slice(1);
 
-  const { data: allAppointments } = await supabase
-    .from("appointments")
-    .select(`
-      id,
-      starts_at,
-      source,
-      status,
-      total_cents,
-      notes,
-      customers (full_name),
-      staff_members (full_name),
-      appointment_services (services (name))
-    `)
-    .eq("tenant_id", tenant.id)
-    .order("starts_at", { ascending: true });
-
-  const { data: allPayments } = await supabase
-    .from("payments")
-    .select("amount_cents, status, paid_at")
-    .eq("tenant_id", tenant.id);
-
-  const appointments = allAppointments || [];
-  const todayManilaKey = getManilaTodayKey();
-
-  const todayAppointments = appointments.filter(
-    (appointment) => getManilaDateKey(appointment.starts_at) === todayManilaKey
+  const overview = await getMerchantOverview(
+    supabase,
+    tenant.id,
+    new Date(),
+    period,
   );
-  const completedToday = todayAppointments.filter(
-    (appointment) => appointment.status === "completed"
-  );
-  const paidPayments = (allPayments || []).filter(
-    (payment) => payment.status === "paid"
-  );
-  const revenueTotal = paidPayments.reduce(
-    (sum, payment) => sum + Math.round(payment.amount_cents / 100),
-    0
-  );
-
-  const toAppointmentRow = (appointment: (typeof appointments)[number]): AppointmentRow => {
-    return {
-      id: appointment.id,
-      time: formatTimeManila(appointment.starts_at),
-      customer: resolveCustomerName(appointment.customers, appointment.notes),
-      service: resolveServiceName(appointment.appointment_services),
-      staff: resolveStaffName(appointment.staff_members),
-      source: mapDbSourceToUi(appointment.source),
-      status: mapDbStatusToUi(appointment.status),
-      startsAt: appointment.starts_at,
-      rawStatus: appointment.status,
-    };
-  };
-
-  const calendarAppointments = appointments.map(toAppointmentRow);
-  const initialRows: AppointmentRow[] = todayAppointments.map(toAppointmentRow);
-
-  // Timezone-safe weekly Monday–Sunday stats in Asia/Manila
-  const weekDays = getManilaWeekDays();
-  const chartStats: DayChartStat[] = weekDays.map(({ day, dateKey }) => {
-    const dayAppointments = appointments.filter(
-      (appointment) => getManilaDateKey(appointment.starts_at) === dateKey
-    );
-    return {
-      day,
-      booked: dayAppointments.filter(
-        (appointment) => !["cancelled", "rejected", "expired"].includes(appointment.status)
-      ).length,
-      completed: dayAppointments.filter(
-        (appointment) => appointment.status === "completed"
-      ).length,
-    };
-  });
+  const rows = overview.todayAppointments;
+  const completedToday = rows.filter(
+    (row) => row.rawStatus === "completed",
+  ).length;
+  const checkedInToday = rows.filter(
+    (row) => row.rawStatus === "checked_in" || row.rawStatus === "in_service",
+  ).length;
+  const pendingCount = overview.calendarAppointments.filter(
+    (row) => row.rawStatus === "pending_approval",
+  ).length;
+  const confirmedToday = rows.filter(
+    (row) => row.rawStatus === "confirmed",
+  ).length;
 
   return (
     <OverviewView
       businessName={tenant.name}
-      userName={profile?.full_name?.trim() || user.email?.split("@")[0] || "Merchant"}
+      userName={
+        profile?.full_name?.trim() || user.email?.split("@")[0] || "Merchant"
+      }
       userEmail={user.email ?? "Merchant staff"}
       userRole={formattedRole}
       tenantId={tenant.id}
       basePath={`/${slug}`}
-      todayCount={todayAppointments.length}
-      confirmedCount={todayAppointments.filter((appointment) => appointment.status === "confirmed").length}
-      pendingCount={appointments.filter((appointment) => appointment.status === "pending_approval").length}
-      checkedInCount={todayAppointments.filter((appointment) =>
-        ["checked_in", "in_service"].includes(appointment.status)
-      ).length}
-      completedVisitsCount={completedToday.length}
-      revenueTotal={revenueTotal}
-      chartStats={chartStats}
-      todayActivity={initialRows.slice(0, 4).map((row) => ({
+      todayCount={rows.length}
+      confirmedCount={confirmedToday}
+      pendingCount={pendingCount}
+      checkedInCount={checkedInToday}
+      completedVisitsCount={completedToday}
+      revenueTotal={Math.round(overview.metrics.revenueCents / 100)}
+      revenueChangePercent={overview.metrics.revenueChangePercent}
+      bookingCount={overview.metrics.bookingCount}
+      activeCustomerCount={overview.metrics.activeCustomerCount}
+      customerGrowthPercent={overview.metrics.customerGrowthPercent}
+      averageOrderValue={Math.round(
+        overview.metrics.averageOrderValueCents / 100,
+      )}
+      initialPeriod={period}
+      chartStats={overview.chartStats}
+      todayActivity={rows.slice(0, 4).map((row) => ({
         time: row.time,
         customer: row.customer,
         service: row.service,
       }))}
-      initialRows={initialRows}
-      calendarAppointments={calendarAppointments}
+      initialRows={rows}
+      calendarAppointments={overview.calendarAppointments}
     />
   );
 }
