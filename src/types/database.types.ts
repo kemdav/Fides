@@ -1248,6 +1248,40 @@ type DatabaseCore = {
           },
         ];
       };
+      staff_invitations: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          full_name: string;
+          email: string;
+          role: Database["public"]["Enums"]["app_role"];
+          title: string | null;
+          created_at: string;
+          expires_at: string;
+          accepted_at: string | null;
+          cancelled_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          full_name: string;
+          email: string;
+          role: Database["public"]["Enums"]["app_role"];
+          title?: string | null;
+          created_at?: string;
+          expires_at: string;
+          accepted_at?: string | null;
+          cancelled_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["staff_invitations"]["Insert"]>;
+        Relationships: [{
+          foreignKeyName: "staff_invitations_tenant_id_fkey";
+          columns: ["tenant_id"];
+          isOneToOne: false;
+          referencedRelation: "tenants";
+          referencedColumns: ["id"];
+        }];
+      };
       staff_members: {
         Row: {
           active: boolean;
@@ -1871,6 +1905,10 @@ type DatabaseCore = {
       [_ in never]: never;
     };
     Functions: {
+      get_staff_commission_totals: {
+        Args: { p_tenant_id: string; p_period_start: string; p_period_end: string; p_staff_id?: string };
+        Returns: { staff_id: string; commission_cents: number }[];
+      };
       manage_staff_profile: {
         Args: {
           p_actor_id: string;

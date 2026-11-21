@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
-import { StaffView } from "@/components/merchant/staff/staff-view";
+import { StaffView, type StaffItem } from "@/components/merchant/staff/staff-view";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminClient } from "@/lib/supabase/admin";
+import { zonedDateToUtc } from "@/lib/merchant/overview";
+import { formatStaffCommission, getMonthlyStaffCommission, staffDateKey, staffRoleLabels } from "@/lib/merchant/staff-profile";
 
 interface StaffPageProps {
   params: Promise<{ slug: string }>;
@@ -30,251 +32,132 @@ export async function generateMetadata({
 export default async function StaffPage({ params }: StaffPageProps) {
   const { slug } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect(`/login?redirect=/${slug}/dashboard/staff`);
 
-  if (!user) {
-    redirect(`/login?redirect=/${slug}/dashboard/staff`);
-  }
+  const { data: tenant } = await supabase.from("tenants").select("id, name, timezone").eq("slug", slug).maybeSingle();
+  if (!tenant) notFound();
 
-  const { data: tenant } = await supabase
-    .from("tenants")
-    .select("id, name")
-    .eq("slug", slug)
-    .single();
+  const { data: membership } = await supabase.from("tenant_memberships").select("role")
+    .eq("tenant_id", tenant.id).eq("profile_id", user.id).maybeSingle();
+  if (membership?.role !== "owner" && membership?.role !== "admin") notFound();
 
-  if (!tenant) {
-    notFound();
-  }
+  const db = getAdminClient();
+  if (!db) throw new Error("The staff roster requires Supabase server credentials.");
 
-  // Use admin client for full column access (commission data)
-  const adminClient = getAdminClient();
-  const db = adminClient ?? supabase;
-
-  // ── Parallel data fetching ────────────────────────────────────────────────
-  const monthStart = new Date();
-  monthStart.setDate(1);
-  monthStart.setHours(0, 0, 0, 0);
-
-  const [
-    { data: staffRows },
-    { data: memberships },
-    { data: skills },
-    { data: allServices },
-    { data: allProfiles },
-    { data: completedAppointments },
-    { data: profile },
-  ] = await Promise.all([
-    db
-      .from("staff_members")
-      .select(
-        "id, full_name, title, bio, image_url, active, sort_order, profile_id, created_at, commission_type, commission_value"
-      )
-      .eq("tenant_id", tenant.id)
-      .order("sort_order", { ascending: true }),
-    db
-      .from("tenant_memberships")
-      .select("profile_id, role")
-      .eq("tenant_id", tenant.id),
-    db
-      .from("staff_service_skills")
-      .select("staff_id, service_id")
-      .eq("tenant_id", tenant.id),
-    db
-      .from("services")
-      .select("id, name")
-      .eq("tenant_id", tenant.id)
-      .eq("active", true),
-    db.from("profiles").select("id, email").eq("tenant_id", tenant.id),
-    db
-      .from("appointments")
-      .select("id")
-      .eq("tenant_id", tenant.id)
-      .eq("status", "completed")
-      .gte("starts_at", monthStart.toISOString()),
-    supabase.from("profiles").select("full_name, role").eq("id", user.id).single(),
+  const timezone = tenant.timezone || "Asia/Manila";
+  const now = new Date();
+  const today = staffDateKey(now, timezone);
+  const todayStart = zonedDateToUtc(today, timezone).toISOString();
+  const todayEnd = zonedDateToUtc(today, timezone, true).toISOString();
+  const [rows, memberships, skills, services, shifts, leaves, invitations, application, commission] = await Promise.all([
+    db.from("staff_members").select("id, full_name, title, active, sort_order, profile_id, created_at, commission_type, commission_value")
+      .eq("tenant_id", tenant.id).order("sort_order").order("full_name"),
+    db.from("tenant_memberships").select("profile_id, role, profiles(full_name, email)").eq("tenant_id", tenant.id),
+    db.from("staff_service_skills").select("staff_id, services!inner(name)").eq("tenant_id", tenant.id).eq("services.active", true),
+    db.from("services").select("id, name").eq("tenant_id", tenant.id).eq("active", true).order("name"),
+    db.from("shifts").select("staff_id, starts_at, ends_at").eq("tenant_id", tenant.id)
+      .lt("starts_at", todayEnd).gt("ends_at", todayStart).order("starts_at"),
+    db.from("leaves").select("staff_id").eq("tenant_id", tenant.id).eq("approved", true)
+      .lte("starts_on", today).gte("ends_on", today),
+    db.from("staff_invitations").select("id, full_name, email, role, title, created_at, expires_at, cancelled_at")
+      .eq("tenant_id", tenant.id).is("accepted_at", null).order("created_at", { ascending: false }),
+    db.from("account_applications").select("plan_code").eq("tenant_id", tenant.id).eq("status", "approved")
+      .order("approved_at", { ascending: false }).limit(1).maybeSingle(),
+    getMonthlyStaffCommission(db, tenant.id, timezone, now),
   ]);
-
-  // ── Build lookups ─────────────────────────────────────────────────────────
-
-  // Role map from memberships
-  const roleMap = new Map<string, string>();
-  for (const m of memberships ?? []) {
-    roleMap.set(m.profile_id, m.role);
+  for (const { error } of [rows, memberships, skills, services, shifts, leaves, invitations, application]) {
+    if (error) throw error;
   }
 
-  // Email map from profiles
-  const emailMap = new Map<string, string>();
-  for (const p of allProfiles ?? []) {
-    emailMap.set(p.id, p.email ?? "");
+  let staffLimit: number | null | undefined;
+  if (application.data) {
+    const { data: plan, error } = await db.from("subscription_plans").select("staff_limit")
+      .eq("code", application.data.plan_code).maybeSingle();
+    if (error) throw error;
+    staffLimit = plan?.staff_limit;
   }
 
-  // Service name map
-  const serviceNameMap = new Map<string, string>();
-  for (const s of allServices ?? []) {
-    serviceNameMap.set(s.id, s.name);
+  const membershipByProfile = new Map(memberships.data?.map((entry) => [entry.profile_id, entry]));
+  const viewerName = membershipByProfile.get(user.id)?.profiles?.full_name;
+  const serviceNamesByStaff = new Map<string, string[]>();
+  for (const skill of skills.data ?? []) {
+    const names = serviceNamesByStaff.get(skill.staff_id) ?? [];
+    names.push(skill.services.name);
+    serviceNamesByStaff.set(skill.staff_id, names);
   }
-  const totalServiceCount = allServices?.length ?? 0;
-
-  // Skills grouped by staff_id
-  const skillsByStaff = new Map<string, string[]>();
-  for (const skill of skills ?? []) {
-    const list = skillsByStaff.get(skill.staff_id) ?? [];
-    const name = serviceNameMap.get(skill.service_id);
-    if (name) list.push(name);
-    skillsByStaff.set(skill.staff_id, list);
+  const shiftsByStaff = new Map<string, string[]>();
+  const shiftTime = new Intl.DateTimeFormat("en-PH", { timeZone: timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  for (const shift of shifts.data ?? []) {
+    const ranges = shiftsByStaff.get(shift.staff_id) ?? [];
+    ranges.push(`${shiftTime.format(new Date(shift.starts_at))}–${shiftTime.format(new Date(shift.ends_at))}`);
+    shiftsByStaff.set(shift.staff_id, ranges);
   }
-
-  // ── Commission this month ─────────────────────────────────────────────────
-
-  // Build commission config per staff
-  const commissionConfig = new Map<
-    string,
-    { type: string; value: number }
-  >();
-  for (const s of staffRows ?? []) {
-    commissionConfig.set(s.id, {
-      type: s.commission_type ?? "fixed",
-      value: Number(s.commission_value ?? 0),
-    });
-  }
-
-  let commissionCents = 0;
-  const completedIds = (completedAppointments ?? []).map(
-    (a: { id: string }) => a.id
-  );
-  if (completedIds.length > 0) {
-    const { data: completedSvcs } = await db
-      .from("appointment_services")
-      .select("price_cents, staff_id")
-      .eq("tenant_id", tenant.id)
-      .in("appointment_id", completedIds);
-
-    for (const svc of completedSvcs ?? []) {
-      if (!svc.staff_id) continue;
-      const comm = commissionConfig.get(svc.staff_id);
-      if (!comm || comm.value <= 0) continue;
-      if (comm.type === "percentage") {
-        commissionCents += Math.round(
-          (svc.price_cents * comm.value) / 100
-        );
-      } else {
-        // fixed: commission_value is in pesos
-        commissionCents += Math.round(comm.value * 100);
-      }
-    }
-  }
-  const commissionThisMonth = Math.round(commissionCents / 100);
-
-  // ── Helper to format role labels ──────────────────────────────────────────
-
-  function getRoleLabel(role: string): string {
-    switch (role) {
-      case "owner":
-        return "Owner";
-      case "admin":
-        return "Admin";
-      case "receptionist":
-        return "Receptionist";
-      default:
-        return "Service Staff";
-    }
-  }
-
-  function getServicesDisplay(
-    role: string,
-    staffSkills: string[]
-  ): string {
-    if (role === "owner" || role === "admin" || role === "receptionist") {
-      return "Not applicable";
-    }
-    if (staffSkills.length === 0) return "No services assigned";
-    return `${staffSkills.length} of ${totalServiceCount} services`;
-  }
-
-  function getCommissionDisplay(type: string, value: number): string {
-    if (value <= 0) return "No commission";
-    if (type === "percentage") return `${value}% of service price`;
-    return `Fixed ₱${value.toLocaleString()} / service`;
-  }
-
-  // ── Map to client shape ───────────────────────────────────────────────────
-
-  const staffItems = (staffRows ?? []).map((s) => {
-    const role = s.profile_id
-      ? (roleMap.get(s.profile_id) ?? "staff")
-      : "staff";
-    const staffSkills = skillsByStaff.get(s.id) ?? [];
-    const email = s.profile_id
-      ? (emailMap.get(s.profile_id) ?? "Not provided")
-      : "Not provided";
-    const commType = s.commission_type ?? "fixed";
-    const commValue = Number(s.commission_value ?? 0);
-
+  const onLeave = new Set(leaves.data?.map((leave) => leave.staff_id));
+  const staffItems: StaffItem[] = (rows.data ?? []).map((row) => {
+    const member = row.profile_id ? membershipByProfile.get(row.profile_id) : undefined;
+    const role = member?.role ?? "staff";
+    const names = (serviceNamesByStaff.get(row.id) ?? []).toSorted((a, b) => a.localeCompare(b));
+    const shiftRanges = shiftsByStaff.get(row.id);
+    const shiftDisplay = !row.active ? "Deactivated"
+      : onLeave.has(row.id) ? "On leave"
+      : shiftRanges?.length ? shiftRanges.join(" · ") : "No shift today";
     return {
-      id: s.id,
-      fullName: s.full_name,
-      email,
-      title: s.title ?? "",
+      id: row.id,
+      fullName: row.full_name,
+      email: member?.profiles?.email || "Not provided",
+      title: row.title ?? "",
       role,
-      roleLabel: getRoleLabel(role),
-      servicesDisplay: getServicesDisplay(role, staffSkills),
-      serviceNames: staffSkills.join(" · "),
-      commissionDisplay: getCommissionDisplay(commType, commValue),
-      active: s.active,
-      sortOrder: s.sort_order,
-      createdAt: s.created_at,
+      roleLabel: staffRoleLabels[role],
+      servicesDisplay: names.length ? `${names.length} of ${services.data?.length ?? 0} services`
+        : role === "staff" ? "No services assigned" : "Not applicable",
+      serviceNames: names.join(" · "),
+      commissionDisplay: formatStaffCommission(row.commission_type, Number(row.commission_value)),
+      active: row.active,
+      sortOrder: row.sort_order,
+      createdAt: row.created_at,
+      shiftDisplay,
     };
   });
 
-  // ── KPI counts ────────────────────────────────────────────────────────────
-  const activeMembers = staffItems.filter((s) => s.active).length;
-  const onShiftToday = activeMembers; // Approximate: same as active for now
-  const pendingInvitations = 0; // No invitation system yet
-  let staffLimit: number | null | undefined;
-  if (adminClient) {
-    const { data: application } = await adminClient
-      .from("account_applications")
-      .select("plan_code")
-      .eq("tenant_id", tenant.id)
-      .eq("status", "approved")
-      .maybeSingle();
-
-    if (application) {
-      const { data: plan } = await adminClient
-        .from("subscription_plans")
-        .select("staff_limit")
-        .eq("code", application.plan_code)
-        .maybeSingle();
-      staffLimit = plan?.staff_limit;
-    }
-  }
+  const invitationDate = new Intl.DateTimeFormat("en-PH", { timeZone: timezone, month: "short", day: "numeric", year: "numeric" });
+  const invitationItems: StaffItem[] = (invitations.data ?? []).map((invite) => {
+    const invitationStatus = invite.cancelled_at ? "cancelled" : Date.parse(invite.expires_at) <= now.getTime() ? "expired" : "pending";
+    const date = invitationDate.format(new Date(invite.cancelled_at ?? invite.expires_at));
+    return {
+      id: invite.id,
+      fullName: invite.full_name,
+      email: invite.email,
+      title: invite.title ?? "",
+      role: invite.role,
+      roleLabel: staffRoleLabels[invite.role],
+      servicesDisplay: "Assigned after acceptance",
+      serviceNames: "",
+      commissionDisplay: "—",
+      active: false,
+      sortOrder: 0,
+      createdAt: invite.created_at,
+      invitationStatus,
+      shiftDisplay: `${invitationStatus === "cancelled" ? "Cancelled" : invitationStatus === "expired" ? "Expired" : "Expires"} ${date}`,
+    };
+  });
 
   return (
     <StaffView
       businessName={tenant.name}
-      userName={
-        profile?.full_name?.trim() ||
-        user.email?.split("@")[0] ||
-        "Merchant"
-      }
+      userName={viewerName?.trim() || user.email?.split("@")[0] || "Merchant"}
       userEmail={user.email ?? "Merchant staff"}
-      userRole={
-        profile?.role === "owner"
-          ? "Business owner"
-          : profile?.role || "Staff"
-      }
+      userRole={membership.role === "owner" ? "Business owner" : staffRoleLabels[membership.role]}
       tenantId={tenant.id}
-      canViewProfiles={["owner", "admin"].includes(roleMap.get(user.id) ?? "")}
+      canViewProfiles
       basePath={`/${slug}`}
-      activeMembers={activeMembers}
-      onShiftToday={onShiftToday}
-      pendingInvitations={pendingInvitations}
+      activeMembers={staffItems.filter((staff) => staff.active).length}
+      onShiftToday={staffItems.filter((staff) => staff.active && shiftsByStaff.has(staff.id) && !onLeave.has(staff.id)).length}
+      pendingInvitations={invitationItems.filter((invite) => invite.invitationStatus === "pending").length}
       staffLimit={staffLimit}
-      services={allServices ?? []}
-      commissionThisMonth={commissionThisMonth}
-      initialItems={staffItems}
+      services={services.data ?? []}
+      commissionThisMonth={commission.reduce((sum, entry) => sum + Number(entry.commission_cents), 0) / 100}
+      initialItems={[...staffItems, ...invitationItems]}
     />
   );
 }

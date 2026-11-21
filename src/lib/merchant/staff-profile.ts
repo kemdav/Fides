@@ -7,6 +7,27 @@ export const staffRoleLabels = { owner: "Owner", admin: "Admin", receptionist: "
 const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
 const staffProfileColumns = "id, full_name, title, bio, image_url, profile_id, active, commission_type, commission_value";
 
+export function staffDateKey(date: Date, timezone: string) {
+  return new Intl.DateTimeFormat("sv-SE", { timeZone: timezone, dateStyle: "short" }).format(date);
+}
+
+export function formatStaffCommission(type: string, value: number) {
+  if (value <= 0) return "No commission";
+  return type === "percentage" ? `${value}% of service price` : `${peso.format(value)} per service`;
+}
+
+export async function getMonthlyStaffCommission(db: AdminClient, tenantId: string, timezone: string, now: Date, staffId?: string) {
+  const month = staffDateKey(now, timezone).slice(0, 7);
+  const { data, error } = await db.rpc("get_staff_commission_totals", {
+    p_tenant_id: tenantId,
+    p_period_start: zonedDateToUtc(`${month}-01`, timezone).toISOString(),
+    p_period_end: now.toISOString(),
+    ...(staffId ? { p_staff_id: staffId } : {}),
+  });
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function isLastActiveStaffOwner(db: AdminClient, tenantId: string, staffId: string) {
   const { data: owners, error: ownersError } = await db.from("tenant_memberships").select("profile_id")
     .eq("tenant_id", tenantId).eq("role", "owner");
@@ -39,8 +60,7 @@ export async function getStaffProfile(tenantId: string, staffId: string, tenantT
 
   const timezone = tenantTimezone || "Asia/Manila";
   const now = new Date();
-  const today = new Intl.DateTimeFormat("sv-SE", { timeZone: timezone, dateStyle: "short" }).format(now);
-  const monthStart = zonedDateToUtc(`${today.slice(0, 7)}-01`, timezone).toISOString();
+  const today = staffDateKey(now, timezone);
   const weekEnd = new Date(`${today}T00:00:00Z`);
   weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
   const commission = Number(staff.commission_value);
@@ -51,11 +71,6 @@ export async function getStaffProfile(tenantId: string, staffId: string, tenantT
       .eq("tenant_id", tenantId).eq("staff_id", staff.id).gt("ends_at", zonedDateToUtc(today, timezone).toISOString())
       .lt("starts_at", zonedDateToUtc(weekEnd.toISOString().slice(0, 10), timezone).toISOString())
       .order("starts_at"),
-    commission > 0
-      ? db.from("appointment_services").select("price_cents, appointments!inner(id)")
-        .eq("tenant_id", tenantId).eq("staff_id", staff.id).eq("appointments.status", "completed")
-        .gte("appointments.starts_at", monthStart).lte("appointments.starts_at", now.toISOString())
-      : { data: [], error: null },
     staff.profile_id
       ? db.from("tenant_memberships").select("role").eq("tenant_id", tenantId).eq("profile_id", staff.profile_id).maybeSingle()
       : { data: null, error: null },
@@ -68,18 +83,18 @@ export async function getStaffProfile(tenantId: string, staffId: string, tenantT
   for (const { error } of results) {
     if (error) throw error;
   }
-  const [skills, shifts, completed, staffMembership, catalog, upcoming] = results;
-  const account = staff.profile_id && staffMembership.data
-    ? (await db.auth.admin.getUserById(staff.profile_id)).data.user
-    : null;
+  const [skills, shifts, staffMembership, catalog, upcoming] = results;
+  const [account, totals] = await Promise.all([
+    staff.profile_id && staffMembership.data
+      ? db.auth.admin.getUserById(staff.profile_id).then(({ data }) => data.user)
+      : null,
+    commission > 0 ? getMonthlyStaffCommission(db, tenantId, timezone, now, staff.id) : [],
+  ]);
   const role = staffMembership.data?.role ?? "staff";
   const staffPhone = "phone" in staff && typeof staff.phone === "string" ? staff.phone : null;
   const phone = staffPhone ?? (account?.phone ? `+${account.phone.replace(/^\+/, "")}` : "");
-  const commissionRule = commission <= 0 ? "No commission" : staff.commission_type === "percentage"
-    ? `${commission}% of service price` : `${peso.format(commission)} per service`;
-  const accrued = (completed.data ?? []).reduce((total, { price_cents }) => total + (
-    staff.commission_type === "percentage" ? Math.round(price_cents * commission / 100) : Math.round(commission * 100)
-  ), 0);
+  const commissionRule = formatStaffCommission(staff.commission_type, commission);
+  const accrued = Number(totals[0]?.commission_cents ?? 0);
   const shiftsThisWeek = shifts.data ?? [];
   const services = (skills.data ?? []).filter(({ services }) => services.active)
     .map(({ service_id, services }) => ({ id: service_id, name: services.name }))
