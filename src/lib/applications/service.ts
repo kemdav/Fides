@@ -13,10 +13,15 @@ import {
   type DocumentKey,
 } from "@/lib/registration/options";
 import { registrationSchema, type RegistrationInput } from "@/lib/registration/schema";
-import type { ActivityEvent } from "@/lib/admin/activity";
-import type { PlanSummary, Tenant } from "@/lib/admin/tenants";
-import type { Tier } from "@/lib/admin/tiers";
-import type { Submission, SubmissionDocument, SubmissionStatus } from "@/lib/admin/verification";
+import type {
+  ActivityEvent,
+  PlanSummary,
+  Submission,
+  SubmissionDocument,
+  SubmissionStatus,
+  Tenant,
+  Tier,
+} from "./admin-types";
 import type {
   AccountApplicationRow,
   ActivityCategory,
