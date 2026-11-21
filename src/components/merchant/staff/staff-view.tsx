@@ -9,6 +9,7 @@ import { MetricCard } from "@/components/admin/metric-card";
 import { PageContent, PageHeading, StatusPill, Surface } from "@/components/admin/primitives";
 import { EmptyState } from "@/components/ui/empty-state";
 import { InviteStaffModal } from "./invite-staff-modal";
+import { RoleAccessModal } from "./role-access-modal";
 import {
   updateStaffMemberAction,
   toggleStaffActiveAction,
@@ -180,6 +181,7 @@ export function StaffView({
 
   // Modal states
   const [isInviteOpen, setIsInviteOpen] = React.useState(false);
+  const [isRoleAccessOpen, setIsRoleAccessOpen] = React.useState(false);
   const [editTarget, setEditTarget] = React.useState<StaffItem | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<StaffItem | null>(null);
 
@@ -283,7 +285,7 @@ export function StaffView({
                 <AdminButton variant="primary" size="sm" onClick={() => setIsInviteOpen(true)}>
                   + Invite Staff
                 </AdminButton>
-                <AdminButton variant="outline-accent" size="sm">
+                <AdminButton variant="outline-accent" size="sm" aria-haspopup="dialog" onClick={() => setIsRoleAccessOpen(true)}>
                   Role &amp; Access
                 </AdminButton>
               </div>
@@ -346,7 +348,7 @@ export function StaffView({
                     placeholder="Search staff or service"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="h-11 w-full rounded-lg border border-hairline bg-white pl-10 pr-3 text-sm text-ink transition-shadow focus:outline-none focus:ring-2 focus:ring-burnt/40 sm:w-60"
+                    className="h-11 w-full rounded-lg border border-hairline bg-white pl-10 pr-3 text-sm text-ink transition-shadow focus:outline-none focus:ring-2 focus:ring-burnt/40 sm:w-68"
                   />
                   <Icon name="search" className="size-4 text-glyph absolute left-3 top-3 pointer-events-none" />
                 </div>
@@ -595,6 +597,8 @@ export function StaffView({
           </Surface>
         </PageContent>
       </div>
+
+      {isRoleAccessOpen && <RoleAccessModal onClose={() => setIsRoleAccessOpen(false)} />}
 
       {isInviteOpen && (
         <InviteStaffModal
