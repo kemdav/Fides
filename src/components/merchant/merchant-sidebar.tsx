@@ -21,7 +21,7 @@ const manageItems: { label: string; icon: IconName; suffix?: string }[] = [
   { label: "QR check-in", icon: "qr-code" },
   { label: "Customers", icon: "users" },
   { label: "Services", icon: "layers" },
-  { label: "Staff & permissions", icon: "shield" },
+  { label: "Staff & permissions", icon: "shield", suffix: "/staff" },
   { label: "Availability", icon: "clock" },
   { label: "Payments", icon: "card" },
   { label: "Reports", icon: "document" },
@@ -48,7 +48,7 @@ export function MerchantSidebar({
         ? `${dashboardPath}/settings/website`
         : dashboardPath;
     const active = configuration ? pathname.startsWith(href) : isActive(item.suffix);
-    const available = item.label === "Overview" || item.label === "Appointments" || configuration;
+    const available = item.label === "Overview" || item.label === "Appointments" || item.label === "Staff & permissions" || configuration;
 
     if (!available) {
       return (

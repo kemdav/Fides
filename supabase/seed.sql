@@ -322,12 +322,16 @@ ON CONFLICT (id) DO UPDATE SET
   active = EXCLUDED.active;
 
 -- 7. Staff Members
-INSERT INTO public.staff_members (id, tenant_id, full_name, title, active)
+INSERT INTO public.staff_members (id, tenant_id, full_name, title, active, profile_id)
 VALUES
-('33333333-3333-4333-8333-333333333301', '11111111-1111-4111-8111-111111111111', 'Marco Reyes', 'Senior Stylist', TRUE),
-('33333333-3333-4333-8333-333333333302', '11111111-1111-4111-8111-111111111111', 'Elena Cruz', 'Color Specialist', TRUE),
-('33333333-3333-4333-8333-333333333303', '11111111-1111-4111-8111-111111111111', 'Sofia Lim', 'Nail & Skin Therapist', TRUE)
-ON CONFLICT (id) DO NOTHING;
+('33333333-3333-4333-8333-333333333301', '11111111-1111-4111-8111-111111111111', 'Marco Reyes', 'Senior Stylist', TRUE, 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'),
+('33333333-3333-4333-8333-333333333302', '11111111-1111-4111-8111-111111111111', 'Elena Cruz', 'Color Specialist', TRUE, NULL),
+('33333333-3333-4333-8333-333333333303', '11111111-1111-4111-8111-111111111111', 'Sofia Lim', 'Nail & Skin Therapist', TRUE, NULL)
+ON CONFLICT (id) DO UPDATE SET
+  full_name = EXCLUDED.full_name,
+  title = EXCLUDED.title,
+  active = EXCLUDED.active,
+  profile_id = EXCLUDED.profile_id;
 
 -- 8. Customers
 INSERT INTO public.customers (id, tenant_id, full_name, email, phone)
