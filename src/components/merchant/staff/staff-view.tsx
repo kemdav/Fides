@@ -283,7 +283,7 @@ export function StaffView({
                 <AdminButton variant="primary" size="sm" onClick={() => setIsInviteOpen(true)}>
                   + Invite Staff
                 </AdminButton>
-                <AdminButton variant="outline" size="sm">
+                <AdminButton variant="outline-accent" size="sm">
                   Role &amp; Access
                 </AdminButton>
               </div>
@@ -440,7 +440,7 @@ export function StaffView({
                     <th className="px-5 py-3 text-[11px] leading-4 uppercase tracking-wide">Services</th>
                     <th className="px-5 py-3 text-[11px] leading-4 uppercase tracking-wide">Commission</th>
                     <th className="px-5 py-3 text-[11px] leading-4 uppercase tracking-wide">Status / Shift</th>
-                    <th className="pl-2 pr-4 py-3 text-[11px] leading-4 uppercase tracking-wide">Action</th>
+                    <th className="py-3 text-center text-[11px] leading-4 uppercase tracking-wide">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-hairline">
@@ -500,13 +500,13 @@ export function StaffView({
                         </td>
 
                         {/* Action */}
-                        <td className="pl-2 pr-4 py-3.5 relative">
+                        <td className="relative py-3.5">
                           <button
                             type="button"
                             aria-label={`Actions for ${row.fullName}`}
                             aria-expanded={activeMenuId === row.id}
                             onClick={() => setActiveMenuId(activeMenuId === row.id ? null : row.id)}
-                            className="flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 text-glyph"
+                            className="mx-auto flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 text-glyph"
                           >
                             <Icon name="more" weight="fill" className="size-5" />
                           </button>

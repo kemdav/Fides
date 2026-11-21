@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AdminButton } from "@/components/admin/admin-button";
 import { Icon } from "@/components/admin/icon";
 import { Modal } from "@/components/ui/modal";
+import { Listbox } from "../new-appointment-modal";
 
 interface InviteStaffModalProps {
   onClose: () => void;
@@ -20,6 +21,7 @@ function RequiredMark() {
 }
 
 export function InviteStaffModal({ onClose, seatsUsed, staffLimit, services }: InviteStaffModalProps) {
+  const [role, setRole] = useState("staff");
   const [commission, setCommission] = useState("none");
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
 
@@ -59,22 +61,26 @@ export function InviteStaffModal({ onClose, seatsUsed, staffLimit, services }: I
           <div className="grid gap-4 sm:grid-cols-2">
             <label className={labelClass}>
               <span>Full Name<RequiredMark /></span>
-              <input className={fieldClass} name="fullName" autoComplete="name" placeholder="Ari Mendoza" required />
+              <input className={fieldClass} name="fullName" autoComplete="name" placeholder="Juan Dela Cruz" required />
             </label>
             <label className={labelClass}>
               <span>Email Address<RequiredMark /></span>
-              <input className={fieldClass} name="email" type="email" autoComplete="email" placeholder="ari.mendoza@example.com" required />
+              <input className={fieldClass} name="email" type="email" autoComplete="email" placeholder="juan.delacruz@gmail.com" required />
             </label>
           </div>
 
-          <label className={labelClass}>
-            <span>Staff Role<RequiredMark /></span>
-            <select className={fieldClass} name="role" defaultValue="staff" required>
-              <option value="staff">Service Staff</option>
-              <option value="receptionist">Receptionist</option>
-              <option value="admin">Admin</option>
-            </select>
-          </label>
+          <Listbox
+            id="invite-staff-role"
+            label="Staff Role"
+            required
+            value={role}
+            onChange={setRole}
+            options={[
+              { value: "staff", label: "Service Staff" },
+              { value: "receptionist", label: "Receptionist" },
+              { value: "admin", label: "Admin" },
+            ]}
+          />
 
           <div className="space-y-1.5">
             <label className={labelClass}>
@@ -84,43 +90,34 @@ export function InviteStaffModal({ onClose, seatsUsed, staffLimit, services }: I
             <p id="invite-title-help" className="text-xs text-muted">Shown on the website. Service eligibility is set below.</p>
           </div>
 
-          <fieldset className="space-y-1.5" aria-describedby="invite-services-help">
-            <legend className="mb-1.5 text-sm font-medium">Services this person can perform</legend>
-            <details className="rounded-lg border border-hairline bg-white">
-              <summary className="cursor-pointer px-3 py-2.5 text-sm text-muted">
-                {selectedServices.length ? `${selectedServices.length} selected` : "Select services"}
-              </summary>
-              <div className="max-h-40 space-y-2 overflow-y-auto border-t border-hairline px-3 py-2.5">
-                {services.map((service) => (
-                  <label key={service.id} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      className="accent-burnt"
-                      checked={selectedServices.includes(service.id)}
-                      onChange={(event) => {
-                        const checked = event.target.checked;
-                        setSelectedServices((current) => checked
-                          ? [...current, service.id]
-                          : current.filter((id) => id !== service.id));
-                      }}
-                    />
-                    {service.name}
-                  </label>
-                ))}
-                {services.length === 0 && <p className="text-xs text-muted">No active services available.</p>}
-              </div>
-            </details>
+          <div className="space-y-1.5">
+            <Listbox
+              id="invite-staff-services"
+              label="Services this person can perform"
+              describedBy="invite-services-help"
+              placeholder="Select services"
+              placement="above"
+              multiple
+              value={selectedServices}
+              onChange={setSelectedServices}
+              options={services.map(({ id, name }) => ({ value: id, label: name }))}
+            />
             <p id="invite-services-help" className="text-xs text-muted">The Services page displays these assignments.</p>
-          </fieldset>
+          </div>
 
-          <label className={labelClass}>
-            <span>Commission Arrangement<RequiredMark /></span>
-            <select className={fieldClass} name="commission" value={commission} onChange={(event) => setCommission(event.target.value)} required>
-              <option value="none">No Commission</option>
-              <option value="fixed">Fixed Amount per Service</option>
-              <option value="percentage">Percentage of Service Price</option>
-            </select>
-          </label>
+          <Listbox
+            id="invite-staff-commission"
+            label="Commission Arrangement"
+            required
+            placement="above"
+            value={commission}
+            onChange={setCommission}
+            options={[
+              { value: "none", label: "No Commission" },
+              { value: "fixed", label: "Fixed Amount per Service" },
+              { value: "percentage", label: "Percentage of Service Price" },
+            ]}
+          />
 
           {commission === "none" ? (
             <div className="rounded-lg bg-mist px-3 py-3 text-xs text-body">

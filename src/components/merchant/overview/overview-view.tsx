@@ -326,7 +326,7 @@ export function OverviewView({
         basePath={basePath}
       />
 
-      <div className="min-w-0 flex-1 lg:h-dvh lg:overflow-y-auto">
+      <div className="min-w-0 flex-1 lg:h-dvh lg:overflow-y-auto lg:[scrollbar-gutter:stable]">
         <PageContent>
           {/* Page Heading */}
           <PageHeading
@@ -373,7 +373,7 @@ export function OverviewView({
                   + New Booking
                 </AdminButton>
                 <AdminButton
-                  variant="outline"
+                  variant="outline-accent"
                   size="sm"
                   onClick={() => setIsWalkInOpen(true)}
                 >
@@ -800,7 +800,7 @@ export function OverviewView({
           </div>
 
           {/* Bottom Section: Today's Appointments Table */}
-          <Surface className="overflow-hidden !p-0">
+          <Surface className="!p-0">
             {/* Card Controls */}
             <div className="p-4 sm:p-6 border-b border-hairline flex flex-wrap items-center justify-between gap-5">
               <div className="flex items-center gap-3">
@@ -815,61 +815,61 @@ export function OverviewView({
                 </span>
               </div>
 
-              <div className="flex items-center gap-2.5">
-                <div className="relative">
+              <div className="flex w-full items-center gap-2.5 sm:w-auto">
+                <div className="relative min-w-0 flex-1">
                   <input
                     type="text"
+                    aria-label="Search customer or service"
                     placeholder="Search customer or service"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="h-11 pl-10 pr-3 rounded-lg border border-hairline bg-white text-sm text-ink focus:outline-none focus:ring-2 focus:ring-burnt/40 focus:bg-white w-48 sm:w-64 transition-shadow"
+                    className="h-11 w-full rounded-lg border border-hairline bg-white pl-10 pr-3 text-sm text-ink transition-shadow focus:outline-none focus:ring-2 focus:ring-burnt/40 sm:w-64"
                   />
                   <Icon name="search" className="size-4 text-glyph absolute left-3 top-3 pointer-events-none" />
                 </div>
 
-                <div className="relative">
+                <div className="relative shrink-0">
                   <button
                     type="button"
+                    aria-expanded={isFilterOpen}
+                    aria-label={filterStatus === "All" ? "Filter" : `Filter, status: ${filterStatus}`}
                     onClick={() => setIsFilterOpen(!isFilterOpen)}
                     className="h-11 rounded-lg border border-hairline bg-white px-3 text-sm font-semibold text-ink hover:bg-mist flex items-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="size-3.5 text-glyph" aria-hidden>
                       <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
                     </svg>
-                    <span>Filter</span>
-                    <Icon name="chevron-down" className="size-3.5 text-glyph" />
+                    <span className="relative">
+                      Filter
+                      {filterStatus !== "All" && (
+                        <span aria-hidden="true" className="absolute -right-1.5 top-0 size-1.5 rounded-full bg-burnt" />
+                      )}
+                    </span>
+                    <Icon name="chevron-down" className={`size-3.5 text-glyph transition-transform ${isFilterOpen ? "rotate-180" : ""}`} />
                   </button>
                   {isFilterOpen && (
-                    <div className="absolute right-0 mt-1 w-40 rounded-[10px] bg-white border border-hairline shadow-lg py-1 z-20 text-sm">
-                      {["All", "Confirmed", "Pending approval", "Check In"].map((status) => (
-                        <button
-                          key={status}
-                          type="button"
-                          onClick={() => { setFilterStatus(status); setIsFilterOpen(false); }}
-                          className={`w-full text-left px-4 py-2 hover:bg-mist ${filterStatus === status ? "text-burnt font-semibold" : "text-body"}`}
-                        >
-                          {status}
-                        </button>
-                      ))}
-                    </div>
+                    <details className="group absolute right-0 z-20 mt-1 w-56 overflow-hidden rounded-[10px] border border-hairline bg-white text-sm shadow-lg">
+                      <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-subtle hover:bg-mist [&::-webkit-details-marker]:hidden">
+                        Status
+                        <span aria-hidden="true" className="group-open:hidden">+</span>
+                        <span aria-hidden="true" className="hidden group-open:inline">−</span>
+                      </summary>
+                      <div className="pb-2">
+                        {["All", "Confirmed", "Pending approval", "Check In"].map((status) => (
+                          <button
+                            key={status}
+                            type="button"
+                            aria-pressed={filterStatus === status}
+                            onClick={() => setFilterStatus(status)}
+                            className={`w-full px-4 py-2 text-left hover:bg-mist ${filterStatus === status ? "font-semibold text-burnt" : "text-body"}`}
+                          >
+                            {status}
+                          </button>
+                        ))}
+                      </div>
+                    </details>
                   )}
                 </div>
-                {filterStatus !== "All" && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-burnt/10 px-2.5 py-1 text-xs font-semibold text-burnt">
-                    {filterStatus}
-                    <button
-                      type="button"
-                      onClick={() => setFilterStatus("All")}
-                      className="flex size-4 items-center justify-center rounded-full hover:bg-burnt/20 transition-colors"
-                      aria-label="Clear filter"
-                    >
-                      <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2} className="size-2.5" aria-hidden>
-                        <line x1="2" y1="2" x2="10" y2="10" />
-                        <line x1="10" y1="2" x2="2" y2="10" />
-                      </svg>
-                    </button>
-                  </span>
-                )}
               </div>
             </div>
 
@@ -937,7 +937,16 @@ export function OverviewView({
 
             {/* Desktop table (QA #1: Empty state row when 0 appointments) */}
             <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-left text-sm">
+              <table className="w-full min-w-[760px] table-fixed text-left text-sm">
+                <colgroup>
+                  <col className="w-[12%]" />
+                  <col className="w-[17%]" />
+                  <col className="w-[17%]" />
+                  <col className="w-[15%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[15%]" />
+                  <col className="w-[12%]" />
+                </colgroup>
                 <thead className="bg-mist border-b border-hairline text-subtle font-semibold">
                   <tr>
                     <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Time</th>
@@ -946,7 +955,7 @@ export function OverviewView({
                     <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Staff</th>
                     <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Source</th>
                     <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Status</th>
-                    <th className="w-24 px-6 py-4 text-[11px] leading-4 uppercase tracking-wide text-right">Action</th>
+                    <th className="py-4 pl-3 pr-7 text-right text-[11px] leading-4 uppercase tracking-wide xl:pr-10">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-hairline">
@@ -979,7 +988,7 @@ export function OverviewView({
                         <td className="px-6 py-4">
                           <AppointmentStatusPill status={row.status} />
                         </td>
-                        <td className="w-24 px-6 py-4 text-right align-middle">
+                        <td className="py-4 pl-3 pr-7 text-right align-middle xl:pr-10">
                           <button
                             type="button"
                             onClick={() => setActiveMenuId(activeMenuId === row.id ? null : row.id)}
