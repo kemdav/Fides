@@ -31,8 +31,8 @@ export interface StaffItem {
   serviceNames: string;
   commissionDisplay: string;
   active: boolean;
-  sortOrder: number;
-  createdAt: string;
+  shiftDisplay: string;
+  invitationStatus?: "pending" | "expired" | "cancelled";
 }
 
 interface StaffViewProps {
@@ -54,10 +54,15 @@ interface StaffViewProps {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function StatusBadge({ active }: { active: boolean }) {
+const invitationLabels = { pending: "Invited", expired: "Invite expired", cancelled: "Invite cancelled" };
+
+function StatusBadge({ row }: { row: StaffItem }) {
+  if (row.invitationStatus) {
+    return <StatusPill tone={row.invitationStatus === "pending" ? "warning" : "neutral"}>{invitationLabels[row.invitationStatus]}</StatusPill>;
+  }
   return (
-    <StatusPill tone={active ? "success" : "danger"}>
-      {active ? "Active" : "Inactive"}
+    <StatusPill tone={row.active ? "success" : "danger"}>
+      {row.active ? "Active" : "Inactive"}
     </StatusPill>
   );
 }
@@ -155,13 +160,16 @@ export function StaffView({
           matchesRole = item.active;
           break;
         case "Invited & Expired":
-          matchesRole = false; // No invitation system yet
+          matchesRole = item.invitationStatus === "pending" || item.invitationStatus === "expired";
+          break;
+        case "Cancelled Invitations":
+          matchesRole = item.invitationStatus === "cancelled";
           break;
         case "Deactivated Accounts":
-          matchesRole = !item.active;
+          matchesRole = !item.active && !item.invitationStatus;
           break;
         case "Service Staff only":
-          matchesRole = item.role === "staff";
+          matchesRole = item.role === "staff" && !item.invitationStatus;
           break;
         // "All team members" = default, no filter
       }
@@ -180,6 +188,7 @@ export function StaffView({
 
   // Active filter label for badge
   const hasActiveFilter = roleFilter !== "All team members";
+  const rosterSize = items.filter((row) => !row.invitationStatus).length;
 
   // ── Action handlers ───────────────────────────────────────────────────────
 
@@ -236,21 +245,21 @@ export function StaffView({
               value={activeMembers}
               caption="Owner, reception, and service staff"
               icon="users"
-              progress={100}
+              progress={rosterSize ? Math.min(100, 100 * activeMembers / rosterSize) : 0}
             />
             <MetricCard
               label="On shift today"
               value={onShiftToday}
-              caption="View staff working hours"
+              caption="Active staff with scheduled hours"
               icon="clock"
-              progress={items.length > 0 ? Math.round((onShiftToday / items.length) * 100) : 0}
+              progress={activeMembers ? 100 * onShiftToday / activeMembers : 0}
             />
             <MetricCard
               label="Pending invitations"
               value={pendingInvitations}
-              caption="Manage sent invitations"
+              caption="Unaccepted, unexpired invitations"
               icon="bell"
-              progress={pendingInvitations > 0 ? 50 : 0}
+              progress={staffLimit ? Math.min(100, 100 * pendingInvitations / staffLimit) : pendingInvitations > 0 ? 50 : 0}
             />
             <MetricCard
               label="Commission this month"
@@ -320,7 +329,7 @@ export function StaffView({
                           <span aria-hidden="true" className="hidden group-open:inline">−</span>
                         </summary>
                         <div className="pb-2">
-                          {["All team members", "Active Accounts", "Invited & Expired", "Deactivated Accounts", "Service Staff only"].map((opt) => (
+                            {["All team members", "Active Accounts", "Invited & Expired", "Cancelled Invitations", "Deactivated Accounts", "Service Staff only"].map((opt) => (
                             <button
                               key={opt}
                               type="button"
@@ -402,7 +411,7 @@ export function StaffView({
                               {getInitials(row.fullName)}
                             </div>
                             <div className="min-w-0">
-                              {canViewProfiles ? (
+                              {canViewProfiles && !row.invitationStatus ? (
                                 <Link
                                   href={`${basePath}/dashboard/staff/${row.id}`}
                                   className="block truncate font-semibold text-ink after:absolute after:inset-0 hover:text-burnt focus-visible:outline-burnt"
@@ -436,36 +445,36 @@ export function StaffView({
 
                         {/* Status / Shift */}
                         <td className="px-5 py-3.5">
-                          <StatusBadge active={row.active} />
-                          <p className="text-xs text-muted mt-1">
-                            {row.active
-                              ? (row.role === "owner" || row.role === "admin"
-                                ? "No service shift"
-                                : "On shift · 09:00-17:00")
-                              : "Deactivated"}
-                          </p>
+                          <StatusBadge row={row} />
+                          <p className="mt-1 text-xs text-muted">{row.shiftDisplay}</p>
                         </td>
 
                         {/* Action */}
                         <td className="relative py-3.5">
-                          <button
-                            type="button"
-                            aria-label={`Actions for ${row.fullName}`}
-                            aria-expanded={activeMenuId === row.id}
-                            aria-busy={loadingEditId === row.id}
-                            onClick={() => setActiveMenuId(activeMenuId === row.id ? null : row.id)}
-                            className="relative z-10 mx-auto flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 text-glyph"
-                          >
-                            <Icon name="more" weight="fill" className="size-5" />
-                          </button>
-                          {activeMenuId === row.id && (
-                            <div className="absolute right-4 mt-1 w-44 rounded-[10px] bg-white border border-hairline shadow-lg py-1 z-30 text-left text-sm">
-                              {canViewProfiles && (
-                                <button type="button" disabled={Boolean(loadingEditId)} onClick={() => openEditor(row.id)} className="w-full px-4 py-2 text-left text-body hover:bg-mist disabled:opacity-50">Edit details</button>
+                          {row.invitationStatus ? (
+                            <span className="block text-center text-xs text-muted">—</span>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                aria-label={`Actions for ${row.fullName}`}
+                                aria-expanded={activeMenuId === row.id}
+                                aria-busy={loadingEditId === row.id}
+                                onClick={() => setActiveMenuId(activeMenuId === row.id ? null : row.id)}
+                                className="relative z-10 mx-auto flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 text-glyph"
+                              >
+                                <Icon name="more" weight="fill" className="size-5" />
+                              </button>
+                              {activeMenuId === row.id && (
+                                <div className="absolute right-4 mt-1 w-44 rounded-[10px] bg-white border border-hairline shadow-lg py-1 z-30 text-left text-sm">
+                                  {canViewProfiles && (
+                                    <button type="button" disabled={Boolean(loadingEditId)} onClick={() => openEditor(row.id)} className="w-full px-4 py-2 text-left text-body hover:bg-mist disabled:opacity-50">Edit details</button>
+                                  )}
+                                  <button type="button" aria-haspopup="dialog" onClick={() => openStatusDialog(row)} className="w-full text-left px-4 py-2 hover:bg-mist text-body">{row.active ? "Deactivate" : "Activate"}</button>
+                                  <button type="button" onClick={() => { setDeleteTarget(row); setActiveMenuId(null); }} className="w-full text-left px-4 py-2 hover:bg-danger-bg text-danger font-medium">Remove member</button>
+                                </div>
                               )}
-                              <button type="button" aria-haspopup="dialog" onClick={() => openStatusDialog(row)} className="w-full text-left px-4 py-2 hover:bg-mist text-body">{row.active ? "Deactivate" : "Activate"}</button>
-                              <button type="button" onClick={() => { setDeleteTarget(row); setActiveMenuId(null); }} className="w-full text-left px-4 py-2 hover:bg-danger-bg text-danger font-medium">Remove member</button>
-                            </div>
+                            </>
                           )}
                         </td>
                       </tr>
@@ -497,12 +506,12 @@ export function StaffView({
                           <p className="mt-0.5 text-sm text-muted">{row.roleLabel} · {row.title || "No title"}</p>
                         </div>
                       </div>
-                      <StatusBadge active={row.active} />
+                      <StatusBadge row={row} />
                     </div>
                   );
                   return (
                     <div key={row.id} className="px-5 py-4">
-                      {canViewProfiles ? (
+                      {canViewProfiles && !row.invitationStatus ? (
                         <Link href={`${basePath}/dashboard/staff/${row.id}`} className="block rounded-lg text-left focus-visible:outline-burnt">
                           {heading}
                         </Link>
@@ -522,7 +531,7 @@ export function StaffView({
                             <span>Email<strong className="mt-1 block text-ink text-xs">{row.email}</strong></span>
                             <span>Services<strong className="mt-1 block text-ink text-xs">{row.servicesDisplay}</strong></span>
                             <span>Commission<strong className="mt-1 block text-ink text-xs">{row.commissionDisplay}</strong></span>
-                            <span>Status<strong className="mt-1 block text-ink text-xs">{row.active ? "Active" : "Inactive"}</strong></span>
+                            <span>{row.invitationStatus ? "Invitation" : "Shift"}<strong className="mt-1 block text-ink text-xs">{row.shiftDisplay}</strong></span>
                           </div>
                           {row.serviceNames && (
                             <div className="border-t border-hairline pt-3">
@@ -530,7 +539,7 @@ export function StaffView({
                               <p className="text-sm text-ink mt-1">{row.serviceNames}</p>
                             </div>
                           )}
-                          <div className="flex flex-wrap gap-2 border-t border-hairline pt-3">
+                          {!row.invitationStatus && <div className="flex flex-wrap gap-2 border-t border-hairline pt-3">
                             {canViewProfiles && (
                               <AdminButton size="xs" variant="outline" disabled={Boolean(loadingEditId)} onClick={() => openEditor(row.id)}>
                                 {loadingEditId === row.id ? "Loading…" : "Edit details"}
@@ -540,7 +549,7 @@ export function StaffView({
                               {row.active ? "Deactivate" : "Activate"}
                             </AdminButton>
                             <AdminButton size="xs" variant="danger" onClick={() => setDeleteTarget(row)}>Remove</AdminButton>
-                          </div>
+                          </div>}
                         </div>
                       )}
                     </div>
@@ -593,7 +602,6 @@ export function StaffView({
             && !items.some((staff) => staff.id !== statusTarget.id && staff.active && staff.role === "owner")}
           onClose={() => setStatusTarget(null)}
           onChanged={(active) => {
-            setItems((current) => current.map((staff) => staff.id === statusTarget.id ? { ...staff, active } : staff));
             showToast(`${statusTarget.fullName} ${active ? "activated" : "deactivated"}.`);
             setStatusTarget(null);
             router.refresh();

@@ -51,7 +51,7 @@ export default async function StaffPage({ params }: StaffPageProps) {
   const todayStart = zonedDateToUtc(today, timezone).toISOString();
   const todayEnd = zonedDateToUtc(today, timezone, true).toISOString();
   const [rows, memberships, skills, services, shifts, leaves, invitations, application, commission] = await Promise.all([
-    db.from("staff_members").select("id, full_name, title, active, sort_order, profile_id, created_at, commission_type, commission_value")
+    db.from("staff_members").select("id, full_name, title, active, profile_id, commission_type, commission_value")
       .eq("tenant_id", tenant.id).order("sort_order").order("full_name"),
     db.from("tenant_memberships").select("profile_id, role, profiles(full_name, email)").eq("tenant_id", tenant.id),
     db.from("staff_service_skills").select("staff_id, services!inner(name)").eq("tenant_id", tenant.id).eq("services.active", true),
@@ -60,15 +60,16 @@ export default async function StaffPage({ params }: StaffPageProps) {
       .lt("starts_at", todayEnd).gt("ends_at", todayStart).order("starts_at"),
     db.from("leaves").select("staff_id").eq("tenant_id", tenant.id).eq("approved", true)
       .lte("starts_on", today).gte("ends_on", today),
-    db.from("staff_invitations").select("id, full_name, email, role, title, created_at, expires_at, cancelled_at")
+    db.from("staff_invitations").select("id, full_name, email, role, title, expires_at, cancelled_at")
       .eq("tenant_id", tenant.id).is("accepted_at", null).order("created_at", { ascending: false }),
     db.from("account_applications").select("plan_code").eq("tenant_id", tenant.id).eq("status", "approved")
       .order("approved_at", { ascending: false }).limit(1).maybeSingle(),
     getMonthlyStaffCommission(db, tenant.id, timezone, now),
   ]);
-  for (const { error } of [rows, memberships, skills, services, shifts, leaves, invitations, application]) {
+  for (const { error } of [rows, memberships, skills, services, shifts, leaves, application]) {
     if (error) throw error;
   }
+  if (invitations.error && !["PGRST205", "42P01"].includes(invitations.error.code)) throw invitations.error;
 
   let staffLimit: number | null | undefined;
   if (application.data) {
@@ -114,8 +115,6 @@ export default async function StaffPage({ params }: StaffPageProps) {
       serviceNames: names.join(" · "),
       commissionDisplay: formatStaffCommission(row.commission_type, Number(row.commission_value)),
       active: row.active,
-      sortOrder: row.sort_order,
-      createdAt: row.created_at,
       shiftDisplay,
     };
   });
@@ -135,8 +134,6 @@ export default async function StaffPage({ params }: StaffPageProps) {
       serviceNames: "",
       commissionDisplay: "—",
       active: false,
-      sortOrder: 0,
-      createdAt: invite.created_at,
       invitationStatus,
       shiftDisplay: `${invitationStatus === "cancelled" ? "Cancelled" : invitationStatus === "expired" ? "Expired" : "Expires"} ${date}`,
     };

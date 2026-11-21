@@ -93,6 +93,40 @@ NOW(),
 '',
 '',
 ''
+),
+(
+'00000000-0000-0000-0000-000000000000',
+'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+'authenticated',
+'authenticated',
+'reception@bellavita.example',
+extensions.crypt('Password123!', extensions.gen_salt('bf')),
+NOW(),
+'{"provider":"email","providers":["email"],"role":"receptionist","tenant_id":"11111111-1111-4111-8111-111111111111"}'::jsonb,
+'{"full_name":"Chloe Lim"}'::jsonb,
+NOW(),
+NOW(),
+'',
+'',
+'',
+''
+),
+(
+'00000000-0000-0000-0000-000000000000',
+'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+'authenticated',
+'authenticated',
+'sofia.lim@bellavita.example',
+extensions.crypt('Password123!', extensions.gen_salt('bf')),
+NOW(),
+'{"provider":"email","providers":["email"],"role":"staff","tenant_id":"11111111-1111-4111-8111-111111111111"}'::jsonb,
+'{"full_name":"Sofia Lim"}'::jsonb,
+NOW(),
+NOW(),
+'',
+'',
+'',
+''
 )
 ON CONFLICT (id) DO NOTHING;
 -- 3. Seed Auth Identities (required by Supabase GoTrue email login)
@@ -136,6 +170,26 @@ NOW()
 NOW(),
 NOW(),
 NOW()
+),
+(
+'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+'{"sub":"dddddddd-dddd-4ddd-8ddd-dddddddddddd","email":"reception@bellavita.example","email_verified":true,"phone_verified":false}'::jsonb,
+'email',
+NOW(),
+NOW(),
+NOW()
+),
+(
+'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+'{"sub":"eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee","email":"sofia.lim@bellavita.example","email_verified":true,"phone_verified":false}'::jsonb,
+'email',
+NOW(),
+NOW(),
+NOW()
 )
 ON CONFLICT (id) DO NOTHING;
 
@@ -144,7 +198,9 @@ INSERT INTO public.profiles (id, email, full_name, role, tenant_id)
 VALUES
 ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'owner@bellavita.com', 'Maria Santos', 'owner', '11111111-1111-4111-8111-111111111111'),
 ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'staff@bellavita.com', 'Marco Reyes', 'staff', '11111111-1111-4111-8111-111111111111'),
-('cccccccc-cccc-4ccc-8ccc-cccccccccccc', 'admin@fides.app', 'Fides Admin', 'admin', NULL)
+('cccccccc-cccc-4ccc-8ccc-cccccccccccc', 'admin@fides.app', 'Fides Admin', 'admin', NULL),
+('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'reception@bellavita.example', 'Chloe Lim', 'receptionist', '11111111-1111-4111-8111-111111111111'),
+('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', 'sofia.lim@bellavita.example', 'Sofia Lim', 'staff', '11111111-1111-4111-8111-111111111111')
 ON CONFLICT (id) DO UPDATE SET
 email = EXCLUDED.email,
 full_name = EXCLUDED.full_name,
@@ -154,11 +210,17 @@ tenant_id = EXCLUDED.tenant_id;
 INSERT INTO public.tenant_memberships (tenant_id, profile_id, role)
 VALUES
 ('11111111-1111-4111-8111-111111111111', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'owner'),
-('11111111-1111-4111-8111-111111111111', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'staff')
+('11111111-1111-4111-8111-111111111111', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'staff'),
+('11111111-1111-4111-8111-111111111111', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'receptionist'),
+('11111111-1111-4111-8111-111111111111', 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', 'staff')
 ON CONFLICT (tenant_id, profile_id) DO UPDATE SET
 role = EXCLUDED.role;
 
 -- 5. Approved Account Application
+INSERT INTO public.subscription_plans (code, name, price_php, staff_limit, is_active)
+VALUES ('staff-qa', 'Staff QA', 1299, 10, FALSE)
+ON CONFLICT (code) DO UPDATE SET staff_limit = EXCLUDED.staff_limit, is_active = EXCLUDED.is_active;
+
 INSERT INTO public.account_applications (
 id,
 reference_code,
@@ -185,7 +247,7 @@ VALUES (
 'owner@bellavita.com',
 '+63 917 555 0143',
 'approved',
-'starter',
+'staff-qa',
 NOW(),
 NOW(),
 NOW(),
@@ -197,6 +259,7 @@ NOW(),
 )
 ON CONFLICT (user_id) DO UPDATE SET
 status = 'approved',
+plan_code = EXCLUDED.plan_code,
 reviewed_at = NOW(),
 approved_at = NOW(),
 decided_at = NOW(),
@@ -322,15 +385,20 @@ ON CONFLICT (id) DO UPDATE SET
   active = EXCLUDED.active;
 
 -- 7. Staff Members
-INSERT INTO public.staff_members (id, tenant_id, full_name, title, active, profile_id, commission_type, commission_value, sort_order)
+INSERT INTO public.staff_members (id, tenant_id, full_name, title, bio, phone, active, profile_id, commission_type, commission_value, sort_order)
 VALUES
-('33333333-3333-4333-8333-333333333304', '11111111-1111-4111-8111-111111111111', 'Maria Santos', 'Business management', TRUE, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'fixed', 0, 0),
-('33333333-3333-4333-8333-333333333301', '11111111-1111-4111-8111-111111111111', 'Marco Reyes', 'Senior Stylist', TRUE, 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'percentage', 20, 1),
-('33333333-3333-4333-8333-333333333302', '11111111-1111-4111-8111-111111111111', 'Elena Cruz', 'Color Specialist', TRUE, NULL, 'fixed', 50, 2),
-('33333333-3333-4333-8333-333333333303', '11111111-1111-4111-8111-111111111111', 'Sofia Lim', 'Nail & Skin Therapist', TRUE, NULL, 'percentage', 15, 3)
+('33333333-3333-4333-8333-333333333304', '11111111-1111-4111-8111-111111111111', 'Maria Santos', 'Business management', 'Manages the Bella Vita workspace.', '+63 917 555 0143', TRUE, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'fixed', 0, 0),
+('33333333-3333-4333-8333-333333333301', '11111111-1111-4111-8111-111111111111', 'Marco Reyes', 'Senior Stylist', 'Specializes in precision cuts and balayage.', '+63 917 555 0144', TRUE, 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'percentage', 20, 1),
+('33333333-3333-4333-8333-333333333302', '11111111-1111-4111-8111-111111111111', 'Elena Cruz', 'Color Specialist', 'Works across hair and skin services.', NULL, TRUE, NULL, 'fixed', 50, 2),
+('33333333-3333-4333-8333-333333333303', '11111111-1111-4111-8111-111111111111', 'Sofia Lim', 'Nail & Skin Therapist', 'Offers wellness treatments and nail care.', '+63 917 555 0145', TRUE, 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', 'percentage', 15, 3),
+('33333333-3333-4333-8333-333333333305', '11111111-1111-4111-8111-111111111111', 'Chloe Lim', 'Front Desk Coordinator', 'Handles bookings and customer check-ins.', '+63 917 555 0146', TRUE, 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'fixed', 0, 4),
+('33333333-3333-4333-8333-333333333306', '11111111-1111-4111-8111-111111111111', 'Jules Navarro', 'Former Stylist', NULL, NULL, FALSE, NULL, 'fixed', 125, 5),
+('33333333-3333-4333-8333-333333333307', '11111111-1111-4111-8111-111111111111', 'Lia Ramos', 'Junior Therapist', NULL, NULL, TRUE, NULL, 'fixed', 0, 6)
 ON CONFLICT (id) DO UPDATE SET
   full_name = EXCLUDED.full_name,
   title = EXCLUDED.title,
+  bio = EXCLUDED.bio,
+  phone = EXCLUDED.phone,
   active = EXCLUDED.active,
   profile_id = EXCLUDED.profile_id,
   commission_type = EXCLUDED.commission_type,
@@ -343,14 +411,61 @@ VALUES
 -- Marco Reyes: Signature haircut, Balayage & gloss
 ('11111111-1111-4111-8111-111111111111', '33333333-3333-4333-8333-333333333301', '22222222-2222-4222-8222-222222222201'),
 ('11111111-1111-4111-8111-111111111111', '33333333-3333-4333-8333-333333333301', '22222222-2222-4222-8222-222222222202'),
--- Elena Cruz: Signature haircut, Botanical spa manicure, Hydra facial
+-- Elena Cruz: Signature haircut, Balayage & gloss, Botanical spa manicure, Hydra facial
 ('11111111-1111-4111-8111-111111111111', '33333333-3333-4333-8333-333333333302', '22222222-2222-4222-8222-222222222201'),
+('11111111-1111-4111-8111-111111111111', '33333333-3333-4333-8333-333333333302', '22222222-2222-4222-8222-222222222202'),
 ('11111111-1111-4111-8111-111111111111', '33333333-3333-4333-8333-333333333302', '22222222-2222-4222-8222-222222222203'),
 ('11111111-1111-4111-8111-111111111111', '33333333-3333-4333-8333-333333333302', '22222222-2222-4222-8222-222222222205'),
--- Sofia Lim: Wellness massage, Scalp detox
+-- Sofia Lim: Botanical spa manicure, Wellness massage, Scalp detox
+('11111111-1111-4111-8111-111111111111', '33333333-3333-4333-8333-333333333303', '22222222-2222-4222-8222-222222222203'),
 ('11111111-1111-4111-8111-111111111111', '33333333-3333-4333-8333-333333333303', '22222222-2222-4222-8222-222222222204'),
-('11111111-1111-4111-8111-111111111111', '33333333-3333-4333-8333-333333333303', '22222222-2222-4222-8222-222222222206')
+('11111111-1111-4111-8111-111111111111', '33333333-3333-4333-8333-333333333303', '22222222-2222-4222-8222-222222222206'),
+-- Jules Navarro: An inactive staff member can retain service assignments.
+('11111111-1111-4111-8111-111111111111', '33333333-3333-4333-8333-333333333306', '22222222-2222-4222-8222-222222222201')
 ON CONFLICT (staff_id, service_id) DO NOTHING;
+
+-- 7c. Invitation states (display only)
+INSERT INTO public.staff_invitations (id, tenant_id, full_name, email, role, title, created_at, expires_at, cancelled_at)
+VALUES
+('31313131-3131-4131-8131-313131313101', '11111111-1111-4111-8111-111111111111', 'Jade Rivera', 'jade.rivera@example.com', 'staff', 'Hair Stylist', now() - interval '1 day', now() + interval '6 days', NULL),
+('31313131-3131-4131-8131-313131313102', '11111111-1111-4111-8111-111111111111', 'Nina Torres', 'nina.torres@example.com', 'receptionist', 'Front Desk Associate', now() - interval '10 days', now() - interval '3 days', NULL),
+('31313131-3131-4131-8131-313131313103', '11111111-1111-4111-8111-111111111111', 'Emil Garcia', 'emil.garcia@example.com', 'staff', 'Massage Therapist', now() - interval '3 days', now() + interval '4 days', now() - interval '1 day')
+ON CONFLICT (id) DO UPDATE SET
+  created_at = EXCLUDED.created_at,
+  expires_at = EXCLUDED.expires_at,
+  cancelled_at = EXCLUDED.cancelled_at,
+  accepted_at = NULL;
+
+-- 7d. Real shifts, breaks and approved leave on the tenant's calendar
+WITH schedule (id, staff_id, day_offset, start_time, end_time) AS (VALUES
+  ('32323232-3232-4232-8232-323232323201'::uuid, '33333333-3333-4333-8333-333333333301'::uuid, 0, time '09:00', time '17:00'),
+  ('32323232-3232-4232-8232-323232323202'::uuid, '33333333-3333-4333-8333-333333333302'::uuid, 0, time '10:00', time '18:30'),
+  ('32323232-3232-4232-8232-323232323203'::uuid, '33333333-3333-4333-8333-333333333303'::uuid, 0, time '10:00', time '16:00'),
+  ('32323232-3232-4232-8232-323232323204'::uuid, '33333333-3333-4333-8333-333333333303'::uuid, 1, time '11:00', time '19:00'),
+  ('32323232-3232-4232-8232-323232323205'::uuid, '33333333-3333-4333-8333-333333333305'::uuid, 0, time '08:30', time '16:30'),
+  ('32323232-3232-4232-8232-323232323206'::uuid, '33333333-3333-4333-8333-333333333301'::uuid, 2, time '12:00', time '20:00')
+)
+INSERT INTO public.shifts (id, tenant_id, staff_id, starts_at, ends_at)
+SELECT id, '11111111-1111-4111-8111-111111111111', staff_id,
+  (((now() at time zone 'Asia/Manila')::date + day_offset) + start_time) at time zone 'Asia/Manila',
+  (((now() at time zone 'Asia/Manila')::date + day_offset) + end_time) at time zone 'Asia/Manila'
+FROM schedule
+ON CONFLICT (id) DO UPDATE SET starts_at = EXCLUDED.starts_at, ends_at = EXCLUDED.ends_at;
+
+INSERT INTO public.breaks (id, tenant_id, shift_id, starts_at, ends_at)
+SELECT pause.id, shift.tenant_id, shift.id, shift.starts_at + interval '3 hours', shift.starts_at + interval '4 hours'
+FROM (VALUES
+  ('34343434-3434-4434-8434-343434343401'::uuid, '32323232-3232-4232-8232-323232323201'::uuid),
+  ('34343434-3434-4434-8434-343434343402'::uuid, '32323232-3232-4232-8232-323232323204'::uuid)
+) AS pause(id, shift_id)
+JOIN public.shifts AS shift ON shift.id = pause.shift_id
+ON CONFLICT (id) DO UPDATE SET starts_at = EXCLUDED.starts_at, ends_at = EXCLUDED.ends_at;
+
+INSERT INTO public.leaves (id, tenant_id, staff_id, starts_on, ends_on, reason, approved)
+VALUES ('35353535-3535-4535-8535-353535353501', '11111111-1111-4111-8111-111111111111',
+  '33333333-3333-4333-8333-333333333303', (now() at time zone 'Asia/Manila')::date,
+  (now() at time zone 'Asia/Manila')::date, 'Planned leave', TRUE)
+ON CONFLICT (id) DO UPDATE SET starts_on = EXCLUDED.starts_on, ends_on = EXCLUDED.ends_on, approved = EXCLUDED.approved;
 
 -- 8. Customers
 INSERT INTO public.customers (id, tenant_id, full_name, email, phone)
@@ -361,7 +476,7 @@ VALUES
 ('44444444-4444-4444-8444-444444444404', '11111111-1111-4111-8111-111111111111', 'Isabel Villanueva', 'isabel@example.com', '+63 917 100 0004')
 ON CONFLICT (id) DO NOTHING;
 
--- 9. Today's Appointments
+-- 9. Completed and upcoming appointments
 INSERT INTO public.appointments (
 id,
 tenant_id,
@@ -382,8 +497,8 @@ VALUES
 '33333333-3333-4333-8333-333333333301',
 'online',
 'completed',
-CURRENT_DATE + INTERVAL '9 hours',
-CURRENT_DATE + INTERVAL '9 hours 45 minutes',
+least((((now() at time zone 'Asia/Manila')::date + time '09:00') at time zone 'Asia/Manila'), now() - interval '50 minutes'),
+least((((now() at time zone 'Asia/Manila')::date + time '09:45') at time zone 'Asia/Manila'), now() - interval '5 minutes'),
 150000,
 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 ),
@@ -394,8 +509,8 @@ CURRENT_DATE + INTERVAL '9 hours 45 minutes',
 '33333333-3333-4333-8333-333333333302',
 'online',
 'in_service',
-CURRENT_DATE + INTERVAL '11 hours',
-CURRENT_DATE + INTERVAL '13 hours',
+((now() at time zone 'Asia/Manila')::date + time '11:00') at time zone 'Asia/Manila',
+((now() at time zone 'Asia/Manila')::date + time '13:00') at time zone 'Asia/Manila',
 480000,
 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 ),
@@ -406,8 +521,8 @@ CURRENT_DATE + INTERVAL '13 hours',
 '33333333-3333-4333-8333-333333333303',
 'walk_in',
 'confirmed',
-CURRENT_DATE + INTERVAL '14 hours',
-CURRENT_DATE + INTERVAL '15 hours',
+(((now() at time zone 'Asia/Manila')::date + 1) + time '14:00') at time zone 'Asia/Manila',
+(((now() at time zone 'Asia/Manila')::date + 1) + time '15:00') at time zone 'Asia/Manila',
 95000,
 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 ),
@@ -418,12 +533,25 @@ CURRENT_DATE + INTERVAL '15 hours',
 '33333333-3333-4333-8333-333333333301',
 'online',
 'pending_approval',
-CURRENT_DATE + INTERVAL '16 hours',
-CURRENT_DATE + INTERVAL '16 hours 45 minutes',
+(((now() at time zone 'Asia/Manila')::date + 2) + time '16:00') at time zone 'Asia/Manila',
+(((now() at time zone 'Asia/Manila')::date + 2) + time '16:45') at time zone 'Asia/Manila',
+150000,
+'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+),
+(
+'55555555-5555-4555-8555-555555555505',
+'11111111-1111-4111-8111-111111111111',
+'44444444-4444-4444-8444-444444444403',
+'33333333-3333-4333-8333-333333333302',
+'walk_in',
+'completed',
+now() - interval '3 hours',
+now() - interval '2 hours 15 minutes',
 150000,
 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 )
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET
+  starts_at = EXCLUDED.starts_at, ends_at = EXCLUDED.ends_at, status = EXCLUDED.status;
 
 -- 10. Appointment Service Line Items
 INSERT INTO public.appointment_services (
@@ -438,7 +566,8 @@ VALUES
 ('11111111-1111-4111-8111-111111111111', '55555555-5555-4555-8555-555555555501', '22222222-2222-4222-8222-222222222201', '33333333-3333-4333-8333-333333333301', 150000, 45),
 ('11111111-1111-4111-8111-111111111111', '55555555-5555-4555-8555-555555555502', '22222222-2222-4222-8222-222222222202', '33333333-3333-4333-8333-333333333302', 480000, 120),
 ('11111111-1111-4111-8111-111111111111', '55555555-5555-4555-8555-555555555503', '22222222-2222-4222-8222-222222222203', '33333333-3333-4333-8333-333333333303', 95000, 60),
-('11111111-1111-4111-8111-111111111111', '55555555-5555-4555-8555-555555555504', '22222222-2222-4222-8222-222222222201', '33333333-3333-4333-8333-333333333301', 150000, 45)
+('11111111-1111-4111-8111-111111111111', '55555555-5555-4555-8555-555555555504', '22222222-2222-4222-8222-222222222201', '33333333-3333-4333-8333-333333333301', 150000, 45),
+('11111111-1111-4111-8111-111111111111', '55555555-5555-4555-8555-555555555505', '22222222-2222-4222-8222-222222222201', '33333333-3333-4333-8333-333333333302', 150000, 45)
 ON CONFLICT (appointment_id, service_id) DO NOTHING;
 
 COMMIT;

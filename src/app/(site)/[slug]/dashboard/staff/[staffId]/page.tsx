@@ -118,6 +118,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ s
                 {shiftsThisWeek.map((shift) => (
                   <li key={shift.id} className="py-3 text-sm">
                     <p className="font-medium">{formatRange(shift.starts_at, shift.ends_at)}</p>
+                    {shift.overlapsLeave && <p className="mt-1 text-xs text-muted">Overlaps approved leave</p>}
                     {shift.breaks.toSorted((a, b) => a.starts_at.localeCompare(b.starts_at)).map((pause) => (
                       <p key={pause.id} className="mt-1 text-xs text-muted">Break · {formatRange(pause.starts_at, pause.ends_at)}</p>
                     ))}
