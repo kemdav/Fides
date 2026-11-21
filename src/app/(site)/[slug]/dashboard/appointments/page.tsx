@@ -7,10 +7,23 @@ interface MerchantAppointmentsPageProps {
   params: Promise<{ slug: string }>;
 }
 
-export const metadata: Metadata = {
-  title: "Appointments · Merchant Workspace · Fides",
-  description: "Manage bookings, approvals, and appointment outcomes.",
-};
+export async function generateMetadata({
+  params,
+}: MerchantAppointmentsPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const supabase = await createClient();
+  const { data: tenant } = await supabase
+    .from("tenants")
+    .select("name")
+    .eq("slug", slug)
+    .maybeSingle();
+  return {
+    title: tenant?.name?.trim()
+      ? `${tenant.name.trim()} Appointments`
+      : "Merchant Appointments",
+    description: "Manage bookings, approvals, and appointment outcomes.",
+  };
+}
 
 export default async function MerchantAppointmentsPage({
   params,

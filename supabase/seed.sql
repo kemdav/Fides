@@ -158,7 +158,51 @@ VALUES
 ON CONFLICT (tenant_id, profile_id) DO UPDATE SET
 role = EXCLUDED.role;
 
--- 5. Tenant Settings
+-- 5. Approved Account Application
+INSERT INTO public.account_applications (
+id,
+reference_code,
+user_id,
+full_name,
+email,
+phone,
+status,
+plan_code,
+terms_accepted_at,
+consent_accepted_at,
+submitted_at,
+reviewed_at,
+reviewed_by,
+approved_at,
+decided_at,
+tenant_id
+)
+VALUES (
+'66666666-6666-4666-8666-666666666601',
+'FID-1001',
+'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+'Maria Santos',
+'owner@bellavita.com',
+'+63 917 555 0143',
+'approved',
+'starter',
+NOW(),
+NOW(),
+NOW(),
+NOW(),
+'Local seed',
+NOW(),
+NOW(),
+'11111111-1111-4111-8111-111111111111'
+)
+ON CONFLICT (user_id) DO UPDATE SET
+status = 'approved',
+reviewed_at = NOW(),
+approved_at = NOW(),
+decided_at = NOW(),
+tenant_id = '11111111-1111-4111-8111-111111111111';
+
+-- 6. Tenant Settings
 INSERT INTO public.tenant_settings (
 tenant_id,
 dominant_color,
@@ -197,13 +241,85 @@ TRUE
 )
 ON CONFLICT (tenant_id) DO NOTHING;
 
--- 6. Services
-INSERT INTO public.services (id, tenant_id, name, slug, duration_minutes, price_cents, active)
+-- 6. Service Categories
+INSERT INTO public.service_categories (id, tenant_id, name, slug, sort_order, active)
 VALUES
-('22222222-2222-4222-8222-222222222201', '11111111-1111-4111-8111-111111111111', 'Signature haircut', 'signature-haircut', 45, 150000, TRUE),
-('22222222-2222-4222-8222-222222222202', '11111111-1111-4111-8111-111111111111', 'Balayage & gloss', 'balayage-gloss', 120, 480000, TRUE),
-('22222222-2222-4222-8222-222222222203', '11111111-1111-4111-8111-111111111111', 'Botanical spa manicure', 'botanical-spa-manicure', 60, 95000, TRUE)
+('77777777-7777-4777-8777-777777777701', '11111111-1111-4111-8111-111111111111', 'Style & Care', 'style-and-care', 1, TRUE),
+('77777777-7777-4777-8777-777777777702', '11111111-1111-4111-8111-111111111111', 'Rest & Recover', 'rest-and-recover', 2, TRUE),
+('77777777-7777-4777-8777-777777777703', '11111111-1111-4111-8111-111111111111', 'Feel Your Best', 'feel-your-best', 3, TRUE)
 ON CONFLICT (id) DO NOTHING;
+
+-- 7. Services (6 services across 3 categories)
+INSERT INTO public.services (id, tenant_id, name, slug, description, duration_minutes, price_cents, category_id, active)
+VALUES
+(
+  '22222222-2222-4222-8222-222222222201',
+  '11111111-1111-4111-8111-111111111111',
+  'Signature haircut',
+  'signature-haircut',
+  'A precision cut tailored to your face shape and style, finished with a relaxing scalp massage and blowout.',
+  45, 65000,
+  '77777777-7777-4777-8777-777777777701',
+  TRUE
+),
+(
+  '22222222-2222-4222-8222-222222222202',
+  '11111111-1111-4111-8111-111111111111',
+  'Balayage & gloss',
+  'balayage-gloss',
+  'Hand-painted highlights blended with a glossing treatment for natural, sun-kissed dimension.',
+  120, 480000,
+  '77777777-7777-4777-8777-777777777701',
+  TRUE
+),
+(
+  '22222222-2222-4222-8222-222222222203',
+  '11111111-1111-4111-8111-111111111111',
+  'Botanical spa manicure',
+  'botanical-spa-manicure',
+  'A nourishing hand and nail treatment with plant-based products, cuticle care, shaping, and polish.',
+  60, 95000,
+  '77777777-7777-4777-8777-777777777703',
+  TRUE
+),
+(
+  '22222222-2222-4222-8222-222222222204',
+  '11111111-1111-4111-8111-111111111111',
+  'Wellness massage',
+  'wellness-massage',
+  'A full-body relaxation massage using warm aromatic oils to ease tension and restore balance.',
+  60, 120000,
+  '77777777-7777-4777-8777-777777777702',
+  TRUE
+),
+(
+  '22222222-2222-4222-8222-222222222205',
+  '11111111-1111-4111-8111-111111111111',
+  'Hydra facial treatment',
+  'hydra-facial-treatment',
+  'A deep-cleansing facial with hydrating serums, gentle exfoliation, and LED light therapy.',
+  50, 95000,
+  '77777777-7777-4777-8777-777777777703',
+  TRUE
+),
+(
+  '22222222-2222-4222-8222-222222222206',
+  '11111111-1111-4111-8111-111111111111',
+  'Scalp detox & therapy',
+  'scalp-detox-therapy',
+  'A restorative scalp treatment with tea tree and peppermint to soothe, purify, and promote healthy hair growth.',
+  30, 45000,
+  '77777777-7777-4777-8777-777777777702',
+  TRUE
+)
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  slug = EXCLUDED.slug,
+  description = EXCLUDED.description,
+  duration_minutes = EXCLUDED.duration_minutes,
+  price_cents = EXCLUDED.price_cents,
+  category_id = EXCLUDED.category_id,
+  active = EXCLUDED.active;
 
 -- 7. Staff Members
 INSERT INTO public.staff_members (id, tenant_id, full_name, title, active)

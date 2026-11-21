@@ -66,8 +66,45 @@ export async function GET(request: NextRequest) {
     }
 
     // Otherwise route to the requested destination or dashboard
-    const nextPath =
-      redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//") ? redirectTo : "/dashboard";
+    let nextPath =
+      redirectTo &&
+      redirectTo.startsWith("/") &&
+      !redirectTo.startsWith("//") &&
+      !redirectTo.includes("\\")
+        ? redirectTo
+        : "/dashboard";
+
+    if (
+      nextPath === "/dashboard" ||
+      nextPath === "/overview" ||
+      nextPath === "/appointments" ||
+      nextPath.startsWith("/dashboard/") ||
+      nextPath === "/tenant-dashboard"
+    ) {
+      const supabase = await createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("tenant_id")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (profile?.tenant_id) {
+          const { data: tenant } = await supabase
+            .from("tenants")
+            .select("slug")
+            .eq("id", profile.tenant_id)
+            .maybeSingle();
+          if (tenant?.slug) {
+            nextPath = nextPath.endsWith("/appointments")
+              ? `/${tenant.slug}/dashboard/appointments`
+              : `/${tenant.slug}/dashboard`;
+          }
+        }
+      }
+    }
     return NextResponse.redirect(new URL(nextPath, origin));
   }
 

@@ -10,6 +10,7 @@ import { PageContent, PageHeading, StatusPill, Surface } from "@/components/admi
 import { updateAppointmentStatusAction } from "@/app/actions/appointments";
 import { NewAppointmentModal, type NewAppointmentResult } from "@/components/merchant/new-appointment-modal";
 import { WalkInModal, type WalkInResult } from "@/components/merchant/walk-in-modal";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export interface AppointmentItem {
   id: string;
@@ -106,6 +107,8 @@ const CAL_START_HOUR = 8;  // 8:00 AM
 const CAL_END_HOUR   = 20; // 8:00 PM
 const HOURS = Array.from({ length: CAL_END_HOUR - CAL_START_HOUR }, (_, i) => CAL_START_HOUR + i);
 
+const EMPTY_ITEMS: AppointmentItem[] = [];
+
 // ─── component ──────────────────────────────────────────────────────────────
 
 export function AppointmentsView({
@@ -116,14 +119,14 @@ export function AppointmentsView({
   awaitingCount = 0,
   checkedInCount = 0,
   completedTodayCount = 0,
-  initialItems = [],
+  initialItems = EMPTY_ITEMS,
   basePath = "",
 }: AppointmentsViewProps) {
   const router = useRouter();
   const [items, setItems] = React.useState<AppointmentItem[]>(initialItems);
-  const [prevInitialItems, setPrevInitialItems] = React.useState<AppointmentItem[]>(initialItems);
-  if (initialItems !== prevInitialItems) {
-    setPrevInitialItems(initialItems);
+  const prevInitialItemsRef = React.useRef(initialItems);
+  if (prevInitialItemsRef.current !== initialItems) {
+    prevInitialItemsRef.current = initialItems;
     setItems(initialItems);
   }
 
@@ -785,9 +788,13 @@ export function AppointmentsView({
 
                 {/* Empty state for calendar */}
                 {filtered.length === 0 && (
-                  <div className="py-12 text-center text-sm text-subtle border-t border-hairline">
-                    No appointments found. Try adjusting your filter or navigate to another week.
-                  </div>
+                  <EmptyState
+                    compact
+                    title={searchQuery || filterStatus !== "All"
+                      ? "No appointments match your search."
+                      : "No appointments scheduled."}
+                    description="Try adjusting your filter or navigate to another week."
+                  />
                 )}
               </div>
 
@@ -799,7 +806,13 @@ export function AppointmentsView({
                 {/* Mobile cards */}
                 <div className="md:hidden divide-y divide-hairline">
                   {filtered.length === 0 ? (
-                    <p className="px-5 py-10 text-center text-sm text-subtle">No appointments found.</p>
+                    <EmptyState
+                      compact
+                      title={searchQuery || filterStatus !== "All"
+                        ? "No appointments match your search."
+                        : "No appointments scheduled."}
+                      description="Try a different name, service, staff member, or status."
+                    />
                   ) : (
                     filtered.map((row) => {
                       const isExpanded = expandedAppointmentId === row.id;
@@ -845,7 +858,17 @@ export function AppointmentsView({
                     </thead>
                     <tbody className="divide-y divide-hairline">
                       {filtered.length === 0 ? (
-                        <tr><td colSpan={7} className="px-5 py-8 text-center text-xs text-subtle">No appointments found.</td></tr>
+                        <tr>
+                          <td colSpan={7} className="px-5 py-2">
+                            <EmptyState
+                              compact
+                              title={searchQuery || filterStatus !== "All"
+                                ? "No appointments match your search."
+                                : "No appointments scheduled."}
+                              description="Try a different name, service, staff member, or status."
+                            />
+                          </td>
+                        </tr>
                       ) : (
                         filtered.map((row) => (
                           <tr key={row.id} className="hover:bg-mist transition-colors">
