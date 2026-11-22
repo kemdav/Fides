@@ -298,7 +298,7 @@ function ResetRequestContent() {
         <span>/</span>
         <span className="text-neutral-900 font-medium">Reset Account Request (CPG-62)</span>
         <span>·</span>
-        <Link href="/request-account" className="hover:text-neutral-900 underline underline-offset-4">
+        <Link href="/register" className="hover:text-neutral-900 underline underline-offset-4">
           Request Account (CPG-61)
         </Link>
       </nav>
@@ -495,7 +495,7 @@ function ResetRequestContent() {
               </CardContent>
               <CardFooter className="flex flex-wrap justify-between gap-2">
                 <Link
-                  href="/request-account"
+                  href="/register"
                   className="text-sm text-neutral-600 underline underline-offset-4 hover:text-neutral-900"
                 >
                   Request New Account (CPG-61)
