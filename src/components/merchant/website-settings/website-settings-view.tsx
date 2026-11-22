@@ -119,10 +119,10 @@ const INITIAL_SETTINGS: WebsiteSettingsData = {
 
 // Shared field input classes
 const fieldInput =
-  "h-11 w-full rounded-lg border border-outline bg-white px-3 text-sm text-ink placeholder:text-glyph focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/30 transition-shadow disabled:bg-mist disabled:text-muted disabled:cursor-not-allowed";
+  "h-11 w-full min-w-0 rounded-lg border border-outline bg-white px-3 text-sm text-ink placeholder:text-glyph focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/30 transition-shadow disabled:bg-mist disabled:text-muted disabled:cursor-not-allowed";
 
 const fieldTextarea =
-  "w-full rounded-lg border border-outline bg-white px-3 py-2.5 text-sm text-ink placeholder:text-glyph focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/30 transition-shadow leading-relaxed disabled:bg-mist disabled:text-muted disabled:cursor-not-allowed";
+  "w-full min-w-0 rounded-lg border border-outline bg-white px-3 py-2.5 text-sm text-ink placeholder:text-glyph focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/30 transition-shadow leading-relaxed disabled:bg-mist disabled:text-muted disabled:cursor-not-allowed";
 
 interface WebsiteSettingsViewProps {
   initialData?: Partial<WebsiteSettingsData>;
@@ -384,6 +384,7 @@ export function WebsiteSettingsView({
 
   const resolvedCoverImage = form.coverPhotoUrl || DEFAULT_COVER_IMAGE;
   const resolvedSocialImage = form.socialImageUrl || resolvedCoverImage;
+  const isMobilePreview = previewDevice === "mobile";
 
   const tabs: { id: ActiveTab; label: string }[] = [
     { id: "branding", label: "Branding & homepage" },
@@ -396,20 +397,20 @@ export function WebsiteSettingsView({
     <div className="flex min-h-dvh flex-col bg-powder text-ink lg:h-dvh lg:flex-row lg:overflow-hidden">
       {/* Toast notifications */}
       {linkCopiedToast && (
-        <div className="fixed top-5 right-5 z-50 bg-ink text-white px-4 py-2.5 rounded-[10px] shadow-xl flex items-center gap-2 text-xs font-medium">
-          <CheckIcon className="w-4 h-4 text-mint" />
+        <div className="fixed top-4 right-4 left-4 sm:left-auto z-50 bg-ink text-white px-4 py-2.5 rounded-[10px] shadow-xl flex items-center gap-2 text-xs font-medium max-w-md">
+          <CheckIcon className="w-4 h-4 shrink-0 text-mint" />
           <span>Website link copied to clipboard</span>
         </div>
       )}
 
       {uploadError && (
-        <div className="fixed top-5 right-5 z-50 bg-danger text-white px-4 py-2.5 rounded-[10px] shadow-xl flex items-center gap-2 text-xs font-medium">
-          <AlertCircleIcon className="w-4 h-4 text-white" />
-          <span>{uploadError}</span>
+        <div className="fixed top-4 right-4 left-4 sm:left-auto z-50 bg-danger text-white px-4 py-2.5 rounded-[10px] shadow-xl flex items-center gap-2 text-xs font-medium max-w-md">
+          <AlertCircleIcon className="w-4 h-4 shrink-0 text-white" />
+          <span className="flex-1 min-w-0 break-words">{uploadError}</span>
           <button
             type="button"
             onClick={() => setUploadError(null)}
-            className="ml-2 font-bold hover:opacity-80"
+            className="ml-2 shrink-0 font-bold hover:opacity-80"
           >
             ×
           </button>
@@ -417,13 +418,13 @@ export function WebsiteSettingsView({
       )}
 
       {saveDraftError && (
-        <div className="fixed top-5 right-5 z-50 bg-danger text-white px-4 py-2.5 rounded-[10px] shadow-xl flex items-center gap-2 text-xs font-medium">
-          <AlertCircleIcon className="w-4 h-4 text-white" />
-          <span>{saveDraftError}</span>
+        <div className="fixed top-4 right-4 left-4 sm:left-auto z-50 bg-danger text-white px-4 py-2.5 rounded-[10px] shadow-xl flex items-center gap-2 text-xs font-medium max-w-md">
+          <AlertCircleIcon className="w-4 h-4 shrink-0 text-white" />
+          <span className="flex-1 min-w-0 break-words">{saveDraftError}</span>
           <button
             type="button"
             onClick={() => setSaveDraftError(null)}
-            className="ml-2 font-bold hover:opacity-80"
+            className="ml-2 shrink-0 font-bold hover:opacity-80"
           >
             ×
           </button>
@@ -442,7 +443,7 @@ export function WebsiteSettingsView({
       />
 
       {/* Main content */}
-      <div className="flex-1 flex min-w-0 flex-col lg:h-dvh lg:overflow-y-auto">
+      <div className="flex-1 flex min-w-0 flex-col overflow-x-hidden lg:h-dvh lg:overflow-y-auto">
         <PageContent>
           {/* Page Heading */}
           <PageHeading
@@ -450,8 +451,8 @@ export function WebsiteSettingsView({
             title="Website settings"
             description="Set your logo, colors and homepage content. Preview your changes before publishing."
             actions={
-              <div className="flex items-center gap-3">
-                <span className="inline-flex items-center gap-1.5 rounded-md bg-wash px-2.5 py-1 text-xs font-semibold leading-[18px] text-success">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <span className="inline-flex items-center gap-1.5 rounded-md bg-wash px-2.5 py-1 text-xs font-semibold leading-[18px] text-success whitespace-nowrap">
                   <span className="w-1.5 h-1.5 rounded-full bg-success" />
                   Website is live
                 </span>
@@ -471,7 +472,7 @@ export function WebsiteSettingsView({
           {!canEdit && (
             <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 flex items-start gap-2.5">
               <AlertCircleIcon className="w-4 h-4 shrink-0 mt-0.5 text-amber-700" />
-              <div>
+              <div className="min-w-0">
                 <p className="font-semibold">View-only access</p>
                 <p className="text-xs text-amber-800 mt-0.5">
                   Only business owners can edit or publish website settings. You
@@ -483,13 +484,13 @@ export function WebsiteSettingsView({
 
           {/* Tab Navigation */}
           <div className="-mt-1 border-b border-hairline">
-            <div className="flex items-center gap-6 overflow-x-auto text-sm font-medium">
+            <div className="flex items-center gap-4 sm:gap-6 overflow-x-auto text-sm font-medium">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`pb-3 border-b-2 transition-colors whitespace-nowrap focus-visible:outline-none ${
+                  className={`pb-3 border-b-2 transition-colors whitespace-nowrap shrink-0 focus-visible:outline-none ${
                     activeTab === tab.id
                       ? "border-burnt text-burnt font-semibold"
                       : "border-transparent text-muted hover:text-ink"
@@ -505,12 +506,12 @@ export function WebsiteSettingsView({
               TAB 1: BRANDING & HOMEPAGE
              ====================================================================== */}
           {activeTab === "branding" && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 2xl:gap-6 items-start">
               {/* Left: Form controls */}
-              <div className="lg:col-span-7 space-y-5">
+              <div className="xl:col-span-7 min-w-0 space-y-5">
                 {/* 01 Brand identity */}
                 <Surface className="space-y-5">
-                  <div className="flex items-center justify-between border-b border-hairline pb-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-hairline pb-4">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-subtle">01</span>
                       <h2 className="text-sm font-semibold text-ink">
@@ -523,9 +524,9 @@ export function WebsiteSettingsView({
                   </div>
 
                   {/* Logo, Display Name, Typography */}
-                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-start">
+                  <div className="flex flex-col sm:flex-row gap-5 items-start">
                     {/* Business logo */}
-                    <div className="sm:col-span-3">
+                    <div className="shrink-0">
                       <span className="block text-xs font-semibold text-ink mb-1.5">
                         Business logo
                       </span>
@@ -550,7 +551,7 @@ export function WebsiteSettingsView({
                           form.logoInitials
                         )}
                       </div>
-                      <span className="block text-[10px] text-subtle mt-1">
+                      <span className="block text-[10px] text-subtle mt-1 whitespace-nowrap">
                         PNG or SVG · 2 MB
                       </span>
                       <div className="flex items-center gap-2 mt-2">
@@ -558,7 +559,7 @@ export function WebsiteSettingsView({
                           type="button"
                           disabled={!canEdit || isUploadingLogo}
                           onClick={() => logoInputRef.current?.click()}
-                          className="text-xs font-semibold text-burnt hover:text-burnt-dark underline disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          className="text-xs font-semibold text-burnt hover:text-burnt-dark underline whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                           {isUploadingLogo ? "Uploading..." : "Replace logo"}
                         </button>
@@ -576,55 +577,56 @@ export function WebsiteSettingsView({
                               val.toUpperCase().slice(0, 3),
                             );
                           }}
-                          className="text-[11px] text-muted hover:text-ink underline disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          className="text-[11px] text-muted hover:text-ink underline whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                           Initials
                         </button>
                       </div>
                     </div>
 
-                    {/* Business display name */}
-                    <div className="sm:col-span-5">
-                      <label className="block text-xs font-semibold text-ink mb-1.5">
-                        Business display name
-                      </label>
-                      <input
-                        type="text"
-                        disabled={!canEdit}
-                        value={form.businessName}
-                        onChange={(e) =>
-                          handleChange("businessName", e.target.value)
-                        }
-                        className={fieldInput}
-                      />
-                    </div>
-
-                    {/* Website typography */}
-                    <div className="sm:col-span-4">
-                      <label className="block text-xs font-semibold text-ink mb-1.5">
-                        Website typography
-                      </label>
-                      <div className="relative">
-                        <select
+                    {/* Display name & Typography */}
+                    <div className="flex-1 min-w-0 w-full grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="min-w-0">
+                        <label className="block text-xs font-semibold text-ink mb-1.5">
+                          Business display name
+                        </label>
+                        <input
+                          type="text"
                           disabled={!canEdit}
-                          value={form.typography}
+                          value={form.businessName}
                           onChange={(e) =>
-                            handleChange("typography", e.target.value)
+                            handleChange("businessName", e.target.value)
                           }
-                          className={`${fieldInput} appearance-none pr-8`}
-                        >
-                          <option value="Ovo + Mulish">Ovo + Mulish</option>
-                          <option value="Playfair + Inter">
-                            Playfair + Inter
-                          </option>
-                          <option value="Cormorant + Plus Jakarta Sans">
-                            Cormorant + Plus Jakarta Sans
-                          </option>
-                          <option value="DM Serif + Montserrat">
-                            DM Serif + Montserrat
-                          </option>
-                        </select>
-                        <ChevronDownIcon className="w-3.5 h-3.5 text-glyph absolute right-3 top-3.5 pointer-events-none" />
+                          className={fieldInput}
+                        />
+                      </div>
+
+                      <div className="min-w-0">
+                        <label className="block text-xs font-semibold text-ink mb-1.5">
+                          Website typography
+                        </label>
+                        <div className="relative">
+                          <select
+                            disabled={!canEdit}
+                            value={form.typography}
+                            onChange={(e) =>
+                              handleChange("typography", e.target.value)
+                            }
+                            className={`${fieldInput} appearance-none pr-8`}
+                          >
+                            <option value="Ovo + Mulish">Ovo + Mulish</option>
+                            <option value="Playfair + Inter">
+                              Playfair + Inter
+                            </option>
+                            <option value="Cormorant + Plus Jakarta Sans">
+                              Cormorant + Plus Jakarta Sans
+                            </option>
+                            <option value="DM Serif + Montserrat">
+                              DM Serif + Montserrat
+                            </option>
+                          </select>
+                          <ChevronDownIcon className="w-3.5 h-3.5 text-glyph absolute right-3 top-3.5 pointer-events-none" />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -634,7 +636,7 @@ export function WebsiteSettingsView({
                     <span className="block text-xs font-semibold text-ink mb-2">
                       Website color palette
                     </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-[repeat(auto-fit,minmax(145px,1fr))] gap-3">
                       {(["main", "secondary", "accent"] as ColorType[]).map(
                         (type) => {
                           const labels = {
@@ -679,7 +681,7 @@ export function WebsiteSettingsView({
                                   className="w-5 h-5 rounded border border-black/10 shrink-0"
                                   style={{ backgroundColor: color }}
                                 />
-                                <span className="font-mono text-xs uppercase font-medium text-body">
+                                <span className="font-mono text-xs uppercase font-medium text-body truncate">
                                   {color}
                                 </span>
                               </div>
@@ -720,7 +722,7 @@ export function WebsiteSettingsView({
 
                 {/* 02 Homepage content */}
                 <Surface className="space-y-5">
-                  <div className="flex items-center justify-between border-b border-hairline pb-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-hairline pb-4">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-subtle">02</span>
                       <h2 className="text-sm font-semibold text-ink">
@@ -760,9 +762,9 @@ export function WebsiteSettingsView({
                     />
                   </div>
 
-                  <div className="pt-1 grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+                  <div className="pt-1 grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
                     {/* Cover photo */}
-                    <div className="sm:col-span-5 flex items-center gap-3">
+                    <div className="md:col-span-5 flex items-center gap-3 min-w-0">
                       <input
                         ref={coverInputRef}
                         type="file"
@@ -780,8 +782,8 @@ export function WebsiteSettingsView({
                           className="object-cover"
                         />
                       </div>
-                      <div className="text-xs">
-                        <div className="flex items-center gap-2">
+                      <div className="text-xs min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                           <span className="font-semibold text-ink">
                             Cover photo
                           </span>
@@ -794,17 +796,17 @@ export function WebsiteSettingsView({
                             {isUploadingCover ? "Uploading..." : "Change"}
                           </button>
                         </div>
-                        <span className="text-muted block truncate max-w-[140px]">
+                        <span className="text-muted block truncate">
                           {form.coverPhotoName}
                         </span>
-                        <span className="text-subtle text-[10px]">
+                        <span className="text-subtle text-[10px] block">
                           Recommended: 1600 × 900
                         </span>
                       </div>
                     </div>
 
                     {/* Toggles */}
-                    <div className="sm:col-span-7 space-y-3">
+                    <div className="md:col-span-7 space-y-3 min-w-0">
                       {[
                         {
                           key: "showFeaturedServices" as const,
@@ -819,13 +821,13 @@ export function WebsiteSettingsView({
                       ].map(({ key, label, desc }) => (
                         <div
                           key={key}
-                          className="flex items-center justify-between"
+                          className="flex items-center justify-between gap-3"
                         >
-                          <div>
+                          <div className="min-w-0">
                             <span className="text-xs font-semibold text-ink block">
                               {label}
                             </span>
-                            <span className="text-[11px] text-muted">
+                            <span className="text-[11px] text-muted block">
                               {desc}
                             </span>
                           </div>
@@ -835,7 +837,7 @@ export function WebsiteSettingsView({
                             aria-checked={form[key]}
                             disabled={!canEdit}
                             onClick={() => handleChange(key, !form[key])}
-                            className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:opacity-50 disabled:cursor-not-allowed ${form[key] ? "bg-burnt" : "bg-line"}`}
+                            className={`w-10 h-5 shrink-0 flex items-center rounded-full p-0.5 transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:opacity-50 disabled:cursor-not-allowed ${form[key] ? "bg-burnt" : "bg-line"}`}
                           >
                             <div
                               className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ${form[key] ? "translate-x-5" : "translate-x-0"}`}
@@ -849,10 +851,10 @@ export function WebsiteSettingsView({
               </div>
 
               {/* Right: Website Preview */}
-              <div className="lg:col-span-5 lg:sticky lg:top-8 space-y-4">
+              <div className="xl:col-span-5 xl:sticky xl:top-6 min-w-0 space-y-4">
                 <Surface className="space-y-4">
                   {/* Preview header */}
-                  <div className="flex items-center justify-between pb-1">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
                     <div className="flex items-center gap-2">
                       <Icon name="settings" className="size-4 text-glyph" />
                       <span className="text-xs font-semibold text-ink">
@@ -909,15 +911,15 @@ export function WebsiteSettingsView({
                           </button>
                         ))}
                       </div>
-                      <span className="inline-flex items-center rounded-md bg-warn-bg px-2 py-1 text-xs font-semibold leading-[18px] text-warn-fg">
+                      <span className="inline-flex items-center rounded-md bg-warn-bg px-2 py-1 text-xs font-semibold leading-[18px] text-warn-fg whitespace-nowrap">
                         Draft preview
                       </span>
                     </div>
                   </div>
 
                   {/* Browser URL bar */}
-                  <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-mist border border-hairline text-xs font-mono text-body">
-                    <div className="flex items-center gap-2 truncate">
+                  <div className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg bg-mist border border-hairline text-xs font-mono text-body">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
                       <svg
                         viewBox="0 0 24 24"
                         fill="none"
@@ -936,7 +938,7 @@ export function WebsiteSettingsView({
                     <button
                       type="button"
                       onClick={() => setIsLivePreviewOpen(true)}
-                      className="text-glyph hover:text-ink ml-2 transition-colors"
+                      className="text-glyph hover:text-ink shrink-0 transition-colors"
                       aria-label="Open in full preview"
                     >
                       <svg
@@ -955,7 +957,11 @@ export function WebsiteSettingsView({
 
                   {/* Scaled preview frame */}
                   <div
-                    className={`rounded-xl border border-black/5 overflow-hidden transition-all duration-200 ${previewDevice === "mobile" ? "max-w-[280px] mx-auto shadow-md" : "w-full"}`}
+                    className={`rounded-xl border border-black/5 overflow-hidden transition-all duration-200 ${
+                      isMobilePreview
+                        ? "max-w-[290px] mx-auto shadow-md"
+                        : "w-full"
+                    }`}
                     style={{
                       backgroundColor: form.mainColor,
                       fontFamily: form.typography.includes("Ovo")
@@ -963,35 +969,52 @@ export function WebsiteSettingsView({
                         : "inherit",
                     }}
                   >
-                    <div className="px-4 py-3 flex items-center justify-between border-b border-black/5 bg-white/40">
-                      <span className="font-serif text-sm font-semibold text-ink truncate max-w-[140px]">
+                    <div className="px-4 py-3 flex items-center justify-between gap-2 border-b border-black/5 bg-white/40">
+                      <span className="font-serif text-sm font-semibold text-ink truncate min-w-0">
                         {form.businessName || "Bella Vita"}
                       </span>
-                      <div className="flex items-center gap-3 text-[10px] font-sans">
-                        <span className="hidden sm:inline text-body">Home</span>
-                        <span className="hidden sm:inline text-body">
-                          Services
-                        </span>
-                        <span className="hidden sm:inline text-body">
-                          Contact
-                        </span>
+                      <div className="flex items-center gap-2.5 text-[10px] font-sans shrink-0">
+                        {!isMobilePreview && (
+                          <>
+                            <span className="hidden sm:inline text-body">
+                              Home
+                            </span>
+                            <span className="hidden sm:inline text-body">
+                              Services
+                            </span>
+                            <span className="hidden sm:inline text-body">
+                              Contact
+                            </span>
+                          </>
+                        )}
                         <span
-                          className="px-2.5 py-1 rounded-md text-[10px] font-bold text-white shadow-sm"
+                          className="px-2.5 py-1 rounded-md text-[10px] font-bold text-white shadow-sm whitespace-nowrap"
                           style={{ backgroundColor: form.accentColor }}
                         >
                           Book now
                         </span>
                       </div>
                     </div>
-                    <div className="p-4 grid grid-cols-12 gap-3 items-center">
-                      <div className="col-span-7 space-y-1.5">
+
+                    <div
+                      className={`p-4 grid gap-3 items-center ${
+                        isMobilePreview
+                          ? "grid-cols-1"
+                          : "grid-cols-1 sm:grid-cols-12"
+                      }`}
+                    >
+                      <div
+                        className={`${
+                          isMobilePreview ? "" : "sm:col-span-7"
+                        } space-y-1.5 min-w-0`}
+                      >
                         <span
-                          className="text-[9px] uppercase tracking-wider font-bold block"
+                          className="text-[9px] uppercase tracking-wider font-bold block truncate"
                           style={{ color: form.accentColor }}
                         >
                           {form.businessCategory.toUpperCase()}
                         </span>
-                        <h3 className="text-base font-serif font-medium text-ink leading-snug">
+                        <h3 className="text-base font-serif font-medium text-ink leading-snug break-words">
                           {form.headline}
                         </h3>
                         <p className="text-[10px] text-body font-sans leading-relaxed line-clamp-2">
@@ -1006,7 +1029,13 @@ export function WebsiteSettingsView({
                           </span>
                         </div>
                       </div>
-                      <div className="col-span-5 h-24 rounded-lg overflow-hidden bg-mist relative">
+                      <div
+                        className={`${
+                          isMobilePreview
+                            ? "h-32"
+                            : "sm:col-span-5 h-28 sm:h-24"
+                        } w-full rounded-lg overflow-hidden bg-mist relative`}
+                      >
                         <Image
                           src={resolvedCoverImage}
                           alt="Specialist"
@@ -1016,6 +1045,7 @@ export function WebsiteSettingsView({
                         />
                       </div>
                     </div>
+
                     {form.showFeaturedServices && (
                       <div
                         className="p-3.5 space-y-2 font-sans"
@@ -1024,7 +1054,13 @@ export function WebsiteSettingsView({
                         <span className="text-[10px] font-bold text-ink block font-serif">
                           Find your moment of care
                         </span>
-                        <div className="grid grid-cols-3 gap-1.5 text-[9px]">
+                        <div
+                          className={`grid gap-1.5 text-[9px] ${
+                            isMobilePreview
+                              ? "grid-cols-1"
+                              : "grid-cols-1 sm:grid-cols-3"
+                          }`}
+                        >
                           {displayedPreviewServices.slice(0, 3).map((svc) => {
                             const formattedPrice = `₱${Math.round(
                               svc.priceCents / 100,
@@ -1032,12 +1068,12 @@ export function WebsiteSettingsView({
                             return (
                               <div
                                 key={svc.id}
-                                className="bg-white/90 p-1.5 rounded border border-black/5"
+                                className="bg-white/90 p-2 rounded border border-black/5 min-w-0"
                               >
                                 <span className="font-semibold text-ink block truncate">
                                   {svc.name}
                                 </span>
-                                <span className="text-muted block text-[8px]">
+                                <span className="text-muted block text-[8px] truncate">
                                   {svc.durationMinutes} min · {formattedPrice}
                                 </span>
                                 <span
@@ -1052,14 +1088,15 @@ export function WebsiteSettingsView({
                         </div>
                       </div>
                     )}
-                    <div className="px-4 py-2 border-t border-black/5 flex items-center justify-between text-[9px] text-muted font-sans">
-                      <span>{form.businessName}</span>
-                      <span>Powered by Fides</span>
+
+                    <div className="px-4 py-2 border-t border-black/5 flex flex-wrap items-center justify-between gap-2 text-[9px] text-muted font-sans">
+                      <span className="truncate">{form.businessName}</span>
+                      <span className="shrink-0">Powered by Fides</span>
                     </div>
                   </div>
 
                   <p className="text-xs text-muted flex items-center gap-1.5 pt-1">
-                    <CheckIcon className="w-3.5 h-3.5 text-glyph" />
+                    <CheckIcon className="w-3.5 h-3.5 shrink-0 text-glyph" />
                     <span>
                       Only you can see these updates until you publish.
                     </span>
@@ -1073,9 +1110,9 @@ export function WebsiteSettingsView({
               TAB 2: BUSINESS INFORMATION
              ====================================================================== */}
           {activeTab === "business-info" && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
               {/* Left: Public Profile & Contact */}
-              <div className="space-y-5">
+              <div className="min-w-0 space-y-5">
                 <Surface className="space-y-4">
                   <div className="border-b border-hairline pb-4">
                     <span className="text-xs font-bold text-subtle block">
@@ -1156,33 +1193,35 @@ export function WebsiteSettingsView({
                     </p>
                   </div>
                   <div className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-ink mb-1.5">
-                        Business email
-                      </label>
-                      <input
-                        type="email"
-                        disabled={!canEdit}
-                        value={form.businessEmail}
-                        onChange={(e) =>
-                          handleChange("businessEmail", e.target.value)
-                        }
-                        className={fieldInput}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-ink mb-1.5">
-                        Phone number
-                      </label>
-                      <input
-                        type="text"
-                        disabled={!canEdit}
-                        value={form.phoneNumber}
-                        onChange={(e) =>
-                          handleChange("phoneNumber", e.target.value)
-                        }
-                        className={fieldInput}
-                      />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="min-w-0">
+                        <label className="block text-xs font-semibold text-ink mb-1.5">
+                          Business email
+                        </label>
+                        <input
+                          type="email"
+                          disabled={!canEdit}
+                          value={form.businessEmail}
+                          onChange={(e) =>
+                            handleChange("businessEmail", e.target.value)
+                          }
+                          className={fieldInput}
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <label className="block text-xs font-semibold text-ink mb-1.5">
+                          Phone number
+                        </label>
+                        <input
+                          type="text"
+                          disabled={!canEdit}
+                          value={form.phoneNumber}
+                          onChange={(e) =>
+                            handleChange("phoneNumber", e.target.value)
+                          }
+                          className={fieldInput}
+                        />
+                      </div>
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-ink mb-1.5">
@@ -1203,7 +1242,7 @@ export function WebsiteSettingsView({
               </div>
 
               {/* Right: Location & Opening Hours */}
-              <div className="space-y-5">
+              <div className="min-w-0 space-y-5">
                 <Surface className="space-y-4">
                   <div className="border-b border-hairline pb-4">
                     <span className="text-xs font-bold text-subtle block">
@@ -1231,8 +1270,8 @@ export function WebsiteSettingsView({
                         className={fieldInput}
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="min-w-0">
                         <label className="block text-xs font-semibold text-ink mb-1.5">
                           City / province
                         </label>
@@ -1246,7 +1285,7 @@ export function WebsiteSettingsView({
                           className={fieldInput}
                         />
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <label className="block text-xs font-semibold text-ink mb-1.5">
                           Postal code
                         </label>
@@ -1285,7 +1324,7 @@ export function WebsiteSettingsView({
                     ].map(({ label, value }) => (
                       <div
                         key={label}
-                        className="flex items-center justify-between p-3 rounded-lg bg-mist border border-hairline"
+                        className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-lg bg-mist border border-hairline"
                       >
                         <span className="text-body font-medium">{label}</span>
                         <span className="font-semibold text-ink">{value}</span>
@@ -1295,12 +1334,12 @@ export function WebsiteSettingsView({
                       Time zone · {form.timeZone}
                     </p>
                   </div>
-                  <div className="flex items-center justify-between pt-1">
-                    <div>
+                  <div className="flex items-center justify-between gap-3 pt-1">
+                    <div className="min-w-0">
                       <span className="text-xs font-semibold text-ink block">
                         Show opening hours
                       </span>
-                      <span className="text-xs text-muted">
+                      <span className="text-xs text-muted block">
                         Display your weekly hours on the contact page.
                       </span>
                     </div>
@@ -1312,7 +1351,7 @@ export function WebsiteSettingsView({
                       onClick={() =>
                         handleChange("showOpeningHours", !form.showOpeningHours)
                       }
-                      className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:opacity-50 disabled:cursor-not-allowed ${form.showOpeningHours ? "bg-burnt" : "bg-line"}`}
+                      className={`w-10 h-5 shrink-0 flex items-center rounded-full p-0.5 transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:opacity-50 disabled:cursor-not-allowed ${form.showOpeningHours ? "bg-burnt" : "bg-line"}`}
                     >
                       <div
                         className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ${form.showOpeningHours ? "translate-x-5" : "translate-x-0"}`}
@@ -1328,11 +1367,11 @@ export function WebsiteSettingsView({
               TAB 3: WEBSITE ADDRESS
              ====================================================================== */}
           {activeTab === "website-address" && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-              <div className="lg:col-span-7 space-y-5">
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
+              <div className="xl:col-span-7 min-w-0 space-y-5">
                 <Surface className="space-y-5">
-                  <div className="flex items-start justify-between border-b border-hairline pb-4">
-                    <div>
+                  <div className="flex flex-wrap items-start justify-between gap-3 border-b border-hairline pb-4">
+                    <div className="min-w-0">
                       <span className="text-xs font-bold text-subtle block">
                         01 · WEBSITE ADDRESS
                       </span>
@@ -1344,7 +1383,7 @@ export function WebsiteSettingsView({
                         directly.
                       </p>
                     </div>
-                    <span className="inline-flex items-center rounded-md bg-wash px-2 py-1 text-xs font-semibold leading-[18px] text-success">
+                    <span className="inline-flex items-center rounded-md bg-wash px-2 py-1 text-xs font-semibold leading-[18px] text-success whitespace-nowrap shrink-0">
                       <span className="w-1.5 h-1.5 rounded-full bg-success mr-1.5" />
                       Live · Secure HTTPS
                     </span>
@@ -1354,12 +1393,14 @@ export function WebsiteSettingsView({
                     <span className="text-xs font-semibold text-ink block">
                       Fides website address
                     </span>
-                    <div className="flex items-center justify-between bg-white border border-hairline rounded-lg px-3 py-2 font-mono text-sm text-ink">
-                      <span>{form.subdomain}.fides.app</span>
+                    <div className="flex flex-wrap items-center justify-between gap-2 bg-white border border-hairline rounded-lg px-3 py-2 font-mono text-sm text-ink">
+                      <span className="truncate min-w-0">
+                        {form.subdomain}.fides.app
+                      </span>
                       <button
                         type="button"
                         onClick={handleCopyLink}
-                        className="inline-flex items-center gap-1 text-xs text-muted hover:text-ink font-sans transition-colors"
+                        className="inline-flex items-center gap-1 shrink-0 text-xs text-muted hover:text-ink font-sans transition-colors"
                       >
                         <CopyIcon className="w-3.5 h-3.5" />
                         <span>Copy link</span>
@@ -1438,12 +1479,12 @@ export function WebsiteSettingsView({
                       View connection steps
                     </AdminButton>
                     {form.isDomainVerified ? (
-                      <span className="inline-flex items-center rounded-md bg-wash px-2 py-1 text-xs font-semibold leading-[18px] text-success">
+                      <span className="inline-flex items-center rounded-md bg-wash px-2 py-1 text-xs font-semibold leading-[18px] text-success whitespace-nowrap">
                         <span className="w-1.5 h-1.5 rounded-full bg-success mr-1.5" />
                         Connected · Verified
                       </span>
                     ) : (
-                      <span className="inline-flex items-center rounded-md bg-warn-bg px-2 py-1 text-xs font-semibold leading-[18px] text-warn-fg">
+                      <span className="inline-flex items-center rounded-md bg-warn-bg px-2 py-1 text-xs font-semibold leading-[18px] text-warn-fg whitespace-nowrap">
                         <span className="w-1.5 h-1.5 rounded-full bg-warn-fg mr-1.5" />
                         Pending DNS setup
                       </span>
@@ -1452,7 +1493,7 @@ export function WebsiteSettingsView({
                 </Surface>
               </div>
 
-              <div className="lg:col-span-5 space-y-4">
+              <div className="xl:col-span-5 min-w-0 space-y-4">
                 <Surface className="space-y-4">
                   <span className="text-xs font-bold text-subtle block">
                     CUSTOMER LINK
@@ -1461,10 +1502,10 @@ export function WebsiteSettingsView({
                     One link. A simple way to book.
                   </h3>
                   <div className="rounded-lg border border-hairline bg-mist p-4 space-y-1">
-                    <span className="text-sm font-bold text-ink block">
+                    <span className="text-sm font-bold text-ink block break-words">
                       {form.businessName}
                     </span>
-                    <span className="font-mono text-xs text-muted block">
+                    <span className="font-mono text-xs text-muted block break-all">
                       {form.subdomain}.fides.app
                     </span>
                     <span className="text-xs text-subtle block pt-1">
@@ -1497,8 +1538,8 @@ export function WebsiteSettingsView({
               TAB 4: SEARCH & SHARING
              ====================================================================== */}
           {activeTab === "search-sharing" && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-              <div className="lg:col-span-7 space-y-5">
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
+              <div className="xl:col-span-7 min-w-0 space-y-5">
                 <Surface className="space-y-5">
                   <div className="border-b border-hairline pb-4">
                     <span className="text-xs font-bold text-subtle block">
@@ -1509,7 +1550,7 @@ export function WebsiteSettingsView({
                     </h2>
                   </div>
                   <div>
-                    <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex flex-wrap items-center justify-between gap-1 mb-1.5">
                       <label className="text-xs font-semibold text-ink">
                         Page title
                       </label>
@@ -1528,7 +1569,7 @@ export function WebsiteSettingsView({
                     />
                   </div>
                   <div>
-                    <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex flex-wrap items-center justify-between gap-1 mb-1.5">
                       <label className="text-xs font-semibold text-ink">
                         Meta description
                       </label>
@@ -1548,7 +1589,7 @@ export function WebsiteSettingsView({
                     />
                   </div>
                   <div className="flex items-center justify-between gap-4 pt-2 border-t border-hairline">
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-xs font-semibold text-ink">
                         Allow search engine indexing
                       </p>
@@ -1565,7 +1606,7 @@ export function WebsiteSettingsView({
                       onClick={() =>
                         handleChange("allowIndexing", !form.allowIndexing)
                       }
-                      className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:opacity-50 disabled:cursor-not-allowed ${
+                      className={`w-10 h-5 shrink-0 flex items-center rounded-full p-0.5 transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:opacity-50 disabled:cursor-not-allowed ${
                         form.allowIndexing ? "bg-burnt" : "bg-line"
                       }`}
                     >
@@ -1624,7 +1665,7 @@ export function WebsiteSettingsView({
                       disabled={!canEdit}
                       onChange={(e) => handleFileUpload(e, "social")}
                     />
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div className="relative h-14 w-24 shrink-0 overflow-hidden rounded-lg border border-hairline bg-mist">
                         <Image
                           src={resolvedSocialImage}
@@ -1645,7 +1686,7 @@ export function WebsiteSettingsView({
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
                       {form.socialImageUrl && canEdit && (
                         <button
                           type="button"
@@ -1673,27 +1714,27 @@ export function WebsiteSettingsView({
               </div>
 
               {/* Right: Previews */}
-              <div className="lg:col-span-5 space-y-4">
+              <div className="xl:col-span-5 xl:sticky xl:top-6 min-w-0 space-y-4">
                 <Surface className="space-y-3">
                   <span className="text-xs font-bold text-subtle block">
                     SEARCH ENGINE RESULT
                   </span>
-                  <div className="text-sm text-ink font-medium">
+                  <div className="text-sm text-ink font-medium break-words">
                     {form.businessName}
                   </div>
-                  <div className="text-xs text-subtle font-mono">
+                  <div className="text-xs text-subtle font-mono break-all">
                     https://{form.subdomain}.fides.app
                   </div>
-                  <h4 className="text-sm font-semibold text-info">
+                  <h4 className="text-sm font-semibold text-info break-words">
                     {form.pageTitle}
                   </h4>
-                  <p className="text-sm text-muted line-clamp-3">
+                  <p className="text-sm text-muted line-clamp-3 break-words">
                     {form.metaDescription}
                   </p>
                 </Surface>
 
                 <Surface className="overflow-hidden !p-0">
-                  <div className="h-32 bg-mist overflow-hidden relative">
+                  <div className="h-36 sm:h-40 bg-mist overflow-hidden relative">
                     <Image
                       src={resolvedSocialImage}
                       alt="Social banner"
@@ -1703,13 +1744,13 @@ export function WebsiteSettingsView({
                     />
                   </div>
                   <div className="p-4 space-y-1 bg-mist">
-                    <span className="font-mono text-[10px] uppercase font-bold text-subtle block">
+                    <span className="font-mono text-[10px] uppercase font-bold text-subtle block break-all">
                       {form.subdomain.toUpperCase()}.FIDES.APP
                     </span>
-                    <h4 className="text-sm font-bold text-ink">
+                    <h4 className="text-sm font-bold text-ink break-words">
                       {form.socialTitle}
                     </h4>
-                    <p className="text-sm text-muted line-clamp-2">
+                    <p className="text-sm text-muted line-clamp-2 break-words">
                       {form.socialDescription}
                     </p>
                     <p className="text-[11px] text-subtle pt-1">
@@ -1725,20 +1766,18 @@ export function WebsiteSettingsView({
 
         {/* Sticky bottom action bar */}
         {canEdit && (
-          <div className="sticky bottom-0 z-30 bg-white/95 backdrop-blur-md border-t border-hairline px-4 sm:px-6 lg:px-8 py-4 shadow-lg flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div>
-                <span className="text-sm font-semibold text-ink block">
-                  Draft ·{" "}
-                  {hasChanges ? "Unpublished changes" : "All changes published"}
-                </span>
-                <span className="text-xs text-muted hidden sm:block">
-                  Your current website stays live while you edit.
-                </span>
-              </div>
+          <div className="sticky bottom-0 z-30 mt-auto bg-white/95 backdrop-blur-md border-t border-hairline px-4 sm:px-6 lg:px-8 py-3.5 sm:py-4 shadow-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+            <div className="min-w-0">
+              <span className="text-sm font-semibold text-ink block">
+                Draft ·{" "}
+                {hasChanges ? "Unpublished changes" : "All changes published"}
+              </span>
+              <span className="text-xs text-muted hidden sm:block">
+                Your current website stays live while you edit.
+              </span>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3 shrink-0">
               <AdminButton
                 variant="outline"
                 size="xs"
