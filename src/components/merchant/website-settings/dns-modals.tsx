@@ -107,7 +107,7 @@ export function ConnectDomainModal({
               <span>1 · Verify domain ownership</span>
             </h4>
             <div className="rounded-xl border border-neutral-200 bg-neutral-50/70 p-4 space-y-3">
-              <span className="inline-block text-[11px] font-semibold text-neutral-700 bg-white border border-neutral-200 px-2 py-0.5 rounded-md">
+              <span className="inline-block text-xs font-semibold text-neutral-700 bg-white border border-neutral-200 px-2 py-0.5 rounded-md">
                 TXT · Required ownership record
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
@@ -171,7 +171,7 @@ export function ConnectDomainModal({
 
             {/* CNAME option */}
             <div className="rounded-xl border border-neutral-200 bg-neutral-50/70 p-4 space-y-3">
-              <span className="inline-block text-[11px] font-semibold text-neutral-700 bg-white border border-neutral-200 px-2 py-0.5 rounded-md">
+              <span className="inline-block text-xs font-semibold text-neutral-700 bg-white border border-neutral-200 px-2 py-0.5 rounded-md">
                 CNAME · For {domain.startsWith("www.") ? domain : `www.${domain}`}
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
@@ -228,7 +228,7 @@ export function ConnectDomainModal({
 
             {/* A record option */}
             <div className="rounded-xl border border-neutral-200 bg-neutral-50/70 p-4 space-y-3">
-              <span className="inline-block text-[11px] font-semibold text-neutral-700 bg-white border border-neutral-200 px-2 py-0.5 rounded-md">
+              <span className="inline-block text-xs font-semibold text-neutral-700 bg-white border border-neutral-200 px-2 py-0.5 rounded-md">
                 A · For {rootDomain} (root domain)
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
@@ -345,7 +345,7 @@ export function ConnectDomainModal({
               type="button"
               disabled={isChecking}
               onClick={handleCheckDnsStatus}
-              className="px-4 py-2 text-sm font-medium text-white bg-[#C35000] hover:bg-[#A94400] disabled:opacity-60 rounded-lg shadow-xs transition flex items-center gap-1.5"
+              className="px-4 py-2 text-sm font-medium text-white bg-burnt hover:bg-burnt-dark disabled:opacity-60 rounded-lg shadow-xs transition flex items-center gap-1.5"
             >
               {isChecking ? (
                 <>
@@ -392,7 +392,7 @@ export function WaitingDnsModal({ isOpen, onClose }: WaitingDnsModalProps) {
         </div>
 
         <div className="mt-4 rounded-xl bg-amber-50/80 border border-amber-200/80 p-3.5 space-y-1.5">
-          <span className="inline-block text-[10px] font-semibold text-amber-900 bg-amber-100/90 px-2.5 py-0.5 rounded-full">
+          <span className="inline-block text-xs font-semibold text-amber-900 bg-amber-100/90 px-2.5 py-0.5 rounded-full">
             Pending DNS setup
           </span>
         </div>

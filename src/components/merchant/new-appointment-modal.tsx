@@ -73,7 +73,7 @@ function formatDateDisplay(iso: string): string {
 // ─── Shared input class ───────────────────────────────────────────────────────
 
 const fieldCls =
-  "h-11 w-full rounded-lg border border-[#aeb6c0] bg-white px-3 text-sm text-ink placeholder:text-glyph focus:border-burnt focus:outline-none transition-shadow";
+  "h-11 w-full rounded-lg border border-glyph bg-white px-3 text-sm text-ink placeholder:text-glyph focus:border-burnt focus:outline-none transition-shadow";
 
 // ─── Chevron SVG ─────────────────────────────────────────────────────────────
 
@@ -120,7 +120,7 @@ export function Listbox({ id, label, required, value, onChange, options, placeho
       <div ref={ref} className="relative">
         <button id={id} type="button" aria-haspopup="listbox" aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
-          className="flex h-11 w-full items-center justify-between rounded-lg border border-[#aeb6c0] bg-white px-3 text-left text-sm outline-none focus:border-burnt"
+          className="flex h-11 w-full items-center justify-between rounded-lg border border-glyph bg-white px-3 text-left text-sm outline-none focus:border-burnt"
         >
           <span className={selected ? "text-ink" : "text-glyph"}>
             {selected ? selected.label : (placeholder ?? "Select an option")}
@@ -128,7 +128,7 @@ export function Listbox({ id, label, required, value, onChange, options, placeho
           <ChevronSvg open={open} />
         </button>
         {open && (
-          <ul role="listbox" className="absolute inset-x-0 top-full z-30 mt-1 max-h-56 overflow-y-auto rounded-lg border border-[#aeb6c0] bg-white py-1 shadow-md">
+          <ul role="listbox" className="absolute inset-x-0 top-full z-30 mt-1 max-h-56 overflow-y-auto rounded-lg border border-glyph bg-white py-1 shadow-md">
             {options.map((opt) => (
               <li key={opt.value}>
                 <button type="button" role="option" aria-selected={value === opt.value}
@@ -220,7 +220,7 @@ export function CalendarPicker({ id, label, required, value, onChange }: Calenda
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={handleOpen}
-        className="flex h-11 w-full items-center justify-between rounded-lg border border-[#aeb6c0] bg-white px-3 text-left text-sm outline-none focus:border-burnt"
+        className="flex h-11 w-full items-center justify-between rounded-lg border border-glyph bg-white px-3 text-left text-sm outline-none focus:border-burnt"
       >
         <span className={value ? "text-ink" : "text-glyph"}>
           {value ? formatDateDisplay(value) : "Select a date"}
@@ -237,7 +237,7 @@ export function CalendarPicker({ id, label, required, value, onChange }: Calenda
           role="dialog"
           aria-label="Choose appointment date"
           style={panelStyle}
-          className="rounded-lg border border-[#aeb6c0] bg-white p-3 shadow-lg"
+          className="rounded-lg border border-glyph bg-white p-3 shadow-lg"
         >
           <div className="mb-2 flex items-center justify-between">
             <button type="button" aria-label="Previous month"
@@ -250,7 +250,7 @@ export function CalendarPicker({ id, label, required, value, onChange }: Calenda
               className="rounded-md px-2 py-1 text-body hover:bg-mist text-sm"
             >›</button>
           </div>
-          <div className="grid grid-cols-7 text-center text-[10px] font-semibold text-subtle mb-1">
+          <div className="grid grid-cols-7 text-center text-xs font-semibold text-subtle mb-1">
             {CALENDAR_WEEKDAYS.map((d, i) => <span key={`${d}-${i}`}>{d}</span>)}
           </div>
           <div className="grid grid-cols-7 gap-y-0.5 text-center">
@@ -303,13 +303,13 @@ export function TimeListbox({ id, label, required, value, onChange }: TimeListbo
       <div ref={ref} className="relative">
         <button id={id} type="button" aria-haspopup="listbox" aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
-          className="flex h-11 w-full items-center justify-between rounded-lg border border-[#aeb6c0] bg-white px-3 text-left text-sm outline-none focus:border-burnt"
+          className="flex h-11 w-full items-center justify-between rounded-lg border border-glyph bg-white px-3 text-left text-sm outline-none focus:border-burnt"
         >
           <span className={value ? "text-ink" : "text-glyph"}>{value || "Select a time"}</span>
           <Icon name="clock" className="size-4 text-glyph" />
         </button>
         {open && (
-          <ul role="listbox" className="absolute inset-x-0 top-full z-30 mt-1 max-h-48 overflow-y-auto rounded-lg border border-[#aeb6c0] bg-white py-1 shadow-md">
+          <ul role="listbox" className="absolute inset-x-0 top-full z-30 mt-1 max-h-48 overflow-y-auto rounded-lg border border-glyph bg-white py-1 shadow-md">
             {TIME_SLOTS.map((t) => (
               <li key={t}>
                 <button type="button" role="option" aria-selected={value === t}
@@ -345,7 +345,7 @@ function StepperIndicator({ step }: { step: 1 | 2 }) {
             </svg>
           ) : "1"}
         </span>
-        <span className={`text-center text-[11px] font-semibold transition-colors ${step === 1 ? "text-ink" : "text-muted"}`}>
+        <span className={`text-center text-xs font-semibold transition-colors ${step === 1 ? "text-ink" : "text-muted"}`}>
           Customer details
         </span>
       </div>
@@ -362,7 +362,7 @@ function StepperIndicator({ step }: { step: 1 | 2 }) {
         }`}>
           2
         </span>
-        <span className={`text-center text-[11px] font-semibold transition-colors ${step === 2 ? "text-ink" : "text-muted"}`}>
+        <span className={`text-center text-xs font-semibold transition-colors ${step === 2 ? "text-ink" : "text-muted"}`}>
           Service &amp; schedule
         </span>
       </div>
@@ -650,7 +650,7 @@ export function NewAppointmentModal({
                         <p className="mt-1 truncate text-xs text-muted">
                           ana.reyes@email.com · +63 995 122 3548
                         </p>
-                        <p className="mt-2 text-[11px] text-muted">No match? Create a new customer instead.</p>
+                        <p className="mt-2 text-xs text-muted">No match? Create a new customer instead.</p>
                       </div>
                       <button
                         type="button"
@@ -736,7 +736,7 @@ export function NewAppointmentModal({
                 <textarea id="appt-notes" rows={3} value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Add notes (optional)..."
-                  className="w-full resize-none rounded-lg border border-[#aeb6c0] bg-white px-3 py-2.5 text-sm text-ink placeholder:text-glyph focus:border-burnt focus:outline-none transition-shadow"
+                  className="w-full resize-none rounded-lg border border-glyph bg-white px-3 py-2.5 text-sm text-ink placeholder:text-glyph focus:border-burnt focus:outline-none transition-shadow"
                 />
               </div>
 

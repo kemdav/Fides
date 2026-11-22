@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { createAppointmentBookingAction } from "@/app/actions/appointments";
+import { buttonClasses, inputClasses } from "@/components/ui";
 import {
   CalendarPicker,
   Listbox,
@@ -35,10 +36,6 @@ interface WalkInModalProps {
   onClose: () => void;
   onCreated: (result: WalkInResult) => void;
   showToast: (message: string) => void;
-}
-
-function fieldClassName() {
-  return "h-11 w-full rounded-lg border border-[#aeb6c0] bg-white px-3 text-sm text-ink outline-none transition focus:border-burnt focus:ring-2 focus:ring-burnt/20";
 }
 
 export function WalkInModal({
@@ -154,25 +151,25 @@ export function WalkInModal({
 
         <form onSubmit={submit} className="mt-5 space-y-4">
           <fieldset className="space-y-2.5">
-            <legend className="text-[11px] font-semibold text-muted">Customer Information</legend>
+            <legend className="text-xs font-semibold text-muted">Customer Information</legend>
             <label className="block text-sm font-medium text-body">
               Customer Name<span className="text-burnt">*</span>
-              <input value={customer} onChange={(event) => setCustomer(event.target.value)} placeholder="Juan Dela Cruz" className={`${fieldClassName()} mt-1.5`} />
+              <input value={customer} onChange={(event) => setCustomer(event.target.value)} placeholder="Juan Dela Cruz" className={`${inputClasses()} mt-1.5`} />
             </label>
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
               <label className="block text-sm font-medium text-body">
                 Email <span className="font-normal">(optional)</span>
-                <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="juan.delacruz@gmail.com" className={`${fieldClassName()} mt-1.5`} />
+                <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="juan.delacruz@gmail.com" className={`${inputClasses()} mt-1.5`} />
               </label>
               <label className="block text-sm font-medium text-body">
                 Contact Number<span className="text-burnt">*</span>
-                <input type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="09956663254" className={`${fieldClassName()} mt-1.5`} />
+                <input type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="09956663254" className={`${inputClasses()} mt-1.5`} />
               </label>
             </div>
           </fieldset>
 
           <fieldset className="space-y-2.5">
-            <legend className="text-[11px] font-semibold text-muted">Service &amp; staff</legend>
+            <legend className="text-xs font-semibold text-muted">Service &amp; staff</legend>
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
               <div className="block text-sm font-medium text-body">
                 Requested Service<span className="text-burnt">*</span>
@@ -198,7 +195,7 @@ export function WalkInModal({
           </fieldset>
 
           <fieldset className="space-y-2.5">
-            <legend className="text-[11px] font-semibold text-muted">Schedule</legend>
+            <legend className="text-xs font-semibold text-muted">Schedule</legend>
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
               <div className="block text-sm font-medium text-body">
                 Appointment Date<span className="text-burnt">*</span>
@@ -213,7 +210,7 @@ export function WalkInModal({
 
           <label className="block text-sm font-medium text-body">
             Notes <span className="font-normal">(optional)</span>
-            <textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Add customer requests or service notes..." className="mt-1.5 min-h-10 w-full resize-y rounded-lg border border-[#aeb6c0] px-3 py-2 text-sm text-ink outline-none focus:border-burnt focus:ring-2 focus:ring-burnt/20" />
+            <textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Add customer requests or service notes..." className="mt-1.5 min-h-10 w-full resize-y rounded-lg border border-glyph px-3 py-2 text-sm text-ink outline-none focus:border-burnt focus:ring-2 focus:ring-burnt/20" />
           </label>
 
           <label className="flex items-center gap-2 text-xs text-muted">
@@ -223,10 +220,10 @@ export function WalkInModal({
           <p className="text-xs tracking-wide text-muted">Existing scheduled bookings are protected. If a slot becomes unavailable, use the waiting list.</p>
 
           <div className="flex flex-col-reverse items-stretch justify-between gap-3 border-t border-hairline pt-4 sm:flex-row sm:items-center">
-            <button type="button" onClick={() => showToast("Waiting-list action is available after selecting an open slot.")} className="h-10 rounded-md border-2 border-burnt px-3 text-sm font-semibold text-burnt hover:bg-mist">
+            <button type="button" onClick={() => showToast("Waiting-list action is available after selecting an open slot.")} className={buttonClasses({ variant: "brand-outline", size: "form" })}>
               Add to waiting list
             </button>
-            <button type="submit" disabled={isSubmitting} className="h-10 rounded-md bg-burnt px-6 text-sm font-semibold text-white hover:bg-burnt/90 disabled:opacity-60">
+            <button type="submit" disabled={isSubmitting} className={buttonClasses({ variant: "brand", size: "form", className: "px-6" })}>
               {isSubmitting ? "Creating..." : "Create walk-in appointment"}
             </button>
           </div>

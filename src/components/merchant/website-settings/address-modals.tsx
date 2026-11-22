@@ -102,7 +102,7 @@ function ChangeAddressDialogContent({
             <label className="block text-xs font-medium text-neutral-700 mb-1.5">
               New Fides address
             </label>
-            <div className="flex items-center rounded-xl border border-neutral-300 overflow-hidden focus-within:ring-1 focus-within:ring-[#C35000] focus-within:border-[#C35000] bg-neutral-50">
+            <div className="flex items-center rounded-xl border border-neutral-300 overflow-hidden focus-within:ring-1 focus-within:ring-burnt focus-within:border-burnt bg-neutral-50">
               <input
                 type="text"
                 value={subdomain}
@@ -126,7 +126,7 @@ function ChangeAddressDialogContent({
             <span className="block text-xs font-semibold text-amber-950">
               Update your shared links
             </span>
-            <p className="text-[11px] text-amber-800 leading-relaxed">
+            <p className="text-xs text-amber-800 leading-relaxed">
               The old address may stop working. Your saved bookmarks, QR codes, and social links need to use the new URL.
             </p>
           </div>
@@ -144,7 +144,7 @@ function ChangeAddressDialogContent({
             type="button"
             disabled={isSubmitting}
             onClick={handleConfirm}
-            className="px-4 py-2 text-xs font-semibold text-white bg-[#C35000] hover:bg-[#A94400] disabled:opacity-60 rounded-xl shadow-xs transition"
+            className="px-4 py-2 text-xs font-semibold text-white bg-burnt hover:bg-burnt-dark disabled:opacity-60 rounded-xl shadow-xs transition"
           >
             {isSubmitting ? "Updating..." : "Confirm address"}
           </button>
@@ -188,7 +188,7 @@ export function AddressUpdatedModal({
         </div>
 
         <div className="mt-4 rounded-xl bg-neutral-50/80 border border-neutral-200 p-3.5 space-y-1.5">
-          <span className="inline-block text-[10px] font-semibold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full">
+          <span className="inline-block text-xs font-semibold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full">
             Address confirmed
           </span>
           <div className="font-mono text-xs font-semibold text-neutral-900">

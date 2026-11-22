@@ -39,7 +39,7 @@ export function ShareWebsiteModal({
         </div>
 
         <div className="mt-4 rounded-xl bg-neutral-50/80 border border-neutral-200 p-3.5 space-y-1.5">
-          <span className="inline-block text-[10px] font-semibold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full">
+          <span className="inline-block text-xs font-semibold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full">
             Website link
           </span>
           <div className="font-mono text-xs font-semibold text-neutral-900">
@@ -110,7 +110,7 @@ export function PublishReviewModal({
         </div>
 
         <div className="rounded-xl border border-neutral-200 bg-neutral-50/70 p-3.5 space-y-2.5">
-          <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+          <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-wider">
             YOUR WEBSITE UPDATES
           </h4>
           <ul className="space-y-1.5 text-xs text-neutral-800 font-medium">
@@ -135,7 +135,7 @@ export function PublishReviewModal({
           </div>
         )}
 
-        <p className="mt-3 text-[11px] text-neutral-400 text-center">
+        <p className="mt-3 text-xs text-neutral-400 text-center">
           Appointments, services, and customer accounts are unaffected.
         </p>
 
@@ -151,7 +151,7 @@ export function PublishReviewModal({
             type="button"
             disabled={isPublishing}
             onClick={() => onPublish()}
-            className="px-4 py-2 text-xs font-semibold text-white bg-[#C35000] hover:bg-[#A94400] disabled:opacity-60 rounded-xl shadow-xs transition"
+            className="px-4 py-2 text-xs font-semibold text-white bg-burnt hover:bg-burnt-dark disabled:opacity-60 rounded-xl shadow-xs transition"
           >
             {isPublishing ? "Publishing..." : "Publish website"}
           </button>
@@ -200,7 +200,7 @@ export function PublishedModal({
         </p>
 
         <div className="mt-4 rounded-xl bg-neutral-50/80 border border-neutral-200 p-3.5 space-y-1.5">
-          <span className="inline-block text-[10px] font-semibold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full">
+          <span className="inline-block text-xs font-semibold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full">
             Website published
           </span>
           <div className="font-mono text-xs font-semibold text-neutral-900">
@@ -212,7 +212,7 @@ export function PublishedModal({
           <button
             type="button"
             onClick={onClose}
-            className="px-6 py-2 text-xs font-semibold text-white bg-[#C35000] hover:bg-[#A94400] rounded-xl shadow-xs transition"
+            className="px-6 py-2 text-xs font-semibold text-white bg-burnt hover:bg-burnt-dark rounded-xl shadow-xs transition"
           >
             Close
           </button>
@@ -257,7 +257,7 @@ export function DraftSavedModal({ isOpen, onClose }: DraftSavedModalProps) {
           <span className="block text-xs font-semibold text-neutral-900">
             Ready when you are
           </span>
-          <p className="text-[11px] text-neutral-500 leading-relaxed">
+          <p className="text-xs text-neutral-500 leading-relaxed">
             Return to any settings tab to review your updates before publishing.
           </p>
         </div>
@@ -266,7 +266,7 @@ export function DraftSavedModal({ isOpen, onClose }: DraftSavedModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="px-6 py-2 text-xs font-semibold text-white bg-[#C35000] hover:bg-[#A94400] rounded-xl shadow-xs transition"
+            className="px-6 py-2 text-xs font-semibold text-white bg-burnt hover:bg-burnt-dark rounded-xl shadow-xs transition"
           >
             Close
           </button>

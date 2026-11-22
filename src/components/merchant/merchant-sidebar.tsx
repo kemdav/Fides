@@ -66,7 +66,7 @@ export function MerchantSidebar({
         onClick={() => setMobileOpen(false)}
         className={cn(
           "flex min-h-[clamp(32px,4.2vh,40px)] items-center gap-3 whitespace-nowrap rounded-[9px] px-3 py-1.5 text-sm font-semibold leading-[21px] transition-colors",
-          active ? "bg-[#C35000]/10 text-[#C35000]" : "text-[#354357] hover:bg-[#F4F1EA]"
+          active ? "bg-burnt/10 text-burnt" : "text-body hover:bg-[#F4F1EA]"
         )}
       >
         <Icon name={item.icon} weight={active ? "fill" : "regular"} className="size-5" />
@@ -78,10 +78,10 @@ export function MerchantSidebar({
   return (
     <>
       <div className="sticky top-0 z-40 flex items-center justify-between border-b border-[#EDECE8] bg-white px-5 py-4 lg:hidden">
-        <button type="button" onClick={() => setMobileOpen(true)} className="rounded-lg p-1 text-[#354357]" aria-label="Toggle navigation menu">
+        <button type="button" onClick={() => setMobileOpen(true)} className="rounded-lg p-1 text-body" aria-label="Toggle navigation menu">
           <Icon name="grid" className="size-6" />
         </button>
-        <span className="font-display text-2xl text-[#C35000]">{businessName}</span>
+        <span className="font-display text-2xl text-burnt">{businessName}</span>
         <span className="text-xs font-semibold uppercase tracking-[1.2px] text-neutral-400">Merchant</span>
       </div>
 
@@ -95,7 +95,7 @@ export function MerchantSidebar({
       )}>
         <div className="flex shrink-0 items-start justify-between border-b border-[#EDECE8] pb-4">
           <div>
-            <h1 className="break-words font-display text-[clamp(24px,3.2vh,32px)] leading-[clamp(29px,4vh,38px)] tracking-tight text-[#C35000]">{businessName}</h1>
+            <h1 className="break-words font-display text-[clamp(24px,3.2vh,32px)] leading-[clamp(29px,4vh,38px)] tracking-tight text-burnt">{businessName}</h1>
             <p className="text-xs font-semibold uppercase leading-[18px] tracking-[1.3px] text-neutral-400">Merchant Workspace</p>
           </div>
           <button type="button" onClick={() => setMobileOpen(false)} className="p-1 text-neutral-400 lg:hidden" aria-label="Close navigation menu">
@@ -114,9 +114,9 @@ export function MerchantSidebar({
         </nav>
         <div className="flex-1" />
         <div className="flex shrink-0 items-center gap-3 border-t border-[#EDECE8] pt-4">
-          <div className="flex size-10 items-center justify-center rounded-full bg-[#C35000] text-sm font-semibold text-white">MS</div>
+          <div className="flex size-10 items-center justify-center rounded-full bg-burnt text-sm font-semibold text-white">MS</div>
           <div className="min-w-0">
-            <span className="block truncate text-sm font-semibold leading-[21px] text-[#354357]">{displayName}</span>
+            <span className="block truncate text-sm font-semibold leading-[21px] text-body">{displayName}</span>
             <span className="block text-xs leading-[18px] text-neutral-400">{userRole}</span>
           </div>
         </div>

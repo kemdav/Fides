@@ -389,7 +389,7 @@ export function WebsiteSettingsView({
                           form.logoInitials
                         )}
                       </div>
-                      <span className="block text-[10px] text-subtle mt-1">PNG or SVG · 2 MB</span>
+                      <span className="block text-xs text-subtle mt-1">PNG or SVG · 2 MB</span>
                       <div className="flex items-center gap-2 mt-2">
                         <button
                           type="button"
@@ -405,7 +405,7 @@ export function WebsiteSettingsView({
                             const val = prompt("Logo initials (1-3 letters):", form.logoInitials) || form.logoInitials;
                             handleChange("logoInitials", val.toUpperCase().slice(0, 3));
                           }}
-                          className="text-[11px] text-muted hover:text-ink underline transition-colors"
+                          className="text-xs text-muted hover:text-ink underline transition-colors"
                         >
                           Initials
                         </button>
@@ -464,13 +464,13 @@ export function WebsiteSettingsView({
                           >
                             <div className="flex items-center justify-between text-xs mb-1.5">
                               <span className="font-semibold text-ink">{labels[type]}</span>
-                              <span className="text-[10px] text-subtle">{percents[type]}</span>
+                              <span className="text-xs text-subtle">{percents[type]}</span>
                             </div>
                             <div className="flex items-center gap-2 p-1 rounded-lg bg-mist border border-hairline">
                               <span className="w-5 h-5 rounded border border-black/10 shrink-0" style={{ backgroundColor: color }} />
                               <span className="font-mono text-xs uppercase font-medium text-body">{color}</span>
                             </div>
-                            <span className="block text-[10px] text-subtle mt-1.5">{descs[type]}</span>
+                            <span className="block text-xs text-subtle mt-1.5">{descs[type]}</span>
                           </button>
                         );
                       })}
@@ -548,7 +548,7 @@ export function WebsiteSettingsView({
                           </button>
                         </div>
                         <span className="text-muted block truncate max-w-[140px]">{form.coverPhotoName}</span>
-                        <span className="text-subtle text-[10px]">Recommended: 1600 × 900</span>
+                        <span className="text-subtle text-xs">Recommended: 1600 × 900</span>
                       </div>
                     </div>
 
@@ -561,7 +561,7 @@ export function WebsiteSettingsView({
                         <div key={key} className="flex items-center justify-between">
                           <div>
                             <span className="text-xs font-semibold text-ink block">{label}</span>
-                            <span className="text-[11px] text-muted">{desc}</span>
+                            <span className="text-xs text-muted">{desc}</span>
                           </div>
                           <button
                             type="button"
@@ -645,20 +645,20 @@ export function WebsiteSettingsView({
                   >
                     <div className="px-4 py-3 flex items-center justify-between border-b border-black/5 bg-white/40">
                       <span className="font-serif text-sm font-semibold text-ink">{form.businessName.split(" ")[0] || "Bella Vita"}</span>
-                      <div className="flex items-center gap-3 text-[10px] font-sans">
+                      <div className="flex items-center gap-3 text-xs font-sans">
                         <span className="hidden sm:inline text-body">Home</span>
                         <span className="hidden sm:inline text-body">Services</span>
                         <span className="hidden sm:inline text-body">Contact</span>
-                        <span className="px-2.5 py-1 rounded-md text-[10px] font-bold text-white shadow-sm" style={{ backgroundColor: form.accentColor }}>Book now</span>
+                        <span className="px-2.5 py-1 rounded-md text-xs font-bold text-white shadow-sm" style={{ backgroundColor: form.accentColor }}>Book now</span>
                       </div>
                     </div>
                     <div className="p-4 grid grid-cols-12 gap-3 items-center">
                       <div className="col-span-7 space-y-1.5">
-                        <span className="text-[9px] uppercase tracking-wider font-bold block" style={{ color: form.accentColor }}>{form.businessCategory.toUpperCase()}</span>
+                        <span className="text-xs uppercase tracking-wider font-bold block" style={{ color: form.accentColor }}>{form.businessCategory.toUpperCase()}</span>
                         <h3 className="text-base font-serif font-medium text-ink leading-snug">{form.headline}</h3>
-                        <p className="text-[10px] text-body font-sans leading-relaxed line-clamp-2">{form.supportingMessage}</p>
+                        <p className="text-xs text-body font-sans leading-relaxed line-clamp-2">{form.supportingMessage}</p>
                         <div className="pt-1">
-                          <span className="inline-block px-3 py-1 rounded-md text-[10px] font-semibold text-white shadow-sm font-sans" style={{ backgroundColor: form.accentColor }}>Book an appointment</span>
+                          <span className="inline-block px-3 py-1 rounded-md text-xs font-semibold text-white shadow-sm font-sans" style={{ backgroundColor: form.accentColor }}>Book an appointment</span>
                         </div>
                       </div>
                       <div className="col-span-5 h-24 rounded-lg overflow-hidden bg-mist relative">
@@ -667,8 +667,8 @@ export function WebsiteSettingsView({
                     </div>
                     {form.showFeaturedServices && (
                       <div className="p-3.5 space-y-2 font-sans" style={{ backgroundColor: form.secondaryColor }}>
-                        <span className="text-[10px] font-bold text-ink block font-serif">Find your moment of care</span>
-                        <div className="grid grid-cols-3 gap-1.5 text-[9px]">
+                        <span className="text-xs font-bold text-ink block font-serif">Find your moment of care</span>
+                        <div className="grid grid-cols-3 gap-1.5 text-xs">
                           {["Signature haircut · 45 min · ₱650", "Wellness massage · 60 min · ₱1,200", "Facial treatment · 50 min · ₱950"].map((s, i) => {
                             const [name, ...rest] = s.split(" · ");
                             return (
@@ -682,7 +682,7 @@ export function WebsiteSettingsView({
                         </div>
                       </div>
                     )}
-                    <div className="px-4 py-2 border-t border-black/5 flex items-center justify-between text-[9px] text-muted font-sans">
+                    <div className="px-4 py-2 border-t border-black/5 flex items-center justify-between text-xs text-muted font-sans">
                       <span>{form.businessName}</span>
                       <span>Powered by Fides</span>
                     </div>
@@ -972,7 +972,7 @@ export function WebsiteSettingsView({
                     <Image src="https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=400&q=80" alt="Social banner" fill unoptimized className="object-cover" />
                   </div>
                   <div className="p-4 space-y-1 bg-mist">
-                    <span className="font-mono text-[10px] uppercase font-bold text-subtle block">{form.subdomain.toUpperCase()}.FIDES.APP</span>
+                    <span className="font-mono text-xs uppercase font-bold text-subtle block">{form.subdomain.toUpperCase()}.FIDES.APP</span>
                     <h4 className="text-sm font-bold text-ink">{form.socialTitle}</h4>
                     <p className="text-sm text-muted line-clamp-2">{form.socialDescription}</p>
                   </div>
