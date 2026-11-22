@@ -16,11 +16,11 @@ export function ActivityDetailsDialog({ event, onClose }: { event: ActivityEvent
       <p className="text-xs leading-[18px]">{formatEventTime(event)}</p>
       <div className="flex flex-col gap-4 rounded-lg bg-mist p-4 font-semibold sm:flex-row">
         <div className="flex flex-1 flex-col gap-1.5">
-          <p className="text-[11px] leading-4">BEFORE</p>
+          <p className="text-xs leading-4">BEFORE</p>
           <p className="text-base leading-6">{event.before}</p>
         </div>
         <div className="flex flex-1 flex-col gap-1.5">
-          <p className="text-[11px] leading-4">AFTER</p>
+          <p className="text-xs leading-4">AFTER</p>
           <p className="text-base leading-6">{event.after}</p>
         </div>
       </div>

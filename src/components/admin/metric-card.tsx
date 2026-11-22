@@ -34,20 +34,20 @@ export function MetricCard({
   iconWeight,
 }: MetricCardProps) {
   const className = cn(
-    "flex h-[184px] flex-col gap-3 overflow-hidden rounded-[10px] p-6 text-left shadow-[0_3px_7px_rgb(44_58_75/0.04)]",
+    "flex min-h-[184px] flex-col gap-3 overflow-hidden rounded-[10px] p-6 text-left shadow-[0_3px_7px_rgb(44_58_75/0.04)]",
     featured ? "bg-burnt text-white" : "bg-white text-ink",
     (href || onClick) && interactiveRing,
   );
 
   const content = (
     <>
-      <div className="flex h-5 items-center gap-2">
+      <div className="flex min-h-5 items-start gap-2">
         <Icon
           name={icon}
           weight={iconWeight ?? (featured ? "fill" : "regular")}
-          className={cn("size-5", featured ? "text-white" : "text-glyph")}
+          className={cn("size-5 shrink-0", featured ? "text-white" : "text-glyph")}
         />
-        <p className="truncate text-sm font-semibold leading-5">{label}</p>
+        <p className="min-w-0 break-words text-sm font-semibold leading-5">{label}</p>
       </div>
       <div className="flex h-9 items-center gap-2">
         <p className="text-[32px] font-semibold leading-9">{value}</p>
@@ -73,7 +73,7 @@ export function MetricCard({
           </div>
           <p
             className={cn(
-              "min-w-0 flex-1 text-[10px] leading-[13px] sm:text-[13px] sm:leading-[14px]",
+              "min-w-0 flex-1 text-xs leading-[13px] sm:text-[13px] sm:leading-[14px]",
               featured ? "text-white" : "text-muted",
             )}
           >
@@ -84,7 +84,7 @@ export function MetricCard({
         <>
           <p
             className={cn(
-              "truncate text-[13px] leading-[18px]",
+              "break-words text-[13px] leading-[18px]",
               featured ? "text-white" : "text-muted",
             )}
           >

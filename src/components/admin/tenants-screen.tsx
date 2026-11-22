@@ -37,7 +37,7 @@ function StatusBadge({ tenant }: { tenant: Tenant }) {
   return (
     <StatusPill
       tone={tenant.access === "active" ? "success" : "danger"}
-      className="rounded-full px-2.5 py-0.5 text-[11px] leading-4 text-body"
+      className="rounded-full px-2.5 py-0.5 text-xs leading-4 text-body"
     >
       {tenant.access === "active" ? "Active" : "Suspended"}
     </StatusPill>
@@ -203,7 +203,7 @@ function TenantsContent({ initialFilter }: { initialFilter: StatusFilter }) {
           <div className="flex items-center gap-2.5">
             <Icon name="users" className="size-[18px] text-glyph" />
             <h2 className="text-base font-semibold leading-[23px] text-body">All tenants</h2>
-            <span className="rounded-full bg-wash px-2.5 py-1 text-[11px] font-semibold leading-4 text-body">
+            <span className="rounded-full bg-wash px-2.5 py-1 text-xs font-semibold leading-4 text-body">
               {pluralize(rows.length, "tenant")}
             </span>
           </div>
@@ -289,7 +289,7 @@ function TenantsContent({ initialFilter }: { initialFilter: StatusFilter }) {
           </div>
         ) : null}
 
-        <div className={cn("hidden border-b border-hairline px-1 text-[11px] leading-4 text-subtle md:grid md:items-center md:gap-4", rowGrid)}>
+        <div className={cn("hidden border-b border-hairline px-1 text-xs leading-4 text-subtle md:grid md:items-center md:gap-4", rowGrid)}>
           <span className="py-3">
             <Checkbox
               checked={allSelected}
@@ -380,7 +380,7 @@ function TenantsContent({ initialFilter }: { initialFilter: StatusFilter }) {
           </ul>
         )}
 
-        <p className="text-[11px] leading-4 text-subtle">
+        <p className="text-xs leading-4 text-subtle">
           Showing {rows.length} of {tenants.length} tenants · USD · Monthly billing
         </p>
       </Surface>
