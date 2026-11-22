@@ -284,12 +284,12 @@ export function AppointmentsView({
   const itemsByStaff = React.useMemo<Map<string, AppointmentItem[]>>(() => {
     const map = new Map<string, AppointmentItem[]>();
     for (const s of staffList) map.set(s, []);
-    const day = focusedStaffName ? calendarAnchor.toLocaleDateString("sv-SE") : undefined;
+    const day = focusedStaffName || userRole === "staff" ? calendarAnchor.toLocaleDateString("sv-SE") : undefined;
     for (const item of filtered) {
       if (!day || item.calendarDate === day) map.get(item.staff)?.push(item);
     }
     return map;
-  }, [filtered, staffList, focusedStaffName, calendarAnchor]);
+  }, [filtered, staffList, focusedStaffName, userRole, calendarAnchor]);
 
   // today date string for highlight
   const today = new Date();

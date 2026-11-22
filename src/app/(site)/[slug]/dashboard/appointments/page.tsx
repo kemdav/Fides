@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { AppointmentsView } from "@/components/merchant/appointments/appointments-view";
 import { createClient } from "@/lib/supabase/server";
 import { toAppointmentRow } from "@/lib/merchant/overview";
+import { getActiveStaffForProfile } from "@/lib/merchant/staff-profile";
 
 interface MerchantAppointmentsPageProps {
   params: Promise<{ slug: string }>;
@@ -59,25 +60,46 @@ export default async function MerchantAppointmentsPage({
     .eq("tenant_id", tenant.id).eq("profile_id", user.id).maybeSingle();
   if (!membership) notFound();
 
-  const staffId = membership.role === "staff" ? undefined : requestedStaffId;
-  let query = supabase.from("appointments")
-    .select("id, starts_at, source, status, customers(full_name), staff_members(full_name), appointment_services(services(name)), assigned:appointment_services()")
-    .eq("tenant_id", tenant.id)
-    .in("status", ["pending_approval", "confirmed", "checked_in", "in_service"])
-    .gte("starts_at", new Date().toISOString()).order("starts_at");
+  const isServiceStaff = membership.role === "staff";
+  const tenantId = tenant.id;
+  const ownStaff = isServiceStaff ? await getActiveStaffForProfile(tenantId, user.id) : null;
+  const staffId = isServiceStaff ? ownStaff?.id : requestedStaffId;
 
-  if (staffId) {
-    query = query.eq("assigned.staff_id", staffId).or(`staff_id.eq.${staffId},assigned.not.is.null`);
+  function buildQuery() {
+    const query = supabase.from("appointments")
+      .select("id, starts_at, source, status, customers(full_name), staff_members(full_name), appointment_services(services(name)), assigned:appointment_services()")
+      .eq("tenant_id", tenantId).order("starts_at").order("id");
+    if (staffId) query.eq("assigned.staff_id", staffId).or(`staff_id.eq.${staffId},assigned.not.is.null`);
+    if (!isServiceStaff) query.in("status", ["pending_approval", "confirmed", "checked_in", "in_service"])
+      .gte("starts_at", new Date().toISOString());
+    return query;
+  }
+
+  async function loadAppointments() {
+    if (!isServiceStaff) {
+      const { data, error } = await buildQuery();
+      if (error) throw error;
+      return data;
+    }
+    const rows: NonNullable<Awaited<ReturnType<typeof buildQuery>>["data"]> = [];
+    if (!ownStaff) return rows;
+    const pageSize = 500;
+    for (let offset = 0; ; offset += pageSize) {
+      const { data, error } = await buildQuery().range(offset, offset + pageSize - 1);
+      if (error) throw error;
+      rows.push(...data);
+      if (data.length < pageSize) return rows;
+    }
   }
 
   const [appointments, focusedStaff] = await Promise.all([
-    query,
-    staffId
+    loadAppointments(),
+    !isServiceStaff && staffId
       ? supabase.from("staff_members").select("full_name").eq("tenant_id", tenant.id).eq("id", staffId).maybeSingle()
       : { data: null, error: null },
   ]);
-  if (appointments.error) throw appointments.error;
   if (focusedStaff.error) throw focusedStaff.error;
+  const staffName = ownStaff?.full_name ?? focusedStaff.data?.full_name;
 
   return (
     <AppointmentsView
@@ -88,11 +110,11 @@ export default async function MerchantAppointmentsPage({
       userRole={membership.role}
       tenantId={tenant.id}
       basePath={basePath}
-      focusedStaffName={staffId ? focusedStaff.data?.full_name ?? "Selected staff member" : undefined}
-      initialItems={(appointments.data ?? []).map((appointment) => ({
+      focusedStaffName={!isServiceStaff && staffId ? focusedStaff.data?.full_name ?? "Selected staff member" : undefined}
+      initialItems={appointments.map((appointment) => ({
         ...toAppointmentRow(appointment, tenant.timezone || "Asia/Manila"),
-        ...(staffId && focusedStaff.data ? { staff: focusedStaff.data.full_name } : {}),
-        staffScheduleMatch: Boolean(staffId),
+        ...(staffName && { staff: staffName }),
+        staffScheduleMatch: !isServiceStaff && Boolean(staffId),
       }))}
     />
   );

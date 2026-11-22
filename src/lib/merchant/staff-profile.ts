@@ -8,6 +8,15 @@ export { staffRoleLabels };
 const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
 const staffProfileColumns = "id, full_name, title, bio, image_url, profile_id, active, commission_type, commission_value";
 
+export async function getActiveStaffForProfile(tenantId: string, profileId: string) {
+  const db = getAdminClient();
+  if (!db) throw new Error("Staff schedules require Supabase server credentials.");
+  const { data, error } = await db.from("staff_members").select("id, full_name")
+    .eq("tenant_id", tenantId).eq("profile_id", profileId).eq("active", true).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 export function staffDateKey(date: Date, timezone: string) {
   return new Intl.DateTimeFormat("sv-SE", { timeZone: timezone, dateStyle: "short" }).format(date);
 }

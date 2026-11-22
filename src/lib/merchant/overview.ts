@@ -20,6 +20,8 @@ export interface OverviewData {
   chartStats: DayChartStat[];
   todayAppointments: AppointmentRow[];
   calendarAppointments: AppointmentRow[];
+  calendarMonth: string;
+  todayKey: string;
   timezone: string;
 }
 
@@ -249,7 +251,8 @@ export async function getMerchantOverview(
   supabase: MerchantClient,
   tenantId: string,
   now = new Date(),
-  period: OverviewPeriod = "This Week"
+  period: OverviewPeriod = "This Week",
+  options: { calendarMonth?: string; staff?: { id: string; full_name: string } | null } = {},
 ): Promise<OverviewData> {
   if (!tenantId) throw new Error("A tenant is required to load the merchant overview.");
 
@@ -294,7 +297,11 @@ export async function getMerchantOverview(
     previousStart.setUTCDate(previousStart.getUTCDate() - 7);
     previousEnd = currentStart;
   }
-  const localMonth = new Date(Date.UTC(todayParts[0], todayParts[1] - 1, 1));
+  const calendarMonth = options.calendarMonth && /^\d{4}-(0[1-9]|1[0-2])$/.test(options.calendarMonth)
+    && options.calendarMonth >= "1900-01" && options.calendarMonth <= "9998-12"
+    ? options.calendarMonth : todayKey.slice(0, 7);
+  const [year, month] = calendarMonth.split("-").map(Number);
+  const localMonth = new Date(Date.UTC(year, month - 1, 1));
   const nextMonth = new Date(Date.UTC(localMonth.getUTCFullYear(), localMonth.getUTCMonth() + 1, 1));
   const calendarStart = zonedDateToUtc(
     `${localMonth.getUTCFullYear()}-${String(localMonth.getUTCMonth() + 1).padStart(2, "0")}-01`,
@@ -306,7 +313,8 @@ export async function getMerchantOverview(
   );
   assertDateRange(currentStart, currentEnd);
 
-  const { data: aggregate, error: aggregateError } = await supabase.rpc("get_merchant_overview_metrics", {
+  const staff = options.staff;
+  const { data: aggregate, error: aggregateError } = staff !== undefined ? { data: null, error: null } : await supabase.rpc("get_merchant_overview_metrics", {
     p_tenant_id: tenantId,
     p_current_start: currentStart.toISOString(),
     p_current_end: currentEnd.toISOString(),
@@ -314,7 +322,9 @@ export async function getMerchantOverview(
     p_previous_end: previousEnd.toISOString(),
   });
   let metrics: OverviewMetrics;
-  if (aggregateError) {
+  if (staff !== undefined) {
+    metrics = { revenueCents: 0, revenueChangePercent: 0, bookingCount: 0, activeCustomerCount: 0, customerGrowthPercent: 0, averageOrderValueCents: 0 };
+  } else if (aggregateError) {
     const functionMissing = aggregateError.message.includes(
       "Could not find the function public.get_merchant_overview_metrics"
     );
@@ -346,69 +356,57 @@ export async function getMerchantOverview(
     };
   }
 
-  const { data: appointments, error: appointmentsError } = await supabase
-    .from("appointments")
-    .select(`
-      id, starts_at, source, status,
-      customers (full_name),
-      staff_members (full_name),
-      appointment_services (services (name))
-    `)
-    .eq("tenant_id", tenantId)
-    .gte("starts_at", calendarStart.toISOString())
-    .lt("starts_at", calendarEnd.toISOString())
-    .order("starts_at", { ascending: true });
-  if (appointmentsError) throw new Error(`Failed to load merchant appointments: ${appointmentsError.message}`);
-
-  const rows = (appointments ?? []).map((appointment) =>
-    toAppointmentRow(appointment, timezone)
-  );
-  const { data: periodAppointments, error: periodAppointmentsError } = await supabase
-    .from("appointments")
-    .select(`
-      id, starts_at, source, status,
-      customers (full_name),
-      staff_members (full_name),
-      appointment_services (services (name))
-    `)
-    .eq("tenant_id", tenantId)
-    .gte("starts_at", currentStart.toISOString())
-    .lt("starts_at", currentEnd.toISOString())
-    .order("starts_at", { ascending: true });
-  if (periodAppointmentsError) {
-    throw new Error(`Failed to load period appointments: ${periodAppointmentsError.message}`);
+  async function loadAppointments(start: Date, end: Date) {
+    if (staff === null) return [];
+    const buildQuery = () => supabase.from("appointments")
+      .select("id, starts_at, source, status, customer_id, customers(full_name), staff_members(full_name), appointment_services(services(name)), assigned:appointment_services()")
+      .eq("tenant_id", tenantId).gte("starts_at", start.toISOString()).lt("starts_at", end.toISOString())
+      .order("starts_at").order("id");
+    if (!staff) {
+      const { data, error } = await buildQuery();
+      if (error) throw error;
+      return data;
+    }
+    const rows: NonNullable<Awaited<ReturnType<typeof buildQuery>>["data"]> = [];
+    const pageSize = 500;
+    for (let offset = 0; ; offset += pageSize) {
+      const { data, error } = await buildQuery()
+        .eq("assigned.staff_id", staff.id).or(`staff_id.eq.${staff.id},assigned.not.is.null`)
+        .range(offset, offset + pageSize - 1);
+      if (error) throw error;
+      rows.push(...data);
+      if (data.length < pageSize) return rows;
+    }
   }
 
-  const periodRows = (periodAppointments ?? []).map((appointment) =>
-    toAppointmentRow(appointment, timezone)
-  );
-  const { data: weekAppointments, error: weekAppointmentsError } = await supabase
-    .from("appointments")
-    .select(`
-      id, starts_at, source, status,
-      customers (full_name),
-      staff_members (full_name),
-      appointment_services (services (name))
-    `)
-    .eq("tenant_id", tenantId)
-    .gte("starts_at", zonedDateToUtc(weekStart, timezone).toISOString())
-    .lt("starts_at", zonedDateToUtc(weekEnd, timezone).toISOString())
-    .order("starts_at", { ascending: true });
-  if (weekAppointmentsError) {
-    throw new Error(`Failed to load weekly chart appointments: ${weekAppointmentsError.message}`);
+  const [calendarRows, periodRows, weekRows, todayRows] = await Promise.all([
+    loadAppointments(calendarStart, calendarEnd),
+    loadAppointments(currentStart, currentEnd),
+    loadAppointments(zonedDateToUtc(weekStart, timezone), zonedDateToUtc(weekEnd, timezone)),
+    calendarMonth === todayKey.slice(0, 7) ? null : loadAppointments(
+      zonedDateToUtc(todayKey, timezone), zonedDateToUtc(addDays(todayKey, 1), timezone),
+    ),
+  ]);
+  const toRow = (appointment: (typeof calendarRows)[number]) => ({
+    ...toAppointmentRow(appointment, timezone),
+    ...(staff && { staff: staff.full_name }),
+  });
+  const rows = calendarRows.map(toRow);
+  const weekSourceRows = weekRows.map(toRow);
+  const periodAppointments = periodRows.map(toRow);
+  const todayAppointments = todayRows?.map(toRow) ?? rows.filter((row) => row.calendarDate === todayKey);
+  if (staff !== undefined) {
+    const booked = periodRows.filter(({ status }) => !["cancelled", "rejected", "expired", "no_show"].includes(status));
+    metrics.bookingCount = booked.length;
+    metrics.activeCustomerCount = new Set(booked.flatMap(({ customer_id }) => customer_id ? [customer_id] : [])).size;
   }
-  const weekSourceRows = (weekAppointments ?? []).map((appointment) =>
-    toAppointmentRow(appointment, timezone)
-  );
-  const todayAppointments = rows.filter(
-    (appointment) => appointment.startsAt && dateKeyInTimezone(appointment.startsAt, timezone) === todayKey
-  );
+
   let chartStats: DayChartStat[];
   if (period === "This Month") {
     const daysInMonth = new Date(Date.UTC(todayParts[0], todayParts[1], 0)).getUTCDate();
     chartStats = Array.from({ length: daysInMonth }, (_, index) => {
       const dayNumber = index + 1;
-      const dayRows = periodRows.filter((row) => {
+      const dayRows = periodAppointments.filter((row) => {
         if (!row.startsAt) return false;
         const [year, month, day] = dateKeyInTimezone(row.startsAt, timezone).split("-").map(Number);
         return year === todayParts[0] && month === todayParts[1] && day === dayNumber;
@@ -449,6 +447,8 @@ export async function getMerchantOverview(
     chartStats,
     todayAppointments,
     calendarAppointments: rows,
+    calendarMonth,
+    todayKey,
     timezone,
   };
 }

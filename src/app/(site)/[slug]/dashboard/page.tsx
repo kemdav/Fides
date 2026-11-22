@@ -5,11 +5,13 @@ import {
 } from "@/components/merchant/overview/overview-view";
 import { getMerchantOverview } from "@/lib/merchant/overview";
 import type { OverviewPeriod } from "@/lib/merchant/overview";
+import { getActiveStaffForProfile, getMonthlyStaffCommission } from "@/lib/merchant/staff-profile";
+import { getAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 interface MerchantDashboardPageProps {
   params: Promise<{ slug: string }>;
-  searchParams?: Promise<{ period?: string }>;
+  searchParams?: Promise<{ period?: string; month?: string }>;
 }
 
 export async function generateMetadata({
@@ -36,7 +38,7 @@ export default async function MerchantDashboardPage({
   searchParams,
 }: MerchantDashboardPageProps) {
   const { slug } = await params;
-  const { period: periodParam } = (await searchParams) ?? {};
+  const { period: periodParam, month } = (await searchParams) ?? {};
   const period: OverviewPeriod =
     periodParam === "Today" || periodParam === "This Month"
       ? periodParam
@@ -62,13 +64,19 @@ export default async function MerchantDashboardPage({
   const userRole = membership.role;
   const userName = membership.profiles?.full_name?.trim() || user.email?.split("@")[0] || "My account";
   const canViewBusinessMetrics = userRole === "owner" || userRole === "admin";
-  const overview = await getMerchantOverview(supabase, tenant.id, new Date(), period);
+  const staff = userRole === "staff" ? await getActiveStaffForProfile(tenant.id, user.id) : undefined;
+  const now = new Date();
+  const overview = await getMerchantOverview(supabase, tenant.id, now, period, { staff, calendarMonth: month });
+  const db = staff ? getAdminClient() : null;
+  const commission = staff && db
+    ? await getMonthlyStaffCommission(db, tenant.id, overview.timezone, now, staff.id)
+    : [];
   const rows = overview.todayAppointments;
   const completedToday = rows.filter((row) => row.rawStatus === "completed").length;
   const checkedInToday = rows.filter((row) =>
     row.rawStatus === "checked_in" || row.rawStatus === "in_service"
   ).length;
-  const pendingCount = overview.calendarAppointments.filter(
+  const pendingCount = rows.filter(
     (row) => row.rawStatus === "pending_approval"
   ).length;
   const confirmedToday = rows.filter((row) => row.rawStatus === "confirmed").length;
@@ -87,6 +95,10 @@ export default async function MerchantDashboardPage({
       checkedInCount={checkedInToday}
       completedVisitsCount={completedToday}
       bookingCount={overview.metrics.bookingCount}
+      {...(userRole === "staff" && {
+        activeCustomerCount: overview.metrics.activeCustomerCount,
+        commissionThisMonth: commission.reduce((sum, total) => sum + Number(total.commission_cents), 0) / 100,
+      })}
       {...(canViewBusinessMetrics && {
         revenueTotal: Math.round(overview.metrics.revenueCents / 100),
         revenueChangePercent: overview.metrics.revenueChangePercent,
@@ -103,6 +115,8 @@ export default async function MerchantDashboardPage({
       }))}
       initialRows={rows}
       calendarAppointments={overview.calendarAppointments}
+      calendarMonthKey={overview.calendarMonth}
+      todayKey={overview.todayKey}
     />
   );
 }

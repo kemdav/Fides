@@ -49,6 +49,9 @@ export interface OverviewViewProps {
   revenueChangePercent?: number;
   bookingCount?: number;
   activeCustomerCount?: number;
+  commissionThisMonth?: number;
+  calendarMonthKey?: string;
+  todayKey?: string;
   customerGrowthPercent?: number;
   averageOrderValue?: number;
   initialPeriod?: "Today" | "This Week" | "This Month";
@@ -89,6 +92,9 @@ export function OverviewView({
   revenueChangePercent = 0,
   bookingCount = 0,
   activeCustomerCount = 0,
+  commissionThisMonth = 0,
+  calendarMonthKey,
+  todayKey,
   customerGrowthPercent = 0,
   averageOrderValue = 0,
   initialPeriod = "This Week",
@@ -103,6 +109,7 @@ export function OverviewView({
 
   const [filterStatus, setFilterStatus] = React.useState<string>("All");
   const canManage = canManageBookings(userRole);
+  const isServiceStaff = userRole === "staff";
   const canViewBusinessMetrics = userRole === "owner" || userRole === "admin";
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [period, setPeriod] = React.useState(initialPeriod);
@@ -114,10 +121,14 @@ export function OverviewView({
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
   const [expandedAppointmentId, setExpandedAppointmentId] = React.useState<string | null>(null);
   const [selectedCalendarDay, setSelectedCalendarDay] = React.useState<number | null>(null);
-  const [calendarMonth, setCalendarMonth] = React.useState(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1);
-  });
+  const calendarMonth = calendarMonthKey ? new Date(`${calendarMonthKey}-01T12:00:00`) : new Date();
+  const changeCalendarMonth = (offset: number) => {
+    const month = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + offset, 1);
+    const key = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
+    if (key < "1900-01" || key > "9998-12") return;
+    setSelectedCalendarDay(null);
+    router.push(`${basePath}/dashboard?${new URLSearchParams({ period, month: key })}`, { scroll: false });
+  };
   const displayName = userName || userEmail;
 
   const showToast = (msg: string) => {
@@ -284,7 +295,7 @@ export function OverviewView({
         (item[key] / lineMaxVal) * (lineHeight - 24);
       return `${x},${y}`;
     }).join(" ");
-  const today = new Date();
+  const today = todayKey ? new Date(`${todayKey}T12:00:00`) : new Date();
   const currentMonthLabel = calendarMonth.toLocaleDateString("en-US", {
     month: "long",
     year: "numeric",
@@ -357,8 +368,7 @@ export function OverviewView({
                             setPeriod(p as typeof initialPeriod);
                             setIsPeriodOpen(false);
                             setHoveredPoint(null);
-                            router.push(`${basePath}/dashboard?period=${encodeURIComponent(p)}`);
-                            router.refresh();
+                            router.push(`${basePath}/dashboard?${new URLSearchParams({ period: p, ...(calendarMonthKey && { month: calendarMonthKey }) })}`, { scroll: false });
                           }}
                           className={`w-full text-left px-4 py-2.5 hover:bg-mist ${period === p ? "text-burnt font-semibold" : "text-body"}`}
                         >
@@ -392,11 +402,12 @@ export function OverviewView({
           <div className="grid grid-cols-2 gap-5 xl:grid-cols-4">
             <MetricCard
               featured
-              label={canViewBusinessMetrics ? "Total revenue" : "Today’s appointments"}
-              value={canViewBusinessMetrics ? revenueTotal : todayCount}
-              caption={canViewBusinessMetrics ? `${revenueChangePercent >= 0 ? "+" : ""}${revenueChangePercent.toFixed(1)}% vs previous week` : `${confirmedCount} confirmed today`}
+              label={isServiceStaff ? "Commission this month" : canViewBusinessMetrics ? "Total revenue" : "Today’s appointments"}
+              value={isServiceStaff ? commissionThisMonth : canViewBusinessMetrics ? revenueTotal : todayCount}
+              valuePrefix={isServiceStaff ? "₱" : undefined}
+              caption={isServiceStaff ? "Earned from completed services" : canViewBusinessMetrics ? `${revenueChangePercent >= 0 ? "+" : ""}${revenueChangePercent.toFixed(1)}% vs previous week` : `${confirmedCount} confirmed today`}
               icon="calendar"
-              progress={canViewBusinessMetrics ? Math.min(100, Math.max(0, 50 + revenueChangePercent / 2)) : todayCount ? confirmedCount / todayCount * 100 : 0}
+              progress={isServiceStaff ? (commissionThisMonth > 0 ? 100 : 0) : canViewBusinessMetrics ? Math.min(100, Math.max(0, 50 + revenueChangePercent / 2)) : todayCount ? confirmedCount / todayCount * 100 : 0}
             />
             <MetricCard
               label="Total bookings"
@@ -407,11 +418,11 @@ export function OverviewView({
               miniChart
             />
             <MetricCard
-              label={canViewBusinessMetrics ? "Active customers" : "Checked-in customers"}
-              value={canViewBusinessMetrics ? activeCustomerCount : checkedInCount}
-              caption={canViewBusinessMetrics ? `${customerGrowthPercent >= 0 ? "+" : ""}${customerGrowthPercent.toFixed(1)}% vs previous week · ${checkedInCount} checked in` : "Checked in or in service today"}
+              label={isServiceStaff ? "Total customers" : canViewBusinessMetrics ? "Active customers" : "Checked-in customers"}
+              value={isServiceStaff || canViewBusinessMetrics ? activeCustomerCount : checkedInCount}
+              caption={isServiceStaff ? "Unique customers in the selected period" : canViewBusinessMetrics ? `${customerGrowthPercent >= 0 ? "+" : ""}${customerGrowthPercent.toFixed(1)}% vs previous week · ${checkedInCount} checked in` : "Checked in or in service today"}
               icon="users"
-              progress={canViewBusinessMetrics ? Math.min(100, Math.max(0, 50 + customerGrowthPercent / 2)) : todayCount ? checkedInCount / todayCount * 100 : 0}
+              progress={isServiceStaff ? (bookingCount ? activeCustomerCount / bookingCount * 100 : 0) : canViewBusinessMetrics ? Math.min(100, Math.max(0, 50 + customerGrowthPercent / 2)) : todayCount ? checkedInCount / todayCount * 100 : 0}
             />
             <MetricCard
               label={canViewBusinessMetrics ? "Average order value" : "Completed today"}
@@ -718,10 +729,7 @@ export function OverviewView({
                     <button
                       type="button"
                       aria-label="Previous month"
-                      onClick={() => {
-                        setCalendarMonth((month) => new Date(month.getFullYear(), month.getMonth() - 1, 1));
-                        setSelectedCalendarDay(null);
-                      }}
+                      onClick={() => changeCalendarMonth(-1)}
                       className="flex size-8 items-center justify-center rounded-md text-2xl leading-none text-glyph hover:bg-mist hover:text-ink"
                     >
                       ‹
@@ -730,10 +738,7 @@ export function OverviewView({
                     <button
                       type="button"
                       aria-label="Next month"
-                      onClick={() => {
-                        setCalendarMonth((month) => new Date(month.getFullYear(), month.getMonth() + 1, 1));
-                        setSelectedCalendarDay(null);
-                      }}
+                      onClick={() => changeCalendarMonth(1)}
                       className="flex size-8 items-center justify-center rounded-md text-2xl leading-none text-glyph hover:bg-mist hover:text-ink"
                     >
                       ›
