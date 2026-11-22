@@ -2,6 +2,7 @@
 
 import { getServerEnv } from "@/lib/env";
 import { isMailConfigured, sendMail } from "@/lib/mail/mailer";
+import { limitByClient, MINUTES } from "@/lib/rate-limit";
 
 export type ContactState = {
   status: "idle" | "error" | "sent";
@@ -19,6 +20,12 @@ export async function submitContact(_previous: ContactState, formData: FormData)
     topic: String(formData.get("topic") ?? "General").trim().slice(0, 60),
     message: String(formData.get("message") ?? "").trim().slice(0, 2000),
   };
+
+  // hidden field that real visitors never fill in; bots do
+  if (String(formData.get("website") ?? "")) return { status: "sent", values: { name: "", email: "", topic: "General", message: "" } };
+  if (await limitByClient("contact", { limit: 5, windowMs: 10 * MINUTES })) {
+    return { status: "error", values, message: "Too many messages. Please wait a few minutes and try again." };
+  }
 
   const fieldErrors: NonNullable<ContactState["fieldErrors"]> = {};
   if (!values.name) fieldErrors.name = "Enter your name.";

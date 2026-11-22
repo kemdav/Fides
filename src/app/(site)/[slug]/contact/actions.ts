@@ -1,5 +1,6 @@
 "use server";
 
+import { limitByClient, MINUTES } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 
 export type ContactFormState = {
@@ -27,6 +28,11 @@ export async function submitContactForm(
   const message = formData.get("message")?.toString().trim() ?? "";
   const tenantSlug = formData.get("tenantSlug")?.toString().trim();
   let tenantId = formData.get("tenantId")?.toString().trim() || null;
+
+  if (formData.get("website")?.toString()) return { success: true, message: "Thanks for reaching out." };
+  if (await limitByClient("storefront-contact", { limit: 5, windowMs: 10 * MINUTES })) {
+    return { success: false, error: "Too many messages. Please wait a few minutes and try again." };
+  }
 
   if (!name || !email || !topic || !message) {
     return {

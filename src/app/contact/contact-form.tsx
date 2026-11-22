@@ -24,6 +24,7 @@ export function ContactForm() {
   return (
     <form action={action} noValidate aria-busy={pending} className="flex min-w-0 flex-col gap-4 rounded-2xl border border-hairline bg-white p-6 shadow-[0_3px_14px_rgb(44_58_75/0.04)] sm:p-9">
       {state.status === "error" && state.message ? <AuthBanner title={state.message} /> : null}
+      <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden className="hidden" />
       <div className="grid gap-4 sm:grid-cols-2">
         <AuthField id="name" name="name" label="Name" autoComplete="name" defaultValue={values.name} disabled={pending} error={fieldErrors?.name} placeholder="Maria Santos" />
         <AuthField id="email" name="email" type="email" label="Email" autoComplete="email" defaultValue={values.email} disabled={pending} error={fieldErrors?.email} placeholder="maria@bellavita.ph" />

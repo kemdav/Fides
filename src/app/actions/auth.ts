@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { clearAdminSession } from "@/lib/admin/session";
 import { getAccountAccess } from "@/lib/applications/service";
 import { AUTH_ERROR_MESSAGES, mapAuthError } from "@/lib/auth/error-handler";
+import { limitByClient, MINUTES } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loginFieldErrors, loginSchema, safeRedirect, type LoginFieldErrors } from "@/lib/validations/auth";
@@ -13,6 +14,10 @@ export type LoginState = { error: string | null; email: string; fieldErrors?: Lo
 
 export async function login(_previous: LoginState, formData: FormData): Promise<LoginState> {
   const email = String(formData.get("email") ?? "");
+
+  if (await limitByClient("login", { limit: 10, windowMs: 15 * MINUTES }, email)) {
+    return { error: "Too many login attempts. Please wait a few minutes and try again.", email };
+  }
 
   const parsed = loginSchema.safeParse({ email, password: formData.get("password") });
   if (!parsed.success) {
