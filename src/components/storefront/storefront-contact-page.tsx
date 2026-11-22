@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import { useActionState, useState } from "react";
-import { buttonClasses } from "@/components/ui";
+import { buttonClasses, inputClasses } from "@/components/ui";
+import { cn } from "@/lib/utils";
 import {
   submitContactForm,
   type ContactFormState,
@@ -111,7 +112,7 @@ export function StorefrontContactPage({
                   name="name"
                   placeholder="Juan Dela Cruz"
                   disabled={isPending}
-                  className="mt-2 h-12 w-full rounded-lg border border-[#aeb6c0] px-4 text-base outline-none placeholder:text-muted focus:border-burnt disabled:opacity-60"
+                  className={cn(inputClasses(), "mt-2")}
                 />
               </label>
               <label className="text-base/6 text-ink">
@@ -122,7 +123,7 @@ export function StorefrontContactPage({
                   name="email"
                   placeholder="juan@gmail.com"
                   disabled={isPending}
-                  className="mt-2 h-12 w-full rounded-lg border border-[#aeb6c0] px-4 text-base outline-none placeholder:text-muted focus:border-burnt disabled:opacity-60"
+                  className={cn(inputClasses(), "mt-2")}
                 />
               </label>
               <label className="text-base/6 text-ink">
@@ -131,7 +132,7 @@ export function StorefrontContactPage({
                   name="phone"
                   placeholder="09123456789"
                   disabled={isPending}
-                  className="mt-2 h-12 w-full rounded-lg border border-[#aeb6c0] px-4 text-base outline-none placeholder:text-muted focus:border-burnt disabled:opacity-60"
+                  className={cn(inputClasses(), "mt-2")}
                 />
               </label>
               <div className="relative text-base/6 text-ink">
@@ -142,7 +143,7 @@ export function StorefrontContactPage({
                   aria-expanded={topicOpen}
                   disabled={isPending}
                   onClick={() => setTopicOpen((open) => !open)}
-                  className="mt-2 flex h-12 w-full items-center justify-between rounded-lg border border-[#aeb6c0] bg-white px-4 text-left text-base outline-none focus:border-burnt disabled:opacity-60"
+                  className={cn(inputClasses(), "mt-2 flex items-center justify-between text-left")}
                 >
                   <span className={topic ? "text-ink" : "text-muted"}>
                     {topic || "Select a Topic"}
@@ -159,7 +160,7 @@ export function StorefrontContactPage({
                 {topicOpen && (
                   <ul
                     role="listbox"
-                    className="absolute inset-x-0 top-full z-10 mt-2 overflow-hidden rounded-lg border border-[#aeb6c0] bg-white py-1 shadow-md"
+                    className="absolute inset-x-0 top-full z-10 mt-2 overflow-hidden rounded-lg border border-glyph bg-white py-1 shadow-md"
                   >
                     {topicOptions.map((option) => (
                       <li key={option}>
@@ -193,7 +194,7 @@ export function StorefrontContactPage({
                   name="message"
                   placeholder="How can we help you?"
                   disabled={isPending}
-                  className="mt-2 min-h-32 w-full resize-y rounded-lg border border-[#aeb6c0] px-4 py-3 text-base outline-none placeholder:text-muted focus:border-burnt disabled:opacity-60"
+                  className={cn(inputClasses(), "mt-2 h-auto min-h-32 resize-y py-3")}
                 />
               </label>
               <p className="text-sm/6 text-muted sm:col-span-2">
@@ -230,7 +231,7 @@ export function StorefrontContactPage({
           <div className="text-sm/6 text-muted">
             {/* Dynamic tenant contact details card */}
             {(email || phone || address) && (
-              <div className="mb-8 rounded-lg border border-[#e2e8f0] bg-powder/70 p-6">
+              <div className="mb-8 rounded-lg border border-hairline bg-powder/70 p-6">
                 <h3 className="font-display text-xl text-ink">
                   Direct Details
                 </h3>
@@ -321,7 +322,7 @@ export function StorefrontContactPage({
               </span>
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <a
               href={servicesHref}
               className={buttonClasses({
