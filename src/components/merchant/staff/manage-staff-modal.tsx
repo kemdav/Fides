@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { saveStaffProfileAction } from "@/app/actions/staff";
 import { AdminButton, AdminLinkButton } from "@/components/admin/admin-button";
@@ -34,6 +34,12 @@ export interface ManagedStaff {
   upcomingCount: number;
 }
 
+function editablePhone(value: string) {
+  const digits = value.replace(/[^0-9]/g, "");
+  if (digits.length === 12 && digits.startsWith("63")) return `0${digits.slice(2)}`;
+  return digits.length <= 11 ? digits : "";
+}
+
 export function ManageStaffModal({ staff, tenantId, basePath, onClose, onSaved }: {
   staff: ManagedStaff;
   tenantId: string;
@@ -43,22 +49,28 @@ export function ManageStaffModal({ staff, tenantId, basePath, onClose, onSaved }
 }) {
   const [name, setName] = useState(staff.fullName);
   const [title, setTitle] = useState(staff.title);
-  const [phone, setPhone] = useState(staff.phone);
+  const [phone, setPhone] = useState(() => editablePhone(staff.phone));
+  const [phoneEdited, setPhoneEdited] = useState(false);
   const [bio, setBio] = useState(staff.bio);
   const [role, setRole] = useState(staff.role);
   const [services, setServices] = useState(staff.serviceIds);
   const [commission, setCommission] = useState(staff.commissionValue ? staff.commissionType : "none");
   const [value, setValue] = useState(staff.commissionValue ? String(staff.commissionValue) : "");
-  const [imageName, setImageName] = useState("");
+  const [selectedPhoto, setSelectedPhoto] = useState<{ name: string; url: string } | null>(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [dialog, setDialog] = useState<"availability" | "email" | null>(null);
+  const previewUrl = selectedPhoto?.url;
+  const photoUrl = previewUrl ?? staff.imageUrl;
+
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
 
   async function save(form: FormData) {
     setSaving(true);
     setError("");
     form.set("tenantId", tenantId);
     form.set("staffId", staff.id);
+    if (!phoneEdited) form.delete("phone");
     form.set("role", role);
     form.set("commissionType", commission === "none" ? "fixed" : commission);
     form.set("commissionValue", commission === "none" ? "0" : value);
@@ -102,7 +114,27 @@ export function ManageStaffModal({ staff, tenantId, basePath, onClose, onSaved }
             <div className="grid gap-4 sm:grid-cols-2">
               <TextField label="Full Name" name="fullName" required maxLength={150} value={name} onChange={setName} />
               <TextField label="Title" name="title" maxLength={150} value={title} onChange={setTitle} />
-              <TextField label="Phone Number" name="phone" type="tel" maxLength={24} value={phone} onChange={setPhone} />
+              <div className="space-y-1.5">
+                <TextField label="Phone Number" name="phone" type="tel" inputMode="numeric" autoComplete="tel-national"
+                  maxLength={11} pattern="[0-9]{6,11}" aria-describedby="manage-staff-phone-help" value={phone}
+                  onChange={(entry) => {
+                    setPhone(entry.replace(/[^0-9]/g, "").slice(0, 11));
+                    setPhoneEdited(true);
+                  }}
+                  onPaste={(event) => {
+                    event.preventDefault();
+                    const input = event.currentTarget;
+                    const start = input.selectionStart ?? phone.length;
+                    const end = input.selectionEnd ?? start;
+                    const digits = event.clipboardData.getData("text").replace(/[^0-9]/g, "");
+                    if (!digits) return;
+                    const pasted = digits.length === 12 && digits.startsWith("63") ? `0${digits.slice(2)}` : digits;
+                    setPhone(`${phone.slice(0, start)}${pasted}${phone.slice(end)}`.slice(0, 11));
+                    setPhoneEdited(true);
+                  }}
+                />
+                <p id="manage-staff-phone-help" className="text-xs text-muted">Use 6–11 digits, without spaces or a country code.</p>
+              </div>
               <Listbox id="manage-staff-role" label="Dashboard Role" required value={role}
                 onChange={(entry) => setRole(entry === "receptionist" ? "receptionist" : "staff")}
                 options={staff.canChangeRole
@@ -111,7 +143,12 @@ export function ManageStaffModal({ staff, tenantId, basePath, onClose, onSaved }
             </div>
             <div className="space-y-2">
               <div className="flex flex-wrap items-end gap-3">
-                <TextField label="Email Address" type="email" value={staff.email} onChange={() => {}} placeholder="Not provided" readOnly className="grow" />
+                <div className="min-w-0 grow space-y-2">
+                  <p className="text-sm font-semibold">Email Address</p>
+                  <p className="pointer-events-none flex min-h-11 items-center break-all rounded-lg border border-outline bg-mist px-3 text-sm text-muted">
+                    {staff.email || "Not provided"}
+                  </p>
+                </div>
                 <AdminButton variant="outline-accent" size="xs" className="h-11" aria-haspopup="dialog" onClick={() => setDialog("email")} disabled={saving}>Request Email Change</AdminButton>
               </div>
               <p className="text-xs text-muted">Email changes require identity confirmation and verification.</p>
@@ -123,14 +160,27 @@ export function ManageStaffModal({ staff, tenantId, basePath, onClose, onSaved }
             </label>
             <div className="space-y-2">
               <p className="text-sm font-semibold">Profile photo</p>
-              <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-outline bg-mist p-4 text-sm font-medium text-burnt hover:bg-burnt/5 focus-within:ring-2 focus-within:ring-burnt/40">
-                <input type="file" name="image" accept="image/png,image/jpeg,image/webp" className="sr-only"
-                  onChange={(event) => setImageName(event.target.files?.[0]?.name ?? "")} />
-                {staff.imageUrl && <Image src={staff.imageUrl} width={40} height={40} alt="" unoptimized className="size-10 rounded-full object-cover" />}
-                <Icon name="upload" className="size-5" />
-                <span className="max-w-full break-all">{imageName || "Choose a photo"}</span>
+              <label className="flex cursor-pointer flex-wrap items-center gap-4 rounded-lg border border-dashed border-outline bg-mist p-4 text-sm hover:bg-burnt/5 focus-within:ring-2 focus-within:ring-burnt/40">
+                <input type="file" name="image" accept="image/png,image/jpeg,image/webp" className="sr-only" disabled={saving}
+                  aria-label={photoUrl ? "Change profile photo" : "Upload profile photo"}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    setSelectedPhoto(file ? { name: file.name, url: URL.createObjectURL(file) } : null);
+                  }} />
+                {photoUrl ? (
+                  <Image src={photoUrl} width={80} height={80} alt={previewUrl ? "New photo preview" : "Current profile photo"}
+                    unoptimized className="size-20 shrink-0 rounded-full object-cover ring-2 ring-white" />
+                ) : (
+                  <span className="grid size-14 shrink-0 place-items-center rounded-full bg-white text-burnt">
+                    <Icon name="upload" className="size-5" />
+                  </span>
+                )}
+                <span className="min-w-0 space-y-1">
+                  <span className="block font-semibold text-burnt">{photoUrl ? "Change profile photo" : "Upload a profile photo"}</span>
+                  <span className="block break-all text-xs text-muted">{selectedPhoto?.name ?? (staff.imageUrl ? "Current photo" : "Choose a file")}</span>
+                </span>
               </label>
-              <p className="text-xs text-muted">JPG, PNG, or WebP up to 750 KB. The profile displays initials until a photo is uploaded.</p>
+              <p className="text-xs text-muted">JPG, PNG, or WebP up to 750 KB.</p>
             </div>
             <h3 className="border-t border-hairline pt-4 text-base font-semibold">Services and commission</h3>
             <div className="space-y-2">

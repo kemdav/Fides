@@ -1,5 +1,6 @@
 alter table public.staff_invitations
   add column token_hash text unique,
+  add column last_resent_at timestamptz,
   add column service_ids uuid[] not null default '{}',
   add column commission_type public.commission_type not null default 'fixed',
   add column commission_value numeric(12, 2) not null default 0

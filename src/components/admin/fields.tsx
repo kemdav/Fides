@@ -31,7 +31,7 @@ export function TextField({ label, required, value, onChange, error, className, 
         aria-describedby={error ? errorId : undefined}
         className={cn(
           fieldOutlineClasses,
-          "h-11 w-full px-3 text-sm text-ink placeholder:text-glyph read-only:bg-mist disabled:bg-mist",
+          "h-11 w-full px-3 text-sm text-ink placeholder:text-glyph read-only:cursor-default read-only:bg-mist disabled:bg-mist",
           error && "border-danger"
         )}
         {...props}

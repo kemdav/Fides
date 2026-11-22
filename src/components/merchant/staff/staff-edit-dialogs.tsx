@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { requestStaffEmailChangeAction } from "@/app/actions/staff";
+import { requestStaffEmailChangeAction } from "@/app/actions/staff-email-change";
 import { AdminButton, AdminLinkButton } from "@/components/admin/admin-button";
 import { TextField } from "@/components/admin/fields";
 import { Icon } from "@/components/admin/icon";
@@ -73,17 +73,18 @@ export function StaffEmailChangeDialog({ name, tenantId, staffId, currentEmail, 
     try {
       const result = await requestStaffEmailChangeAction({ tenantId, staffId, email });
       if (result.success) setSent(true);
-      else setError(result.error ?? "Verification emails could not be sent.");
+      else setError(result.error);
     } catch {
-      setError("Verification emails could not be sent.");
+      setError("The verification email could not be sent.");
     } finally {
       setBusy(false);
     }
   }
 
   if (sent) {
-    return <StaffSuccessDialog title="Verification emails sent"
-      description="Confirmation links were sent to the current and new addresses." onClose={onClose} />;
+    return <StaffSuccessDialog title="Verification email sent"
+      description={`A link was sent to ${email.trim()}. The staff member can open it and use their current Fides password to verify the new email and open their dashboard.`}
+      onClose={onClose} />;
   }
 
   return (
@@ -92,15 +93,29 @@ export function StaffEmailChangeDialog({ name, tenantId, staffId, currentEmail, 
         event.preventDefault();
         if (currentEmail && !busy) void send();
       }}>
-        <p className="text-sm text-body">
-          {name}&apos;s current email stays active until the new email address is verified. A confirmation notice is sent to the new email address. The current address must also approve the change.
-        </p>
-        <TextField label="New Email Address" type="email" autoComplete="email" maxLength={254} required value={email} onChange={setEmail} disabled={busy} />
-        {!currentEmail && <p className="text-xs text-muted">This staff member needs a linked sign-in email to request a change.</p>}
+        <p className="text-sm leading-relaxed text-body">Enter the new sign-in email for <strong className="font-semibold">{name}</strong>.</p>
+        <div className="rounded-lg border border-hairline bg-mist px-4 py-3">
+          <p className="text-xs font-medium text-muted">Current sign-in email</p>
+          <p className="mt-1 break-all text-sm font-semibold text-ink">{currentEmail || "No email linked"}</p>
+        </div>
+        <TextField label="New email address" type="email" autoComplete="email" maxLength={254} required
+          placeholder="name@example.com" value={email} onChange={setEmail} disabled={busy || !currentEmail} />
+        {currentEmail ? (
+          <div className="space-y-2 rounded-lg bg-powder px-4 py-3 text-sm text-body">
+            <p className="font-semibold text-ink">What happens next</p>
+            <ol className="list-decimal space-y-1 pl-5">
+              <li>We’ll send a verification link to the new address.</li>
+              <li>{name} will open the link and enter their current Fides password to verify the new address and open their dashboard.</li>
+            </ol>
+            <p className="text-muted">The current email will stay active until verification succeeds.</p>
+          </div>
+        ) : (
+          <p className="text-sm text-muted">A linked sign-in email is required to request a change.</p>
+        )}
         {error && <p role="alert" className="text-xs text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
           <AdminButton variant="outline" size="xs" onClick={onClose} disabled={busy}>Cancel</AdminButton>
-          <AdminButton variant="primary" size="xs" type="submit" disabled={busy || !currentEmail}>
+          <AdminButton variant="primary" size="xs" type="submit" disabled={busy || !currentEmail || !email.trim()}>
             {busy ? "Sending…" : "Send verification email"}
           </AdminButton>
         </div>

@@ -51,7 +51,7 @@ export default async function StaffPage({ params }: StaffPageProps) {
   const todayStart = zonedDateToUtc(today, timezone).toISOString();
   const todayEnd = zonedDateToUtc(today, timezone, true).toISOString();
   const [rows, memberships, skills, services, shifts, leaves, invitations, application, commission] = await Promise.all([
-    db.from("staff_members").select("id, full_name, title, active, profile_id, commission_type, commission_value")
+    db.from("staff_members").select("id, full_name, title, active, image_url, profile_id, commission_type, commission_value")
       .eq("tenant_id", tenant.id).order("sort_order").order("full_name"),
     db.from("tenant_memberships").select("profile_id, role, profiles(full_name, email)").eq("tenant_id", tenant.id),
     db.from("staff_service_skills").select("staff_id, services!inner(name)").eq("tenant_id", tenant.id).eq("services.active", true),
@@ -106,6 +106,7 @@ export default async function StaffPage({ params }: StaffPageProps) {
     return {
       id: row.id,
       fullName: row.full_name,
+      imageUrl: row.image_url,
       email: member?.profiles?.email || "Not provided",
       title: row.title ?? "",
       role,

@@ -4,7 +4,7 @@ import { MerchantSidebar } from "@/components/merchant/merchant-sidebar";
 import { PageContent, StatusPill, Surface } from "@/components/admin/primitives";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import Image from "next/image";
+import { StaffAvatar } from "@/components/merchant/staff/staff-avatar";
 import { getStaffProfile, staffRoleLabels } from "@/lib/merchant/staff-profile";
 
 export const metadata = { title: "Staff Profile" };
@@ -33,7 +33,6 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ s
   ]);
   if (!profile) notFound();
   const { managedStaff, services, shiftsThisWeek, commissionRule, timezone, formatRange } = profile;
-  const initials = managedStaff.fullName.trim().split(/\s+/).slice(0, 2).map((word) => word[0]).join("").toUpperCase();
   const contact = [
     ["Email address", managedStaff.email || "Not provided"],
     ["Phone number", managedStaff.phone || "Not provided"],
@@ -64,11 +63,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ s
           <Surface className="overflow-hidden border border-hairline !p-0">
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-hairline bg-burnt/5 p-4 sm:p-6">
               <div className="flex min-w-0 items-center gap-4">
-                {managedStaff.imageUrl ? (
-                  <Image src={managedStaff.imageUrl} width={56} height={56} alt="" unoptimized className="size-14 shrink-0 rounded-full object-cover" />
-                ) : (
-                  <span aria-hidden="true" className="grid size-14 shrink-0 place-items-center rounded-full bg-burnt/10 text-lg font-semibold text-burnt-dark">{initials}</span>
-                )}
+                <StaffAvatar name={managedStaff.fullName} imageUrl={managedStaff.imageUrl} size={56} />
                 <div className="min-w-0">
                   <h2 className="break-words text-2xl font-semibold">{managedStaff.fullName}</h2>
                   <div className="mt-1.5">
@@ -88,23 +83,29 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ s
             </dl>
           </Surface>
 
-          <Surface className="space-y-4 border border-hairline">
+          <Surface className="space-y-5 border border-hairline">
             <h2 className="text-lg font-semibold">Staff details</h2>
-            {(managedStaff.title || managedStaff.bio) && (
-              <div className="space-y-1">
-                {managedStaff.title && <p className="text-sm font-medium">{managedStaff.title}</p>}
-                {managedStaff.bio && <p className="whitespace-pre-wrap break-words text-sm text-muted">{managedStaff.bio}</p>}
+            <div className="grid gap-5 lg:grid-cols-2">
+              <dl className="space-y-4 rounded-lg bg-mist p-4">
+                <div>
+                  <dt className="text-sm font-semibold">Public title</dt>
+                  <dd className="mt-1 break-words text-sm text-body">{managedStaff.title || "No public title added."}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-semibold">Bio</dt>
+                  <dd className="mt-1 whitespace-pre-wrap break-words text-sm text-body">{managedStaff.bio || "No bio added."}</dd>
+                </div>
+              </dl>
+              <div className="space-y-3 rounded-lg border border-hairline p-4">
+                <h3 className="text-sm font-semibold">Assigned services</h3>
+                {services.length ? (
+                  <ul className="flex flex-wrap gap-2">
+                    {services.map((service) => (
+                      <li key={service.id} className="break-words rounded-full bg-burnt/10 px-3 py-1 text-sm text-burnt-dark">{service.name}</li>
+                    ))}
+                  </ul>
+                ) : <p className="text-sm text-muted">No services assigned to this staff member.</p>}
               </div>
-            )}
-            <div className="space-y-2 border-t border-hairline pt-4">
-              <h3 className="text-sm font-semibold">Services this person can perform</h3>
-              {services.length ? (
-                <ul className="flex flex-wrap gap-2">
-                  {services.map((service) => (
-                    <li key={service.id} className="break-words rounded-full bg-burnt/10 px-3 py-1 text-sm text-burnt-dark">{service.name}</li>
-                  ))}
-                </ul>
-              ) : <p className="text-sm text-muted">No service assignments.</p>}
             </div>
           </Surface>
 

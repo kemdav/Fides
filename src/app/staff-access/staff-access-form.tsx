@@ -6,7 +6,9 @@ import { fieldOutlineClasses, TextField } from "@/components/admin/fields";
 import { PasswordInput } from "@/components/ui/password-input";
 import { accessStaffWorkspaceAction } from "@/app/actions/staff-invitations";
 
-export function StaffAccessForm({ token, workspace, invitedEmail }: { token: string; workspace: string; invitedEmail?: string }) {
+export function StaffAccessForm({ token, workspace, invitedEmail }: {
+  token: string; workspace: string; invitedEmail?: string;
+}) {
   const [create, setCreate] = useState(Boolean(invitedEmail));
   const [workspaceSlug, setWorkspaceSlug] = useState(workspace);
   const [email, setEmail] = useState(invitedEmail ?? "");

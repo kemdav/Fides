@@ -1,4 +1,5 @@
 import "server-only";
+import { normalizeBrandColor as emailColor, colorLuminance as emailLuminance, readableForeground as emailForeground } from "@/lib/brand-colors";
 import { publicEnv } from "@/lib/env";
 import { formatPeso } from "@/lib/registration/options";
 import { sendMail } from "./mailer";
@@ -21,34 +22,6 @@ function escapeHtml(value: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
-}
-
-function emailColor(value: string | null, fallback: string): string {
-  const color = value?.trim();
-  if (!color || !/^#(?:[a-f\d]{3}|[a-f\d]{6})$/i.test(color)) return fallback;
-  return color.length === 4
-    ? "#" +
-        color
-          .slice(1)
-          .split("")
-          .map((channel) => channel.repeat(2))
-          .join("")
-    : color;
-}
-
-function emailLuminance(color: string): number {
-  const channels = [1, 3, 5].map((start) => {
-    const value = Number.parseInt(color.slice(start, start + 2), 16) / 255;
-    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
-  });
-  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
-}
-
-function emailForeground(background: string, preferred: string): string {
-  const bg = emailLuminance(background);
-  const fg = emailLuminance(preferred);
-  const ratio = (Math.max(bg, fg) + 0.05) / (Math.min(bg, fg) + 0.05);
-  return ratio >= 4.5 ? preferred : bg > 0.179 ? "#000000" : "#ffffff";
 }
 
 function emailContrast(a: string, b: string): number {

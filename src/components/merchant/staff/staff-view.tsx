@@ -14,6 +14,7 @@ import { cancelStaffInvitationAction, deleteStaffInvitationAction, resendStaffIn
 import { InviteStaffModal } from "./invite-staff-modal";
 import { RoleAccessModal } from "./role-access-modal";
 import { StaffStatusDialog } from "./staff-status-dialog";
+import { StaffAvatar } from "./staff-avatar";
 import { StaffConfirmationDialog, StaffSuccessDialog, type StaffSuccessDetails } from "./staff-confirmation-dialog";
 import {
   loadStaffEditorAction,
@@ -25,6 +26,7 @@ import {
 export interface StaffItem {
   id: string;
   fullName: string;
+  imageUrl?: string | null;
   email: string;
   title: string;
   role: string;
@@ -73,15 +75,6 @@ function StatusBadge({ row }: { row: StaffItem }) {
       {row.active ? "Active" : "Inactive"}
     </StatusPill>
   );
-}
-
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
 }
 
 const EMPTY_ITEMS: StaffItem[] = [];
@@ -458,9 +451,7 @@ export function StaffView({
                         {/* Team Member / Email */}
                         <td className="px-5 py-3.5">
                           <div className="flex items-center gap-3">
-                            <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-burnt/10 text-sm font-semibold text-burnt">
-                              {getInitials(row.fullName)}
-                            </div>
+                            <StaffAvatar name={row.fullName} imageUrl={row.imageUrl} />
                             <div className="min-w-0">
                               {canViewProfiles && !row.invitationStatus ? (
                                 <Link
@@ -563,9 +554,7 @@ export function StaffView({
                   const heading = (
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-burnt/10 text-sm font-semibold text-burnt">
-                          {getInitials(row.fullName)}
-                        </div>
+                        <StaffAvatar name={row.fullName} imageUrl={row.imageUrl} />
                         <div className="min-w-0">
                           <p className="truncate text-base font-semibold text-ink">{row.fullName}</p>
                           <p className="mt-0.5 text-sm text-muted">{row.roleLabel} · {row.title || "No title"}</p>

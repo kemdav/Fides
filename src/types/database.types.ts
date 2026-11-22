@@ -1248,6 +1248,28 @@ type DatabaseCore = {
           },
         ];
       };
+      staff_email_change_requests: {
+        Row: {
+          profile_id: string;
+          tenant_id: string;
+          current_email: string;
+          new_email: string;
+          token_hash: string;
+          expires_at: string;
+          claimed_at: string | null;
+        };
+        Insert: Omit<Database["public"]["Tables"]["staff_email_change_requests"]["Row"], "claimed_at"> & {
+          claimed_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["staff_email_change_requests"]["Insert"]>;
+        Relationships: [{
+          foreignKeyName: "staff_email_change_requests_tenant_id_fkey";
+          columns: ["tenant_id"];
+          isOneToOne: false;
+          referencedRelation: "tenants";
+          referencedColumns: ["id"];
+        }];
+      };
       staff_invitations: {
         Row: {
           last_resent_at: string | null;

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon, type IconName } from "@/components/admin/icon";
 import { cn, getInitials } from "@/lib/utils";
+import { merchantNameTypography } from "@/lib/brand-colors";
 
 interface MerchantSidebarProps {
   businessName?: string;
@@ -97,7 +98,7 @@ export function MerchantSidebar({
       )}>
         <div className="flex shrink-0 items-start justify-between border-b border-[#EDECE8] pb-4">
           <div>
-            <h1 className="break-words font-display text-[clamp(24px,3.2vh,32px)] leading-[clamp(29px,4vh,38px)] tracking-tight text-[#C35000]">{businessName}</h1>
+            <h1 className={cn(merchantNameTypography, "text-burnt")}>{businessName}</h1>
             <p className="text-xs font-semibold uppercase leading-[18px] tracking-[1.3px] text-neutral-400">Merchant Workspace</p>
           </div>
           <button type="button" onClick={() => setMobileOpen(false)} className="p-1 text-neutral-400 lg:hidden" aria-label="Close navigation menu">

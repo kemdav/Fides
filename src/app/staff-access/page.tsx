@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { FoxCtaMascot } from "@/components/landing/fox-cta-mascot";
 import { staffRoleLabels } from "@/lib/merchant/staff-profile";
 import { getStaffInvitation } from "@/lib/merchant/staff-invitations";
@@ -21,11 +22,14 @@ function formatInvitationExpiration(value: string, timezone: string | null) {
 }
 
 export default async function StaffAccessPage({ searchParams }: {
-  searchParams: Promise<{ invite?: string | string[]; workspace?: string | string[] }>;
+  searchParams: Promise<{ invite?: string | string[]; workspace?: string | string[]; verifyEmail?: string | string[] }>;
 }) {
   const params = await searchParams;
   const token = typeof params.invite === "string" ? params.invite : "";
   const workspace = typeof params.workspace === "string" ? params.workspace : "";
+  const verifyEmail = !token && typeof params.verifyEmail === "string" && /^[A-Za-z0-9_-]{43}$/.test(params.verifyEmail)
+    ? params.verifyEmail : undefined;
+  if (verifyEmail) redirect(`/staff-email-change?token=${verifyEmail}`);
   const invitation = token ? await getStaffInvitation(token).catch(() => null) : null;
   const invalidInvitation = params.invite !== undefined && !invitation;
 
@@ -78,7 +82,8 @@ export default async function StaffAccessPage({ searchParams }: {
             <FoxCtaMascot className="aspect-[441.75/516.723] w-full overflow-visible [&_.fox-point]:[--point-angle:0deg]" />
           </div>
         </aside>
-        <StaffAccessForm key={token || workspace} token={token} workspace={workspace} invitedEmail={invitation?.email} />
+        <StaffAccessForm key={token || workspace} token={token} workspace={workspace}
+          invitedEmail={invitation?.email} />
       </section>
     </main>
   );
