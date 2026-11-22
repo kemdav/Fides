@@ -167,7 +167,14 @@ export function MerchantSidebar({
           className="flex w-full flex-col gap-[clamp(1px,0.4vh,5px)]"
         >
           {renderItem({ label: "Website settings", icon: "settings" }, true)}
-          {renderItem({ label: "Booking settings", icon: "book-settings" })}
+          {renderItem(
+            {
+              label: "Booking settings",
+              icon: "book-settings",
+              suffix: "/settings/booking",
+            },
+            true,
+          )}
           {renderItem({ label: "Subscription", icon: "card" })}
         </nav>
         <div className="flex-1" />
