@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { resolveTenantAccess } from "@/lib/merchant/access";
 import { combineDateAndTimeManila } from "@/lib/date-utils";
 import type { Database } from "@/types/database.types";
 
@@ -59,25 +60,13 @@ export async function updateAppointmentStatusAction({
     return { success: false, error: "Authentication required." };
   }
 
-  // Resolve target tenant
-  let targetTenantId = tenantIdParam;
-  let tenantSlug: string | undefined;
-
-  if (targetTenantId) {
-    const { data: tenant } = await supabase
-      .from("tenants")
-      .select("slug")
-      .eq("id", targetTenantId)
-      .single();
-    tenantSlug = tenant?.slug;
-  } else {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("tenant_id")
-      .eq("id", user.id)
-      .single();
-    targetTenantId = profile?.tenant_id ?? undefined;
+  const access = await resolveTenantAccess(supabase, tenantIdParam);
+  if (!access) {
+    return { success: false, error: "Access Denied: You do not have permissions for this business." };
   }
+  const targetTenantId = access.tenantId;
+  const { data: tenant } = await supabase.from("tenants").select("slug").eq("id", targetTenantId).single();
+  const tenantSlug: string | undefined = tenant?.slug;
 
   const dbStatus = mapUiStatusToDb(newStatus);
   const updatePayload: Database["public"]["Tables"]["appointments"]["Update"] = {
@@ -91,9 +80,7 @@ export async function updateAppointmentStatusAction({
   };
 
   let query = supabase.from("appointments").update(updatePayload).eq("id", appointmentId);
-  if (targetTenantId) {
-    query = query.eq("tenant_id", targetTenantId);
-  }
+  query = query.eq("tenant_id", targetTenantId);
 
   const { error } = await query;
 

@@ -1,4 +1,5 @@
     import { createClient } from "@/lib/supabase/server";
+import { resolveTenantAccess } from "./access";
 import type {
   AssignableSlotOption,
   WaitlistQueueItem,
@@ -69,38 +70,8 @@ export async function resolveMerchantTenantId(
   supabase: Awaited<ReturnType<typeof createClient>>,
   tenantIdParam?: string
 ): Promise<string | null> {
-  if (tenantIdParam) return tenantIdParam;
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data: membership } = await supabase
-    .from("tenant_memberships")
-    .select("tenant_id")
-    .eq("profile_id", user.id)
-    .in("role", ["owner", "admin", "receptionist", "staff"])
-    .limit(1)
-    .maybeSingle();
-
-  if (membership?.tenant_id) return membership.tenant_id;
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("tenant_id")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (profile?.tenant_id) return profile.tenant_id;
-
-  const { data: fallbackTenant } = await supabase
-    .from("tenants")
-    .select("id")
-    .limit(1)
-    .maybeSingle();
-
-  return fallbackTenant?.id ?? null;
+  const access = await resolveTenantAccess(supabase, tenantIdParam);
+  return access?.tenantId ?? null;
 }
 
 interface BusyInterval {
