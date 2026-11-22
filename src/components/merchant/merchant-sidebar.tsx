@@ -19,7 +19,7 @@ const manageItems: { label: string; icon: IconName; suffix?: string }[] = [
   { label: "Appointments", icon: "calendar", suffix: "/appointments" },
   { label: "Walk-ins", icon: "users", suffix: "/walk-ins" },
   { label: "QR check-in", icon: "qr-code" },
-  { label: "Customers", icon: "users" },
+  { label: "Customers", icon: "users", suffix: "/customers" },
   { label: "Services", icon: "layers" },
   { label: "Staff & permissions", icon: "shield" },
   { label: "Availability", icon: "clock" },
@@ -59,6 +59,7 @@ export function MerchantSidebar({
       item.label === "Overview" ||
       item.label === "Appointments" ||
       item.label === "Walk-ins" ||
+      item.label === "Customers" ||
       configuration;
 
     if (!available) {
