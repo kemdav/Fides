@@ -2,7 +2,13 @@
 
 import * as React from "react";
 import Image from "next/image";
-import { WebsiteSettingsData, ActiveTab, ColorType } from "./types";
+import { useRouter } from "next/navigation";
+import {
+  WebsiteSettingsData,
+  ActiveTab,
+  ColorType,
+  PreviewServiceItem,
+} from "./types";
 import {
   CheckIcon,
   CopyIcon,
@@ -13,7 +19,11 @@ import {
 import { MerchantSidebar } from "../merchant-sidebar";
 import { Icon } from "@/components/admin/icon";
 import { AdminButton } from "@/components/admin/admin-button";
-import { PageContent, PageHeading, Surface } from "@/components/admin/primitives";
+import {
+  PageContent,
+  PageHeading,
+  Surface,
+} from "@/components/admin/primitives";
 import { ColorPickerModal } from "./color-picker-modal";
 import { ConnectDomainModal, WaitingDnsModal } from "./dns-modals";
 import { ChangeAddressModal, AddressUpdatedModal } from "./address-modals";
@@ -34,8 +44,33 @@ import {
 import {
   ALLOWED_LOGO_MIME_TYPES,
   ALLOWED_COVER_MIME_TYPES,
+  ALLOWED_MIME_TYPES,
   MAX_FILE_SIZES,
 } from "@/lib/validations/website-settings";
+
+const DEFAULT_COVER_IMAGE =
+  "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80";
+
+const FALLBACK_PREVIEW_SERVICES: PreviewServiceItem[] = [
+  {
+    id: "fallback-1",
+    name: "Signature haircut",
+    durationMinutes: 45,
+    priceCents: 65000,
+  },
+  {
+    id: "fallback-2",
+    name: "Wellness massage",
+    durationMinutes: 60,
+    priceCents: 120000,
+  },
+  {
+    id: "fallback-3",
+    name: "Facial treatment",
+    durationMinutes: 50,
+    priceCents: 95000,
+  },
+];
 
 const INITIAL_SETTINGS: WebsiteSettingsData = {
   businessName: "Bella Vita Salon & Spa",
@@ -53,8 +88,7 @@ const INITIAL_SETTINGS: WebsiteSettingsData = {
   showContactDetails: true,
 
   businessCategory: "Beauty & wellness",
-  about:
-    "Thoughtful hair, skin, and wellness care in a calm, welcoming space.",
+  about: "Thoughtful hair, skin, and wellness care in a calm, welcoming space.",
   businessEmail: "hello@bellavita.example",
   phoneNumber: "+63 917 555 0148",
   instagram: "instagram.com/bellavita.example",
@@ -79,48 +113,79 @@ const INITIAL_SETTINGS: WebsiteSettingsData = {
   socialTitle: "Your next moment of care starts here.",
   socialDescription:
     "Explore Bella Vita services and book a little time for yourself.",
+  socialImageUrl: "",
+  socialImageName: "",
 };
 
-// Shared field input class
+// Shared field input classes
 const fieldInput =
-  "h-11 w-full rounded-lg border border-outline bg-white px-3 text-sm text-ink placeholder:text-glyph focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/30 transition-shadow";
+  "h-11 w-full rounded-lg border border-outline bg-white px-3 text-sm text-ink placeholder:text-glyph focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/30 transition-shadow disabled:bg-mist disabled:text-muted disabled:cursor-not-allowed";
 
 const fieldTextarea =
-  "w-full rounded-lg border border-outline bg-white px-3 py-2.5 text-sm text-ink placeholder:text-glyph focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/30 transition-shadow leading-relaxed";
+  "w-full rounded-lg border border-outline bg-white px-3 py-2.5 text-sm text-ink placeholder:text-glyph focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/30 transition-shadow leading-relaxed disabled:bg-mist disabled:text-muted disabled:cursor-not-allowed";
 
 interface WebsiteSettingsViewProps {
   initialData?: Partial<WebsiteSettingsData>;
+  initialDraft?: Partial<WebsiteSettingsData> | null;
   tenantSlug?: string;
   tenantId?: string;
+  basePath?: string;
+  canEdit?: boolean;
+  previewServices?: PreviewServiceItem[];
   customDomainToken?: string;
+  userName?: string;
   userEmail?: string;
+  userRole?: string;
 }
 
 export function WebsiteSettingsView({
   initialData,
+  initialDraft = null,
   tenantSlug,
   tenantId,
+  basePath,
+  canEdit = true,
+  previewServices = [],
   customDomainToken,
+  userName = "Maria Santos",
   userEmail = "Maria Santos",
+  userRole = "Business owner",
 }: WebsiteSettingsViewProps) {
-  // Stored saved state
-  const [savedSettings, setSavedSettings] = React.useState<WebsiteSettingsData>({
+  const router = useRouter();
+
+  // Live published state
+  const [savedSettings, setSavedSettings] = React.useState<WebsiteSettingsData>(
+    {
+      ...INITIAL_SETTINGS,
+      ...(tenantSlug ? { subdomain: tenantSlug } : {}),
+      ...initialData,
+    },
+  );
+
+  // Current draft state (hydrates from saved draft if present)
+  const [form, setForm] = React.useState<WebsiteSettingsData>(() => ({
     ...INITIAL_SETTINGS,
     ...(tenantSlug ? { subdomain: tenantSlug } : {}),
     ...initialData,
-  });
-
-  // Current draft state
-  const [form, setForm] = React.useState<WebsiteSettingsData>(savedSettings);
+    ...(initialDraft ?? {}),
+  }));
+  const [hasSavedDraft, setHasSavedDraft] = React.useState<boolean>(
+    Boolean(initialDraft),
+  );
   const [activeTab, setActiveTab] = React.useState<ActiveTab>("branding");
-  const [previewDevice, setPreviewDevice] = React.useState<"desktop" | "mobile">("desktop");
+  const [previewDevice, setPreviewDevice] = React.useState<
+    "desktop" | "mobile"
+  >("desktop");
 
   const hasChanges = React.useMemo(() => {
-    return JSON.stringify(form) !== JSON.stringify(savedSettings);
-  }, [form, savedSettings]);
+    return (
+      hasSavedDraft || JSON.stringify(form) !== JSON.stringify(savedSettings)
+    );
+  }, [form, savedSettings, hasSavedDraft]);
 
   // Modals state
-  const [activeColorPicker, setActiveColorPicker] = React.useState<ColorType | null>(null);
+  const [activeColorPicker, setActiveColorPicker] =
+    React.useState<ColorType | null>(null);
   const [isConnectDomainOpen, setIsConnectDomainOpen] = React.useState(false);
   const [isWaitingDnsOpen, setIsWaitingDnsOpen] = React.useState(false);
   const [isChangeAddressOpen, setIsChangeAddressOpen] = React.useState(false);
@@ -135,27 +200,49 @@ export function WebsiteSettingsView({
   const [uploadError, setUploadError] = React.useState<string | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = React.useState(false);
   const [isUploadingCover, setIsUploadingCover] = React.useState(false);
+  const [isUploadingSocial, setIsUploadingSocial] = React.useState(false);
   const [isSavingDraft, setIsSavingDraft] = React.useState(false);
-  const [saveDraftError, setSaveDraftError] = React.useState<string | null>(null);
+  const [saveDraftError, setSaveDraftError] = React.useState<string | null>(
+    null,
+  );
   const [isPublishing, setIsPublishing] = React.useState(false);
   const [publishError, setPublishError] = React.useState<string | null>(null);
 
   const logoInputRef = React.useRef<HTMLInputElement | null>(null);
   const coverInputRef = React.useRef<HTMLInputElement | null>(null);
+  const socialInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const handleChange = <K extends keyof WebsiteSettingsData>(
+    key: K,
+    val: WebsiteSettingsData[K],
+  ) => {
+    if (!canEdit) return;
+    setForm((prev) => ({ ...prev, [key]: val }));
+  };
 
   const handleFileUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
-    assetType: "logo" | "cover"
+    assetType: "logo" | "cover" | "social",
   ) => {
+    if (!canEdit) return;
     const file = event.target.files?.[0];
     if (!file) return;
 
     const allowed =
-      assetType === "logo" ? ALLOWED_LOGO_MIME_TYPES : ALLOWED_COVER_MIME_TYPES;
+      assetType === "logo"
+        ? ALLOWED_LOGO_MIME_TYPES
+        : assetType === "cover"
+          ? ALLOWED_COVER_MIME_TYPES
+          : ALLOWED_MIME_TYPES;
+
     if (!allowed.has(file.type)) {
       const allowedText =
-        assetType === "cover" ? "PNG, JPEG, or WEBP" : "PNG, JPEG, WEBP, or SVG";
-      setUploadError(`Unsupported file format (${file.type}). Please upload a ${allowedText}.`);
+        assetType === "cover"
+          ? "PNG, JPEG, or WEBP"
+          : "PNG, JPEG, WEBP, or SVG";
+      setUploadError(
+        `Unsupported file format (${file.type}). Please upload a ${allowedText}.`,
+      );
       event.target.value = "";
       return;
     }
@@ -163,13 +250,16 @@ export function WebsiteSettingsView({
     const maxBytes = MAX_FILE_SIZES[assetType];
     if (file.size > maxBytes) {
       const maxMb = Math.round(maxBytes / (1024 * 1024));
-      setUploadError(`File is too large. Maximum allowed size for ${assetType} is ${maxMb} MB.`);
+      setUploadError(
+        `File is too large. Maximum allowed size for ${assetType} is ${maxMb} MB.`,
+      );
       event.target.value = "";
       return;
     }
 
     if (assetType === "logo") setIsUploadingLogo(true);
-    else setIsUploadingCover(true);
+    else if (assetType === "cover") setIsUploadingCover(true);
+    else setIsUploadingSocial(true);
     setUploadError(null);
 
     try {
@@ -178,32 +268,29 @@ export function WebsiteSettingsView({
       formData.append("assetType", assetType);
 
       const res = await uploadTenantMediaAction(formData, tenantId);
-      if (res.success) {
-        if (res.data) {
-          if (assetType === "logo") {
-            handleChange("logoUrl", res.data.url);
-          } else {
-            handleChange("coverPhotoName", res.data.filename);
-            handleChange("coverPhotoUrl", res.data.url);
-          }
+      if (res.success && res.data) {
+        if (assetType === "logo") {
+          handleChange("logoUrl", res.data.url);
+        } else if (assetType === "cover") {
+          handleChange("coverPhotoName", res.data.filename);
+          handleChange("coverPhotoUrl", res.data.url);
+        } else {
+          handleChange("socialImageName", res.data.filename);
+          handleChange("socialImageUrl", res.data.url);
         }
-      } else {
+      } else if (!res.success) {
         setUploadError(res.error || "Upload failed");
       }
     } catch (err: unknown) {
-      setUploadError(err instanceof Error ? err.message : "Failed to upload file");
+      setUploadError(
+        err instanceof Error ? err.message : "Failed to upload file",
+      );
     } finally {
       if (assetType === "logo") setIsUploadingLogo(false);
-      else setIsUploadingCover(false);
+      else if (assetType === "cover") setIsUploadingCover(false);
+      else setIsUploadingSocial(false);
       event.target.value = "";
     }
-  };
-
-  const handleChange = <K extends keyof WebsiteSettingsData>(
-    key: K,
-    val: WebsiteSettingsData[K]
-  ) => {
-    setForm((prev) => ({ ...prev, [key]: val }));
   };
 
   const handleApplyColor = (type: ColorType, hex: string) => {
@@ -213,9 +300,17 @@ export function WebsiteSettingsView({
   };
 
   const handleConfirmAddress = (newSubdomain: string) => {
-    handleChange("subdomain", newSubdomain);
+    setForm((prev) => ({ ...prev, subdomain: newSubdomain }));
+    setSavedSettings((prev) => ({ ...prev, subdomain: newSubdomain }));
     setIsChangeAddressOpen(false);
     setIsAddressUpdatedOpen(true);
+  };
+
+  const handleCloseAddressUpdated = () => {
+    setIsAddressUpdatedOpen(false);
+    if (tenantSlug && form.subdomain !== tenantSlug) {
+      router.replace(`/${form.subdomain}/dashboard/settings/website`);
+    }
   };
 
   const handleCopyLink = () => {
@@ -226,6 +321,7 @@ export function WebsiteSettingsView({
   };
 
   const handleSaveDraft = async () => {
+    if (!canEdit) return;
     setIsSavingDraft(true);
     setSaveDraftError(null);
     try {
@@ -234,16 +330,19 @@ export function WebsiteSettingsView({
         setSaveDraftError(res.error || "Failed to save draft.");
         return;
       }
-      setSavedSettings(form);
+      setHasSavedDraft(true);
       setIsDraftSavedOpen(true);
     } catch (err: unknown) {
-      setSaveDraftError(err instanceof Error ? err.message : "Failed to save draft.");
+      setSaveDraftError(
+        err instanceof Error ? err.message : "Failed to save draft.",
+      );
     } finally {
       setIsSavingDraft(false);
     }
   };
 
   const handlePublish = async () => {
+    if (!canEdit) return;
     setIsPublishing(true);
     setPublishError(null);
     try {
@@ -253,20 +352,38 @@ export function WebsiteSettingsView({
         return;
       }
       setSavedSettings(form);
+      setHasSavedDraft(false);
       setIsPublishReviewOpen(false);
       setIsPublishedOpen(true);
     } catch (err: unknown) {
-      setPublishError(err instanceof Error ? err.message : "Failed to publish settings.");
+      setPublishError(
+        err instanceof Error ? err.message : "Failed to publish settings.",
+      );
     } finally {
       setIsPublishing(false);
     }
   };
 
+  const handleClosePublished = () => {
+    setIsPublishedOpen(false);
+    if (tenantSlug && form.subdomain !== tenantSlug) {
+      router.replace(`/${form.subdomain}/dashboard/settings/website`);
+    }
+  };
+
   const handleDiscard = async () => {
+    if (!canEdit) return;
     setForm(savedSettings);
+    setHasSavedDraft(false);
     await discardWebsiteDraftAction(tenantId);
     setIsDiscardOpen(false);
   };
+
+  const displayedPreviewServices =
+    previewServices.length > 0 ? previewServices : FALLBACK_PREVIEW_SERVICES;
+
+  const resolvedCoverImage = form.coverPhotoUrl || DEFAULT_COVER_IMAGE;
+  const resolvedSocialImage = form.socialImageUrl || resolvedCoverImage;
 
   const tabs: { id: ActiveTab; label: string }[] = [
     { id: "branding", label: "Branding & homepage" },
@@ -289,7 +406,13 @@ export function WebsiteSettingsView({
         <div className="fixed top-5 right-5 z-50 bg-danger text-white px-4 py-2.5 rounded-[10px] shadow-xl flex items-center gap-2 text-xs font-medium">
           <AlertCircleIcon className="w-4 h-4 text-white" />
           <span>{uploadError}</span>
-          <button type="button" onClick={() => setUploadError(null)} className="ml-2 font-bold hover:opacity-80">×</button>
+          <button
+            type="button"
+            onClick={() => setUploadError(null)}
+            className="ml-2 font-bold hover:opacity-80"
+          >
+            ×
+          </button>
         </div>
       )}
 
@@ -297,14 +420,25 @@ export function WebsiteSettingsView({
         <div className="fixed top-5 right-5 z-50 bg-danger text-white px-4 py-2.5 rounded-[10px] shadow-xl flex items-center gap-2 text-xs font-medium">
           <AlertCircleIcon className="w-4 h-4 text-white" />
           <span>{saveDraftError}</span>
-          <button type="button" onClick={() => setSaveDraftError(null)} className="ml-2 font-bold hover:opacity-80">×</button>
+          <button
+            type="button"
+            onClick={() => setSaveDraftError(null)}
+            className="ml-2 font-bold hover:opacity-80"
+          >
+            ×
+          </button>
         </div>
       )}
 
       {/* Sidebar */}
       <MerchantSidebar
-        businessName={form.businessName.split(" ")[0] || "Bella Vita"}
+        businessName={
+          savedSettings.businessName || form.businessName || "Bella Vita"
+        }
+        userName={userName}
         userEmail={userEmail}
+        userRole={userRole}
+        basePath={basePath ?? (tenantSlug ? `/${tenantSlug}` : "")}
       />
 
       {/* Main content */}
@@ -332,6 +466,20 @@ export function WebsiteSettingsView({
               </div>
             }
           />
+
+          {/* Staff View-Only Banner */}
+          {!canEdit && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 flex items-start gap-2.5">
+              <AlertCircleIcon className="w-4 h-4 shrink-0 mt-0.5 text-amber-700" />
+              <div>
+                <p className="font-semibold">View-only access</p>
+                <p className="text-xs text-amber-800 mt-0.5">
+                  Only business owners can edit or publish website settings. You
+                  can still review configurations and preview the website.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Tab Navigation */}
           <div className="-mt-1 border-b border-hairline">
@@ -365,47 +513,70 @@ export function WebsiteSettingsView({
                   <div className="flex items-center justify-between border-b border-hairline pb-4">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-subtle">01</span>
-                      <h2 className="text-sm font-semibold text-ink">Brand identity</h2>
+                      <h2 className="text-sm font-semibold text-ink">
+                        Brand identity
+                      </h2>
                     </div>
-                    <span className="text-xs text-muted">Visible across your website</span>
+                    <span className="text-xs text-muted">
+                      Visible across your website
+                    </span>
                   </div>
 
                   {/* Logo, Display Name, Typography */}
                   <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-start">
                     {/* Business logo */}
                     <div className="sm:col-span-3">
-                      <span className="block text-xs font-semibold text-ink mb-1.5">Business logo</span>
+                      <span className="block text-xs font-semibold text-ink mb-1.5">
+                        Business logo
+                      </span>
                       <input
                         ref={logoInputRef}
                         type="file"
                         accept="image/png,image/jpeg,image/webp,image/svg+xml"
                         className="hidden"
+                        disabled={!canEdit}
                         onChange={(e) => handleFileUpload(e, "logo")}
                       />
                       <div className="w-16 h-16 rounded-xl bg-powder border border-hairline flex items-center justify-center font-display text-2xl font-bold text-burnt shadow-sm overflow-hidden relative">
                         {form.logoUrl ? (
-                          <Image src={form.logoUrl} alt="Logo" fill unoptimized className="object-cover" />
+                          <Image
+                            src={form.logoUrl}
+                            alt="Logo"
+                            fill
+                            unoptimized
+                            className="object-cover"
+                          />
                         ) : (
                           form.logoInitials
                         )}
                       </div>
-                      <span className="block text-[10px] text-subtle mt-1">PNG or SVG · 2 MB</span>
+                      <span className="block text-[10px] text-subtle mt-1">
+                        PNG or SVG · 2 MB
+                      </span>
                       <div className="flex items-center gap-2 mt-2">
                         <button
                           type="button"
-                          disabled={isUploadingLogo}
+                          disabled={!canEdit || isUploadingLogo}
                           onClick={() => logoInputRef.current?.click()}
-                          className="text-xs font-semibold text-burnt hover:text-burnt-dark underline disabled:opacity-50 transition-colors"
+                          className="text-xs font-semibold text-burnt hover:text-burnt-dark underline disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                           {isUploadingLogo ? "Uploading..." : "Replace logo"}
                         </button>
                         <button
                           type="button"
+                          disabled={!canEdit}
                           onClick={() => {
-                            const val = prompt("Logo initials (1-3 letters):", form.logoInitials) || form.logoInitials;
-                            handleChange("logoInitials", val.toUpperCase().slice(0, 3));
+                            const val =
+                              prompt(
+                                "Logo initials (1-3 letters):",
+                                form.logoInitials,
+                              ) || form.logoInitials;
+                            handleChange(
+                              "logoInitials",
+                              val.toUpperCase().slice(0, 3),
+                            );
                           }}
-                          className="text-[11px] text-muted hover:text-ink underline transition-colors"
+                          className="text-[11px] text-muted hover:text-ink underline disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                           Initials
                         </button>
@@ -419,8 +590,11 @@ export function WebsiteSettingsView({
                       </label>
                       <input
                         type="text"
+                        disabled={!canEdit}
                         value={form.businessName}
-                        onChange={(e) => handleChange("businessName", e.target.value)}
+                        onChange={(e) =>
+                          handleChange("businessName", e.target.value)
+                        }
                         className={fieldInput}
                       />
                     </div>
@@ -432,14 +606,23 @@ export function WebsiteSettingsView({
                       </label>
                       <div className="relative">
                         <select
+                          disabled={!canEdit}
                           value={form.typography}
-                          onChange={(e) => handleChange("typography", e.target.value)}
+                          onChange={(e) =>
+                            handleChange("typography", e.target.value)
+                          }
                           className={`${fieldInput} appearance-none pr-8`}
                         >
                           <option value="Ovo + Mulish">Ovo + Mulish</option>
-                          <option value="Playfair + Inter">Playfair + Inter</option>
-                          <option value="Cormorant + Plus Jakarta Sans">Cormorant + Plus Jakarta Sans</option>
-                          <option value="DM Serif + Montserrat">DM Serif + Montserrat</option>
+                          <option value="Playfair + Inter">
+                            Playfair + Inter
+                          </option>
+                          <option value="Cormorant + Plus Jakarta Sans">
+                            Cormorant + Plus Jakarta Sans
+                          </option>
+                          <option value="DM Serif + Montserrat">
+                            DM Serif + Montserrat
+                          </option>
                         </select>
                         <ChevronDownIcon className="w-3.5 h-3.5 text-glyph absolute right-3 top-3.5 pointer-events-none" />
                       </div>
@@ -448,40 +631,89 @@ export function WebsiteSettingsView({
 
                   {/* Website color palette */}
                   <div className="pt-1">
-                    <span className="block text-xs font-semibold text-ink mb-2">Website color palette</span>
+                    <span className="block text-xs font-semibold text-ink mb-2">
+                      Website color palette
+                    </span>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      {(["main", "secondary", "accent"] as ColorType[]).map((type) => {
-                        const labels = { main: "Main", secondary: "Secondary", accent: "Accent" };
-                        const descs = { main: "Backgrounds", secondary: "Sections & cards", accent: "Buttons & links" };
-                        const percents = { main: "60%", secondary: "30%", accent: "10%" };
-                        const color = type === "main" ? form.mainColor : type === "secondary" ? form.secondaryColor : form.accentColor;
-                        return (
-                          <button
-                            key={type}
-                            type="button"
-                            onClick={() => setActiveColorPicker(type)}
-                            className="p-3 rounded-[10px] border border-hairline bg-white hover:border-outline transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
-                          >
-                            <div className="flex items-center justify-between text-xs mb-1.5">
-                              <span className="font-semibold text-ink">{labels[type]}</span>
-                              <span className="text-[10px] text-subtle">{percents[type]}</span>
-                            </div>
-                            <div className="flex items-center gap-2 p-1 rounded-lg bg-mist border border-hairline">
-                              <span className="w-5 h-5 rounded border border-black/10 shrink-0" style={{ backgroundColor: color }} />
-                              <span className="font-mono text-xs uppercase font-medium text-body">{color}</span>
-                            </div>
-                            <span className="block text-[10px] text-subtle mt-1.5">{descs[type]}</span>
-                          </button>
-                        );
-                      })}
+                      {(["main", "secondary", "accent"] as ColorType[]).map(
+                        (type) => {
+                          const labels = {
+                            main: "Main",
+                            secondary: "Secondary",
+                            accent: "Accent",
+                          };
+                          const descs = {
+                            main: "Backgrounds",
+                            secondary: "Sections & cards",
+                            accent: "Buttons & links",
+                          };
+                          const percents = {
+                            main: "60%",
+                            secondary: "30%",
+                            accent: "10%",
+                          };
+                          const color =
+                            type === "main"
+                              ? form.mainColor
+                              : type === "secondary"
+                                ? form.secondaryColor
+                                : form.accentColor;
+                          return (
+                            <button
+                              key={type}
+                              type="button"
+                              disabled={!canEdit}
+                              onClick={() => setActiveColorPicker(type)}
+                              className="p-3 rounded-[10px] border border-hairline bg-white hover:border-outline transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                              <div className="flex items-center justify-between text-xs mb-1.5">
+                                <span className="font-semibold text-ink">
+                                  {labels[type]}
+                                </span>
+                                <span className="text-[10px] text-subtle">
+                                  {percents[type]}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 p-1 rounded-lg bg-mist border border-hairline">
+                                <span
+                                  className="w-5 h-5 rounded border border-black/10 shrink-0"
+                                  style={{ backgroundColor: color }}
+                                />
+                                <span className="font-mono text-xs uppercase font-medium text-body">
+                                  {color}
+                                </span>
+                              </div>
+                              <span className="block text-[10px] text-subtle mt-1.5">
+                                {descs[type]}
+                              </span>
+                            </button>
+                          );
+                        },
+                      )}
                     </div>
                     <div className="w-full h-1.5 rounded-full overflow-hidden flex my-3 border border-black/5">
-                      <div style={{ width: "60%", backgroundColor: form.mainColor }} />
-                      <div style={{ width: "30%", backgroundColor: form.secondaryColor }} />
-                      <div style={{ width: "10%", backgroundColor: form.accentColor }} />
+                      <div
+                        style={{
+                          width: "60%",
+                          backgroundColor: form.mainColor,
+                        }}
+                      />
+                      <div
+                        style={{
+                          width: "30%",
+                          backgroundColor: form.secondaryColor,
+                        }}
+                      />
+                      <div
+                        style={{
+                          width: "10%",
+                          backgroundColor: form.accentColor,
+                        }}
+                      />
                     </div>
                     <p className="text-xs text-muted">
-                      Use 60% Main for backgrounds, 30% Secondary for supporting sections, and 10% Accent for key actions.
+                      Use 60% Main for backgrounds, 30% Secondary for supporting
+                      sections, and 10% Accent for key actions.
                     </p>
                   </div>
                 </Surface>
@@ -491,15 +723,22 @@ export function WebsiteSettingsView({
                   <div className="flex items-center justify-between border-b border-hairline pb-4">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-subtle">02</span>
-                      <h2 className="text-sm font-semibold text-ink">Homepage content</h2>
+                      <h2 className="text-sm font-semibold text-ink">
+                        Homepage content
+                      </h2>
                     </div>
-                    <span className="text-xs text-muted">Make it feel like you</span>
+                    <span className="text-xs text-muted">
+                      Make it feel like you
+                    </span>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-ink mb-1.5">Headline</label>
+                    <label className="block text-xs font-semibold text-ink mb-1.5">
+                      Headline
+                    </label>
                     <input
                       type="text"
+                      disabled={!canEdit}
                       value={form.headline}
                       onChange={(e) => handleChange("headline", e.target.value)}
                       className={fieldInput}
@@ -507,11 +746,16 @@ export function WebsiteSettingsView({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-ink mb-1.5">Supporting message</label>
+                    <label className="block text-xs font-semibold text-ink mb-1.5">
+                      Supporting message
+                    </label>
                     <textarea
                       rows={2}
+                      disabled={!canEdit}
                       value={form.supportingMessage}
-                      onChange={(e) => handleChange("supportingMessage", e.target.value)}
+                      onChange={(e) =>
+                        handleChange("supportingMessage", e.target.value)
+                      }
                       className={fieldTextarea}
                     />
                   </div>
@@ -524,11 +768,12 @@ export function WebsiteSettingsView({
                         type="file"
                         accept="image/png,image/jpeg,image/webp"
                         className="hidden"
+                        disabled={!canEdit}
                         onChange={(e) => handleFileUpload(e, "cover")}
                       />
                       <div className="w-14 h-14 rounded-xl overflow-hidden bg-mist border border-hairline shrink-0 relative">
                         <Image
-                          src={form.coverPhotoUrl || "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=300&q=80"}
+                          src={resolvedCoverImage}
                           alt="Cover"
                           fill
                           unoptimized
@@ -537,40 +782,64 @@ export function WebsiteSettingsView({
                       </div>
                       <div className="text-xs">
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-ink">Cover photo</span>
+                          <span className="font-semibold text-ink">
+                            Cover photo
+                          </span>
                           <button
                             type="button"
-                            disabled={isUploadingCover}
+                            disabled={!canEdit || isUploadingCover}
                             onClick={() => coverInputRef.current?.click()}
-                            className="text-burnt hover:underline font-semibold disabled:opacity-50 transition-colors"
+                            className="text-burnt hover:underline font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
                             {isUploadingCover ? "Uploading..." : "Change"}
                           </button>
                         </div>
-                        <span className="text-muted block truncate max-w-[140px]">{form.coverPhotoName}</span>
-                        <span className="text-subtle text-[10px]">Recommended: 1600 × 900</span>
+                        <span className="text-muted block truncate max-w-[140px]">
+                          {form.coverPhotoName}
+                        </span>
+                        <span className="text-subtle text-[10px]">
+                          Recommended: 1600 × 900
+                        </span>
                       </div>
                     </div>
 
                     {/* Toggles */}
                     <div className="sm:col-span-7 space-y-3">
                       {[
-                        { key: "showFeaturedServices" as const, label: "Show featured services", desc: "Help visitors find their next appointment." },
-                        { key: "showContactDetails" as const, label: "Show contact details", desc: "Display your business email and phone." },
+                        {
+                          key: "showFeaturedServices" as const,
+                          label: "Show featured services",
+                          desc: "Help visitors find their next appointment.",
+                        },
+                        {
+                          key: "showContactDetails" as const,
+                          label: "Show contact details",
+                          desc: "Display your business email and phone.",
+                        },
                       ].map(({ key, label, desc }) => (
-                        <div key={key} className="flex items-center justify-between">
+                        <div
+                          key={key}
+                          className="flex items-center justify-between"
+                        >
                           <div>
-                            <span className="text-xs font-semibold text-ink block">{label}</span>
-                            <span className="text-[11px] text-muted">{desc}</span>
+                            <span className="text-xs font-semibold text-ink block">
+                              {label}
+                            </span>
+                            <span className="text-[11px] text-muted">
+                              {desc}
+                            </span>
                           </div>
                           <button
                             type="button"
                             role="switch"
                             aria-checked={form[key]}
+                            disabled={!canEdit}
                             onClick={() => handleChange(key, !form[key])}
-                            className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${form[key] ? "bg-burnt" : "bg-line"}`}
+                            className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:opacity-50 disabled:cursor-not-allowed ${form[key] ? "bg-burnt" : "bg-line"}`}
                           >
-                            <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ${form[key] ? "translate-x-5" : "translate-x-0"}`} />
+                            <div
+                              className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ${form[key] ? "translate-x-5" : "translate-x-0"}`}
+                            />
                           </button>
                         </div>
                       ))}
@@ -586,7 +855,9 @@ export function WebsiteSettingsView({
                   <div className="flex items-center justify-between pb-1">
                     <div className="flex items-center gap-2">
                       <Icon name="settings" className="size-4 text-glyph" />
-                      <span className="text-xs font-semibold text-ink">Website preview</span>
+                      <span className="text-xs font-semibold text-ink">
+                        Website preview
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
                       {/* Device switcher */}
@@ -600,12 +871,39 @@ export function WebsiteSettingsView({
                             aria-label={`${device} view`}
                           >
                             {device === "desktop" ? (
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
-                                <rect x="2" y="3" width="20" height="14" rx="2" /><line x1="12" y1="17" x2="12" y2="21" /><line x1="8" y1="21" x2="16" y2="21" />
+                              <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth={2}
+                                className="w-3.5 h-3.5"
+                              >
+                                <rect
+                                  x="2"
+                                  y="3"
+                                  width="20"
+                                  height="14"
+                                  rx="2"
+                                />
+                                <line x1="12" y1="17" x2="12" y2="21" />
+                                <line x1="8" y1="21" x2="16" y2="21" />
                               </svg>
                             ) : (
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
-                                <rect x="5" y="2" width="14" height="20" rx="2" /><line x1="12" y1="18" x2="12.01" y2="18" />
+                              <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth={2}
+                                className="w-3.5 h-3.5"
+                              >
+                                <rect
+                                  x="5"
+                                  y="2"
+                                  width="14"
+                                  height="20"
+                                  rx="2"
+                                />
+                                <line x1="12" y1="18" x2="12.01" y2="18" />
                               </svg>
                             )}
                           </button>
@@ -620,11 +918,20 @@ export function WebsiteSettingsView({
                   {/* Browser URL bar */}
                   <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-mist border border-hairline text-xs font-mono text-body">
                     <div className="flex items-center gap-2 truncate">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5 text-glyph shrink-0">
-                        <circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" />
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        className="w-3.5 h-3.5 text-glyph shrink-0"
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="2" y1="12" x2="22" y2="12" />
                         <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
                       </svg>
-                      <span className="truncate">{form.subdomain}.fides.app</span>
+                      <span className="truncate">
+                        {form.subdomain}.fides.app
+                      </span>
                     </div>
                     <button
                       type="button"
@@ -632,8 +939,16 @@ export function WebsiteSettingsView({
                       className="text-glyph hover:text-ink ml-2 transition-colors"
                       aria-label="Open in full preview"
                     >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
-                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        className="w-3.5 h-3.5"
+                      >
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                        <polyline points="15 3 21 3 21 9" />
+                        <line x1="10" y1="14" x2="21" y2="3" />
                       </svg>
                     </button>
                   </div>
@@ -641,41 +956,96 @@ export function WebsiteSettingsView({
                   {/* Scaled preview frame */}
                   <div
                     className={`rounded-xl border border-black/5 overflow-hidden transition-all duration-200 ${previewDevice === "mobile" ? "max-w-[280px] mx-auto shadow-md" : "w-full"}`}
-                    style={{ backgroundColor: form.mainColor, fontFamily: form.typography.includes("Ovo") ? "var(--font-display), Georgia, serif" : "inherit" }}
+                    style={{
+                      backgroundColor: form.mainColor,
+                      fontFamily: form.typography.includes("Ovo")
+                        ? "var(--font-display), Georgia, serif"
+                        : "inherit",
+                    }}
                   >
                     <div className="px-4 py-3 flex items-center justify-between border-b border-black/5 bg-white/40">
-                      <span className="font-serif text-sm font-semibold text-ink">{form.businessName.split(" ")[0] || "Bella Vita"}</span>
+                      <span className="font-serif text-sm font-semibold text-ink truncate max-w-[140px]">
+                        {form.businessName || "Bella Vita"}
+                      </span>
                       <div className="flex items-center gap-3 text-[10px] font-sans">
                         <span className="hidden sm:inline text-body">Home</span>
-                        <span className="hidden sm:inline text-body">Services</span>
-                        <span className="hidden sm:inline text-body">Contact</span>
-                        <span className="px-2.5 py-1 rounded-md text-[10px] font-bold text-white shadow-sm" style={{ backgroundColor: form.accentColor }}>Book now</span>
+                        <span className="hidden sm:inline text-body">
+                          Services
+                        </span>
+                        <span className="hidden sm:inline text-body">
+                          Contact
+                        </span>
+                        <span
+                          className="px-2.5 py-1 rounded-md text-[10px] font-bold text-white shadow-sm"
+                          style={{ backgroundColor: form.accentColor }}
+                        >
+                          Book now
+                        </span>
                       </div>
                     </div>
                     <div className="p-4 grid grid-cols-12 gap-3 items-center">
                       <div className="col-span-7 space-y-1.5">
-                        <span className="text-[9px] uppercase tracking-wider font-bold block" style={{ color: form.accentColor }}>{form.businessCategory.toUpperCase()}</span>
-                        <h3 className="text-base font-serif font-medium text-ink leading-snug">{form.headline}</h3>
-                        <p className="text-[10px] text-body font-sans leading-relaxed line-clamp-2">{form.supportingMessage}</p>
+                        <span
+                          className="text-[9px] uppercase tracking-wider font-bold block"
+                          style={{ color: form.accentColor }}
+                        >
+                          {form.businessCategory.toUpperCase()}
+                        </span>
+                        <h3 className="text-base font-serif font-medium text-ink leading-snug">
+                          {form.headline}
+                        </h3>
+                        <p className="text-[10px] text-body font-sans leading-relaxed line-clamp-2">
+                          {form.supportingMessage}
+                        </p>
                         <div className="pt-1">
-                          <span className="inline-block px-3 py-1 rounded-md text-[10px] font-semibold text-white shadow-sm font-sans" style={{ backgroundColor: form.accentColor }}>Book an appointment</span>
+                          <span
+                            className="inline-block px-3 py-1 rounded-md text-[10px] font-semibold text-white shadow-sm font-sans"
+                            style={{ backgroundColor: form.accentColor }}
+                          >
+                            Book an appointment
+                          </span>
                         </div>
                       </div>
                       <div className="col-span-5 h-24 rounded-lg overflow-hidden bg-mist relative">
-                        <Image src="https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=300&q=80" alt="Specialist" fill unoptimized className="object-cover" />
+                        <Image
+                          src={resolvedCoverImage}
+                          alt="Specialist"
+                          fill
+                          unoptimized
+                          className="object-cover"
+                        />
                       </div>
                     </div>
                     {form.showFeaturedServices && (
-                      <div className="p-3.5 space-y-2 font-sans" style={{ backgroundColor: form.secondaryColor }}>
-                        <span className="text-[10px] font-bold text-ink block font-serif">Find your moment of care</span>
+                      <div
+                        className="p-3.5 space-y-2 font-sans"
+                        style={{ backgroundColor: form.secondaryColor }}
+                      >
+                        <span className="text-[10px] font-bold text-ink block font-serif">
+                          Find your moment of care
+                        </span>
                         <div className="grid grid-cols-3 gap-1.5 text-[9px]">
-                          {["Signature haircut · 45 min · ₱650", "Wellness massage · 60 min · ₱1,200", "Facial treatment · 50 min · ₱950"].map((s, i) => {
-                            const [name, ...rest] = s.split(" · ");
+                          {displayedPreviewServices.slice(0, 3).map((svc) => {
+                            const formattedPrice = `₱${Math.round(
+                              svc.priceCents / 100,
+                            ).toLocaleString("en-PH")}`;
                             return (
-                              <div key={i} className="bg-white/90 p-1.5 rounded border border-black/5">
-                                <span className="font-semibold text-ink block truncate">{name}</span>
-                                <span className="text-muted block text-[8px]">{rest.join(" · ")}</span>
-                                <span className="text-[8px] text-burnt font-medium mt-1 block">View service →</span>
+                              <div
+                                key={svc.id}
+                                className="bg-white/90 p-1.5 rounded border border-black/5"
+                              >
+                                <span className="font-semibold text-ink block truncate">
+                                  {svc.name}
+                                </span>
+                                <span className="text-muted block text-[8px]">
+                                  {svc.durationMinutes} min · {formattedPrice}
+                                </span>
+                                <span
+                                  className="text-[8px] font-medium mt-1 block"
+                                  style={{ color: form.accentColor }}
+                                >
+                                  View service →
+                                </span>
                               </div>
                             );
                           })}
@@ -690,7 +1060,9 @@ export function WebsiteSettingsView({
 
                   <p className="text-xs text-muted flex items-center gap-1.5 pt-1">
                     <CheckIcon className="w-3.5 h-3.5 text-glyph" />
-                    <span>Only you can see these updates until you publish.</span>
+                    <span>
+                      Only you can see these updates until you publish.
+                    </span>
                   </p>
                 </Surface>
               </div>
@@ -706,52 +1078,125 @@ export function WebsiteSettingsView({
               <div className="space-y-5">
                 <Surface className="space-y-4">
                   <div className="border-b border-hairline pb-4">
-                    <span className="text-xs font-bold text-subtle block">01 · PUBLIC PROFILE</span>
-                    <h2 className="text-sm font-semibold text-ink mt-1">Help customers get to know you</h2>
-                    <p className="text-xs text-muted">These details appear on your About &amp; contact page.</p>
+                    <span className="text-xs font-bold text-subtle block">
+                      01 · PUBLIC PROFILE
+                    </span>
+                    <h2 className="text-sm font-semibold text-ink mt-1">
+                      Help customers get to know you
+                    </h2>
+                    <p className="text-xs text-muted">
+                      These details appear on your About &amp; contact page.
+                    </p>
                   </div>
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-xs font-semibold text-ink mb-1.5">Business name</label>
-                      <input type="text" value={form.businessName} onChange={(e) => handleChange("businessName", e.target.value)} className={fieldInput} />
+                      <label className="block text-xs font-semibold text-ink mb-1.5">
+                        Business name
+                      </label>
+                      <input
+                        type="text"
+                        disabled={!canEdit}
+                        value={form.businessName}
+                        onChange={(e) =>
+                          handleChange("businessName", e.target.value)
+                        }
+                        className={fieldInput}
+                      />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-ink mb-1.5">Business category</label>
+                      <label className="block text-xs font-semibold text-ink mb-1.5">
+                        Business category
+                      </label>
                       <div className="relative">
-                        <select value={form.businessCategory} onChange={(e) => handleChange("businessCategory", e.target.value)} className={`${fieldInput} appearance-none pr-8`}>
-                          <option value="Beauty & wellness">Beauty &amp; wellness</option>
+                        <select
+                          disabled={!canEdit}
+                          value={form.businessCategory}
+                          onChange={(e) =>
+                            handleChange("businessCategory", e.target.value)
+                          }
+                          className={`${fieldInput} appearance-none pr-8`}
+                        >
+                          <option value="Beauty & wellness">
+                            Beauty &amp; wellness
+                          </option>
                           <option value="Healthcare">Healthcare</option>
                           <option value="Fitness">Fitness</option>
-                          <option value="Professional services">Professional services</option>
+                          <option value="Professional services">
+                            Professional services
+                          </option>
                         </select>
                         <ChevronDownIcon className="w-3.5 h-3.5 text-glyph absolute right-3 top-3.5 pointer-events-none" />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-ink mb-1.5">About your business</label>
-                      <textarea rows={3} value={form.about} onChange={(e) => handleChange("about", e.target.value)} className={fieldTextarea} />
+                      <label className="block text-xs font-semibold text-ink mb-1.5">
+                        About your business
+                      </label>
+                      <textarea
+                        rows={3}
+                        disabled={!canEdit}
+                        value={form.about}
+                        onChange={(e) => handleChange("about", e.target.value)}
+                        className={fieldTextarea}
+                      />
                     </div>
                   </div>
                 </Surface>
 
                 <Surface className="space-y-4">
                   <div className="border-b border-hairline pb-4">
-                    <span className="text-xs font-bold text-subtle block">02 · CUSTOMER CONTACT</span>
-                    <h2 className="text-sm font-semibold text-ink mt-1">Make it easy to reach you</h2>
-                    <p className="text-xs text-muted">Use contact details your customers can access.</p>
+                    <span className="text-xs font-bold text-subtle block">
+                      02 · CUSTOMER CONTACT
+                    </span>
+                    <h2 className="text-sm font-semibold text-ink mt-1">
+                      Make it easy to reach you
+                    </h2>
+                    <p className="text-xs text-muted">
+                      Use contact details your customers can access.
+                    </p>
                   </div>
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-xs font-semibold text-ink mb-1.5">Business email</label>
-                      <input type="email" value={form.businessEmail} onChange={(e) => handleChange("businessEmail", e.target.value)} className={fieldInput} />
+                      <label className="block text-xs font-semibold text-ink mb-1.5">
+                        Business email
+                      </label>
+                      <input
+                        type="email"
+                        disabled={!canEdit}
+                        value={form.businessEmail}
+                        onChange={(e) =>
+                          handleChange("businessEmail", e.target.value)
+                        }
+                        className={fieldInput}
+                      />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-ink mb-1.5">Phone number</label>
-                      <input type="text" value={form.phoneNumber} onChange={(e) => handleChange("phoneNumber", e.target.value)} className={fieldInput} />
+                      <label className="block text-xs font-semibold text-ink mb-1.5">
+                        Phone number
+                      </label>
+                      <input
+                        type="text"
+                        disabled={!canEdit}
+                        value={form.phoneNumber}
+                        onChange={(e) =>
+                          handleChange("phoneNumber", e.target.value)
+                        }
+                        className={fieldInput}
+                      />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-ink mb-1.5">Instagram profile</label>
-                      <input type="text" value={form.instagram} onChange={(e) => handleChange("instagram", e.target.value)} className={fieldInput} />
+                      <label className="block text-xs font-semibold text-ink mb-1.5">
+                        Instagram profile
+                      </label>
+                      <input
+                        type="text"
+                        disabled={!canEdit}
+                        value={form.instagram}
+                        onChange={(e) =>
+                          handleChange("instagram", e.target.value)
+                        }
+                        className={fieldInput}
+                      />
                     </div>
                   </div>
                 </Surface>
@@ -761,23 +1206,59 @@ export function WebsiteSettingsView({
               <div className="space-y-5">
                 <Surface className="space-y-4">
                   <div className="border-b border-hairline pb-4">
-                    <span className="text-xs font-bold text-subtle block">03 · LOCATION</span>
-                    <h2 className="text-sm font-semibold text-ink mt-1">Where customers can find you</h2>
-                    <p className="text-xs text-muted">Shown with your contact details on the website.</p>
+                    <span className="text-xs font-bold text-subtle block">
+                      03 · LOCATION
+                    </span>
+                    <h2 className="text-sm font-semibold text-ink mt-1">
+                      Where customers can find you
+                    </h2>
+                    <p className="text-xs text-muted">
+                      Shown with your contact details on the website.
+                    </p>
                   </div>
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-xs font-semibold text-ink mb-1.5">Street address</label>
-                      <input type="text" value={form.streetAddress} onChange={(e) => handleChange("streetAddress", e.target.value)} className={fieldInput} />
+                      <label className="block text-xs font-semibold text-ink mb-1.5">
+                        Street address
+                      </label>
+                      <input
+                        type="text"
+                        disabled={!canEdit}
+                        value={form.streetAddress}
+                        onChange={(e) =>
+                          handleChange("streetAddress", e.target.value)
+                        }
+                        className={fieldInput}
+                      />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-semibold text-ink mb-1.5">City / province</label>
-                        <input type="text" value={form.cityProvince} onChange={(e) => handleChange("cityProvince", e.target.value)} className={fieldInput} />
+                        <label className="block text-xs font-semibold text-ink mb-1.5">
+                          City / province
+                        </label>
+                        <input
+                          type="text"
+                          disabled={!canEdit}
+                          value={form.cityProvince}
+                          onChange={(e) =>
+                            handleChange("cityProvince", e.target.value)
+                          }
+                          className={fieldInput}
+                        />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-ink mb-1.5">Postal code</label>
-                        <input type="text" value={form.postalCode} onChange={(e) => handleChange("postalCode", e.target.value)} className={fieldInput} />
+                        <label className="block text-xs font-semibold text-ink mb-1.5">
+                          Postal code
+                        </label>
+                        <input
+                          type="text"
+                          disabled={!canEdit}
+                          value={form.postalCode}
+                          onChange={(e) =>
+                            handleChange("postalCode", e.target.value)
+                          }
+                          className={fieldInput}
+                        />
                       </div>
                     </div>
                   </div>
@@ -785,9 +1266,16 @@ export function WebsiteSettingsView({
 
                 <Surface className="space-y-4">
                   <div className="border-b border-hairline pb-4">
-                    <span className="text-xs font-bold text-subtle block">04 · OPENING HOURS</span>
-                    <h2 className="text-sm font-semibold text-ink mt-1">Set clear expectations</h2>
-                    <p className="text-xs text-muted">These are display hours. Appointment availability follows Booking settings.</p>
+                    <span className="text-xs font-bold text-subtle block">
+                      04 · OPENING HOURS
+                    </span>
+                    <h2 className="text-sm font-semibold text-ink mt-1">
+                      Set clear expectations
+                    </h2>
+                    <p className="text-xs text-muted">
+                      These are display hours. Appointment availability follows
+                      Booking settings.
+                    </p>
                   </div>
                   <div className="space-y-2 text-sm">
                     {[
@@ -795,26 +1283,40 @@ export function WebsiteSettingsView({
                       { label: "Saturday", value: form.hoursSat },
                       { label: "Sunday", value: form.hoursSun },
                     ].map(({ label, value }) => (
-                      <div key={label} className="flex items-center justify-between p-3 rounded-lg bg-mist border border-hairline">
+                      <div
+                        key={label}
+                        className="flex items-center justify-between p-3 rounded-lg bg-mist border border-hairline"
+                      >
                         <span className="text-body font-medium">{label}</span>
                         <span className="font-semibold text-ink">{value}</span>
                       </div>
                     ))}
-                    <p className="text-xs text-muted pt-1">Time zone · {form.timeZone}</p>
+                    <p className="text-xs text-muted pt-1">
+                      Time zone · {form.timeZone}
+                    </p>
                   </div>
                   <div className="flex items-center justify-between pt-1">
                     <div>
-                      <span className="text-xs font-semibold text-ink block">Show opening hours</span>
-                      <span className="text-xs text-muted">Display your weekly hours on the contact page.</span>
+                      <span className="text-xs font-semibold text-ink block">
+                        Show opening hours
+                      </span>
+                      <span className="text-xs text-muted">
+                        Display your weekly hours on the contact page.
+                      </span>
                     </div>
                     <button
                       type="button"
                       role="switch"
                       aria-checked={form.showOpeningHours}
-                      onClick={() => handleChange("showOpeningHours", !form.showOpeningHours)}
-                      className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${form.showOpeningHours ? "bg-burnt" : "bg-line"}`}
+                      disabled={!canEdit}
+                      onClick={() =>
+                        handleChange("showOpeningHours", !form.showOpeningHours)
+                      }
+                      className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:opacity-50 disabled:cursor-not-allowed ${form.showOpeningHours ? "bg-burnt" : "bg-line"}`}
                     >
-                      <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ${form.showOpeningHours ? "translate-x-5" : "translate-x-0"}`} />
+                      <div
+                        className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ${form.showOpeningHours ? "translate-x-5" : "translate-x-0"}`}
+                      />
                     </button>
                   </div>
                 </Surface>
@@ -831,9 +1333,16 @@ export function WebsiteSettingsView({
                 <Surface className="space-y-5">
                   <div className="flex items-start justify-between border-b border-hairline pb-4">
                     <div>
-                      <span className="text-xs font-bold text-subtle block">01 · WEBSITE ADDRESS</span>
-                      <h2 className="text-sm font-semibold text-ink mt-1">Your home on the web</h2>
-                      <p className="text-xs text-muted">Share this address with customers so they can book directly.</p>
+                      <span className="text-xs font-bold text-subtle block">
+                        01 · WEBSITE ADDRESS
+                      </span>
+                      <h2 className="text-sm font-semibold text-ink mt-1">
+                        Your home on the web
+                      </h2>
+                      <p className="text-xs text-muted">
+                        Share this address with customers so they can book
+                        directly.
+                      </p>
                     </div>
                     <span className="inline-flex items-center rounded-md bg-wash px-2 py-1 text-xs font-semibold leading-[18px] text-success">
                       <span className="w-1.5 h-1.5 rounded-full bg-success mr-1.5" />
@@ -842,23 +1351,41 @@ export function WebsiteSettingsView({
                   </div>
 
                   <div className="rounded-lg border border-hairline bg-mist p-4 space-y-3">
-                    <span className="text-xs font-semibold text-ink block">Fides website address</span>
+                    <span className="text-xs font-semibold text-ink block">
+                      Fides website address
+                    </span>
                     <div className="flex items-center justify-between bg-white border border-hairline rounded-lg px-3 py-2 font-mono text-sm text-ink">
                       <span>{form.subdomain}.fides.app</span>
-                      <button type="button" onClick={handleCopyLink} className="inline-flex items-center gap-1 text-xs text-muted hover:text-ink font-sans transition-colors">
+                      <button
+                        type="button"
+                        onClick={handleCopyLink}
+                        className="inline-flex items-center gap-1 text-xs text-muted hover:text-ink font-sans transition-colors"
+                      >
                         <CopyIcon className="w-3.5 h-3.5" />
                         <span>Copy link</span>
                       </button>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 pt-1">
-                      <AdminButton variant="primary" size="xs" onClick={() => setIsChangeAddressOpen(true)}>
+                      <AdminButton
+                        variant="primary"
+                        size="xs"
+                        disabled={!canEdit}
+                        onClick={() => setIsChangeAddressOpen(true)}
+                      >
                         Change website address
                       </AdminButton>
-                      <AdminButton variant="outline" size="xs" onClick={() => setIsShareModalOpen(true)}>
+                      <AdminButton
+                        variant="outline"
+                        size="xs"
+                        onClick={() => setIsShareModalOpen(true)}
+                      >
                         Share
                       </AdminButton>
                     </div>
-                    <p className="text-xs text-muted">Use 3–40 lowercase letters, numbers, or hyphens. No spaces.</p>
+                    <p className="text-xs text-muted">
+                      Use 3–40 lowercase letters, numbers, or hyphens. No
+                      spaces.
+                    </p>
                   </div>
 
                   <div className="rounded-lg bg-warn-bg border border-warn-bg p-4 space-y-1">
@@ -867,47 +1394,99 @@ export function WebsiteSettingsView({
                       <span>Changing your address affects shared links</span>
                     </div>
                     <p className="text-sm text-warn-fg leading-relaxed pl-6">
-                      Your previous URL may stop working. Update social profiles, QR codes, and promotional links before sharing a new address.
+                      Your previous URL may stop working. Update social
+                      profiles, QR codes, and promotional links before sharing a
+                      new address.
                     </p>
                   </div>
                 </Surface>
 
                 <Surface className="space-y-5">
                   <div className="border-b border-hairline pb-4">
-                    <span className="text-xs font-bold text-subtle block">02 · CUSTOM DOMAIN</span>
-                    <h2 className="text-sm font-semibold text-ink mt-1">Bring your own domain</h2>
-                    <p className="text-xs text-muted">Connect a domain you already own. Keep the Fides address as a fallback.</p>
+                    <span className="text-xs font-bold text-subtle block">
+                      02 · CUSTOM DOMAIN
+                    </span>
+                    <h2 className="text-sm font-semibold text-ink mt-1">
+                      Bring your own domain
+                    </h2>
+                    <p className="text-xs text-muted">
+                      Connect a domain you already own. Keep the Fides address
+                      as a fallback.
+                    </p>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-ink mb-1.5">Domain name</label>
-                    <input type="text" value={form.customDomain} onChange={(e) => handleChange("customDomain", e.target.value)} className={`${fieldInput} font-mono`} />
+                    <label className="block text-xs font-semibold text-ink mb-1.5">
+                      Domain name
+                    </label>
+                    <input
+                      type="text"
+                      disabled={!canEdit}
+                      value={form.customDomain}
+                      onChange={(e) =>
+                        handleChange("customDomain", e.target.value)
+                      }
+                      className={`${fieldInput} font-mono`}
+                    />
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-lg bg-mist border border-hairline">
-                    <AdminButton variant="primary" size="xs" onClick={() => setIsConnectDomainOpen(true)}>
+                    <AdminButton
+                      variant="primary"
+                      size="xs"
+                      disabled={!canEdit}
+                      onClick={() => setIsConnectDomainOpen(true)}
+                    >
                       View connection steps
                     </AdminButton>
-                    <span className="inline-flex items-center rounded-md bg-warn-bg px-2 py-1 text-xs font-semibold leading-[18px] text-warn-fg">
-                      <span className="w-1.5 h-1.5 rounded-full bg-warn-fg mr-1.5" />
-                      Pending DNS setup
-                    </span>
+                    {form.isDomainVerified ? (
+                      <span className="inline-flex items-center rounded-md bg-wash px-2 py-1 text-xs font-semibold leading-[18px] text-success">
+                        <span className="w-1.5 h-1.5 rounded-full bg-success mr-1.5" />
+                        Connected · Verified
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-md bg-warn-bg px-2 py-1 text-xs font-semibold leading-[18px] text-warn-fg">
+                        <span className="w-1.5 h-1.5 rounded-full bg-warn-fg mr-1.5" />
+                        Pending DNS setup
+                      </span>
+                    )}
                   </div>
                 </Surface>
               </div>
 
               <div className="lg:col-span-5 space-y-4">
                 <Surface className="space-y-4">
-                  <span className="text-xs font-bold text-subtle block">CUSTOMER LINK</span>
-                  <h3 className="text-sm font-semibold text-ink">One link. A simple way to book.</h3>
+                  <span className="text-xs font-bold text-subtle block">
+                    CUSTOMER LINK
+                  </span>
+                  <h3 className="text-sm font-semibold text-ink">
+                    One link. A simple way to book.
+                  </h3>
                   <div className="rounded-lg border border-hairline bg-mist p-4 space-y-1">
-                    <span className="text-sm font-bold text-ink block">{form.businessName}</span>
-                    <span className="font-mono text-xs text-muted block">{form.subdomain}.fides.app</span>
-                    <span className="text-xs text-subtle block pt-1">Services · Online booking · About &amp; contact</span>
+                    <span className="text-sm font-bold text-ink block">
+                      {form.businessName}
+                    </span>
+                    <span className="font-mono text-xs text-muted block">
+                      {form.subdomain}.fides.app
+                    </span>
+                    <span className="text-xs text-subtle block pt-1">
+                      Services · Online booking · About &amp; contact
+                    </span>
                   </div>
                   <div className="space-y-2 pt-1 text-sm text-muted">
-                    <span className="font-semibold text-ink block">Before you make the switch</span>
-                    <p>1 Review your new address: choose a memorable name customers can type easily.</p>
-                    <p>2 Update your shared links: include social media bios, QR codes, and email signature.</p>
-                    <p>3 Check the customer journey: open your website and test booking after publishing.</p>
+                    <span className="font-semibold text-ink block">
+                      Before you make the switch
+                    </span>
+                    <p>
+                      1 Review your new address: choose a memorable name
+                      customers can type easily.
+                    </p>
+                    <p>
+                      2 Update your shared links: include social media bios, QR
+                      codes, and email signature.
+                    </p>
+                    <p>
+                      3 Check the customer journey: open your website and test
+                      booking after publishing.
+                    </p>
                   </div>
                 </Surface>
               </div>
@@ -922,37 +1501,173 @@ export function WebsiteSettingsView({
               <div className="lg:col-span-7 space-y-5">
                 <Surface className="space-y-5">
                   <div className="border-b border-hairline pb-4">
-                    <span className="text-xs font-bold text-subtle block">01 · SEARCH LISTING</span>
-                    <h2 className="text-sm font-semibold text-ink mt-1">Help the right customers find you</h2>
+                    <span className="text-xs font-bold text-subtle block">
+                      01 · SEARCH LISTING
+                    </span>
+                    <h2 className="text-sm font-semibold text-ink mt-1">
+                      Help the right customers find you
+                    </h2>
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-xs font-semibold text-ink">Page title</label>
-                      <span className="text-xs text-muted">{form.pageTitle.length} / 60 characters recommended</span>
+                      <label className="text-xs font-semibold text-ink">
+                        Page title
+                      </label>
+                      <span className="text-xs text-muted">
+                        {form.pageTitle.length} / 60 characters recommended
+                      </span>
                     </div>
-                    <input type="text" value={form.pageTitle} onChange={(e) => handleChange("pageTitle", e.target.value)} className={fieldInput} />
+                    <input
+                      type="text"
+                      disabled={!canEdit}
+                      value={form.pageTitle}
+                      onChange={(e) =>
+                        handleChange("pageTitle", e.target.value)
+                      }
+                      className={fieldInput}
+                    />
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-xs font-semibold text-ink">Meta description</label>
-                      <span className="text-xs text-muted">{form.metaDescription.length} / 160 characters recommended</span>
+                      <label className="text-xs font-semibold text-ink">
+                        Meta description
+                      </label>
+                      <span className="text-xs text-muted">
+                        {form.metaDescription.length} / 160 characters
+                        recommended
+                      </span>
                     </div>
-                    <textarea rows={3} value={form.metaDescription} onChange={(e) => handleChange("metaDescription", e.target.value)} className={fieldTextarea} />
+                    <textarea
+                      rows={3}
+                      disabled={!canEdit}
+                      value={form.metaDescription}
+                      onChange={(e) =>
+                        handleChange("metaDescription", e.target.value)
+                      }
+                      className={fieldTextarea}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-4 pt-2 border-t border-hairline">
+                    <div>
+                      <p className="text-xs font-semibold text-ink">
+                        Allow search engine indexing
+                      </p>
+                      <p className="text-xs text-muted mt-0.5">
+                        Search engines may take time to reflect published
+                        changes.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={form.allowIndexing}
+                      disabled={!canEdit}
+                      onClick={() =>
+                        handleChange("allowIndexing", !form.allowIndexing)
+                      }
+                      className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:opacity-50 disabled:cursor-not-allowed ${
+                        form.allowIndexing ? "bg-burnt" : "bg-line"
+                      }`}
+                    >
+                      <div
+                        className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ${
+                          form.allowIndexing ? "translate-x-5" : "translate-x-0"
+                        }`}
+                      />
+                    </button>
                   </div>
                 </Surface>
 
                 <Surface className="space-y-5">
                   <div className="border-b border-hairline pb-4">
-                    <span className="text-xs font-bold text-subtle block">02 · SOCIAL SHARING</span>
-                    <h2 className="text-sm font-semibold text-ink mt-1">Look good when your link is shared</h2>
+                    <span className="text-xs font-bold text-subtle block">
+                      02 · SOCIAL SHARING
+                    </span>
+                    <h2 className="text-sm font-semibold text-ink mt-1">
+                      Look good when your link is shared
+                    </h2>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-ink mb-1.5">Social preview title</label>
-                    <input type="text" value={form.socialTitle} onChange={(e) => handleChange("socialTitle", e.target.value)} className={fieldInput} />
+                    <label className="block text-xs font-semibold text-ink mb-1.5">
+                      Social preview title
+                    </label>
+                    <input
+                      type="text"
+                      disabled={!canEdit}
+                      value={form.socialTitle}
+                      onChange={(e) =>
+                        handleChange("socialTitle", e.target.value)
+                      }
+                      className={fieldInput}
+                    />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-ink mb-1.5">Social preview description</label>
-                    <textarea rows={2} value={form.socialDescription} onChange={(e) => handleChange("socialDescription", e.target.value)} className={fieldTextarea} />
+                    <label className="block text-xs font-semibold text-ink mb-1.5">
+                      Social preview description
+                    </label>
+                    <textarea
+                      rows={2}
+                      disabled={!canEdit}
+                      value={form.socialDescription}
+                      onChange={(e) =>
+                        handleChange("socialDescription", e.target.value)
+                      }
+                      className={fieldTextarea}
+                    />
+                  </div>
+                  <div className="pt-2 border-t border-hairline flex flex-wrap items-center justify-between gap-4">
+                    <input
+                      ref={socialInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                      className="hidden"
+                      disabled={!canEdit}
+                      onChange={(e) => handleFileUpload(e, "social")}
+                    />
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="relative h-14 w-24 shrink-0 overflow-hidden rounded-lg border border-hairline bg-mist">
+                        <Image
+                          src={resolvedSocialImage}
+                          alt="Social preview thumbnail"
+                          fill
+                          unoptimized
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-ink truncate">
+                          {form.socialImageUrl
+                            ? form.socialImageName || "Custom social image"
+                            : "Using your homepage cover photo"}
+                        </p>
+                        <p className="text-xs text-muted mt-0.5">
+                          Recommended social image size: 1200 × 630
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {form.socialImageUrl && canEdit && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleChange("socialImageUrl", "");
+                            handleChange("socialImageName", "");
+                          }}
+                          className="text-xs text-muted hover:text-ink underline"
+                        >
+                          Use cover
+                        </button>
+                      )}
+                      <AdminButton
+                        variant="outline"
+                        size="xs"
+                        type="button"
+                        disabled={!canEdit || isUploadingSocial}
+                        onClick={() => socialInputRef.current?.click()}
+                      >
+                        {isUploadingSocial ? "Uploading..." : "Change image"}
+                      </AdminButton>
+                    </div>
                   </div>
                 </Surface>
               </div>
@@ -960,21 +1675,47 @@ export function WebsiteSettingsView({
               {/* Right: Previews */}
               <div className="lg:col-span-5 space-y-4">
                 <Surface className="space-y-3">
-                  <span className="text-xs font-bold text-subtle block">SEARCH ENGINE RESULT</span>
-                  <div className="text-sm text-ink font-medium">{form.businessName}</div>
-                  <div className="text-xs text-subtle font-mono">https://{form.subdomain}.fides.app</div>
-                  <h4 className="text-sm font-semibold text-info">{form.pageTitle}</h4>
-                  <p className="text-sm text-muted line-clamp-3">{form.metaDescription}</p>
+                  <span className="text-xs font-bold text-subtle block">
+                    SEARCH ENGINE RESULT
+                  </span>
+                  <div className="text-sm text-ink font-medium">
+                    {form.businessName}
+                  </div>
+                  <div className="text-xs text-subtle font-mono">
+                    https://{form.subdomain}.fides.app
+                  </div>
+                  <h4 className="text-sm font-semibold text-info">
+                    {form.pageTitle}
+                  </h4>
+                  <p className="text-sm text-muted line-clamp-3">
+                    {form.metaDescription}
+                  </p>
                 </Surface>
 
                 <Surface className="overflow-hidden !p-0">
                   <div className="h-32 bg-mist overflow-hidden relative">
-                    <Image src="https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=400&q=80" alt="Social banner" fill unoptimized className="object-cover" />
+                    <Image
+                      src={resolvedSocialImage}
+                      alt="Social banner"
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
                   </div>
                   <div className="p-4 space-y-1 bg-mist">
-                    <span className="font-mono text-[10px] uppercase font-bold text-subtle block">{form.subdomain.toUpperCase()}.FIDES.APP</span>
-                    <h4 className="text-sm font-bold text-ink">{form.socialTitle}</h4>
-                    <p className="text-sm text-muted line-clamp-2">{form.socialDescription}</p>
+                    <span className="font-mono text-[10px] uppercase font-bold text-subtle block">
+                      {form.subdomain.toUpperCase()}.FIDES.APP
+                    </span>
+                    <h4 className="text-sm font-bold text-ink">
+                      {form.socialTitle}
+                    </h4>
+                    <p className="text-sm text-muted line-clamp-2">
+                      {form.socialDescription}
+                    </p>
+                    <p className="text-[11px] text-subtle pt-1">
+                      Preview appearance may vary by platform. Existing shares
+                      can keep a cached preview.
+                    </p>
                   </div>
                 </Surface>
               </div>
@@ -983,48 +1724,51 @@ export function WebsiteSettingsView({
         </PageContent>
 
         {/* Sticky bottom action bar */}
-        <div className="sticky bottom-0 z-30 bg-white/95 backdrop-blur-md border-t border-hairline px-4 sm:px-6 lg:px-8 py-4 shadow-lg flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div>
-              <span className="text-sm font-semibold text-ink block">
-                Draft · {hasChanges ? "Unpublished changes" : "All changes published"}
-              </span>
-              <span className="text-xs text-muted hidden sm:block">
-                Your current website stays live while you edit.
-              </span>
+        {canEdit && (
+          <div className="sticky bottom-0 z-30 bg-white/95 backdrop-blur-md border-t border-hairline px-4 sm:px-6 lg:px-8 py-4 shadow-lg flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div>
+                <span className="text-sm font-semibold text-ink block">
+                  Draft ·{" "}
+                  {hasChanges ? "Unpublished changes" : "All changes published"}
+                </span>
+                <span className="text-xs text-muted hidden sm:block">
+                  Your current website stays live while you edit.
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <AdminButton
+                variant="outline"
+                size="xs"
+                type="button"
+                disabled={!hasChanges}
+                onClick={() => setIsDiscardOpen(true)}
+              >
+                Discard changes
+              </AdminButton>
+              <AdminButton
+                variant="outline"
+                size="xs"
+                type="button"
+                disabled={isSavingDraft}
+                onClick={handleSaveDraft}
+              >
+                {isSavingDraft ? "Saving..." : "Save draft"}
+              </AdminButton>
+              <AdminButton
+                variant="primary"
+                size="sm"
+                type="button"
+                disabled={isPublishing}
+                onClick={() => setIsPublishReviewOpen(true)}
+              >
+                {isPublishing ? "Publishing..." : "Publish changes"}
+              </AdminButton>
             </div>
           </div>
-
-          <div className="flex items-center gap-3">
-            <AdminButton
-              variant="outline"
-              size="xs"
-              type="button"
-              disabled={!hasChanges}
-              onClick={() => setIsDiscardOpen(true)}
-            >
-              Discard changes
-            </AdminButton>
-            <AdminButton
-              variant="outline"
-              size="xs"
-              type="button"
-              disabled={isSavingDraft}
-              onClick={handleSaveDraft}
-            >
-              {isSavingDraft ? "Saving..." : "Save draft"}
-            </AdminButton>
-            <AdminButton
-              variant="primary"
-              size="sm"
-              type="button"
-              disabled={isPublishing}
-              onClick={() => setIsPublishReviewOpen(true)}
-            >
-              {isPublishing ? "Publishing..." : "Publish changes"}
-            </AdminButton>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Modals */}
@@ -1034,46 +1778,76 @@ export function WebsiteSettingsView({
           activeColorPicker === "main"
             ? form.mainColor
             : activeColorPicker === "secondary"
-            ? form.secondaryColor
-            : activeColorPicker === "accent"
-            ? form.accentColor
-            : "#FFFFFF"
+              ? form.secondaryColor
+              : activeColorPicker === "accent"
+                ? form.accentColor
+                : "#FFFFFF"
         }
-        isOpen={activeColorPicker !== null}
+        isOpen={canEdit && activeColorPicker !== null}
         onClose={() => setActiveColorPicker(null)}
         onApply={handleApplyColor}
       />
       <ConnectDomainModal
-        isOpen={isConnectDomainOpen}
+        isOpen={canEdit && isConnectDomainOpen}
         onClose={() => setIsConnectDomainOpen(false)}
         domainName={form.customDomain}
-        verificationToken={customDomainToken || `fides-site-verification=${tenantId || form.subdomain}`}
+        verificationToken={
+          customDomainToken ||
+          `fides-verify=${(tenantId || form.subdomain).slice(0, 12)}`
+        }
         tenantId={tenantId}
         onVerified={() => handleChange("isDomainVerified", true)}
         onCheckStatus={() => setIsWaitingDnsOpen(true)}
       />
-      <WaitingDnsModal isOpen={isWaitingDnsOpen} onClose={() => setIsWaitingDnsOpen(false)} />
+      <WaitingDnsModal
+        isOpen={isWaitingDnsOpen}
+        onClose={() => setIsWaitingDnsOpen(false)}
+      />
       <ChangeAddressModal
-        isOpen={isChangeAddressOpen}
+        isOpen={canEdit && isChangeAddressOpen}
         onClose={() => setIsChangeAddressOpen(false)}
         currentSubdomain={form.subdomain}
         tenantId={tenantId}
         onConfirm={handleConfirmAddress}
       />
-      <AddressUpdatedModal isOpen={isAddressUpdatedOpen} onClose={() => setIsAddressUpdatedOpen(false)} subdomain={form.subdomain} />
-      <ShareWebsiteModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} url={`https://${form.subdomain}.fides.app`} />
+      <AddressUpdatedModal
+        isOpen={isAddressUpdatedOpen}
+        onClose={handleCloseAddressUpdated}
+        subdomain={form.subdomain}
+      />
+      <ShareWebsiteModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        url={`https://${form.subdomain}.fides.app`}
+      />
       <PublishReviewModal
-        isOpen={isPublishReviewOpen}
+        isOpen={canEdit && isPublishReviewOpen}
         onClose={() => setIsPublishReviewOpen(false)}
         onPublish={handlePublish}
         siteAddress={`${form.subdomain}.fides.app`}
         isPublishing={isPublishing}
         errorMessage={publishError}
       />
-      <PublishedModal isOpen={isPublishedOpen} onClose={() => setIsPublishedOpen(false)} siteAddress={`${form.subdomain}.fides.app`} />
-      <DraftSavedModal isOpen={isDraftSavedOpen} onClose={() => setIsDraftSavedOpen(false)} />
-      <DiscardModal isOpen={isDiscardOpen} onClose={() => setIsDiscardOpen(false)} onDiscard={handleDiscard} />
-      <LivePreviewModal isOpen={isLivePreviewOpen} onClose={() => setIsLivePreviewOpen(false)} data={form} />
+      <PublishedModal
+        isOpen={isPublishedOpen}
+        onClose={handleClosePublished}
+        siteAddress={`${form.subdomain}.fides.app`}
+      />
+      <DraftSavedModal
+        isOpen={isDraftSavedOpen}
+        onClose={() => setIsDraftSavedOpen(false)}
+      />
+      <DiscardModal
+        isOpen={canEdit && isDiscardOpen}
+        onClose={() => setIsDiscardOpen(false)}
+        onDiscard={handleDiscard}
+      />
+      <LivePreviewModal
+        isOpen={isLivePreviewOpen}
+        onClose={() => setIsLivePreviewOpen(false)}
+        data={form}
+        services={previewServices}
+      />
     </div>
   );
 }

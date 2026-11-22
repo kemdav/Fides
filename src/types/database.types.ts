@@ -1526,6 +1526,8 @@ type DatabaseCore = {
           time_zone: string;
           typography: string;
           updated_at: string;
+          social_image_name: string | null;
+          social_image_url: string | null;
         };
         ComputedFields: never;
         Insert: {
@@ -1577,6 +1579,8 @@ type DatabaseCore = {
           time_zone?: string;
           typography?: string;
           updated_at?: string;
+          social_image_name?: string | null;
+          social_image_url?: string | null;
         };
         Update: {
           about?: string | null;
@@ -1627,6 +1631,8 @@ type DatabaseCore = {
           time_zone?: string;
           typography?: string;
           updated_at?: string;
+          social_image_name?: string | null;
+          social_image_url?: string | null;
         };
         Relationships: [
           {
