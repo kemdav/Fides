@@ -1250,6 +1250,10 @@ type DatabaseCore = {
       };
       staff_invitations: {
         Row: {
+          token_hash: string | null;
+          service_ids: string[];
+          commission_type: Database["public"]["Enums"]["commission_type"];
+          commission_value: number;
           id: string;
           tenant_id: string;
           full_name: string;
@@ -1262,6 +1266,10 @@ type DatabaseCore = {
           cancelled_at: string | null;
         };
         Insert: {
+          token_hash?: string | null;
+          service_ids?: string[];
+          commission_type?: Database["public"]["Enums"]["commission_type"];
+          commission_value?: number;
           id?: string;
           tenant_id: string;
           full_name: string;
@@ -1905,6 +1913,18 @@ type DatabaseCore = {
       [_ in never]: never;
     };
     Functions: {
+      reserve_staff_invitation: {
+        Args: {
+          p_actor_id: string; p_tenant_id: string; p_full_name: string; p_email: string;
+          p_role: Database["public"]["Enums"]["app_role"]; p_title: string; p_service_ids: string[];
+          p_commission_type: Database["public"]["Enums"]["commission_type"]; p_commission_value: number; p_token_hash: string;
+        };
+        Returns: string;
+      };
+      accept_staff_invitation: {
+        Args: { p_token_hash: string; p_profile_id: string };
+        Returns: undefined;
+      };
       get_staff_commission_totals: {
         Args: { p_tenant_id: string; p_period_start: string; p_period_end: string; p_staff_id?: string };
         Returns: { staff_id: string; commission_cents: number }[];
