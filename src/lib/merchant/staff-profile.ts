@@ -3,7 +3,8 @@ import type { ManagedStaff } from "@/components/merchant/staff/manage-staff-moda
 import { getAdminClient, type AdminClient } from "@/lib/supabase/admin";
 import { zonedDateToUtc } from "@/lib/merchant/overview";
 
-export const staffRoleLabels = { owner: "Owner", admin: "Admin", receptionist: "Receptionist", staff: "Service Staff" };
+import { staffRoleLabels } from "./workspace-roles";
+export { staffRoleLabels };
 const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
 const staffProfileColumns = "id, full_name, title, bio, image_url, profile_id, active, commission_type, commission_value";
 

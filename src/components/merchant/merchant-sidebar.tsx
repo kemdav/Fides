@@ -5,13 +5,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon, type IconName } from "@/components/admin/icon";
 import { cn, getInitials } from "@/lib/utils";
+import { staffRoleLabels, type WorkspaceRole } from "@/lib/merchant/workspace-roles";
 import { merchantNameTypography } from "@/lib/brand-colors";
 
 interface MerchantSidebarProps {
   businessName?: string;
   userName?: string;
   userEmail?: string;
-  userRole?: string;
+  userRole?: WorkspaceRole;
   basePath?: string;
 }
 
@@ -41,6 +42,8 @@ export function MerchantSidebar({
   const accountPath = `${dashboardPath}/account`;
   const accountActive = pathname === accountPath;
   const displayName = userName?.trim() || userEmail?.trim() || "My account";
+  const managesTeam = userRole === "owner" || userRole === "admin";
+  const visibleItems = managesTeam ? manageItems : manageItems.filter(({ label }) => label === "Overview" || label === "Appointments");
   const isActive = (suffix?: string) =>
     suffix ? pathname.startsWith(`${dashboardPath}${suffix}`) : pathname === dashboardPath;
 
@@ -85,7 +88,7 @@ export function MerchantSidebar({
           <Icon name="grid" className="size-6" />
         </button>
         <span className="font-display text-2xl text-[#C35000]">{businessName}</span>
-        <span className="text-xs font-semibold uppercase tracking-[1.2px] text-neutral-400">Merchant</span>
+        <span aria-hidden="true" className="size-8" />
       </div>
 
       {mobileOpen && (
@@ -99,22 +102,23 @@ export function MerchantSidebar({
         <div className="flex shrink-0 items-start justify-between border-b border-[#EDECE8] pb-4">
           <div>
             <h1 className={cn(merchantNameTypography, "text-burnt")}>{businessName}</h1>
-            <p className="text-xs font-semibold uppercase leading-[18px] tracking-[1.3px] text-neutral-400">Merchant Workspace</p>
           </div>
           <button type="button" onClick={() => setMobileOpen(false)} className="p-1 text-neutral-400 lg:hidden" aria-label="Close navigation menu">
             <Icon name="close" className="size-5" />
           </button>
         </div>
         <p className="text-xs leading-[18px] tracking-[1.3px] text-neutral-400">WORKSPACE</p>
-        <nav aria-label="Merchant workspace" className="flex w-full flex-col gap-[clamp(1px,0.4vh,5px)]">
-          {manageItems.map((item) => renderItem(item))}
+        <nav aria-label="Workspace navigation" className="flex w-full flex-col gap-[clamp(1px,0.4vh,5px)]">
+          {visibleItems.map((item) => renderItem(item))}
         </nav>
+        {userRole === "owner" && <>
         <p className="mt-2 text-xs leading-[18px] tracking-[1.3px] text-neutral-400">CONFIGURATION</p>
         <nav aria-label="Merchant configuration" className="flex w-full flex-col gap-[clamp(1px,0.4vh,5px)]">
           {renderItem({ label: "Website settings", icon: "settings" }, true)}
           {renderItem({ label: "Booking settings", icon: "book-settings" })}
           {renderItem({ label: "Subscription", icon: "card" })}
         </nav>
+        </>}
         <div className="flex-1" />
         <div className="shrink-0 border-t border-hairline pt-3">
           <Link href={accountPath} onClick={() => setMobileOpen(false)}
@@ -125,7 +129,7 @@ export function MerchantSidebar({
             </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-semibold text-ink">{displayName}</span>
-              <span className="block truncate text-xs text-muted">{userRole || "My account"}</span>
+              <span className="block truncate text-xs text-muted">{userRole === "owner" ? "Business owner" : userRole ? staffRoleLabels[userRole] : "My account"}</span>
             </span>
             <Icon name="chevron-down" className="size-3.5 -rotate-90 text-muted" />
           </Link>

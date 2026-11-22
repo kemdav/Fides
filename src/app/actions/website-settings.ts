@@ -44,7 +44,7 @@ async function authenticateOwner(tenantIdParam?: string): Promise<
   // 1. Check user platform profile role & tenant
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, role, tenant_id")
+    .select("tenant_id")
     .eq("id", user.id)
     .single();
 
@@ -67,9 +67,7 @@ async function authenticateOwner(tenantIdParam?: string): Promise<
     .eq("profile_id", user.id)
     .maybeSingle();
 
-  const isTenantOwner =
-    membership?.role === "owner" ||
-    (profile?.tenant_id === targetTenantId && profile?.role === "owner");
+  const isTenantOwner = membership?.role === "owner";
 
   // Strict Role-Based Access Control: strictly 'owner' (QA #15).
   // Non-owners (admin, receptionist, staff) must be rejected with 403.

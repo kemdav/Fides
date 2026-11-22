@@ -58,17 +58,42 @@ function emailStrongAccent(accent: string): string {
   return color;
 }
 
-export function staffInvitationMessage(input: {
+type StaffMessageRecipient = {
   name: string;
   merchant: string;
-  invitationUrl: URL;
-  signInUrl: URL;
   colors: {
     brand: string | null;
     secondary: string | null;
     accent: string | null;
   };
-}) {
+};
+
+export function staffInvitationMessage(input: StaffMessageRecipient & { invitationUrl: URL; signInUrl: URL }) {
+  return renderStaffMessage({ ...input, url: input.invitationUrl, kind: "invitation" });
+}
+
+export function staffEmailVerificationMessage(input: StaffMessageRecipient & { verificationUrl: URL; minutesValid: number }) {
+  return renderStaffMessage({ ...input, url: input.verificationUrl, kind: "verification" });
+}
+
+function renderStaffMessage(input: StaffMessageRecipient & { url: URL } & (
+  | { kind: "invitation"; signInUrl: URL }
+  | { kind: "verification"; minutesValid: number }
+)) {
+  const isInvitation = input.kind === "invitation";
+  const label = isInvitation ? "Staff invitation" : "Email verification";
+  const heading = isInvitation ? `Join ${input.merchant} on Fides` : "Verify your new email address";
+  const preheader = isInvitation
+    ? `${input.merchant} invited you to join their team on Fides. Accept within 7 days.`
+    : `Confirm your new sign-in email for ${input.merchant}.`;
+  const body = isInvitation
+    ? `${input.merchant} has invited you to join their team. Accept the invitation to set up your staff account and get started.`
+    : `A request was made to use this email address to sign in to ${input.merchant} on Fides. Verify the new address to finish the change.`;
+  const button = isInvitation ? "Accept invitation" : "Verify Email";
+  const expiry = isInvitation ? "This invitation expires in 7 days." : `This verification link expires in ${input.minutesValid} minutes.`;
+  const closing = isInvitation
+    ? "If you weren't expecting this invitation, you can safely ignore this email."
+    : "If you weren't expecting this change, you can safely ignore this email. Your current sign-in email will stay active.";
   const brand = emailColor(input.colors.brand, "#ffffeb");
   const secondary = emailColor(input.colors.secondary, "#09101d");
   const accent = emailColor(input.colors.accent, "#c35000");
@@ -88,8 +113,7 @@ export function staffInvitationMessage(input: {
   );
   const name = escapeHtml(input.name);
   const merchant = escapeHtml(input.merchant);
-  const invitationUrl = escapeHtml(input.invitationUrl.toString());
-  const signInUrl = escapeHtml(input.signInUrl.toString());
+  const actionUrl = escapeHtml(input.url.toString());
 
   const font =
     "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
@@ -103,25 +127,28 @@ export function staffInvitationMessage(input: {
       <td valign="top" style="padding:2px 0 ${last ? 0 : 14}px;font-family:${font};font-size:14px;line-height:21px;color:#374151;">${content}</td>
     </tr>`;
 
+  const steps = isInvitation
+    ? ["Accept your invitation using the button above.", "Set up or sign in to your staff account.", "Come back any time through the staff portal."]
+    : ["Open the verification page using the button above.", "Enter your current Fides password.", "Once verified, you'll be signed in and taken to your workspace dashboard."];
+
   return {
-    subject: `${input.merchant} invited you to join their team on Fides`,
+    subject: isInvitation ? `${input.merchant} invited you to join their team on Fides` : "Verify your new Fides email address",
 
     text: [
       `Hi ${input.name},`,
       "",
-      `${input.merchant} has invited you to join their team on Fides.`,
+      body,
       "",
-      "Accept your invitation:",
-      input.invitationUrl.toString(),
+      button,
+      input.url.toString(),
       "",
-      "This invitation expires in 7 days.",
+      expiry,
       "",
       "What happens next:",
-      "1. Accept your invitation",
-      "2. Set up or sign in to your staff account",
-      `3. Return any time through the staff portal: ${input.signInUrl.toString()}`,
+      ...steps.map((content, index) => `${index + 1}. ${content}`),
+      ...(isInvitation ? [input.signInUrl.toString()] : []),
       "",
-      "If you weren't expecting this invitation, you can safely ignore this email.",
+      closing,
       "",
       "Powered by Fides",
     ].join("\n"),
@@ -134,7 +161,7 @@ export function staffInvitationMessage(input: {
   <meta name="x-apple-disable-message-reformatting">
   <meta name="color-scheme" content="light">
   <meta name="supported-color-schemes" content="light">
-  <title>Staff invitation</title>
+  <title>${label}</title>
   <style>
     body { margin:0; padding:0; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; }
     table { border-collapse:separate; }
@@ -151,7 +178,7 @@ export function staffInvitationMessage(input: {
 </head>
 <body style="margin:0;padding:0;background-color:${pageBackground};">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;">
-    ${merchant} invited you to join their team on Fides. Accept within 7 days.&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;
+    ${escapeHtml(preheader)}&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;
   </div>
 
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:${pageBackground};">
@@ -170,7 +197,7 @@ export function staffInvitationMessage(input: {
                   </td>
                   <td valign="middle" style="font-family:${font};">
                     <div style="font-size:16px;line-height:22px;font-weight:700;color:#111827;">${merchant}</div>
-                    <div style="font-size:12px;line-height:18px;letter-spacing:0.6px;text-transform:uppercase;color:${strong};">Staff invitation</div>
+                    <div style="font-size:12px;line-height:18px;letter-spacing:0.6px;text-transform:uppercase;color:${strong};">${label}</div>
                   </td>
                 </tr>
               </table>
@@ -180,18 +207,18 @@ export function staffInvitationMessage(input: {
           <!-- Message + button -->
           <tr>
             <td class="px" style="padding:32px 32px 8px;font-family:${font};">
-              <h1 class="h1" style="margin:0 0 14px;font-family:${serif};font-size:26px;line-height:34px;font-weight:normal;color:${headingColor};">Join ${merchant} on Fides</h1>
+              <h1 class="h1" style="margin:0 0 14px;font-family:${serif};font-size:26px;line-height:34px;font-weight:normal;color:${headingColor};">${escapeHtml(heading)}</h1>
               <p style="margin:0 0 6px;font-size:15px;line-height:24px;color:#374151;">Hi ${name},</p>
-              <p style="margin:0 0 26px;font-size:15px;line-height:24px;color:#374151;">${merchant} has invited you to join their team. Accept the invitation to set up your staff account and get started.</p>
+              <p style="margin:0 0 26px;font-size:15px;line-height:24px;color:#374151;">${escapeHtml(body)}</p>
 
               <table class="btn-table" role="presentation" cellspacing="0" cellpadding="0" border="0">
                 <tr>
                   <td bgcolor="${strong}" style="border-radius:8px;background-color:${strong};">
-                    <a class="btn" href="${invitationUrl}" target="_blank" style="display:inline-block;padding:14px 28px;font-family:${font};font-size:15px;line-height:20px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:8px;">Accept invitation</a>
+                    <a class="btn" href="${actionUrl}" target="_blank" style="display:inline-block;padding:14px 28px;font-family:${font};font-size:15px;line-height:20px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:8px;">${button}</a>
                   </td>
                 </tr>
               </table>
-              <p style="margin:14px 0 0;font-size:13px;line-height:20px;color:#6b7280;">This invitation expires in 7 days.</p>
+              <p style="margin:14px 0 0;font-size:13px;line-height:20px;color:#6b7280;">${expiry}</p>
             </td>
           </tr>
 
@@ -203,9 +230,13 @@ export function staffInvitationMessage(input: {
                   <td class="panel-pad" style="padding:20px 22px;">
                     <p style="margin:0 0 14px;font-family:${font};font-size:12px;line-height:18px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#6b7280;">What happens next</p>
                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-                      ${step(1, "Accept your invitation using the button above.")}
-                      ${step(2, "Set up or sign in to your staff account.")}
-                      ${step(3, `Come back any time through the <a href="${signInUrl}" style="color:${strong};font-weight:600;text-decoration:underline;">staff portal</a>.`, true)}
+                      ${steps.map((content, index) => {
+                        const last = index === steps.length - 1;
+                        const html = last && isInvitation
+                          ? escapeHtml(content).replace("staff portal", `<a href="${escapeHtml(input.signInUrl.toString())}" style="color:${strong};font-weight:600;text-decoration:underline;">staff portal</a>`)
+                          : escapeHtml(content);
+                        return step(index + 1, html, last);
+                      }).join("")}
                     </table>
                   </td>
                 </tr>
@@ -217,8 +248,8 @@ export function staffInvitationMessage(input: {
           <tr>
             <td class="px" style="padding:24px 32px 32px;font-family:${font};">
               <p style="margin:0 0 4px;font-size:12px;line-height:18px;color:#6b7280;">Button not working? Paste this link into your browser:</p>
-              <p style="margin:0 0 18px;font-size:12px;line-height:18px;word-break:break-all;overflow-wrap:anywhere;"><a href="${invitationUrl}" style="color:${strong};text-decoration:underline;">${invitationUrl}</a></p>
-              <p style="margin:0;font-size:12px;line-height:18px;color:#6b7280;">If you weren’t expecting this invitation, you can safely ignore this email.</p>
+              <p style="margin:0 0 18px;font-size:12px;line-height:18px;word-break:break-all;overflow-wrap:anywhere;"><a href="${actionUrl}" style="color:${strong};text-decoration:underline;">${actionUrl}</a></p>
+              <p style="margin:0;font-size:12px;line-height:18px;color:#6b7280;">${escapeHtml(closing)}</p>
             </td>
           </tr>
 

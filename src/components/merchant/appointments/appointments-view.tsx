@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { canManageBookings, type WorkspaceRole } from "@/lib/merchant/workspace-roles";
 import { MerchantSidebar } from "../merchant-sidebar";
 import { Icon } from "@/components/admin/icon";
 import { AdminButton, AdminLinkButton } from "@/components/admin/admin-button";
@@ -29,7 +30,7 @@ interface AppointmentsViewProps {
   businessName?: string;
   userName?: string;
   userEmail?: string;
-  userRole?: string;
+  userRole?: WorkspaceRole;
   tenantId?: string;
   todayCount?: number;
   awaitingCount?: number;
@@ -292,6 +293,7 @@ export function AppointmentsView({
 
   // today date string for highlight
   const today = new Date();
+  const canManage = canManageBookings(userRole);
 
   return (
     <div className="flex min-h-dvh flex-col bg-powder text-ink lg:h-dvh lg:flex-row lg:overflow-hidden">
@@ -301,10 +303,10 @@ export function AppointmentsView({
         <PageContent>
           {/* Page Heading */}
           <PageHeading
-            eyebrow="MERCHANT WORKSPACE"
+            eyebrow={businessName}
             title="Appointments"
-            description="Manage bookings, approvals, and appointment outcomes in one place."
-            actions={
+            description={canManage ? "Manage bookings, approvals, and appointment outcomes in one place." : "View your assigned appointments in the list or calendar."}
+            actions={canManage && (
               <div className="flex flex-wrap items-center gap-2">
                 <AdminButton variant="primary" size="sm" onClick={() => setIsNewBookingOpen(true)}>
                   + New Booking
@@ -313,7 +315,7 @@ export function AppointmentsView({
                   + Add Walk-in
                 </AdminButton>
               </div>
-            }
+            )}
           />
 
           {/* KPI Metric Cards */}
@@ -873,9 +875,9 @@ export function AppointmentsView({
                                 {row.staffScheduleMatch && row.calendarDate && (
                                   <AdminButton size="xs" variant="outline-accent" onClick={() => showBookingInCalendar(row.calendarDate!)}>Show in calendar</AdminButton>
                                 )}
-                                {row.status !== "Confirmed" && <AdminButton size="xs" variant="primary" onClick={() => handleStatusChange(row.id, "Confirmed")}>Confirm</AdminButton>}
-                                {row.status !== "Check In"  && <AdminButton size="xs" variant="outline" onClick={() => handleStatusChange(row.id, "Check In")}>Check In</AdminButton>}
-                                <AdminButton size="xs" variant="danger" onClick={() => setCancelTarget(row)}>Cancel</AdminButton>
+                                {canManage && row.status !== "Confirmed" && <AdminButton size="xs" variant="primary" onClick={() => handleStatusChange(row.id, "Confirmed")}>Confirm</AdminButton>}
+                                {canManage && row.status !== "Check In"  && <AdminButton size="xs" variant="outline" onClick={() => handleStatusChange(row.id, "Check In")}>Check In</AdminButton>}
+                                {canManage && <AdminButton size="xs" variant="danger" onClick={() => setCancelTarget(row)}>Cancel</AdminButton>}
                               </div>
                             </div>
                           )}
@@ -890,7 +892,7 @@ export function AppointmentsView({
                   <table className="w-full text-left text-sm">
                     <thead className="bg-mist border-b border-hairline text-subtle font-semibold">
                       <tr>
-                        {["Time","Customer","Service","Staff","Source","Status","Action"].map((h, i) => (
+                        {["Time","Customer","Service","Staff","Source","Status", ...(canManage ? ["Action"] : [])].map((h, i) => (
                           <th key={h} className={`px-5 py-3 text-[11px] leading-4 uppercase tracking-wide ${i === 6 ? "text-right" : ""}`}>{h}</th>
                         ))}
                       </tr>
@@ -898,7 +900,7 @@ export function AppointmentsView({
                     <tbody className="divide-y divide-hairline">
                       {filtered.length === 0 ? (
                         <tr>
-                          <td colSpan={7} className="px-5 py-2">
+                          <td colSpan={canManage ? 7 : 6} className="px-5 py-2">
                             <EmptyState
                               compact
                               title={searchQuery || filterStatus !== "All"
@@ -928,7 +930,7 @@ export function AppointmentsView({
                               <span className={row.source === "Walk-In" ? "text-burnt font-medium" : "text-muted"}>{row.source}</span>
                             </td>
                             <td className="px-5 py-3.5">
-                              {(row.status === "Check In" || row.status === "Pending approval") ? (
+                              {canManage && (row.status === "Check In" || row.status === "Pending approval") ? (
                                 <button type="button" onClick={() => handleStatusChange(row.id, "Confirmed")} className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 rounded-md">
                                   <AppointmentStatusPill status={row.status} />
                                 </button>
@@ -936,18 +938,18 @@ export function AppointmentsView({
                                 <AppointmentStatusPill status={row.status} />
                               )}
                             </td>
-                            <td className="px-5 py-3.5 text-right relative">
+                            {canManage && <td className="px-5 py-3.5 text-right relative">
                               <button type="button" onClick={() => setActiveMenuId(activeMenuId === row.id ? null : row.id)} className="flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 text-glyph ml-auto">
                                 <Icon name="more" weight="fill" className="size-5" />
                               </button>
                               {activeMenuId === row.id && (
                                 <div className="absolute right-4 mt-1 w-44 rounded-[10px] bg-white border border-hairline shadow-lg py-1 z-30 text-left text-sm">
-                                  {row.status !== "Confirmed" && <button type="button" onClick={() => handleStatusChange(row.id, "Confirmed")} className="w-full text-left px-4 py-2 hover:bg-mist text-body">Confirm</button>}
-                                  {row.status !== "Check In"  && <button type="button" onClick={() => handleStatusChange(row.id, "Check In")}  className="w-full text-left px-4 py-2 hover:bg-mist text-body">Check In</button>}
+                                  {canManage && row.status !== "Confirmed" && <button type="button" onClick={() => handleStatusChange(row.id, "Confirmed")} className="w-full text-left px-4 py-2 hover:bg-mist text-body">Confirm</button>}
+                                  {canManage && row.status !== "Check In"  && <button type="button" onClick={() => handleStatusChange(row.id, "Check In")}  className="w-full text-left px-4 py-2 hover:bg-mist text-body">Check In</button>}
                                   <button type="button" onClick={() => { setCancelTarget(row); setActiveMenuId(null); }} className="w-full text-left px-4 py-2 hover:bg-danger-bg text-danger font-medium">Cancel booking</button>
                                 </div>
                               )}
-                            </td>
+                            </td>}
                           </tr>
                         ))
                       )}
@@ -987,13 +989,13 @@ export function AppointmentsView({
             </div>
             {/* actions */}
             <div className="flex flex-wrap gap-2 pt-1 border-t border-hairline">
-              {popoverItem.status !== "Confirmed" && (
+              {canManage && popoverItem.status !== "Confirmed" && (
                 <AdminButton size="xs" variant="primary" onClick={() => handleStatusChange(popoverItem.id, "Confirmed")}>Confirm</AdminButton>
               )}
-              {popoverItem.status !== "Check In" && (
+              {canManage && popoverItem.status !== "Check In" && (
                 <AdminButton size="xs" variant="outline" onClick={() => handleStatusChange(popoverItem.id, "Check In")}>Check In</AdminButton>
               )}
-              <AdminButton size="xs" variant="danger" onClick={() => { setCancelTarget(popoverItem); setPopoverItem(null); }}>Cancel</AdminButton>
+              {canManage && <AdminButton size="xs" variant="danger" onClick={() => { setCancelTarget(popoverItem); setPopoverItem(null); }}>Cancel</AdminButton>}
               <AdminButton size="xs" variant="outline" onClick={() => setPopoverItem(null)} className="ml-auto">Close</AdminButton>
             </div>
           </div>

@@ -145,7 +145,7 @@ export default async function StaffPage({ params }: StaffPageProps) {
       businessName={tenant.name}
       userName={viewerName?.trim() || user.email?.split("@")[0] || "Merchant"}
       userEmail={user.email ?? "Merchant staff"}
-      userRole={membership.role === "owner" ? "Business owner" : staffRoleLabels[membership.role]}
+      userRole={membership.role}
       tenantId={tenant.id}
       canViewProfiles
       basePath={`/${slug}`}

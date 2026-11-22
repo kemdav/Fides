@@ -55,12 +55,13 @@ export default async function MerchantDashboardPage({
     .single();
   if (tenantError || !tenant) notFound();
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, role")
-    .eq("id", user.id)
-    .single();
+  const { data: membership } = await supabase.from("tenant_memberships").select("role, profiles(full_name)")
+    .eq("tenant_id", tenant.id).eq("profile_id", user.id).maybeSingle();
+  if (!membership) notFound();
 
+  const userRole = membership.role;
+  const userName = membership.profiles?.full_name?.trim() || user.email?.split("@")[0] || "My account";
+  const canViewBusinessMetrics = userRole === "owner" || userRole === "admin";
   const overview = await getMerchantOverview(supabase, tenant.id, new Date(), period);
   const rows = overview.todayAppointments;
   const completedToday = rows.filter((row) => row.rawStatus === "completed").length;
@@ -75,9 +76,9 @@ export default async function MerchantDashboardPage({
   return (
     <OverviewView
       businessName={tenant.name}
-      userName={profile?.full_name?.trim() || user.email?.split("@")[0] || "Merchant"}
+      userName={userName}
       userEmail={user.email ?? "Merchant staff"}
-      userRole={profile?.role === "owner" ? "Business owner" : profile?.role || "Staff"}
+      userRole={userRole}
       tenantId={tenant.id}
       basePath={`/${slug}`}
       todayCount={rows.length}
@@ -85,12 +86,14 @@ export default async function MerchantDashboardPage({
       pendingCount={pendingCount}
       checkedInCount={checkedInToday}
       completedVisitsCount={completedToday}
-      revenueTotal={Math.round(overview.metrics.revenueCents / 100)}
-      revenueChangePercent={overview.metrics.revenueChangePercent}
       bookingCount={overview.metrics.bookingCount}
-      activeCustomerCount={overview.metrics.activeCustomerCount}
-      customerGrowthPercent={overview.metrics.customerGrowthPercent}
-      averageOrderValue={Math.round(overview.metrics.averageOrderValueCents / 100)}
+      {...(canViewBusinessMetrics && {
+        revenueTotal: Math.round(overview.metrics.revenueCents / 100),
+        revenueChangePercent: overview.metrics.revenueChangePercent,
+        activeCustomerCount: overview.metrics.activeCustomerCount,
+        customerGrowthPercent: overview.metrics.customerGrowthPercent,
+        averageOrderValue: Math.round(overview.metrics.averageOrderValueCents / 100),
+      })}
       initialPeriod={period}
       chartStats={overview.chartStats}
       todayActivity={rows.slice(0, 4).map((row) => ({

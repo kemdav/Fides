@@ -30,7 +30,7 @@ export default async function MerchantAccountPage({ params }: { params: Promise<
 
   return (
     <div className="flex min-h-dvh flex-col bg-powder text-ink lg:h-dvh lg:flex-row lg:overflow-hidden">
-      <MerchantSidebar businessName={tenant.name} userName={name} userEmail={email} userRole={role} basePath={`/${tenant.slug}`} />
+      <MerchantSidebar businessName={tenant.name} userName={name} userEmail={email} userRole={membership.role} basePath={`/${tenant.slug}`} />
       <div className="min-w-0 flex-1 lg:overflow-y-auto">
         <PageContent>
           <PageHeading eyebrow={tenant.name} title="My account" description="View the account signed in to this workspace." />

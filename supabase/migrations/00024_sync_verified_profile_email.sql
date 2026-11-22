@@ -44,3 +44,18 @@ $$;
 
 revoke all on function public.reserve_staff_email_change(uuid) from public;
 grant execute on function public.reserve_staff_email_change(uuid) to service_role;
+
+-- Store verification requests for password-confirmed email changes.
+create table public.staff_email_change_requests (
+  profile_id uuid primary key references auth.users(id) on delete cascade,
+  tenant_id uuid not null references public.tenants(id) on delete cascade,
+  current_email text not null,
+  new_email text not null,
+  token_hash text not null unique,
+  expires_at timestamptz not null,
+  claimed_at timestamptz
+);
+
+alter table public.staff_email_change_requests enable row level security;
+revoke all on public.staff_email_change_requests from public, anon, authenticated;
+grant select, insert, update, delete on public.staff_email_change_requests to service_role;

@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { ManageStaffModal, type ManagedStaff } from "./manage-staff-modal";
 import { useRouter } from "next/navigation";
+import type { WorkspaceRole } from "@/lib/merchant/workspace-roles";
 import { MerchantSidebar } from "../merchant-sidebar";
 import { Icon } from "@/components/admin/icon";
 import { AdminButton } from "@/components/admin/admin-button";
@@ -43,7 +44,7 @@ interface StaffViewProps {
   businessName?: string;
   userName?: string;
   userEmail?: string;
-  userRole?: string;
+  userRole?: WorkspaceRole;
   tenantId?: string;
   canViewProfiles?: boolean;
   activeMembers?: number;
@@ -85,7 +86,7 @@ export function StaffView({
   businessName = "Bella Vita",
   userName = "Maria Santos",
   userEmail = "Maria Santos",
-  userRole = "Business owner",
+  userRole,
   tenantId,
   canViewProfiles = false,
   activeMembers = 0,
@@ -636,7 +637,7 @@ export function StaffView({
       {isInviteOpen && tenantId && (
         <InviteStaffModal
           tenantId={tenantId}
-          canInviteAdmins={userRole === "Business owner"}
+          canInviteAdmins={userRole === "owner"}
           onClose={() => setIsInviteOpen(false)}
           onSent={(email) => {
             setIsInviteOpen(false);

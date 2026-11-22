@@ -5,7 +5,7 @@ import { PageContent, StatusPill, Surface } from "@/components/admin/primitives"
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { StaffAvatar } from "@/components/merchant/staff/staff-avatar";
-import { getStaffProfile, staffRoleLabels } from "@/lib/merchant/staff-profile";
+import { getStaffProfile } from "@/lib/merchant/staff-profile";
 
 export const metadata = { title: "Staff Profile" };
 
@@ -47,7 +47,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ s
         businessName={tenant.name}
         userName={viewer?.full_name?.trim() || user.email?.split("@")[0] || "Merchant"}
         userEmail={user.email ?? "Merchant staff"}
-        userRole={membership.role === "owner" ? "Business owner" : staffRoleLabels[membership.role]}
+        userRole={membership.role}
         basePath={basePath}
       />
       <div className="min-w-0 flex-1 lg:h-dvh lg:overflow-y-auto">

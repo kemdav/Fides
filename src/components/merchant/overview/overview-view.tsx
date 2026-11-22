@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { canManageBookings, type WorkspaceRole } from "@/lib/merchant/workspace-roles";
 import { MerchantSidebar } from "../merchant-sidebar";
 import { Icon } from "@/components/admin/icon";
 import { AdminButton } from "@/components/admin/admin-button";
@@ -37,7 +38,7 @@ export interface OverviewViewProps {
   businessName?: string;
   userName?: string;
   userEmail?: string;
-  userRole?: string;
+  userRole?: WorkspaceRole;
   tenantId?: string;
   todayCount?: number;
   confirmedCount?: number;
@@ -77,7 +78,7 @@ export function OverviewView({
   businessName = "Bella Vita",
   userName = "Maria Santos",
   userEmail = "Maria Santos",
-  userRole = "Business owner",
+  userRole,
   tenantId,
   todayCount = 0,
   confirmedCount = 0,
@@ -101,6 +102,8 @@ export function OverviewView({
   const [appointments, setAppointments] = React.useState<AppointmentRow[]>(initialRows);
 
   const [filterStatus, setFilterStatus] = React.useState<string>("All");
+  const canManage = canManageBookings(userRole);
+  const canViewBusinessMetrics = userRole === "owner" || userRole === "admin";
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [period, setPeriod] = React.useState(initialPeriod);
   const [isPeriodOpen, setIsPeriodOpen] = React.useState(false);
@@ -365,6 +368,7 @@ export function OverviewView({
                     </div>
                   )}
                 </div>
+                {canManage && <>
                 <AdminButton
                   variant="primary"
                   size="sm"
@@ -379,6 +383,7 @@ export function OverviewView({
                 >
                   + Add Walk-in
                 </AdminButton>
+                </>}
               </div>
             }
           />
@@ -387,11 +392,11 @@ export function OverviewView({
           <div className="grid grid-cols-2 gap-5 xl:grid-cols-4">
             <MetricCard
               featured
-              label="Total revenue"
-              value={revenueTotal}
-              caption={`${revenueChangePercent >= 0 ? "+" : ""}${revenueChangePercent.toFixed(1)}% vs previous week`}
+              label={canViewBusinessMetrics ? "Total revenue" : "Today’s appointments"}
+              value={canViewBusinessMetrics ? revenueTotal : todayCount}
+              caption={canViewBusinessMetrics ? `${revenueChangePercent >= 0 ? "+" : ""}${revenueChangePercent.toFixed(1)}% vs previous week` : `${confirmedCount} confirmed today`}
               icon="calendar"
-              progress={Math.min(100, Math.max(0, 50 + revenueChangePercent / 2))}
+              progress={canViewBusinessMetrics ? Math.min(100, Math.max(0, 50 + revenueChangePercent / 2)) : todayCount ? confirmedCount / todayCount * 100 : 0}
             />
             <MetricCard
               label="Total bookings"
@@ -402,18 +407,18 @@ export function OverviewView({
               miniChart
             />
             <MetricCard
-              label="Active customers"
-              value={activeCustomerCount}
-              caption={`${customerGrowthPercent >= 0 ? "+" : ""}${customerGrowthPercent.toFixed(1)}% vs previous week · ${checkedInCount} checked in`}
+              label={canViewBusinessMetrics ? "Active customers" : "Checked-in customers"}
+              value={canViewBusinessMetrics ? activeCustomerCount : checkedInCount}
+              caption={canViewBusinessMetrics ? `${customerGrowthPercent >= 0 ? "+" : ""}${customerGrowthPercent.toFixed(1)}% vs previous week · ${checkedInCount} checked in` : "Checked in or in service today"}
               icon="users"
-              progress={Math.min(100, Math.max(0, 50 + customerGrowthPercent / 2))}
+              progress={canViewBusinessMetrics ? Math.min(100, Math.max(0, 50 + customerGrowthPercent / 2)) : todayCount ? checkedInCount / todayCount * 100 : 0}
             />
             <MetricCard
-              label="Average order value"
-              value={averageOrderValue}
-              caption={`${completedVisitsCount} completed today`}
-              icon="card"
-              progress={averageOrderValue > 0 ? 100 : 0}
+              label={canViewBusinessMetrics ? "Average order value" : "Completed today"}
+              value={canViewBusinessMetrics ? averageOrderValue : completedVisitsCount}
+              caption={canViewBusinessMetrics ? `${completedVisitsCount} completed today` : "Appointments completed today"}
+              icon={canViewBusinessMetrics ? "card" : "clock"}
+              progress={canViewBusinessMetrics ? (averageOrderValue > 0 ? 100 : 0) : todayCount ? completedVisitsCount / todayCount * 100 : 0}
             />
           </div>
 
@@ -912,7 +917,7 @@ export function OverviewView({
                             <span>Staff <strong className="block text-ink">{row.staff}</strong></span>
                             <span>Source <strong className="block text-ink">{row.source}</strong></span>
                           </div>
-                          <div className="flex flex-wrap gap-2 pt-1">
+                          {canManage && <div className="flex flex-wrap gap-2 pt-1">
                             {row.status !== "Confirmed" && (
                               <AdminButton size="xs" variant="primary" onClick={() => handleStatusChange(row.id, "Confirmed")}>
                                 Confirm
@@ -926,7 +931,7 @@ export function OverviewView({
                             <AdminButton size="xs" variant="danger" onClick={() => setCancelTarget(row)}>
                               Cancel
                             </AdminButton>
-                          </div>
+                          </div>}
                         </div>
                       )}
                     </div>
@@ -945,7 +950,7 @@ export function OverviewView({
                   <col className="w-[15%]" />
                   <col className="w-[12%]" />
                   <col className="w-[15%]" />
-                  <col className="w-[12%]" />
+                  {canManage && <col className="w-[12%]" />}
                 </colgroup>
                 <thead className="bg-mist border-b border-hairline text-subtle font-semibold">
                   <tr>
@@ -955,13 +960,13 @@ export function OverviewView({
                     <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Staff</th>
                     <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Source</th>
                     <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Status</th>
-                    <th className="py-4 pl-3 pr-7 text-right text-[11px] leading-4 uppercase tracking-wide xl:pr-10">Action</th>
+                    {canManage && <th className="py-4 pl-3 pr-7 text-right text-[11px] leading-4 uppercase tracking-wide xl:pr-10">Action</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-hairline">
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-5 py-2">
+                      <td colSpan={canManage ? 7 : 6} className="px-5 py-2">
                         <EmptyState
                           compact
                           title={searchQuery || filterStatus !== "All"
@@ -988,7 +993,7 @@ export function OverviewView({
                         <td className="px-6 py-4">
                           <AppointmentStatusPill status={row.status} />
                         </td>
-                        <td className="py-4 pl-3 pr-7 text-right align-middle xl:pr-10">
+                        {canManage && <td className="py-4 pl-3 pr-7 text-right align-middle xl:pr-10">
                           <button
                             type="button"
                             onClick={() => setActiveMenuId(activeMenuId === row.id ? null : row.id)}
@@ -1026,7 +1031,7 @@ export function OverviewView({
                               </button>
                             </div>
                           )}
-                        </td>
+                        </td>}
                       </tr>
                     ))
                   )}

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { canManageBookings } from "@/lib/merchant/workspace-roles";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database.types";
 
@@ -10,6 +11,12 @@ export type BookingSourceEnum = Database["public"]["Enums"]["booking_source"];
 export type ActionResult<T = unknown> =
   | { success: true; message: string; data?: T }
   | { success: false; error: string };
+
+async function mayManageBookings(supabase: Awaited<ReturnType<typeof createClient>>, tenantId: string, userId: string) {
+  const { data } = await supabase.from("tenant_memberships").select("role")
+    .eq("tenant_id", tenantId).eq("profile_id", userId).maybeSingle();
+  return canManageBookings(data?.role);
+}
 
 function mapUiStatusToDb(status: string): AppointmentStatusEnum {
   const s = status.trim().toLowerCase();
@@ -58,6 +65,10 @@ export async function updateAppointmentStatusAction({
     targetTenantId = profile?.tenant_id ?? undefined;
   }
 
+  if (!targetTenantId || !(await mayManageBookings(supabase, targetTenantId, user.id))) {
+    return { success: false, error: "You do not have permission to manage bookings in this workspace." };
+  }
+
   const dbStatus = mapUiStatusToDb(newStatus);
   const updatePayload: Database["public"]["Tables"]["appointments"]["Update"] = {
     status: dbStatus,
@@ -69,16 +80,13 @@ export async function updateAppointmentStatusAction({
       : {}),
   };
 
-  let query = supabase.from("appointments").update(updatePayload).eq("id", appointmentId);
-  if (targetTenantId) {
-    query = query.eq("tenant_id", targetTenantId);
-  }
-
-  const { error } = await query;
+  const { data, error } = await supabase.from("appointments").update(updatePayload)
+    .eq("id", appointmentId).eq("tenant_id", targetTenantId).select("id").maybeSingle();
 
   if (error) {
     return { success: false, error: `Failed to update appointment: ${error.message}` };
   }
+  if (!data) return { success: false, error: "Appointment not found in this workspace." };
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/appointments");
@@ -143,17 +151,8 @@ export async function createAppointmentBookingAction({
     tenantId = profile?.tenant_id ?? undefined;
   }
 
-  if (!tenantId) {
-    const { data: firstTenant } = await supabase
-      .from("tenants")
-      .select("id")
-      .limit(1)
-      .single();
-    tenantId = firstTenant?.id;
-  }
-
-  if (!tenantId) {
-    return { success: false, error: "No active business tenant found." };
+  if (!tenantId || !(await mayManageBookings(supabase, tenantId, user.id))) {
+    return { success: false, error: "You do not have permission to manage bookings in this workspace." };
   }
 
   const cleanCustomerName = customerName?.trim();

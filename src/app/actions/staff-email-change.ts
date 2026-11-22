@@ -7,6 +7,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { publicEnv } from "@/lib/env";
+import { staffEmailVerificationMessage } from "@/lib/mail/emails";
 import { canDeliverVerificationLinks, isSmtpMailConfigured, sendMail, sendSmtpMail } from "@/lib/mail/mailer";
 import { canVerifyStaffEmail, getPendingStaffEmailChange, hashStaffEmailProof, STAFF_EMAIL_CHANGE_COMPLETE_PATH, STAFF_EMAIL_CHANGE_RECEIPT, STAFF_EMAIL_LINK_MINUTES } from "@/lib/merchant/staff-email-change";
 import { getAdminClient } from "@/lib/supabase/admin";
@@ -40,8 +41,11 @@ export async function requestStaffEmailChangeAction(input: z.input<typeof reques
     return { success: false, error: "Verification email delivery is unavailable." };
   }
 
-  const { data: staff } = await admin.from("staff_members").select("profile_id")
-    .eq("tenant_id", tenantId).eq("id", staffId).maybeSingle();
+  const [{ data: staff }, { data: tenant }] = await Promise.all([
+    admin.from("staff_members").select("profile_id, full_name").eq("tenant_id", tenantId).eq("id", staffId).maybeSingle(),
+    admin.from("tenants").select("name, brand_color, secondary_color, accent_color").eq("id", tenantId).maybeSingle(),
+  ]);
+  if (!tenant) return { success: false, error: "The workspace could not be loaded." };
   if (!staff?.profile_id) return { success: false, error: "This staff member has no linked sign-in account." };
   const { data: targetMembership } = await admin.from("tenant_memberships").select("profile_id")
     .eq("tenant_id", tenantId).eq("profile_id", staff.profile_id).maybeSingle();
@@ -78,8 +82,13 @@ export async function requestStaffEmailChangeAction(input: z.input<typeof reques
   try {
     await (useSmtp ? sendSmtpMail : sendMail)({
       to: email,
-      subject: "Verify your new Fides email address",
-      text: `Open this link to verify your new address within ${STAFF_EMAIL_LINK_MINUTES} minutes:\n\n${link}\n\nEnter your current Fides password to verify your new address and open your workspace. If you did not expect this email, ignore it.`,
+      ...staffEmailVerificationMessage({
+        name: staff.full_name,
+        merchant: tenant.name,
+        verificationUrl: link,
+        minutesValid: STAFF_EMAIL_LINK_MINUTES,
+        colors: { brand: tenant.brand_color, secondary: tenant.secondary_color, accent: tenant.accent_color },
+      }),
     });
   } catch {
     await admin.from("staff_email_change_requests").delete().eq("token_hash", request.token_hash).is("claimed_at", null);
