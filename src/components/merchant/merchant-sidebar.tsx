@@ -5,14 +5,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon, type IconName } from "@/components/admin/icon";
 import { cn, getInitials } from "@/lib/utils";
-import { canManageBookings, staffRoleLabels, type WorkspaceRole } from "@/lib/merchant/workspace-roles";
+import { canManageBookings, workspaceRoleFromLabel, staffRoleLabels, type WorkspaceRole } from "@/lib/merchant/workspace-roles";
 import { merchantNameTypography } from "@/lib/brand-colors";
 
 interface MerchantSidebarProps {
   businessName?: string;
   userName?: string;
   userEmail?: string;
-  userRole?: WorkspaceRole;
+  userRole?: WorkspaceRole | string;
   basePath?: string;
 }
 
@@ -23,7 +23,7 @@ const manageItems: NavigationItem[] = [
   { label: "Appointments", icon: "calendar", suffix: "/appointments" },
   { label: "Walk-ins", icon: "users", suffix: "/walk-ins", access: "operations" },
   { label: "QR check-in", icon: "qr-code", access: "operations" },
-  { label: "Customers", icon: "users", access: "operations" },
+  { label: "Customers", icon: "users", suffix: "/customers", access: "operations" },
   { label: "Services", icon: "layers", access: "operations" },
   { label: "Staff & permissions", icon: "shield", suffix: "/staff", access: "management" },
   { label: "Availability", icon: "clock", access: "operations" },
@@ -44,9 +44,10 @@ export function MerchantSidebar({
   const accountPath = `${dashboardPath}/account`;
   const accountActive = pathname === accountPath;
   const displayName = userName?.trim() || userEmail?.trim() || "My account";
-  const managesTeam = userRole === "owner" || userRole === "admin";
+  const role = workspaceRoleFromLabel(userRole);
+  const managesTeam = role === "owner" || role === "admin";
   const visibleItems = manageItems.filter(({ access }) =>
-    !access || (access === "operations" ? canManageBookings(userRole) : managesTeam)
+    !access || (access === "operations" ? canManageBookings(role) : managesTeam)
   );
 
   const renderItem = (item: NavigationItem) => {
@@ -109,11 +110,11 @@ export function MerchantSidebar({
         <nav aria-label="Workspace navigation" className="flex w-full flex-col gap-[clamp(1px,0.4vh,5px)]">
           {visibleItems.map((item) => renderItem(item))}
         </nav>
-        {userRole === "owner" && <>
+        {role === "owner" && <>
         <p className="mt-2 text-xs leading-[18px] tracking-[1.3px] text-neutral-400">CONFIGURATION</p>
         <nav aria-label="Merchant configuration" className="flex w-full flex-col gap-[clamp(1px,0.4vh,5px)]">
           {renderItem({ label: "Website settings", icon: "settings", suffix: "/settings/website" })}
-          {renderItem({ label: "Booking settings", icon: "book-settings" })}
+          {renderItem({ label: "Booking settings", icon: "book-settings", suffix: "/settings/booking" })}
           {renderItem({ label: "Subscription", icon: "card" })}
         </nav>
         </>}
@@ -127,7 +128,7 @@ export function MerchantSidebar({
             </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-semibold text-ink">{displayName}</span>
-              <span className="block truncate text-xs text-muted">{userRole === "owner" ? "Business owner" : userRole ? staffRoleLabels[userRole] : "My account"}</span>
+              <span className="block truncate text-xs text-muted">{role === "owner" ? "Business owner" : role ? staffRoleLabels[role] : "My account"}</span>
             </span>
             <Icon name="chevron-down" className="size-3.5 -rotate-90 text-muted" />
           </Link>

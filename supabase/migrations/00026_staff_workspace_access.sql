@@ -225,3 +225,46 @@ WITH CHECK (
           )
     )
 );
+
+-- Preserve workspace role boundaries for direct API calls to walk-in workflows.
+create policy waitlist_workspace_operator ON public.waitlist_entries
+as restrictive for all to authenticated
+using (
+  public.is_platform_admin() or exists (
+    select 1 from public.tenant_memberships member
+    where member.tenant_id = waitlist_entries.tenant_id and member.profile_id = auth.uid()
+      and member.role in ('owner', 'admin', 'receptionist')
+  )
+)
+with check (
+  public.is_platform_admin() or exists (
+    select 1 from public.tenant_memberships member
+    where member.tenant_id = waitlist_entries.tenant_id and member.profile_id = auth.uid()
+      and member.role in ('owner', 'admin', 'receptionist')
+  )
+);
+
+create function public.require_walkin_workspace_operator()
+returns trigger
+language plpgsql security definer set search_path = ''
+as $$
+begin
+  -- The walk-in RPCs use definer privileges, so enforce the caller role at insert.
+  if auth.uid() is not null and not public.is_platform_admin() and not exists (
+    select 1 from public.tenant_memberships member
+    where member.tenant_id = new.tenant_id and member.profile_id = auth.uid()
+      and member.role in ('owner', 'admin', 'receptionist')
+  ) then
+    raise exception 'UNAUTHORIZED: caller cannot manage walk-ins in this workspace'
+      using errcode = '42501';
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function public.require_walkin_workspace_operator() from public;
+
+create trigger require_walkin_workspace_operator
+before insert on public.appointments
+for each row when (new.source = 'walk_in')
+execute function public.require_walkin_workspace_operator();

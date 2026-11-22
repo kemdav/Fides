@@ -950,12 +950,12 @@ export function OverviewView({
               <table className="w-full min-w-[760px] table-fixed text-left text-sm">
                 <colgroup>
                   <col className="w-[12%]" />
-                  <col className="w-[17%]" />
-                  <col className="w-[17%]" />
-                  <col className="w-[15%]" />
+                  <col className="w-[18%]" />
+                  <col className="w-[18%]" />
+                  <col className="w-[16%]" />
                   <col className="w-[12%]" />
                   <col className="w-[15%]" />
-                  {canManage && <col className="w-[12%]" />}
+                  {canManage && <col className="w-[9%]" />}
                 </colgroup>
                 <thead className="bg-mist border-b border-hairline text-subtle font-semibold">
                   <tr>
@@ -965,7 +965,7 @@ export function OverviewView({
                     <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Staff</th>
                     <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Source</th>
                     <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Status</th>
-                    {canManage && <th className="py-4 pl-3 pr-7 text-right text-[11px] leading-4 uppercase tracking-wide xl:pr-10">Action</th>}
+                    {canManage && <th className="px-2 py-4 text-center text-[11px] leading-4 uppercase tracking-wide">Action</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-hairline">
@@ -998,11 +998,11 @@ export function OverviewView({
                         <td className="px-6 py-4">
                           <AppointmentStatusPill status={row.status} />
                         </td>
-                        {canManage && <td className="py-4 pl-3 pr-7 text-right align-middle xl:pr-10">
+                        {canManage && <td className="relative px-2 py-4 text-center align-middle">
                           <button
                             type="button"
                             onClick={() => setActiveMenuId(activeMenuId === row.id ? null : row.id)}
-                            className="ml-auto flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 text-glyph"
+                            className="mx-auto flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 text-glyph"
                           >
                             <Icon name="more" weight="fill" className="size-5" />
                           </button>

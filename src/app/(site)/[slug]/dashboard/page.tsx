@@ -6,6 +6,7 @@ import {
 import { getMerchantOverview } from "@/lib/merchant/overview";
 import type { OverviewPeriod } from "@/lib/merchant/overview";
 import { getActiveStaffForProfile, getMonthlyStaffCommission } from "@/lib/merchant/staff-profile";
+import { workspaceRoleFromLabel } from "@/lib/merchant/workspace-roles";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -59,10 +60,11 @@ export default async function MerchantDashboardPage({
 
   const { data: membership } = await supabase.from("tenant_memberships").select("role, profiles(full_name)")
     .eq("tenant_id", tenant.id).eq("profile_id", user.id).maybeSingle();
-  if (!membership) notFound();
-
-  const userRole = membership.role;
-  const userName = membership.profiles?.full_name?.trim() || user.email?.split("@")[0] || "My account";
+  const { data: profile } = await supabase.from("profiles").select("full_name, role, tenant_id")
+    .eq("id", user.id).maybeSingle();
+  const userRole = membership?.role ?? (profile?.tenant_id === tenant.id ? workspaceRoleFromLabel(profile.role) : undefined);
+  if (!userRole) notFound();
+  const userName = membership?.profiles?.full_name?.trim() || profile?.full_name?.trim() || user.email?.split("@")[0] || "My account";
   const canViewBusinessMetrics = userRole === "owner" || userRole === "admin";
   const staff = userRole === "staff" ? await getActiveStaffForProfile(tenant.id, user.id) : undefined;
   const now = new Date();

@@ -39,7 +39,13 @@ const staffProfileSchema = z.object({
 });
 
 export async function saveStaffProfileAction(form: FormData): Promise<StaffActionResult> {
-  const parsed = staffProfileSchema.safeParse({ ...Object.fromEntries(form), serviceIds: form.getAll("serviceIds") });
+  const fields = Object.fromEntries(form);
+  const parsed = staffProfileSchema.safeParse({
+    ...fields,
+    ...(fields.role === "staff"
+      ? { serviceIds: form.getAll("serviceIds") }
+      : { serviceIds: [], commissionType: "fixed", commissionValue: 0 }),
+  });
   if (!parsed.success) return { success: false, error: "Check the profile fields and try again." };
   const input = parsed.data;
   if (input.commissionType === "percentage" && input.commissionValue > 100) {

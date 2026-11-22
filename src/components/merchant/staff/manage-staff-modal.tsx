@@ -53,6 +53,7 @@ export function ManageStaffModal({ staff, tenantId, basePath, onClose, onSaved }
   const [phoneEdited, setPhoneEdited] = useState(false);
   const [bio, setBio] = useState(staff.bio);
   const [role, setRole] = useState(staff.role);
+  const isServiceStaff = role === "staff";
   const [services, setServices] = useState(staff.serviceIds);
   const [commission, setCommission] = useState(staff.commissionValue ? staff.commissionType : "none");
   const [value, setValue] = useState(staff.commissionValue ? String(staff.commissionValue) : "");
@@ -72,9 +73,11 @@ export function ManageStaffModal({ staff, tenantId, basePath, onClose, onSaved }
     form.set("staffId", staff.id);
     if (!phoneEdited) form.delete("phone");
     form.set("role", role);
-    form.set("commissionType", commission === "none" ? "fixed" : commission);
-    form.set("commissionValue", commission === "none" ? "0" : value);
-    services.forEach((id) => form.append("serviceIds", id));
+    if (isServiceStaff) {
+      form.set("commissionType", commission === "none" ? "fixed" : commission);
+      form.set("commissionValue", commission === "none" ? "0" : value);
+      services.forEach((id) => form.append("serviceIds", id));
+    }
     try {
       const result = await saveStaffProfileAction(form);
       if (result.success) onSaved();
@@ -182,34 +185,36 @@ export function ManageStaffModal({ staff, tenantId, basePath, onClose, onSaved }
               </label>
               <p className="text-xs text-muted">JPG, PNG, or WebP up to 750 KB.</p>
             </div>
-            <h3 className="border-t border-hairline pt-4 text-base font-semibold">Services and commission</h3>
-            <div className="space-y-2">
-              <Listbox id="manage-staff-services" label="Services this person can perform" multiple placement="above"
-                value={services} onChange={setServices} options={staff.services} placeholder="Select services" />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Listbox id="manage-staff-commission" label="Commission Arrangement" required placement="above"
-                value={commission} onChange={(entry) => {
-                  setCommission(entry === "percentage" || entry === "fixed" ? entry : "none");
-                  setValue("");
-                }}
-                options={[
-                  { value: "none", label: "No Commission" },
-                  { value: "fixed", label: "Fixed Amount per Service" },
-                  { value: "percentage", label: "Percentage of Service Price" },
-                ]} />
-              {commission === "none" ? (
-                <TextField label="Commission Value" value="No Commission" onChange={() => {}} readOnly />
-              ) : (
-                <TextField label={commission === "fixed" ? "Commission Value (₱)" : "Commission Value (%)"}
-                  required type="number" min="0.01" max={commission === "percentage" ? 100 : 9999999999.99}
-                  step="0.01" value={value} onChange={setValue} />
-              )}
-            </div>
+            {isServiceStaff && <section className="space-y-4 border-t border-hairline pt-4" aria-labelledby="manage-staff-services-heading">
+              <h3 id="manage-staff-services-heading" className="text-base font-semibold">Services and commission</h3>
+              <div className="space-y-2">
+                <Listbox id="manage-staff-services" label="Services this person can perform" multiple placement="above"
+                  value={services} onChange={setServices} options={staff.services} placeholder="Select services" />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Listbox id="manage-staff-commission" label="Commission Arrangement" required placement="above"
+                  value={commission} onChange={(entry) => {
+                    setCommission(entry === "percentage" || entry === "fixed" ? entry : "none");
+                    setValue("");
+                  }}
+                  options={[
+                    { value: "none", label: "No Commission" },
+                    { value: "fixed", label: "Fixed Amount per Service" },
+                    { value: "percentage", label: "Percentage of Service Price" },
+                  ]} />
+                {commission === "none" ? (
+                  <TextField label="Commission Value" value="No Commission" onChange={() => {}} readOnly />
+                ) : (
+                  <TextField label={commission === "fixed" ? "Commission Value (₱)" : "Commission Value (%)"}
+                    required type="number" min="0.01" max={commission === "percentage" ? 100 : 9999999999.99}
+                    step="0.01" value={value} onChange={setValue} />
+                )}
+              </div>
+            </section>}
             <div className="rounded-lg border border-hairline bg-mist p-3 text-sm">
-              <p className="font-medium">Availability and earnings</p>
+              <p className="font-medium">{isServiceStaff ? "Availability and earnings" : "Availability"}</p>
               <p className="mt-1 text-sm text-body">{staff.availability}</p>
-              <p className="mt-1 text-xs text-muted">Commission this month {staff.earnings}</p>
+              {isServiceStaff && <p className="mt-1 text-xs text-muted">Commission this month {staff.earnings}</p>}
             </div>
             <div className="flex flex-wrap gap-2">
               <AdminLinkButton href={`${basePath}/dashboard/appointments?staff=${staff.id}`} variant="outline-accent" size="xs">View Schedule</AdminLinkButton>
