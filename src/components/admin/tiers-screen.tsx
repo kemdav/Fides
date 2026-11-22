@@ -1,10 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
-import { removePlanAction, savePlanAction } from "@/app/(admin)/admin/actions";
-import { formatPrice } from "@/lib/admin/tenants";
-import { pluralize, subscribedLabel, type Tier, type TierDraft } from "@/lib/admin/tiers";
+import { useMemo, useState } from "react";
+import { defaultTiers, pluralize, subscribedLabel, type Tier } from "@/lib/admin/tiers";
+import { sampleTenants } from "@/lib/admin/tenants";
 import { AdminButton } from "./admin-button";
 import { AdminModal } from "./admin-modal";
 import { Icon } from "./icon";
@@ -16,22 +14,18 @@ type DialogState =
   | { type: "create" }
   | { type: "edit"; id: string }
   | { type: "delete"; id: string }
-  | { type: "result"; title: string; message: string; failed?: boolean };
+  | { type: "result"; title: string; message: string };
 
-function TierCard({ tier, onEdit }: { tier: Tier; onEdit: () => void }) {
+function TierCard({ tier, subscribed, onEdit }: { tier: Tier; subscribed: number; onEdit: () => void }) {
   return (
     <article className="flex min-w-0 flex-col gap-3.5 rounded-[14px] border border-burnt bg-white p-5 shadow-[0_8px_12px_rgb(31_46_33/0.04)] sm:p-6">
       <p className="text-xs leading-[18px] text-muted">{tier.eyebrow}</p>
       <h2 className="text-lg font-semibold leading-[27px]">{tier.name}</h2>
-      <p className="text-[32px] font-semibold leading-[47px]">{formatPrice(tier.price)}</p>
-      <p className="text-sm leading-[21px] text-muted">per month · PHP</p>
-      <p className="text-xs leading-[18px] text-muted">{subscribedLabel(tier.subscribed)}</p>
+      <p className="text-[32px] font-semibold leading-[47px]">${tier.price}</p>
+      <p className="text-sm leading-[21px] text-muted">per month · USD</p>
+      <p className="text-xs leading-[18px] text-muted">{subscribedLabel(subscribed)}</p>
       <ul className="flex flex-col gap-3.5">
-        {[
-          ...(tier.staffLimit === null ? [] : [pluralize(tier.staffLimit, "staff member")]),
-          ...(tier.locationLimit === null ? [] : [pluralize(tier.locationLimit, "location")]),
-          ...tier.features,
-        ].map(
+        {[pluralize(tier.staffLimit, "staff member"), pluralize(tier.locationLimit, "location"), ...tier.features].map(
           (entitlement) => (
             <li key={entitlement} className="flex items-center gap-2 text-sm leading-[21px]">
               <Icon name="check" weight="bold" className="size-4 text-burnt" />
@@ -55,10 +49,10 @@ function TierCard({ tier, onEdit }: { tier: Tier; onEdit: () => void }) {
 
 function Comparison({ tiers }: { tiers: Tier[] }) {
   const rows = [
-    { label: "Staff members", values: tiers.map((tier) => (tier.staffLimit === null ? "Not limited" : String(tier.staffLimit))) },
-    { label: "Locations", values: tiers.map((tier) => (tier.locationLimit === null ? "Not limited" : String(tier.locationLimit))) },
-    { label: "Feature count", values: tiers.map((tier) => String(tier.features.length)) },
-    { label: "Monthly price", values: tiers.map((tier) => formatPrice(tier.price)) },
+    { label: "Staff members", values: tiers.map((tier) => String(tier.staffLimit)) },
+    { label: "Locations", values: tiers.map((tier) => String(tier.locationLimit)) },
+    { label: "Online booking", values: tiers.map(() => "Included") },
+    { label: "Monthly price", values: tiers.map((tier) => `$${tier.price}`) },
   ];
   const columns = { gridTemplateColumns: `minmax(120px,340px) repeat(${tiers.length}, minmax(0,1fr))` };
 
@@ -66,7 +60,7 @@ function Comparison({ tiers }: { tiers: Tier[] }) {
     <Surface className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <h2 className="text-lg font-semibold leading-[27px]">Compare entitlements</h2>
-        <p className="text-xs leading-[18px] text-muted">Monthly plans · PHP</p>
+        <p className="text-xs leading-[18px] text-muted">Monthly plans · USD</p>
       </div>
 
       <div className="hidden md:block">
@@ -105,34 +99,22 @@ function Comparison({ tiers }: { tiers: Tier[] }) {
   );
 }
 
-export function TiersScreen({ tiers }: { tiers: Tier[] }) {
-  const router = useRouter();
-  const [busy, startTransition] = useTransition();
+export function TiersScreen() {
+  const [tiers, setTiers] = useState(defaultTiers);
   const [dialog, setDialog] = useState<DialogState | null>(null);
 
   const sorted = useMemo(() => [...tiers].sort((a, b) => a.price - b.price), [tiers]);
+  const subscribers = (tier: Tier) => sampleTenants.filter((tenant) => tenant.plan === tier.name).length;
   const current = dialog && (dialog.type === "edit" || dialog.type === "delete") ? tiers.find((t) => t.id === dialog.id) : undefined;
   const close = () => setDialog(null);
 
-  function report(result: { ok: boolean; message?: string; error?: string }, title: string) {
-    if (result.ok) {
-      setDialog({ type: "result", title, message: result.message ?? "" });
-      router.refresh();
-    } else {
-      setDialog({ type: "result", title: "Action failed", message: result.error ?? "Something went wrong.", failed: true });
-    }
-  }
-
-  function save(draft: TierDraft, id?: string) {
-    startTransition(async () => {
-      const result = await savePlanAction({
-        code: id,
-        name: draft.name.trim(),
-        price: Number(draft.price),
-        staffLimit: draft.staffLimit.trim() ? Number(draft.staffLimit) : null,
-        locationLimit: draft.locationLimit.trim() ? Number(draft.locationLimit) : null,
-      });
-      report(result, id ? "Tier saved" : "Tier created");
+  function save(tier: Tier) {
+    const created = !tiers.some((item) => item.id === tier.id);
+    setTiers((list) => (created ? [...list, tier] : list.map((item) => (item.id === tier.id ? tier : item))));
+    setDialog({
+      type: "result",
+      title: created ? "Tier created" : "Tier saved",
+      message: created ? `${tier.name} is now in the subscription catalog.` : `${tier.name} has been updated.`,
     });
   }
 
@@ -154,37 +136,39 @@ export function TiersScreen({ tiers }: { tiers: Tier[] }) {
           <TierCard
             key={tier.id}
             tier={tier}
+            subscribed={subscribers(tier)}
             onEdit={() => setDialog({ type: "edit", id: tier.id })}
           />
         ))}
       </div>
 
-      {sorted.length > 0 ? <Comparison tiers={sorted} /> : null}
+      <Comparison tiers={sorted} />
 
       <AdminModal open={dialog !== null} onClose={close}>
-        {dialog?.type === "create" ? <TierFormDialog tiers={tiers} busy={busy} onClose={close} onSave={(draft) => save(draft)} /> : null}
+        {dialog?.type === "create" ? <TierFormDialog tiers={tiers} onClose={close} onSave={save} /> : null}
         {dialog?.type === "edit" && current ? (
           <TierFormDialog
             key={current.id}
             tier={current}
             tiers={tiers}
-            busy={busy}
             onClose={close}
-            onSave={(draft) => save(draft, current.id)}
+            onSave={save}
             onDelete={() => setDialog({ type: "delete", id: current.id })}
           />
         ) : null}
         {dialog?.type === "delete" && current ? (
           <DeleteTierDialog
             tier={current}
-            subscribed={current.subscribed}
-            busy={busy}
+            subscribed={subscribers(current)}
             onCancel={close}
-            onConfirm={() => startTransition(async () => report(await removePlanAction(current.id), "Tier deleted"))}
+            onConfirm={() => {
+              setTiers((list) => list.filter((item) => item.id !== current.id));
+              setDialog({ type: "result", title: "Tier deleted", message: `${current.name} has been removed from the catalog.` });
+            }}
           />
         ) : null}
         {dialog?.type === "result" ? (
-          <ResultDialog title={dialog.title} message={dialog.message} failed={dialog.failed} onDone={close} />
+          <ResultDialog title={dialog.title} message={dialog.message} onDone={close} />
         ) : null}
       </AdminModal>
     </PageContent>
