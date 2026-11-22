@@ -4,6 +4,7 @@ import { iconBodies } from "./icon-data";
 
 export type IconName =
   | "alert"
+  | "arrow-right"
   | "bell"
   | "book-settings"
   | "calendar"
@@ -11,21 +12,34 @@ export type IconName =
   | "chart"
   | "check"
   | "chevron-down"
+  | "chevron-left"
+  | "chevron-right"
   | "clock"
   | "close"
+  | "copy"
+  | "document"
+  | "external-link"
+  | "eye"
   | "file"
+  | "filter"
+  | "globe"
   | "grid"
   | "layers"
+  | "list"
   | "lock"
+  | "monitor"
   | "more"
-  | "document"
   | "qr-code"
   | "search"
   | "settings"
   | "shield"
+  | "shield-check"
+  | "smartphone"
+  | "sparkles"
   | "trash"
   | "users"
-  | "verified";
+  | "verified"
+  | "warning";
 
 export type IconWeight = "regular" | "bold" | "fill";
 
