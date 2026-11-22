@@ -6,6 +6,7 @@ import { AdminButton, AdminLinkButton } from "@/components/admin/admin-button";
 import { TextField } from "@/components/admin/fields";
 import { Icon } from "@/components/admin/icon";
 import { Modal } from "@/components/ui/modal";
+import { StaffSuccessDialog } from "./staff-confirmation-dialog";
 
 function StaffEditDialog({ title, children, onClose, busy = false }: {
   title: string;
@@ -80,24 +81,28 @@ export function StaffEmailChangeDialog({ name, tenantId, staffId, currentEmail, 
     }
   }
 
+  if (sent) {
+    return <StaffSuccessDialog title="Verification emails sent"
+      description="Confirmation links were sent to the current and new addresses." onClose={onClose} />;
+  }
+
   return (
     <StaffEditDialog title="Request email change" onClose={onClose} busy={busy}>
       <form className="space-y-4" onSubmit={(event) => {
         event.preventDefault();
-        if (currentEmail && !busy && !sent) void send();
+        if (currentEmail && !busy) void send();
       }}>
         <p className="text-sm text-body">
           {name}&apos;s current email stays active until the new email address is verified. A confirmation notice is sent to the new email address. The current address must also approve the change.
         </p>
-        <TextField label="New Email Address" type="email" autoComplete="email" maxLength={254} required value={email} onChange={setEmail} disabled={busy || sent} />
+        <TextField label="New Email Address" type="email" autoComplete="email" maxLength={254} required value={email} onChange={setEmail} disabled={busy} />
         {!currentEmail && <p className="text-xs text-muted">This staff member needs a linked sign-in email to request a change.</p>}
         {error && <p role="alert" className="text-xs text-danger">{error}</p>}
-        {sent && <p role="status" className="text-sm text-success">Confirmation emails sent to the current and new addresses.</p>}
         <div className="flex justify-end gap-2">
-          <AdminButton variant="outline" size="xs" onClick={onClose} disabled={busy}>{sent ? "Done" : "Cancel"}</AdminButton>
-          {!sent && <AdminButton variant="primary" size="xs" type="submit" disabled={busy || !currentEmail}>
+          <AdminButton variant="outline" size="xs" onClick={onClose} disabled={busy}>Cancel</AdminButton>
+          <AdminButton variant="primary" size="xs" type="submit" disabled={busy || !currentEmail}>
             {busy ? "Sending…" : "Send verification email"}
-          </AdminButton>}
+          </AdminButton>
         </div>
       </form>
     </StaffEditDialog>

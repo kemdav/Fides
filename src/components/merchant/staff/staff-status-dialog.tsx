@@ -36,7 +36,7 @@ export function StaffStatusDialog({ tenantId, staff, lastOwnerProtected = false,
   return (
     <StaffConfirmationDialog
       title={protectedOwner ? "Last owner protected" : `${action} staff member?`}
-      warning={staff.active}
+      tone={staff.active ? "warning" : undefined}
       busy={saving}
       onClose={onClose}
       error={error}

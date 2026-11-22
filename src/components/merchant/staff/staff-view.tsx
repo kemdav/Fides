@@ -14,7 +14,7 @@ import { cancelStaffInvitationAction, deleteStaffInvitationAction, resendStaffIn
 import { InviteStaffModal } from "./invite-staff-modal";
 import { RoleAccessModal } from "./role-access-modal";
 import { StaffStatusDialog } from "./staff-status-dialog";
-import { StaffConfirmationDialog } from "./staff-confirmation-dialog";
+import { StaffConfirmationDialog, StaffSuccessDialog, type StaffSuccessDetails } from "./staff-confirmation-dialog";
 import {
   loadStaffEditorAction,
   deleteStaffMemberAction,
@@ -58,9 +58,9 @@ interface StaffViewProps {
 
 const invitationLabels = { pending: "Invited", expired: "Invite expired", cancelled: "Invite cancelled" };
 const invitationActions = {
-  cancel: { label: "Cancel invitation", success: "Invitation cancelled.", run: cancelStaffInvitationAction },
-  delete: { label: "Delete invitation", success: "Invitation deleted.", run: deleteStaffInvitationAction },
-  resend: { label: "Resend email", success: "Invitation email resent.", run: resendStaffInvitationAction },
+  cancel: { label: "Cancel invitation", success: "Invitation cancelled", run: cancelStaffInvitationAction },
+  delete: { label: "Delete invitation", success: "Invitation deleted", run: deleteStaffInvitationAction },
+  resend: { label: "Resend email", success: "Invitation email resent", run: resendStaffInvitationAction },
 };
 type InvitationAction = keyof typeof invitationActions;
 
@@ -116,6 +116,7 @@ export function StaffView({
   const [activeMenuId, setActiveMenuId] = React.useState<string | null>(null);
   const [expandedStaffId, setExpandedStaffId] = React.useState<string | null>(null);
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
+  const [success, setSuccess] = React.useState<StaffSuccessDetails | null>(null);
 
   // Filter panel state
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
@@ -156,7 +157,13 @@ export function StaffView({
         return;
       }
       setInviteAction(null);
-      showToast(action.success);
+      const { row, type } = inviteAction;
+      const description = {
+        cancel: `The invitation for ${row.fullName} is no longer valid. The reserved seat is available again.`,
+        delete: `The cancelled invitation for ${row.fullName} was removed from the roster.`,
+        resend: `A new invitation link was sent to ${row.email}.`,
+      }[type];
+      setSuccess({ title: action.success, description });
       router.refresh();
     } catch {
       setInviteActionError("The invitation could not be updated. Try again.");
@@ -250,7 +257,7 @@ export function StaffView({
     try {
       const res = await deleteStaffMemberAction({ staffId: target.id, tenantId: tenantId ?? "" });
       if (!res.success) { setItems(prevItems); showToast(res.error || "Failed to remove."); return; }
-      showToast(`${target.fullName} removed.`);
+      setSuccess({ title: "Staff member removed", description: `${target.fullName} was removed from the roster.` });
       router.refresh();
     } catch (err: unknown) {
       setItems(prevItems);
@@ -642,9 +649,9 @@ export function StaffView({
           tenantId={tenantId}
           canInviteAdmins={userRole === "Business owner"}
           onClose={() => setIsInviteOpen(false)}
-          onSent={() => {
+          onSent={(email) => {
             setIsInviteOpen(false);
-            showToast("Staff invitation sent.");
+            setSuccess({ title: "Staff invitation sent", description: `An invitation link was sent to ${email}.` });
             router.refresh();
           }}
           seatsUsed={activeMembers + pendingInvitations}
@@ -664,7 +671,7 @@ export function StaffView({
           onClose={() => setEditTarget(null)}
           onSaved={() => {
             setEditTarget(null);
-            showToast("Staff changes saved.");
+            setSuccess({ title: "Staff changes saved", description: "The staff profile has been updated." });
             router.refresh();
           }}
         />
@@ -676,7 +683,10 @@ export function StaffView({
             && !items.some((staff) => staff.id !== statusTarget.id && staff.active && staff.role === "owner")}
           onClose={() => setStatusTarget(null)}
           onChanged={(active) => {
-            showToast(`${statusTarget.fullName} ${active ? "activated" : "deactivated"}.`);
+            setSuccess({
+              title: active ? "Staff member activated" : "Staff member deactivated",
+              description: `${statusTarget.fullName} is now marked as ${active ? "active" : "inactive"} in the roster.`,
+            });
             setStatusTarget(null);
             router.refresh();
           }} />
@@ -684,7 +694,7 @@ export function StaffView({
 
       {inviteAction && (
         <StaffConfirmationDialog title={`${invitationActions[inviteAction.type].label}?`}
-          warning={inviteAction.type !== "resend"} busy={runningInviteAction}
+          tone={inviteAction.type === "resend" ? undefined : "warning"} busy={runningInviteAction}
           error={inviteActionError} onClose={() => setInviteAction(null)} description={inviteActionDescription}>
           <AdminButton size="xs" variant="outline" disabled={runningInviteAction} onClick={() => setInviteAction(null)}>
             {inviteAction.type === "resend" ? "Cancel" : "Keep invitation"}
@@ -696,9 +706,11 @@ export function StaffView({
         </StaffConfirmationDialog>
       )}
 
-      {/* ── Toast ──────────────────────────────────────────────────────────── */}
+      {success && <StaffSuccessDialog {...success} onClose={() => setSuccess(null)} />}
+
+      {/* ── Error toast ────────────────────────────────────────────────────── */}
       {toastMessage && (
-        <div role="status" className="fixed bottom-6 right-6 z-50 bg-ink text-white px-4 py-2.5 rounded-[10px] shadow-xl text-xs font-medium">
+        <div role="alert" className="fixed bottom-6 right-6 z-50 bg-ink text-white px-4 py-2.5 rounded-[10px] shadow-xl text-xs font-medium">
           {toastMessage}
         </div>
       )}

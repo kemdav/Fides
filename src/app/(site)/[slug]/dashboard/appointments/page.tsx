@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { AppointmentsView } from "@/components/merchant/appointments/appointments-view";
 import { createClient } from "@/lib/supabase/server";
 import { toAppointmentRow } from "@/lib/merchant/overview";
+import { staffRoleLabels } from "@/lib/merchant/staff-profile";
 
 interface MerchantAppointmentsPageProps {
   params: Promise<{ slug: string }>;
@@ -65,11 +66,13 @@ export default async function MerchantAppointmentsPage({
     query = query.eq("assigned.staff_id", staffId).or(`staff_id.eq.${staffId},assigned.not.is.null`);
   }
 
-  const [appointments, focusedStaff] = await Promise.all([
+  const [appointments, focusedStaff, { data: membership }] = await Promise.all([
     query,
     staffId
       ? supabase.from("staff_members").select("full_name").eq("tenant_id", tenant.id).eq("id", staffId).maybeSingle()
       : { data: null, error: null },
+    supabase.from("tenant_memberships").select("role, profiles(full_name)")
+      .eq("tenant_id", tenant.id).eq("profile_id", user.id).maybeSingle(),
   ]);
   if (appointments.error) throw appointments.error;
   if (focusedStaff.error) throw focusedStaff.error;
@@ -78,7 +81,9 @@ export default async function MerchantAppointmentsPage({
     <AppointmentsView
       key={staffId ?? "all"}
       businessName={tenant.name}
+      userName={membership?.profiles?.full_name ?? undefined}
       userEmail={user.email ?? "Merchant staff"}
+      userRole={membership ? membership.role === "owner" ? "Business owner" : staffRoleLabels[membership.role] : undefined}
       tenantId={tenant.id}
       basePath={basePath}
       focusedStaffName={staffId ? focusedStaff.data?.full_name ?? "Selected staff member" : undefined}

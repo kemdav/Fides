@@ -10,8 +10,8 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ registered?: string; error?: string; message?: string; redirect?: string }> }) {
-  const { registered, error, message, redirect: redirectTo } = await searchParams;
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ registered?: string; error?: string; message?: string; redirect?: string; workspace?: string }> }) {
+  const { registered, error, message, redirect: redirectTo, workspace } = await searchParams;
   const target = safeRedirect(redirectTo);
   const supabase = await createClient();
   const {
@@ -24,5 +24,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
     if (access.ok) redirect(target);
   }
 
-  return <LoginForm submitted={registered === "1"} queryError={error?.slice(0, 300) ?? null} queryMessage={message?.slice(0, 300) ?? null} redirectTo={target} />;
+  const staffSignInHref = typeof workspace === "string" && /^[a-z0-9-]{1,80}$/.test(workspace)
+    ? `/staff-access?workspace=${workspace}` : "/staff-access";
+  return <LoginForm submitted={registered === "1"} queryError={error?.slice(0, 300) ?? null} queryMessage={message?.slice(0, 300) ?? null} redirectTo={target} staffSignInHref={staffSignInHref} />;
 }

@@ -27,7 +27,9 @@ export interface AppointmentItem {
 
 interface AppointmentsViewProps {
   businessName?: string;
+  userName?: string;
   userEmail?: string;
+  userRole?: string;
   tenantId?: string;
   todayCount?: number;
   awaitingCount?: number;
@@ -115,7 +117,9 @@ const EMPTY_ITEMS: AppointmentItem[] = [];
 
 export function AppointmentsView({
   businessName = "Bella Vita",
-  userEmail = "Maria Santos",
+  userName,
+  userEmail,
+  userRole,
   tenantId,
   todayCount = 0,
   awaitingCount = 0,
@@ -291,7 +295,7 @@ export function AppointmentsView({
 
   return (
     <div className="flex min-h-dvh flex-col bg-powder text-ink lg:h-dvh lg:flex-row lg:overflow-hidden">
-      <MerchantSidebar businessName={businessName} userEmail={userEmail} basePath={basePath} />
+      <MerchantSidebar businessName={businessName} userName={userName} userEmail={userEmail} userRole={userRole} basePath={basePath} />
 
       <div className="min-w-0 flex-1 lg:h-dvh lg:overflow-y-auto">
         <PageContent>

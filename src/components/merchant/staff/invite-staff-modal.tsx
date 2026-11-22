@@ -10,7 +10,7 @@ import { Listbox } from "../new-appointment-modal";
 
 interface InviteStaffModalProps {
   onClose: () => void;
-  onSent: () => void;
+  onSent: (email: string) => void;
   tenantId: string;
   canInviteAdmins: boolean;
   seatsUsed: number;
@@ -41,7 +41,7 @@ export function InviteStaffModal({ onClose, onSent, tenantId, canInviteAdmins, s
         commissionValue, serviceIds: selectedServices,
       });
       if (result.error) setError(result.error);
-      else onSent();
+      else onSent(email.trim().toLowerCase());
     } catch {
       setError("The invitation could not be sent. Try again.");
     } finally {

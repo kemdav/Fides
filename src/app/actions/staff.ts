@@ -348,16 +348,20 @@ export async function deleteStaffMemberAction(params: {
     } = await supabase.auth.getUser();
     if (!user) return { success: false, error: "Not authenticated." };
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("staff_members")
       .delete()
       .eq("id", params.staffId)
-      .eq("tenant_id", params.tenantId);
+      .eq("tenant_id", params.tenantId)
+      .select("id")
+      .maybeSingle();
 
     if (error) {
       console.error("[deleteStaffMemberAction]", error);
       return { success: false, error: error.message };
     }
+
+    if (!data) return { success: false, error: "Staff member could not be removed." };
 
     revalidatePath("/", "layout");
     return { success: true };

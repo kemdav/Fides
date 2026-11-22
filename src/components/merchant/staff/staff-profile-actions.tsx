@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AdminButton } from "@/components/admin/admin-button";
 import { ManageStaffModal, type ManagedStaff } from "./manage-staff-modal";
 import { StaffStatusDialog } from "./staff-status-dialog";
+import { StaffSuccessDialog, type StaffSuccessDetails } from "./staff-confirmation-dialog";
 
 interface StaffProfileActionsProps {
   tenantId: string;
@@ -17,23 +18,18 @@ export function StaffProfileActions({ tenantId, basePath, staff, lastOwnerProtec
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
-  const [message, setMessage] = useState("");
+  const [success, setSuccess] = useState<StaffSuccessDetails | null>(null);
   const action = staff.active ? "Deactivate" : "Activate";
 
   return (
     <div>
       <div className="flex flex-wrap gap-2">
-        <AdminButton variant="primary" size="xs" aria-haspopup="dialog" onClick={() => { setMessage(""); setEditing(true); }}>Edit Staff</AdminButton>
-        <AdminButton variant="outline" size="xs" aria-haspopup="dialog" onClick={() => {
-          setMessage("");
-          setConfirming(true);
-        }}>
+        <AdminButton variant="primary" size="xs" aria-haspopup="dialog" onClick={() => setEditing(true)}>Edit Staff</AdminButton>
+        <AdminButton variant="outline" size="xs" aria-haspopup="dialog" onClick={() => setConfirming(true)}>
           {action} Staff
         </AdminButton>
       </div>
-      {message && (
-        <p role="status" className="fixed bottom-6 right-6 z-50 rounded-lg bg-ink px-4 py-3 text-xs text-white shadow-lg">{message}</p>
-      )}
+      {success && <StaffSuccessDialog {...success} onClose={() => setSuccess(null)} />}
       {editing && (
         <ManageStaffModal
           tenantId={tenantId}
@@ -42,7 +38,7 @@ export function StaffProfileActions({ tenantId, basePath, staff, lastOwnerProtec
           onClose={() => setEditing(false)}
           onSaved={() => {
             setEditing(false);
-            setMessage("Staff changes saved.");
+            setSuccess({ title: "Staff changes saved", description: "The staff profile has been updated." });
             router.refresh();
           }}
         />
@@ -52,7 +48,10 @@ export function StaffProfileActions({ tenantId, basePath, staff, lastOwnerProtec
           onClose={() => setConfirming(false)}
           onChanged={(active) => {
             setConfirming(false);
-            setMessage(active ? "Staff member activated." : "Staff member deactivated.");
+            setSuccess({
+              title: active ? "Staff member activated" : "Staff member deactivated",
+              description: `${staff.fullName} is now marked as ${active ? "active" : "inactive"} in the roster.`,
+            });
             router.refresh();
           }} />
       )}

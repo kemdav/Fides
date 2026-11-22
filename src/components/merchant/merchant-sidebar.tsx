@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon, type IconName } from "@/components/admin/icon";
-import { cn } from "@/lib/utils";
+import { cn, getInitials } from "@/lib/utils";
 
 interface MerchantSidebarProps {
   businessName?: string;
@@ -29,15 +29,17 @@ const manageItems: { label: string; icon: IconName; suffix?: string }[] = [
 
 export function MerchantSidebar({
   businessName = "Bella Vita",
-  userName = "Maria Santos",
-  userEmail = "Maria Santos",
-  userRole = "Business owner",
+  userName,
+  userEmail,
+  userRole,
   basePath = "",
 }: MerchantSidebarProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const dashboardPath = `${basePath}/dashboard`;
-  const displayName = userName || userEmail;
+  const accountPath = `${dashboardPath}/account`;
+  const accountActive = pathname === accountPath;
+  const displayName = userName?.trim() || userEmail?.trim() || "My account";
   const isActive = (suffix?: string) =>
     suffix ? pathname.startsWith(`${dashboardPath}${suffix}`) : pathname === dashboardPath;
 
@@ -90,7 +92,7 @@ export function MerchantSidebar({
       )}
 
       <aside className={cn(
-        "fixed bottom-0 left-0 top-0 z-50 flex w-[248px] shrink-0 flex-col gap-[clamp(4px,1vh,12px)] overflow-hidden border-r border-[#EDECE8] bg-white p-4 transition-transform duration-200 lg:sticky lg:z-10 lg:flex lg:h-dvh",
+        "fixed bottom-0 left-0 top-0 z-50 flex w-[248px] shrink-0 flex-col gap-[clamp(4px,1vh,12px)] overflow-y-auto border-r border-[#EDECE8] bg-white p-4 transition-transform duration-200 lg:sticky lg:z-10 lg:flex lg:h-dvh",
         mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"
       )}>
         <div className="flex shrink-0 items-start justify-between border-b border-[#EDECE8] pb-4">
@@ -113,12 +115,19 @@ export function MerchantSidebar({
           {renderItem({ label: "Subscription", icon: "card" })}
         </nav>
         <div className="flex-1" />
-        <div className="flex shrink-0 items-center gap-3 border-t border-[#EDECE8] pt-4">
-          <div className="flex size-10 items-center justify-center rounded-full bg-[#C35000] text-sm font-semibold text-white">MS</div>
-          <div className="min-w-0">
-            <span className="block truncate text-sm font-semibold leading-[21px] text-[#354357]">{displayName}</span>
-            <span className="block text-xs leading-[18px] text-neutral-400">{userRole}</span>
-          </div>
+        <div className="shrink-0 border-t border-hairline pt-3">
+          <Link href={accountPath} onClick={() => setMobileOpen(false)}
+            aria-current={accountActive ? "page" : undefined}
+            className={cn("flex min-w-0 items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40", accountActive && "bg-burnt/10")}>
+            <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-burnt text-sm font-semibold text-white">
+              {getInitials(displayName)}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-semibold text-ink">{displayName}</span>
+              <span className="block truncate text-xs text-muted">{userRole || "My account"}</span>
+            </span>
+            <Icon name="chevron-down" className="size-3.5 -rotate-90 text-muted" />
+          </Link>
         </div>
       </aside>
     </>
