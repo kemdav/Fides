@@ -2,7 +2,8 @@
 
 import { useActionState } from "react";
 import { submitContact, type ContactState } from "./actions";
-import { AuthBanner, AuthField, AuthSubmit, authInputClass } from "@/components/auth/auth-ui";
+import { AuthBanner, AuthField, AuthSubmit } from "@/components/auth/auth-ui";
+import { inputClasses } from "@/components/ui";
 
 const initialState: ContactState = { status: "idle", values: { name: "", email: "", topic: "General", message: "" } };
 const topics = ["General", "Pricing", "Demo request", "Support"];
@@ -29,7 +30,7 @@ export function ContactForm() {
       </div>
       <div className="flex flex-col gap-2">
         <label htmlFor="topic" className="text-sm font-semibold text-ink opacity-80">Topic</label>
-        <select id="topic" name="topic" defaultValue={values.topic} disabled={pending} className={`${authInputClass()} cursor-pointer bg-white`}>
+        <select id="topic" name="topic" defaultValue={values.topic} disabled={pending} className={`${inputClasses()} cursor-pointer bg-white`}>
           {topics.map((topic) => (
             <option key={topic}>{topic}</option>
           ))}
@@ -48,7 +49,7 @@ export function ContactForm() {
           disabled={pending}
           aria-invalid={!!fieldErrors?.message}
           placeholder="How can we help?"
-          className={`${authInputClass(!!fieldErrors?.message)} h-auto resize-y py-3`}
+          className={`${inputClasses(!!fieldErrors?.message)} h-auto resize-y py-3`}
         />
         {fieldErrors?.message ? (
           <p role="alert" className="text-[13px] text-[#991b1b]">

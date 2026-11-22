@@ -3,7 +3,7 @@ export { CheckIcon } from "./check-icon";
 export type { CheckIconTone } from "./check-icon";
 export type { ButtonProps, ButtonSize, ButtonVariant } from "./button";
 
-export { Input } from "./input";
+export { Input, inputClasses } from "./input";
 export type { InputProps } from "./input";
 
 export {

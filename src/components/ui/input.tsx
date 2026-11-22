@@ -1,6 +1,15 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
+/** Shared text-field look (Figma input): use for any text input, textarea or select-like control. */
+export const inputClasses = (invalid = false) =>
+  cn(
+    "h-12 w-full rounded-lg border px-4 text-sm font-semibold text-ink placeholder:font-semibold placeholder:text-ink/50 focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50",
+    invalid
+      ? "border-danger bg-danger-bg focus-visible:ring-danger/30"
+      : "border-glyph bg-white hover:border-muted focus-visible:border-muted focus-visible:ring-burnt/30"
+  );
+
 export type InputProps = React.InputHTMLAttributes<HTMLInputElement>;
 
 /*

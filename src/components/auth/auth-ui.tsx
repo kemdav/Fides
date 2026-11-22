@@ -1,18 +1,9 @@
 import Link from "next/link";
 import type { InputHTMLAttributes, ReactNode } from "react";
-import { PasswordInput } from "@/components/ui";
+import { buttonClasses, inputClasses, PasswordInput } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
-export const authInputClass = (invalid = false) =>
-  cn(
-    "h-12 w-full rounded-lg border px-4 text-sm font-semibold text-ink placeholder:font-semibold placeholder:text-ink/50 focus-visible:outline-none focus-visible:ring-2 disabled:opacity-50",
-    invalid
-      ? "border-danger bg-danger-bg focus-visible:ring-danger/30"
-      : "border-glyph bg-white hover:border-muted focus-visible:border-muted focus-visible:ring-burnt/30"
-  );
-
-export const authButtonClass =
-  "inline-flex h-12 w-full cursor-pointer items-center justify-center gap-2.5 rounded-md bg-burnt px-4 text-sm font-semibold text-white transition-colors hover:bg-burnt-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
+export const authButtonClass = buttonClasses({ variant: "brand", size: "form", className: "w-full rounded-md" });
 
 function Spinner() {
   return (
@@ -89,7 +80,7 @@ type AuthFieldProps = InputHTMLAttributes<HTMLInputElement> & { id: string; labe
 export function AuthField({ id, label, error, className, ...props }: AuthFieldProps) {
   return (
     <FieldShell id={id} label={label} error={error}>
-      <input id={id} aria-invalid={!!error} aria-describedby={error ? `${id}-error` : undefined} className={cn(authInputClass(!!error), className)} {...props} />
+      <input id={id} aria-invalid={!!error} aria-describedby={error ? `${id}-error` : undefined} className={cn(inputClasses(!!error), className)} {...props} />
     </FieldShell>
   );
 }
@@ -97,7 +88,7 @@ export function AuthField({ id, label, error, className, ...props }: AuthFieldPr
 export function AuthPasswordField({ id, label = "Password", error, ...props }: Omit<AuthFieldProps, "type" | "label"> & { label?: string }) {
   return (
     <FieldShell id={id} label={label} error={error}>
-      <PasswordInput id={id} aria-invalid={!!error} aria-describedby={error ? `${id}-error` : undefined} inputClassName={authInputClass(!!error)} {...props} />
+      <PasswordInput id={id} aria-invalid={!!error} aria-describedby={error ? `${id}-error` : undefined} inputClassName={inputClasses(!!error)} {...props} />
     </FieldShell>
   );
 }

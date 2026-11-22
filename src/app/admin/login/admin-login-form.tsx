@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { adminLogin, type AdminLoginState } from "@/app/actions/admin-auth";
 import { AdminAuthShell } from "@/components/auth/admin-auth-shell";
 import { AuthBanner, AuthCard, AuthField, AuthFootnote, AuthPasswordField, AuthSubmit, authButtonClass } from "@/components/auth/auth-ui";
+import { cn } from "@/lib/utils";
 
 const initialState: AdminLoginState = { status: "idle", email: "" };
 
@@ -63,7 +64,7 @@ export function AdminLoginForm() {
           </button>
 
           {locked ? (
-            <button type="button" disabled className="inline-flex h-12 w-full cursor-not-allowed items-center justify-center rounded-md bg-body text-sm font-semibold text-white opacity-45">
+            <button type="button" disabled className={cn(authButtonClass, "bg-body disabled:opacity-45")}>
               Try again later
             </button>
           ) : (
