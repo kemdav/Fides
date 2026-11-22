@@ -3,21 +3,19 @@
 import { AdminButton } from "../admin-button";
 import { Icon, type IconName } from "../icon";
 import { Surface } from "../primitives";
-import { formatNextBilling, isRenewingSoon } from "@/lib/admin/tenants";
 import { useTenants } from "../tenant-provider";
 
 export function AccountFollowUp() {
-  const { tenants, openTenant, now } = useTenants();
-  const renewing = tenants.filter((tenant) => isRenewingSoon(tenant, now)).sort((a, b) => Date.parse(a.nextBilling ?? "") - Date.parse(b.nextBilling ?? ""))[0];
+  const { tenants, openTenant } = useTenants();
   const suspended = tenants.find((tenant) => tenant.access === "suspended");
 
   const followUps: { icon: IconName; title: string; detail: string; action: string; onClick?: () => void }[] = [
     {
       icon: "clock",
       title: "Upcoming renewal",
-      detail: renewing ? `${renewing.name} · ${formatNextBilling(renewing)}` : "No renewals due within 7 days",
+      detail: "Olive & Oak Spa · Oct 12",
       action: "Manage",
-      onClick: renewing ? () => openTenant(renewing.id) : undefined,
+      onClick: () => openTenant("olive-and-oak-spa"),
     },
     {
       icon: "lock",
