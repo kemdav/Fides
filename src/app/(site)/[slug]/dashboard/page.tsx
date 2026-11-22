@@ -1,11 +1,20 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
-import {
-  OverviewView,
-} from "@/components/merchant/overview/overview-view";
+import { OverviewView } from "@/components/merchant/overview/overview-view";
 import { getMerchantOverview } from "@/lib/merchant/overview";
 import type { OverviewPeriod } from "@/lib/merchant/overview";
 import { createClient } from "@/lib/supabase/server";
+import {
+  formatTimeManila,
+  getManilaDateKey,
+  getManilaTodayKey,
+  getManilaWeekDays,
+  mapDbSourceToUi,
+  mapDbStatusToUi,
+  resolveCustomerName,
+  resolveServiceName,
+  resolveStaffName,
+} from "@/lib/date-utils";
 
 interface MerchantDashboardPageProps {
   params: Promise<{ slug: string }>;
@@ -27,7 +36,8 @@ export async function generateMetadata({
     : "Merchant Dashboard";
   return {
     title,
-    description: "Manage appointments, walk-ins, customers, and daily operations.",
+    description:
+      "Manage appointments, walk-ins, customers, and daily operations.",
   };
 }
 
@@ -57,27 +67,62 @@ export default async function MerchantDashboardPage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, role")
+    .select("full_name, role, tenant_id")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
-  const overview = await getMerchantOverview(supabase, tenant.id, new Date(), period);
+  const { data: membership } = await supabase
+    .from("tenant_memberships")
+    .select("role")
+    .eq("tenant_id", tenant.id)
+    .eq("profile_id", user.id)
+    .maybeSingle();
+
+  const isTenantMember =
+    Boolean(membership) ||
+    (profile?.tenant_id === tenant.id &&
+      ["owner", "admin", "receptionist", "staff"].includes(
+        profile?.role || "",
+      ));
+
+  if (!isTenantMember) {
+    notFound();
+  }
+
+  const userRole = membership?.role || profile?.role || "staff";
+  const formattedRole =
+    userRole === "owner"
+      ? "Business owner"
+      : userRole.charAt(0).toUpperCase() + userRole.slice(1);
+
+  const overview = await getMerchantOverview(
+    supabase,
+    tenant.id,
+    new Date(),
+    period,
+  );
   const rows = overview.todayAppointments;
-  const completedToday = rows.filter((row) => row.rawStatus === "completed").length;
-  const checkedInToday = rows.filter((row) =>
-    row.rawStatus === "checked_in" || row.rawStatus === "in_service"
+  const completedToday = rows.filter(
+    (row) => row.rawStatus === "completed",
+  ).length;
+  const checkedInToday = rows.filter(
+    (row) => row.rawStatus === "checked_in" || row.rawStatus === "in_service",
   ).length;
   const pendingCount = overview.calendarAppointments.filter(
-    (row) => row.rawStatus === "pending_approval"
+    (row) => row.rawStatus === "pending_approval",
   ).length;
-  const confirmedToday = rows.filter((row) => row.rawStatus === "confirmed").length;
+  const confirmedToday = rows.filter(
+    (row) => row.rawStatus === "confirmed",
+  ).length;
 
   return (
     <OverviewView
       businessName={tenant.name}
-      userName={profile?.full_name?.trim() || user.email?.split("@")[0] || "Merchant"}
+      userName={
+        profile?.full_name?.trim() || user.email?.split("@")[0] || "Merchant"
+      }
       userEmail={user.email ?? "Merchant staff"}
-      userRole={profile?.role === "owner" ? "Business owner" : profile?.role || "Staff"}
+      userRole={formattedRole}
       tenantId={tenant.id}
       basePath={`/${slug}`}
       todayCount={rows.length}
@@ -90,7 +135,9 @@ export default async function MerchantDashboardPage({
       bookingCount={overview.metrics.bookingCount}
       activeCustomerCount={overview.metrics.activeCustomerCount}
       customerGrowthPercent={overview.metrics.customerGrowthPercent}
-      averageOrderValue={Math.round(overview.metrics.averageOrderValueCents / 100)}
+      averageOrderValue={Math.round(
+        overview.metrics.averageOrderValueCents / 100,
+      )}
       initialPeriod={period}
       chartStats={overview.chartStats}
       todayActivity={rows.slice(0, 4).map((row) => ({

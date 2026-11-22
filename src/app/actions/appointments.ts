@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { combineDateAndTimeManila } from "@/lib/date-utils";
 import type { Database } from "@/types/database.types";
 
 export type AppointmentStatusEnum = Database["public"]["Enums"]["appointment_status"];
@@ -22,6 +23,17 @@ function mapUiStatusToDb(status: string): AppointmentStatusEnum {
   if (s === "rejected") return "rejected";
   if (s === "no show" || s === "no_show") return "no_show";
   return "confirmed";
+}
+
+async function revalidateTenantDashboard(tenantSlug?: string) {
+  if (tenantSlug) {
+    revalidatePath(`/${tenantSlug}/dashboard`, "layout");
+    revalidatePath(`/${tenantSlug}/dashboard/appointments`, "page");
+  }
+  revalidatePath("/[slug]/dashboard", "layout");
+  revalidatePath("/[slug]/dashboard/appointments", "page");
+  revalidatePath("/dashboard", "layout");
+  revalidatePath("/appointments", "layout");
 }
 
 /**
@@ -49,7 +61,16 @@ export async function updateAppointmentStatusAction({
 
   // Resolve target tenant
   let targetTenantId = tenantIdParam;
-  if (!targetTenantId) {
+  let tenantSlug: string | undefined;
+
+  if (targetTenantId) {
+    const { data: tenant } = await supabase
+      .from("tenants")
+      .select("slug")
+      .eq("id", targetTenantId)
+      .single();
+    tenantSlug = tenant?.slug;
+  } else {
     const { data: profile } = await supabase
       .from("profiles")
       .select("tenant_id")
@@ -80,10 +101,7 @@ export async function updateAppointmentStatusAction({
     return { success: false, error: `Failed to update appointment: ${error.message}` };
   }
 
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/appointments");
-  revalidatePath("/overview");
-  revalidatePath("/appointments");
+  await revalidateTenantDashboard(tenantSlug);
 
   return { success: true, message: `Appointment status updated to ${newStatus}.` };
 }
@@ -132,36 +150,54 @@ export async function createAppointmentBookingAction({
     return { success: false, error: "Authentication required to book appointments." };
   }
 
-  // Resolve tenant
+  // 1. Resolve tenant
   let tenantId = tenantIdParam;
-  if (!tenantId) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("tenant_id")
-      .eq("id", user.id)
-      .single();
-    tenantId = profile?.tenant_id ?? undefined;
-  }
+  let tenantSlug: string | undefined;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("tenant_id, role")
+    .eq("id", user.id)
+    .single();
 
   if (!tenantId) {
-    const { data: firstTenant } = await supabase
-      .from("tenants")
-      .select("id")
-      .limit(1)
-      .single();
-    tenantId = firstTenant?.id;
+    tenantId = profile?.tenant_id ?? undefined;
   }
 
   if (!tenantId) {
     return { success: false, error: "No active business tenant found." };
   }
 
+  // Verify membership permissions
+  const { data: membership } = await supabase
+    .from("tenant_memberships")
+    .select("role")
+    .eq("tenant_id", tenantId)
+    .eq("profile_id", user.id)
+    .maybeSingle();
+
+  const isAllowed =
+    Boolean(membership) ||
+    (profile?.tenant_id === tenantId &&
+      ["owner", "admin", "receptionist", "staff"].includes(profile?.role || ""));
+
+  if (!isAllowed) {
+    return { success: false, error: "Access Denied: You do not have permissions for this business." };
+  }
+
+  const { data: tenant } = await supabase
+    .from("tenants")
+    .select("slug")
+    .eq("id", tenantId)
+    .single();
+  tenantSlug = tenant?.slug;
+
   const cleanCustomerName = customerName?.trim();
   if (!cleanCustomerName) {
     return { success: false, error: "Customer name is required." };
   }
 
-  // 1. Resolve or insert customer in public.customers
+  // 2. Resolve or insert customer in public.customers
   let customerId: string | null = null;
   const { data: existingCustomer } = await supabase
     .from("customers")
@@ -190,11 +226,11 @@ export async function createAppointmentBookingAction({
     }
   }
 
-  // 2. Resolve staff_id from public.staff_members
+  // 3. Resolve staff_id from public.staff_members
   let staffId: string | null = null;
   const cleanStaffName = staffName?.trim();
 
-  if (cleanStaffName) {
+  if (cleanStaffName && cleanStaffName !== "Any available") {
     const { data: matchedStaff } = await supabase
       .from("staff_members")
       .select("id")
@@ -235,11 +271,11 @@ export async function createAppointmentBookingAction({
     return { success: false, error: "Could not assign a staff member for this booking." };
   }
 
-  // 3. Resolve service details
+  // 4. Resolve service details
   const cleanServiceName = serviceName?.trim() || "Signature haircut";
   let serviceId: string | null = null;
   let servicePriceCents = 150000; // ₱1,500 default
-  let serviceDurationMinutes = 45;
+  let serviceDurationMinutes = 60;
 
   const { data: matchedService } = await supabase
     .from("services")
@@ -252,31 +288,17 @@ export async function createAppointmentBookingAction({
   if (matchedService) {
     serviceId = matchedService.id;
     servicePriceCents = matchedService.price_cents ?? 150000;
-    serviceDurationMinutes = matchedService.duration_minutes ?? 45;
+    serviceDurationMinutes = matchedService.duration_minutes ?? 60;
   }
 
-  // 4. Calculate starts_at and ends_at
+  // 5. Calculate starts_at and ends_at in Asia/Manila (UTC+08:00)
   const bookingDateStr = date || new Date().toISOString().slice(0, 10);
-  let hour = 10;
-  let minute = 0;
+  const bookingTimeStr = time || "10:00 AM";
 
-  if (time) {
-    const timeMatch = time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
-    if (timeMatch) {
-      hour = parseInt(timeMatch[1], 10);
-      minute = parseInt(timeMatch[2], 10);
-      const meridiem = timeMatch[3]?.toUpperCase();
-      if (meridiem === "PM" && hour < 12) hour += 12;
-      if (meridiem === "AM" && hour === 12) hour = 0;
-    }
-  }
+  const { startsAt, startsAtDate } = combineDateAndTimeManila(bookingDateStr, bookingTimeStr);
+  const endsAt = new Date(startsAtDate.getTime() + serviceDurationMinutes * 60 * 1000).toISOString();
 
-  const startDate = new Date(`${bookingDateStr}T12:00:00Z`);
-  startDate.setUTCHours(hour, minute, 0, 0);
-  const startsAt = startDate.toISOString();
-  const endsAt = new Date(startDate.getTime() + serviceDurationMinutes * 60 * 1000).toISOString();
-
-  // 5. Insert into public.appointments
+  // 6. Insert into public.appointments
   const { data: apptRow, error: apptErr } = await supabase
     .from("appointments")
     .insert({
@@ -285,6 +307,7 @@ export async function createAppointmentBookingAction({
       staff_id: staffId,
       starts_at: startsAt,
       ends_at: endsAt,
+      timezone: "Asia/Manila",
       status: "confirmed",
       source: source || "online",
       total_cents: servicePriceCents,
@@ -298,7 +321,7 @@ export async function createAppointmentBookingAction({
     return { success: false, error: `Failed to create appointment: ${apptErr?.message}` };
   }
 
-  // 6. Insert appointment_services line item if service was identified
+  // 7. Insert appointment_services line item if service was identified
   if (serviceId) {
     await supabase.from("appointment_services").insert({
       tenant_id: tenantId,
@@ -310,10 +333,7 @@ export async function createAppointmentBookingAction({
     });
   }
 
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/appointments");
-  revalidatePath("/overview");
-  revalidatePath("/appointments");
+  await revalidateTenantDashboard(tenantSlug);
 
   return {
     success: true,
@@ -325,6 +345,136 @@ export async function createAppointmentBookingAction({
       customerName: cleanCustomerName,
       serviceName: cleanServiceName,
       staffName: cleanStaffName || "Specialist",
+    },
+  };
+}
+
+/**
+ * Action: Adds a customer or walk-in to the tenant waitlist (public.waitlist_entries).
+ */
+export async function addToWaitlistAction({
+  customerName,
+  customerPhone,
+  serviceName,
+  staffName,
+  notes,
+  tenantIdParam,
+}: {
+  customerName: string;
+  customerPhone?: string;
+  serviceName?: string;
+  staffName?: string;
+  notes?: string;
+  tenantIdParam?: string;
+}): Promise<ActionResult<{ id: string; joined_at: string; status: string }>> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, error: "Authentication required." };
+  }
+
+  let tenantId = tenantIdParam;
+  let tenantSlug: string | undefined;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("tenant_id, role")
+    .eq("id", user.id)
+    .single();
+
+  if (!tenantId) {
+    tenantId = profile?.tenant_id ?? undefined;
+  }
+
+  if (!tenantId) {
+    return { success: false, error: "No active tenant found." };
+  }
+
+  // Verify membership permissions
+  const { data: membership } = await supabase
+    .from("tenant_memberships")
+    .select("role")
+    .eq("tenant_id", tenantId)
+    .eq("profile_id", user.id)
+    .maybeSingle();
+
+  const isAllowed =
+    Boolean(membership) ||
+    (profile?.tenant_id === tenantId &&
+      ["owner", "admin", "receptionist", "staff"].includes(profile?.role || ""));
+
+  if (!isAllowed) {
+    return { success: false, error: "Access Denied: Insufficient permissions for this business." };
+  }
+
+  const { data: tenant } = await supabase
+    .from("tenants")
+    .select("slug")
+    .eq("id", tenantId)
+    .single();
+  tenantSlug = tenant?.slug;
+
+  const cleanCustomerName = customerName?.trim();
+  if (!cleanCustomerName) {
+    return { success: false, error: "Customer name is required." };
+  }
+
+  // Resolve service if provided
+  let serviceId: string | null = null;
+  if (serviceName?.trim()) {
+    const { data: matchedService } = await supabase
+      .from("services")
+      .select("id")
+      .eq("tenant_id", tenantId)
+      .ilike("name", `%${serviceName.trim()}%`)
+      .limit(1)
+      .maybeSingle();
+    serviceId = matchedService?.id ?? null;
+  }
+
+  // Resolve staff if provided
+  let staffId: string | null = null;
+  if (staffName?.trim() && staffName !== "Any available") {
+    const { data: matchedStaff } = await supabase
+      .from("staff_members")
+      .select("id")
+      .eq("tenant_id", tenantId)
+      .ilike("full_name", `%${staffName.trim()}%`)
+      .limit(1)
+      .maybeSingle();
+    staffId = matchedStaff?.id ?? null;
+  }
+
+  const { data: entry, error: entryErr } = await supabase
+    .from("waitlist_entries")
+    .insert({
+      tenant_id: tenantId,
+      guest_name: cleanCustomerName,
+      guest_phone: customerPhone?.trim() || null,
+      service_id: serviceId,
+      staff_id: staffId,
+      notes: notes?.trim() || null,
+      status: "waiting",
+    })
+    .select("id, joined_at, status")
+    .single();
+
+  if (entryErr || !entry) {
+    return { success: false, error: `Failed to add to waitlist: ${entryErr?.message}` };
+  }
+
+  await revalidateTenantDashboard(tenantSlug);
+
+  return {
+    success: true,
+    message: `${cleanCustomerName} added to waitlist.`,
+    data: {
+      id: entry.id,
+      joined_at: entry.joined_at,
+      status: entry.status,
     },
   };
 }
