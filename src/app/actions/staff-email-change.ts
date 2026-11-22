@@ -43,7 +43,7 @@ export async function requestStaffEmailChangeAction(input: z.input<typeof reques
 
   const [{ data: staff }, { data: tenant }] = await Promise.all([
     admin.from("staff_members").select("profile_id, full_name").eq("tenant_id", tenantId).eq("id", staffId).maybeSingle(),
-    admin.from("tenants").select("name, brand_color, secondary_color, accent_color").eq("id", tenantId).maybeSingle(),
+    admin.from("tenants").select("name, brand_color, secondary_color, accent_color, tenant_settings(typography)").eq("id", tenantId).maybeSingle(),
   ]);
   if (!tenant) return { success: false, error: "The workspace could not be loaded." };
   if (!staff?.profile_id) return { success: false, error: "This staff member has no linked sign-in account." };
@@ -87,6 +87,7 @@ export async function requestStaffEmailChangeAction(input: z.input<typeof reques
         merchant: tenant.name,
         verificationUrl: link,
         minutesValid: STAFF_EMAIL_LINK_MINUTES,
+        typography: tenant.tenant_settings?.typography,
         colors: { brand: tenant.brand_color, secondary: tenant.secondary_color, accent: tenant.accent_color },
       }),
     });

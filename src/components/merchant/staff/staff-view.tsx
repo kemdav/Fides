@@ -11,7 +11,7 @@ import { AdminButton } from "@/components/admin/admin-button";
 import { MetricCard } from "@/components/admin/metric-card";
 import { PageContent, PageHeading, StatusPill, Surface } from "@/components/admin/primitives";
 import { EmptyState } from "@/components/ui/empty-state";
-import { cancelStaffInvitationAction, deleteStaffInvitationAction, resendStaffInvitationAction } from "@/app/actions/staff-invitations";
+import { cancelStaffInvitationAction, removeStaffInvitationAction, resendStaffInvitationAction } from "@/app/actions/staff-invitations";
 import { InviteStaffModal } from "./invite-staff-modal";
 import { RoleAccessModal } from "./role-access-modal";
 import { StaffStatusDialog } from "./staff-status-dialog";
@@ -62,7 +62,7 @@ interface StaffViewProps {
 const invitationLabels = { pending: "Invited", expired: "Invite expired", cancelled: "Invite cancelled" };
 const invitationActions = {
   cancel: { label: "Cancel invitation", success: "Invitation cancelled", run: cancelStaffInvitationAction },
-  delete: { label: "Delete invitation", success: "Invitation deleted", run: deleteStaffInvitationAction },
+  remove: { label: "Remove invitation", success: "Invitation removed", run: removeStaffInvitationAction },
   resend: { label: "Resend email", success: "Invitation email resent", run: resendStaffInvitationAction },
 };
 type InvitationAction = keyof typeof invitationActions;
@@ -154,7 +154,7 @@ export function StaffView({
       const { row, type } = inviteAction;
       const description = {
         cancel: `The invitation for ${row.fullName} is no longer valid. The reserved seat is available again.`,
-        delete: `The cancelled invitation for ${row.fullName} was removed from the roster.`,
+        remove: `The invitation for ${row.fullName} was removed from the roster.`,
         resend: `A new invitation link was sent to ${row.email}.`,
       }[type];
       setSuccess({ title: action.success, description });
@@ -168,7 +168,7 @@ export function StaffView({
 
   const inviteActionDescription = inviteAction && {
     cancel: `Cancelling the invitation for ${inviteAction.row.fullName} will disable the link and free the reserved staff seat.`,
-    delete: `Delete the cancelled invitation for ${inviteAction.row.fullName} from the roster?`,
+    remove: `Remove the invitation for ${inviteAction.row.fullName} from the roster?`,
     resend: `Send a new invitation link to ${inviteAction.row.email}? The previous link will stop working.`,
   }[inviteAction.type];
 
@@ -494,44 +494,37 @@ export function StaffView({
 
                         {/* Action */}
                         <td className="relative py-3.5">
-                          {row.invitationStatus === "expired" ? (
-                            <span className="block text-center text-xs text-muted">—</span>
-                          ) : (
-                            <>
-                              <button
-                                type="button"
-                                aria-label={`Actions for ${row.fullName}`}
-                                aria-expanded={activeMenuId === row.id}
-                                aria-busy={loadingEditId === row.id}
-                                onClick={() => setActiveMenuId(activeMenuId === row.id ? null : row.id)}
-                                className="relative z-10 mx-auto flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 text-glyph"
-                              >
-                                <Icon name="more" weight="fill" className="size-5" />
-                              </button>
-                              {activeMenuId === row.id && (
-                                <div className="absolute right-4 mt-1 w-44 rounded-[10px] bg-white border border-hairline shadow-lg py-1 z-30 text-left text-sm">
-                                  {row.invitationStatus === "pending" ? (
-                                    <>
-                                      <button type="button" aria-haspopup="dialog" onClick={() => openInvitationAction(row, "resend")}
-                                        className="w-full px-4 py-2 text-left text-body hover:bg-mist">Resend email</button>
-                                      <button type="button" aria-haspopup="dialog" onClick={() => openInvitationAction(row, "cancel")}
-                                        className="w-full px-4 py-2 text-left font-medium text-danger hover:bg-danger-bg">Cancel invitation</button>
-                                    </>
-                                  ) : row.invitationStatus === "cancelled" ? (
-                                    <button type="button" aria-haspopup="dialog" onClick={() => openInvitationAction(row, "delete")}
-                                      className="w-full px-4 py-2 text-left font-medium text-danger hover:bg-danger-bg">Delete invitation</button>
-                                  ) : (
-                                    <>
-                                        {canViewProfiles && (
-                                          <button type="button" disabled={Boolean(loadingEditId)} onClick={() => openEditor(row.id)} className="w-full px-4 py-2 text-left text-body hover:bg-mist disabled:opacity-50">Edit details</button>
-                                        )}
-                                        <button type="button" aria-haspopup="dialog" onClick={() => openStatusDialog(row)} className="w-full text-left px-4 py-2 hover:bg-mist text-body">{row.active ? "Deactivate" : "Activate"}</button>
-                                        <button type="button" onClick={() => { setDeleteTarget(row); setActiveMenuId(null); }} className="w-full text-left px-4 py-2 hover:bg-danger-bg text-danger font-medium">Remove member</button>
-                                    </>
-                                  )}
-                                </div>
+                          <button
+                            type="button"
+                            aria-label={`Actions for ${row.fullName}`}
+                            aria-expanded={activeMenuId === row.id}
+                            aria-busy={loadingEditId === row.id}
+                            onClick={() => setActiveMenuId(activeMenuId === row.id ? null : row.id)}
+                            className="relative z-10 mx-auto flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 text-glyph"
+                          >
+                            <Icon name="more" weight="fill" className="size-5" />
+                          </button>
+                          {activeMenuId === row.id && (
+                            <div className="absolute right-4 mt-1 w-44 rounded-[10px] bg-white border border-hairline shadow-lg py-1 z-30 text-left text-sm">
+                              {row.invitationStatus ? (
+                                <>
+                                  {row.invitationStatus !== "cancelled" && <button type="button" aria-haspopup="dialog" onClick={() => openInvitationAction(row, "resend")}
+                                    className="w-full px-4 py-2 text-left text-body hover:bg-mist">Resend email</button>}
+                                  {row.invitationStatus === "pending" ? <button type="button" aria-haspopup="dialog" onClick={() => openInvitationAction(row, "cancel")}
+                                    className="w-full px-4 py-2 text-left font-medium text-danger hover:bg-danger-bg">Cancel invitation</button> : (
+                                <button type="button" aria-haspopup="dialog" onClick={() => openInvitationAction(row, "remove")}
+                                  className="w-full px-4 py-2 text-left font-medium text-danger hover:bg-danger-bg">Remove invitation</button>)}
+                                </>
+                              ) : (
+                                <>
+                                    {canViewProfiles && (
+                                      <button type="button" disabled={Boolean(loadingEditId)} onClick={() => openEditor(row.id)} className="w-full px-4 py-2 text-left text-body hover:bg-mist disabled:opacity-50">Edit details</button>
+                                    )}
+                                    <button type="button" aria-haspopup="dialog" onClick={() => openStatusDialog(row)} className="w-full text-left px-4 py-2 hover:bg-mist text-body">{row.active ? "Deactivate" : "Activate"}</button>
+                                    <button type="button" onClick={() => { setDeleteTarget(row); setActiveMenuId(null); }} className="w-full text-left px-4 py-2 hover:bg-danger-bg text-danger font-medium">Remove member</button>
+                                </>
                               )}
-                            </>
+                            </div>
                           )}
                         </td>
                       </tr>
@@ -605,14 +598,12 @@ export function StaffView({
                             </AdminButton>
                             <AdminButton size="xs" variant="danger" onClick={() => setDeleteTarget(row)}>Remove</AdminButton>
                           </div>}
-                          {row.invitationStatus === "pending" && (
+                          {row.invitationStatus && (
                             <div className="flex flex-wrap gap-2">
-                              <AdminButton size="xs" variant="outline-accent" aria-haspopup="dialog" onClick={() => openInvitationAction(row, "resend")}>Resend email</AdminButton>
-                              <AdminButton size="xs" variant="outline" aria-haspopup="dialog" onClick={() => openInvitationAction(row, "cancel")}>Cancel invitation</AdminButton>
+                              {row.invitationStatus !== "cancelled" && <AdminButton size="xs" variant="outline-accent" aria-haspopup="dialog" onClick={() => openInvitationAction(row, "resend")}>Resend email</AdminButton>}
+                              {row.invitationStatus === "pending" ? <AdminButton size="xs" variant="outline" aria-haspopup="dialog" onClick={() => openInvitationAction(row, "cancel")}>Cancel invitation</AdminButton> :
+                                <AdminButton size="xs" variant="danger" aria-haspopup="dialog" onClick={() => openInvitationAction(row, "remove")}>Remove invitation</AdminButton>}
                             </div>
-                          )}
-                          {row.invitationStatus === "cancelled" && (
-                            <AdminButton size="xs" variant="danger" aria-haspopup="dialog" onClick={() => openInvitationAction(row, "delete")}>Delete invitation</AdminButton>
                           )}
                         </div>
                       )}

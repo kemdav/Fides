@@ -1937,6 +1937,10 @@ type DatabaseCore = {
       [_ in never]: never;
     };
     Functions: {
+      renew_staff_invitation: {
+        Args: { p_expected_expiry: string; p_invitation_id: string; p_tenant_id: string; p_token_hash: string }
+        Returns: boolean
+      }
       reserve_staff_invitation: {
         Args: {
           p_actor_id: string; p_tenant_id: string; p_full_name: string; p_email: string;

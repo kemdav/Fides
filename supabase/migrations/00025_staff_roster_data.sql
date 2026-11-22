@@ -176,3 +176,66 @@ revoke all on function public.reserve_staff_invitation(uuid, uuid, text, text, p
 revoke all on function public.accept_staff_invitation(text, uuid) from public, anon, authenticated;
 grant execute on function public.reserve_staff_invitation(uuid, uuid, text, text, public.app_role, text, uuid[], public.commission_type, numeric, text) to service_role;
 grant execute on function public.accept_staff_invitation(text, uuid) to service_role;
+
+-- Renew pending or expired invitations while preserving seat limits.
+create function public.renew_staff_invitation(
+  p_tenant_id uuid, p_invitation_id uuid, p_expected_expiry timestamptz, p_token_hash text
+) returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  invitation public.staff_invitations%rowtype;
+  seat_limit integer;
+  seats_used bigint;
+  renewed_at timestamptz;
+begin
+  -- Serialize seat reservations with the new-invitation flow.
+  perform 1 from public.tenants where id = p_tenant_id and status = 'active' for update;
+  if not found then return false; end if;
+
+  select * into invitation from public.staff_invitations
+    where tenant_id = p_tenant_id and id = p_invitation_id
+      and accepted_at is null and cancelled_at is null and expires_at = p_expected_expiry
+    for update;
+  if not found then return false; end if;
+
+  renewed_at := clock_timestamp();
+  if invitation.last_resent_at > renewed_at - interval '2 minutes' then return false; end if;
+
+  if invitation.expires_at <= renewed_at then
+    if exists (
+      select 1 from public.staff_invitations
+      where tenant_id = p_tenant_id and id <> p_invitation_id and lower(email) = lower(invitation.email)
+        and accepted_at is null and cancelled_at is null and expires_at > renewed_at
+    ) then raise exception 'This email already has a pending invitation.'; end if;
+
+    if exists (
+      select 1 from public.tenant_memberships as member
+      join auth.users as account on account.id = member.profile_id
+      where member.tenant_id = p_tenant_id and lower(account.email) = lower(invitation.email)
+    ) then raise exception 'This email already belongs to the workspace.'; end if;
+
+    select plan.staff_limit into seat_limit
+      from public.account_applications as application
+      join public.subscription_plans as plan on plan.code = application.plan_code
+      where application.tenant_id = p_tenant_id and application.status = 'approved'
+      order by application.approved_at desc nulls last limit 1;
+    if seat_limit is not null then
+      select (select count(*) from public.staff_members where tenant_id = p_tenant_id and active)
+        + (select count(*) from public.staff_invitations where tenant_id = p_tenant_id
+          and accepted_at is null and cancelled_at is null and expires_at > renewed_at) into seats_used;
+      if seats_used >= seat_limit then raise exception 'No staff seats are available.'; end if;
+    end if;
+  end if;
+
+  update public.staff_invitations
+    set token_hash = p_token_hash, expires_at = renewed_at + interval '7 days', last_resent_at = renewed_at
+    where id = p_invitation_id and tenant_id = p_tenant_id;
+  return true;
+end;
+$$;
+
+revoke all on function public.renew_staff_invitation(uuid, uuid, timestamptz, text) from public, anon, authenticated;
+grant execute on function public.renew_staff_invitation(uuid, uuid, timestamptz, text) to service_role;

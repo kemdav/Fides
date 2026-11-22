@@ -155,7 +155,7 @@ export default async function StaffPage({ params }: StaffPageProps) {
       staffLimit={staffLimit}
       services={services.data ?? []}
       commissionThisMonth={commission.reduce((sum, entry) => sum + Number(entry.commission_cents), 0) / 100}
-      initialItems={[...staffItems, ...invitationItems]}
+      initialItems={[...staffItems.filter(({ role }) => role !== "owner"), ...invitationItems]}
     />
   );
 }

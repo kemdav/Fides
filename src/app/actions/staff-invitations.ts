@@ -23,10 +23,11 @@ const inviteSchema = z.object({
   commissionValue: z.string(),
 });
 
-const emailTenantColumns = "name, slug, brand_color, secondary_color, accent_color";
+const emailTenantColumns = "name, slug, brand_color, secondary_color, accent_color, tenant_settings(typography)";
 
 function invitationEmail(tenant: {
   slug: string; name: string; brand_color: string | null; secondary_color: string | null; accent_color: string | null;
+  tenant_settings: { typography: string } | null;
 }, name: string, token: string) {
   const invitationUrl = new URL("/staff-access", publicEnv.siteUrl);
   invitationUrl.searchParams.set("invite", token);
@@ -34,6 +35,7 @@ function invitationEmail(tenant: {
   signInUrl.searchParams.set("workspace", tenant.slug);
   return staffInvitationMessage({
     name, merchant: tenant.name, invitationUrl, signInUrl,
+    typography: tenant.tenant_settings?.typography,
     colors: { brand: tenant.brand_color, secondary: tenant.secondary_color, accent: tenant.accent_color },
   });
 }
@@ -42,9 +44,10 @@ export async function sendStaffInvitationAction(input: z.input<typeof inviteSche
   const parsed = inviteSchema.safeParse(input);
   if (!parsed.success) return { error: "Enter a full name and valid email address." };
   const fields = parsed.data;
-  const amount = fields.commission === "none" ? 0 : Number(fields.commissionValue);
-  const limit = fields.commission === "percentage" ? 100 : 9999999999.99;
-  if (fields.commission !== "none" && (!/^\d+(?:\.\d{1,2})?$/.test(fields.commissionValue) || amount <= 0 || amount > limit)) {
+  const commission = fields.role === "receptionist" ? "none" : fields.commission;
+  const amount = commission === "none" ? 0 : Number(fields.commissionValue);
+  const limit = commission === "percentage" ? 100 : 9999999999.99;
+  if (commission !== "none" && (!/^\d+(?:\.\d{1,2})?$/.test(fields.commissionValue) || amount <= 0 || amount > limit)) {
     return { error: "Enter a valid commission value." };
   }
 
@@ -67,8 +70,8 @@ export async function sendStaffInvitationAction(input: z.input<typeof inviteSche
     p_email: fields.email,
     p_role: fields.role,
     p_title: fields.title,
-    p_service_ids: [...new Set(fields.serviceIds)],
-    p_commission_type: fields.commission === "percentage" ? "percentage" : "fixed",
+    p_service_ids: fields.role === "receptionist" ? [] : [...new Set(fields.serviceIds)],
+    p_commission_type: commission === "percentage" ? "percentage" : "fixed",
     p_commission_value: amount,
     p_token_hash: hashStaffInvitation(token),
   });
@@ -126,16 +129,16 @@ export async function cancelStaffInvitationAction(tenantId: string, invitationId
   return { error: null };
 }
 
-export async function deleteStaffInvitationAction(tenantId: string, invitationId: string) {
+export async function removeStaffInvitationAction(tenantId: string, invitationId: string) {
   const manager = await getInvitationManager(tenantId, invitationId);
   if (!manager.admin) return { error: manager.error };
   const { admin, tenant } = manager;
   const { data, error } = await admin.from("staff_invitations").delete()
     .eq("tenant_id", tenantId).eq("id", invitationId)
-    .not("cancelled_at", "is", null).is("accepted_at", null)
+    .is("accepted_at", null).or(`cancelled_at.not.is.null,expires_at.lte.${new Date().toISOString()}`)
     .select("id").maybeSingle();
-  if (error) return { error: "The invitation could not be deleted." };
-  if (!data) return { error: "Only cancelled invitations can be deleted." };
+  if (error) return { error: "The invitation could not be removed." };
+  if (!data) return { error: "Only expired or cancelled invitations can be removed." };
   revalidatePath(`/${tenant.slug}/dashboard/staff`);
   return { error: null };
 }
@@ -146,25 +149,20 @@ export async function resendStaffInvitationAction(tenantId: string, invitationId
   if (!isSmtpMailConfigured()) return { error: "SMTP email delivery is unavailable." };
 
   const { admin, tenant } = manager;
-  const now = new Date();
-  const timestamp = now.toISOString();
-  const cutoff = new Date(now.getTime() - 120_000).toISOString();
   const { data: invitation, error: readError } = await admin.from("staff_invitations")
     .select("email, full_name, token_hash, expires_at, last_resent_at")
     .eq("tenant_id", tenantId).eq("id", invitationId)
-    .is("cancelled_at", null).is("accepted_at", null).gt("expires_at", timestamp).maybeSingle();
+    .is("cancelled_at", null).is("accepted_at", null).maybeSingle();
   if (readError) return { error: "The invitation could not be loaded." };
-  if (!invitation) return { error: "This invitation is no longer pending." };
+  if (!invitation) return { error: "Only pending or expired invitations can be resent." };
 
   const token = randomBytes(32).toString("base64url");
   const hash = hashStaffInvitation(token);
   const message = invitationEmail(tenant, invitation.full_name, token);
-  const { data, error } = await admin.from("staff_invitations")
-    .update({ token_hash: hash, expires_at: new Date(now.getTime() + 7 * 86_400_000).toISOString(), last_resent_at: timestamp })
-    .eq("tenant_id", tenantId).eq("id", invitationId).is("accepted_at", null).is("cancelled_at", null)
-    .eq("expires_at", invitation.expires_at).gt("expires_at", timestamp)
-    .or(`last_resent_at.is.null,last_resent_at.lte.${cutoff}`).select("id").maybeSingle();
-  if (error) return { error: "The invitation could not be renewed." };
+  const { data, error } = await admin.rpc("renew_staff_invitation", {
+    p_tenant_id: tenantId, p_invitation_id: invitationId, p_expected_expiry: invitation.expires_at, p_token_hash: hash,
+  });
+  if (error) return { error: error.code === "P0001" ? error.message : "The invitation could not be renewed." };
   if (!data) return { error: "The invitation changed or was recently resent. Refresh the roster or try again in two minutes." };
 
   try {

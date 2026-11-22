@@ -29,6 +29,7 @@ export function InviteStaffModal({ onClose, onSent, tenantId, canInviteAdmins, s
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const atCapacity = typeof staffLimit === "number" && seatsUsed >= staffLimit;
+  const isReceptionist = role === "receptionist";
 
   async function send() {
     if (sending || atCapacity) return;
@@ -37,8 +38,9 @@ export function InviteStaffModal({ onClose, onSent, tenantId, canInviteAdmins, s
     try {
       const result = await sendStaffInvitationAction({
         tenantId, name, email, title, role: role === "admin" || role === "receptionist" ? role : "staff",
-        commission: commission === "fixed" || commission === "percentage" ? commission : "none",
-        commissionValue, serviceIds: selectedServices,
+        commission: !isReceptionist && (commission === "fixed" || commission === "percentage") ? commission : "none",
+        commissionValue: isReceptionist ? "" : commissionValue,
+        serviceIds: isReceptionist ? [] : selectedServices,
       });
       if (result.error) setError(result.error);
       else onSent(email.trim().toLowerCase());
@@ -100,7 +102,14 @@ export function InviteStaffModal({ onClose, onSent, tenantId, canInviteAdmins, s
             label="Staff Role"
             required
             value={role}
-            onChange={setRole}
+            onChange={(value) => {
+              setRole(value);
+              if (value === "receptionist") {
+                setSelectedServices([]);
+                setCommission("none");
+                setCommissionValue("");
+              }
+            }}
             options={[
               { value: "staff", label: "Service Staff" },
               { value: "receptionist", label: "Receptionist" },
@@ -110,9 +119,12 @@ export function InviteStaffModal({ onClose, onSent, tenantId, canInviteAdmins, s
 
           <div className="space-y-1.5">
             <TextField label="Public Title" name="title" placeholder="Hair Stylist" aria-describedby="invite-title-help" value={title} onChange={setTitle} />
-            <p id="invite-title-help" className="text-xs text-muted">Shown on the website. Service eligibility is set below.</p>
+            <p id="invite-title-help" className="text-xs text-muted">Shown on the website.</p>
           </div>
 
+          {isReceptionist ? (
+            <p className="rounded-lg bg-mist px-3 py-3 text-sm text-muted">Services and commission do not apply to receptionists.</p>
+          ) : <>
           <h3 className="border-t border-hairline pt-4 text-base font-semibold">Services and commission</h3>
           <div className="space-y-1.5">
             <Listbox
@@ -164,6 +176,7 @@ export function InviteStaffModal({ onClose, onSent, tenantId, canInviteAdmins, s
                 onChange={setCommissionValue}
               />
           )}
+          </>}
         </div>
 
         <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2.5 border-t border-hairline bg-mist px-4 py-4 sm:px-6">

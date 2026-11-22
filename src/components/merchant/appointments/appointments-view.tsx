@@ -39,6 +39,7 @@ interface AppointmentsViewProps {
   initialItems?: AppointmentItem[];
   basePath?: string;
   focusedStaffName?: string;
+  walkInsOnly?: boolean;
 }
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -129,6 +130,7 @@ export function AppointmentsView({
   initialItems = EMPTY_ITEMS,
   basePath = "",
   focusedStaffName,
+  walkInsOnly = false,
 }: AppointmentsViewProps) {
   const router = useRouter();
   const [items, setItems] = React.useState<AppointmentItem[]>(initialItems);
@@ -304,14 +306,14 @@ export function AppointmentsView({
           {/* Page Heading */}
           <PageHeading
             eyebrow={businessName}
-            title="Appointments"
-            description={canManage ? "Manage bookings, approvals, and appointment outcomes in one place." : "View your assigned appointments in the list or calendar."}
+            title={walkInsOnly ? "Walk-ins" : "Appointments"}
+            description={walkInsOnly ? "Add and manage walk-in appointments." : canManage ? "Manage bookings, approvals, and appointment outcomes in one place." : "View your assigned appointments in the list or calendar."}
             actions={canManage && (
               <div className="flex flex-wrap items-center gap-2">
-                <AdminButton variant="primary" size="sm" onClick={() => setIsNewBookingOpen(true)}>
+                {!walkInsOnly && <AdminButton variant="primary" size="sm" onClick={() => setIsNewBookingOpen(true)}>
                   + New Booking
-                </AdminButton>
-                <AdminButton variant="outline" size="sm" onClick={() => setIsWalkInOpen(true)}>
+                </AdminButton>}
+                <AdminButton variant={walkInsOnly ? "primary" : "outline"} size="sm" onClick={() => setIsWalkInOpen(true)}>
                   + Add Walk-in
                 </AdminButton>
               </div>
@@ -335,7 +337,7 @@ export function AppointmentsView({
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
                   <Icon name="calendar" className="size-5 text-glyph" />
-                  <h2 className="text-base font-semibold leading-6 text-ink">Appointments</h2>
+                  <h2 className="text-base font-semibold leading-6 text-ink">{walkInsOnly ? "Walk-in appointments" : "Appointments"}</h2>
                 </div>
                 <span className="inline-flex items-center rounded-md bg-mist px-2 py-1 text-xs font-semibold leading-[18px] text-ink">
                   {items.length} appointments

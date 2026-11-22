@@ -4,6 +4,22 @@ import { publicEnv } from "@/lib/env";
 import { formatPeso } from "@/lib/registration/options";
 import { sendMail } from "./mailer";
 
+const systemEmailFonts = {
+  body: "Mulish, 'Segoe UI', Arial, sans-serif",
+  heading: "Ovo, Georgia, 'Times New Roman', serif",
+};
+const merchantEmailFonts = {
+  body: "Inter, 'Segoe UI', Arial, sans-serif",
+  heading: "'Playfair Display', Georgia, 'Times New Roman', serif",
+};
+
+function emailFontStylesheet(useMerchantFonts = false) {
+  const families = (useMerchantFonts ? "family=Inter:wght@400;600;700&amp;" : "")
+    + "family=Mulish:wght@400;600;700&amp;family=Ovo"
+    + (useMerchantFonts ? "&amp;family=Playfair+Display" : "");
+  return `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?${families}&amp;display=swap">`;
+}
+
 /**
  * The mascot is loaded from the public site (never attached): inline attachments make emails
  * heavier and more likely to be filtered as spam. It is skipped on localhost / non-https sites,
@@ -61,6 +77,7 @@ function emailStrongAccent(accent: string): string {
 type StaffMessageRecipient = {
   name: string;
   merchant: string;
+  typography?: string | null;
   colors: {
     brand: string | null;
     secondary: string | null;
@@ -115,9 +132,8 @@ function renderStaffMessage(input: StaffMessageRecipient & { url: URL } & (
   const merchant = escapeHtml(input.merchant);
   const actionUrl = escapeHtml(input.url.toString());
 
-  const font =
-    "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
-  const serif = "Georgia,'Times New Roman',serif";
+  const useMerchantFonts = input.typography === "Playfair + Inter";
+  const { body: font, heading: serif } = useMerchantFonts ? merchantEmailFonts : systemEmailFonts;
 
   const step = (n: number, content: string, last = false) =>
     `<tr>
@@ -162,6 +178,7 @@ function renderStaffMessage(input: StaffMessageRecipient & { url: URL } & (
   <meta name="color-scheme" content="light">
   <meta name="supported-color-schemes" content="light">
   <title>${label}</title>
+  ${emailFontStylesheet(useMerchantFonts)}
   <style>
     body { margin:0; padding:0; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; }
     table { border-collapse:separate; }
@@ -196,7 +213,7 @@ function renderStaffMessage(input: StaffMessageRecipient & { url: URL } & (
                     <div style="width:44px;height:44px;line-height:44px;border-radius:10px;background-color:${strong};color:#ffffff;font-family:${serif};font-size:22px;font-weight:bold;text-align:center;">${initial}</div>
                   </td>
                   <td valign="middle" style="font-family:${font};">
-                    <div style="font-size:16px;line-height:22px;font-weight:700;color:#111827;">${merchant}</div>
+                    <div style="font-family:${serif};font-size:20px;line-height:24px;color:#111827;">${merchant}</div>
                     <div style="font-size:12px;line-height:18px;letter-spacing:0.6px;text-transform:uppercase;color:${strong};">${label}</div>
                   </td>
                 </tr>
@@ -255,8 +272,8 @@ function renderStaffMessage(input: StaffMessageRecipient & { url: URL } & (
 
           <!-- Footer -->
           <tr>
-            <td align="center" style="background-color:${panel};border-top:1px solid ${outline};border-radius:0 0 13px 13px;padding:18px 24px;font-family:${font};font-size:13px;line-height:20px;color:#6b7280;">
-              Powered by <strong style="color:#111827;">Fides</strong>
+            <td align="center" style="background-color:${panel};border-top:1px solid ${outline};border-radius:0 0 13px 13px;padding:18px 24px;font-family:${systemEmailFonts.body};font-size:13px;line-height:normal;color:#c35000;">
+              Powered by <span style="font-family:${systemEmailFonts.heading};font-weight:400;">Fides</span>
             </td>
           </tr>
         </table>
@@ -318,7 +335,7 @@ function renderLayout(layout: Layout): string {
     ? `<tr><td align="center" style="padding:28px 32px 0;"><img src="${mascotSrc}" alt="Fides fox mascot" width="200" style="display:block;width:200px;max-width:100%;height:auto;border:0;" /></td></tr>`
     : "";
 
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><title>${escapeHtml(layout.heading)}</title></head><body style="margin:0;padding:0;background:#ffffeb;font-family:Arial,Helvetica,sans-serif;"><span style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(layout.preheader)}</span><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#ffffeb;padding:32px 12px;"><tr><td align="center"><table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 3px 14px rgba(44,58,75,0.08);"><tr><td style="background:#c35000;padding:22px 32px;"><span style="font-family:Georgia,'Times New Roman',serif;font-size:32px;color:#ffffff;">Fides</span><span style="float:right;font-size:12px;letter-spacing:1.2px;color:#ffe9d6;padding-top:14px;">MANAGE AND GROW YOUR SERVICE BUSINESS</span></td></tr>${mascot}<tr><td style="padding:16px 32px 8px;"><h1 style="margin:0 0 20px;font-family:Georgia,'Times New Roman',serif;font-size:28px;line-height:36px;font-weight:400;color:#09101d;text-align:center;">${escapeHtml(layout.heading)}</h1>${paragraphs}${code}${details}${button}<p style="margin:0 0 8px;font-size:16px;line-height:26px;color:#2c3a4b;">${escapeHtml(layout.closing)}</p><p style="margin:0 0 28px;font-size:16px;line-height:26px;font-weight:700;color:#09101d;">The Fides Team</p></td></tr><tr><td style="background:#fffff7;border-top:1px solid #ebeef2;padding:20px 32px;font-size:12px;line-height:19px;color:#6d7580;text-align:center;">${escapeHtml(layout.footer ?? "You received this email because an account application was submitted with this address on Fides.")}<br />&copy; ${new Date().getFullYear()} Fides. All rights reserved.</td></tr></table></td></tr></table></body></html>`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><title>${escapeHtml(layout.heading)}</title>${emailFontStylesheet()}</head><body style="margin:0;padding:0;background:#ffffeb;font-family:${systemEmailFonts.body};"><span style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(layout.preheader)}</span><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#ffffeb;padding:32px 12px;"><tr><td align="center"><table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 3px 14px rgba(44,58,75,0.08);"><tr><td style="background:#c35000;padding:22px 32px;"><span style="font-family:${systemEmailFonts.heading};font-size:32px;color:#ffffff;">Fides</span><span style="float:right;font-size:12px;letter-spacing:1.2px;color:#ffe9d6;padding-top:14px;">MANAGE AND GROW YOUR SERVICE BUSINESS</span></td></tr>${mascot}<tr><td style="padding:16px 32px 8px;"><h1 style="margin:0 0 20px;font-family:${systemEmailFonts.heading};font-size:28px;line-height:36px;font-weight:400;color:#09101d;text-align:center;">${escapeHtml(layout.heading)}</h1>${paragraphs}${code}${details}${button}<p style="margin:0 0 8px;font-size:16px;line-height:26px;color:#2c3a4b;">${escapeHtml(layout.closing)}</p><p style="margin:0 0 28px;font-size:16px;line-height:26px;font-weight:700;color:#09101d;">The Fides Team</p></td></tr><tr><td style="background:#fffff7;border-top:1px solid #ebeef2;padding:20px 32px;font-size:12px;line-height:19px;color:#6d7580;text-align:center;">${escapeHtml(layout.footer ?? "You received this email because an account application was submitted with this address on Fides.")}<br />&copy; ${new Date().getFullYear()} Fides. All rights reserved.</td></tr></table></td></tr></table></body></html>`;
 }
 
 function renderText(layout: Layout): string {

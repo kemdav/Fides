@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon, type IconName } from "@/components/admin/icon";
 import { cn, getInitials } from "@/lib/utils";
-import { staffRoleLabels, type WorkspaceRole } from "@/lib/merchant/workspace-roles";
+import { canManageBookings, staffRoleLabels, type WorkspaceRole } from "@/lib/merchant/workspace-roles";
 import { merchantNameTypography } from "@/lib/brand-colors";
 
 interface MerchantSidebarProps {
@@ -16,17 +16,19 @@ interface MerchantSidebarProps {
   basePath?: string;
 }
 
-const manageItems: { label: string; icon: IconName; suffix?: string }[] = [
-  { label: "Overview", icon: "grid" },
+type NavigationItem = { label: string; icon: IconName; suffix?: string; access?: "operations" | "management" };
+
+const manageItems: NavigationItem[] = [
+  { label: "Overview", icon: "grid", suffix: "" },
   { label: "Appointments", icon: "calendar", suffix: "/appointments" },
-  { label: "Walk-ins", icon: "users" },
-  { label: "QR check-in", icon: "qr-code" },
-  { label: "Customers", icon: "users" },
-  { label: "Services", icon: "layers" },
-  { label: "Staff & permissions", icon: "shield", suffix: "/staff" },
-  { label: "Availability", icon: "clock" },
-  { label: "Payments", icon: "card" },
-  { label: "Reports", icon: "document" },
+  { label: "Walk-ins", icon: "users", suffix: "/walk-ins", access: "operations" },
+  { label: "QR check-in", icon: "qr-code", access: "operations" },
+  { label: "Customers", icon: "users", access: "operations" },
+  { label: "Services", icon: "layers", access: "operations" },
+  { label: "Staff & permissions", icon: "shield", suffix: "/staff", access: "management" },
+  { label: "Availability", icon: "clock", access: "operations" },
+  { label: "Payments", icon: "card", access: "operations" },
+  { label: "Reports", icon: "document", access: "management" },
 ];
 
 export function MerchantSidebar({
@@ -43,32 +45,28 @@ export function MerchantSidebar({
   const accountActive = pathname === accountPath;
   const displayName = userName?.trim() || userEmail?.trim() || "My account";
   const managesTeam = userRole === "owner" || userRole === "admin";
-  const visibleItems = managesTeam ? manageItems : manageItems.filter(({ label }) => label === "Overview" || label === "Appointments");
-  const isActive = (suffix?: string) =>
-    suffix ? pathname.startsWith(`${dashboardPath}${suffix}`) : pathname === dashboardPath;
+  const visibleItems = manageItems.filter(({ access }) =>
+    !access || (access === "operations" ? canManageBookings(userRole) : managesTeam)
+  );
 
-  const renderItem = (item: (typeof manageItems)[number], configuration = false) => {
-    const href = item.suffix
-      ? `${dashboardPath}${item.suffix}`
-      : configuration
-        ? `${dashboardPath}/settings/website`
-        : dashboardPath;
-    const active = configuration ? pathname.startsWith(href) : isActive(item.suffix);
-    const available = item.label === "Overview" || item.label === "Appointments" || item.label === "Staff & permissions" || configuration;
-
-    if (!available) {
+  const renderItem = (item: NavigationItem) => {
+    if (item.suffix === undefined) {
       return (
-        <div key={item.label} className="flex min-h-[clamp(32px,4.2vh,40px)] items-center gap-3 rounded-[9px] px-3 py-1.5 text-sm leading-[21px] text-neutral-400">
+        <button key={item.label} type="button" disabled
+          className="flex min-h-[clamp(32px,4.2vh,40px)] cursor-not-allowed items-center gap-3 rounded-[9px] px-3 py-1.5 text-left text-sm leading-[21px] text-neutral-400">
           <Icon name={item.icon} className="size-5" />
           <span>{item.label}</span>
-        </div>
+        </button>
       );
     }
+    const href = `${dashboardPath}${item.suffix}`;
+    const active = pathname === href || (item.suffix !== "" && pathname.startsWith(`${href}/`));
 
     return (
       <Link
         key={item.label}
         href={href}
+        aria-current={active ? "page" : undefined}
         onClick={() => setMobileOpen(false)}
         className={cn(
           "flex min-h-[clamp(32px,4.2vh,40px)] items-center gap-3 whitespace-nowrap rounded-[9px] px-3 py-1.5 text-sm font-semibold leading-[21px] transition-colors",
@@ -114,7 +112,7 @@ export function MerchantSidebar({
         {userRole === "owner" && <>
         <p className="mt-2 text-xs leading-[18px] tracking-[1.3px] text-neutral-400">CONFIGURATION</p>
         <nav aria-label="Merchant configuration" className="flex w-full flex-col gap-[clamp(1px,0.4vh,5px)]">
-          {renderItem({ label: "Website settings", icon: "settings" }, true)}
+          {renderItem({ label: "Website settings", icon: "settings", suffix: "/settings/website" })}
           {renderItem({ label: "Booking settings", icon: "book-settings" })}
           {renderItem({ label: "Subscription", icon: "card" })}
         </nav>
