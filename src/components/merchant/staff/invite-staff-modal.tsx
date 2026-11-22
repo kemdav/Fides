@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { sendStaffInvitationAction } from "@/app/actions/staff-invitations";
 import { AdminButton } from "@/components/admin/admin-button";
 import { TextField } from "@/components/admin/fields";
 import { Icon } from "@/components/admin/icon";
@@ -9,12 +10,15 @@ import { Listbox } from "../new-appointment-modal";
 
 interface InviteStaffModalProps {
   onClose: () => void;
+  onSent: () => void;
+  tenantId: string;
+  canInviteAdmins: boolean;
   seatsUsed: number;
   staffLimit?: number | null;
   services: { id: string; name: string }[];
 }
 
-export function InviteStaffModal({ onClose, seatsUsed, staffLimit, services }: InviteStaffModalProps) {
+export function InviteStaffModal({ onClose, onSent, tenantId, canInviteAdmins, seatsUsed, staffLimit, services }: InviteStaffModalProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [title, setTitle] = useState("");
@@ -22,16 +26,38 @@ export function InviteStaffModal({ onClose, seatsUsed, staffLimit, services }: I
   const [commission, setCommission] = useState("none");
   const [commissionValue, setCommissionValue] = useState("");
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+  const atCapacity = typeof staffLimit === "number" && seatsUsed >= staffLimit;
+
+  async function send() {
+    if (sending || atCapacity) return;
+    setSending(true);
+    setError("");
+    try {
+      const result = await sendStaffInvitationAction({
+        tenantId, name, email, title, role: role === "admin" || role === "receptionist" ? role : "staff",
+        commission: commission === "fixed" || commission === "percentage" ? commission : "none",
+        commissionValue, serviceIds: selectedServices,
+      });
+      if (result.error) setError(result.error);
+      else onSent();
+    } catch {
+      setError("The invitation could not be sent. Try again.");
+    } finally {
+      setSending(false);
+    }
+  }
 
   return (
     <Modal
       open
       unstyled
-      onClose={onClose}
+      onClose={() => { if (!sending) onClose(); }}
       labelledBy="invite-staff-title"
       className="m-auto w-[calc(100%-2rem)] max-w-2xl overflow-hidden rounded-[14px] border border-line bg-white p-0 text-ink shadow-2xl backdrop:backdrop-blur-xs"
     >
-      <div className="flex max-h-[min(92dvh,calc(100dvh-2rem))] flex-col">
+      <form onSubmit={(event) => { event.preventDefault(); void send(); }} className="flex max-h-[min(92dvh,calc(100dvh-2rem))] flex-col">
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-hairline bg-powder px-4 py-4 sm:px-6">
           <div>
             <h2 id="invite-staff-title" className="font-display text-[26px] leading-[34px] text-ink">
@@ -43,6 +69,7 @@ export function InviteStaffModal({ onClose, seatsUsed, staffLimit, services }: I
             type="button"
             aria-label="Close"
             onClick={onClose}
+            disabled={sending}
             className="flex size-8 shrink-0 items-center justify-center rounded-lg text-ink hover:bg-burnt/10 focus-visible:outline-burnt"
           >
             <Icon name="close" className="size-5" />
@@ -77,7 +104,7 @@ export function InviteStaffModal({ onClose, seatsUsed, staffLimit, services }: I
             options={[
               { value: "staff", label: "Service Staff" },
               { value: "receptionist", label: "Receptionist" },
-              { value: "admin", label: "Admin" },
+              ...(canInviteAdmins ? [{ value: "admin", label: "Admin" }] : []),
             ]}
           />
 
@@ -140,11 +167,12 @@ export function InviteStaffModal({ onClose, seatsUsed, staffLimit, services }: I
         </div>
 
         <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2.5 border-t border-hairline bg-mist px-4 py-4 sm:px-6">
-          <p className="mr-auto text-xs text-muted">Invitation sending is unavailable.</p>
-          <AdminButton variant="outline" size="xs" onClick={onClose}>Cancel</AdminButton>
-          <AdminButton variant="primary" size="xs" disabled>Send invitation</AdminButton>
+          {error && <p role="alert" className="w-full rounded-lg bg-danger-bg p-2 text-sm text-danger-dark">{error}</p>}
+          <p className="mr-auto text-xs text-muted">{atCapacity ? "No staff seats are available." : "The invitation link expires in 7 days."}</p>
+          <AdminButton variant="outline" size="xs" onClick={onClose} disabled={sending}>Cancel</AdminButton>
+          <AdminButton type="submit" variant="primary" size="xs" disabled={sending || atCapacity}>{sending ? "Sending…" : "Send invitation"}</AdminButton>
         </footer>
-      </div>
+      </form>
     </Modal>
   );
 }

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { publicEnv } from "@/lib/env";
+import { staffInvitationMessage } from "@/lib/mail/emails";
 import { isSmtpMailConfigured, sendSmtpMail } from "@/lib/mail/mailer";
 import { getStaffInvitation, hashStaffInvitation } from "@/lib/merchant/staff-invitations";
 import { getAdminClient } from "@/lib/supabase/admin";
@@ -22,6 +23,21 @@ const inviteSchema = z.object({
   commissionValue: z.string(),
 });
 
+const emailTenantColumns = "name, slug, brand_color, secondary_color, accent_color";
+
+function invitationEmail(tenant: {
+  slug: string; name: string; brand_color: string | null; secondary_color: string | null; accent_color: string | null;
+}, name: string, token: string) {
+  const invitationUrl = new URL("/staff-access", publicEnv.siteUrl);
+  invitationUrl.searchParams.set("invite", token);
+  const signInUrl = new URL("/staff-access", publicEnv.siteUrl);
+  signInUrl.searchParams.set("workspace", tenant.slug);
+  return staffInvitationMessage({
+    name, merchant: tenant.name, invitationUrl, signInUrl,
+    colors: { brand: tenant.brand_color, secondary: tenant.secondary_color, accent: tenant.accent_color },
+  });
+}
+
 export async function sendStaffInvitationAction(input: z.input<typeof inviteSchema>) {
   const parsed = inviteSchema.safeParse(input);
   if (!parsed.success) return { error: "Enter a full name and valid email address." };
@@ -38,14 +54,12 @@ export async function sendStaffInvitationAction(input: z.input<typeof inviteSche
   const admin = getAdminClient();
   if (!admin || !isSmtpMailConfigured()) return { error: "SMTP email delivery is unavailable." };
 
-  const { data: tenant } = await supabase.from("tenants").select("name, slug").eq("id", fields.tenantId).maybeSingle();
+  const { data: tenant } = await supabase.from("tenants")
+    .select(emailTenantColumns).eq("id", fields.tenantId).maybeSingle();
   if (!tenant) return { error: "This workspace is unavailable." };
 
   const token = randomBytes(32).toString("base64url");
-  const url = new URL("/staff-access", publicEnv.siteUrl);
-  url.searchParams.set("invite", token);
-  const signInUrl = new URL("/staff-access", publicEnv.siteUrl);
-  signInUrl.searchParams.set("workspace", tenant.slug);
+  const message = invitationEmail(tenant, fields.name, token);
   const { data: invitationId, error } = await admin.rpc("reserve_staff_invitation", {
     p_actor_id: user.id,
     p_tenant_id: fields.tenantId,
@@ -63,8 +77,7 @@ export async function sendStaffInvitationAction(input: z.input<typeof inviteSche
   try {
     await sendSmtpMail({
       to: fields.email,
-      subject: "Your Fides staff invitation",
-      text: `Hi ${fields.name},\n\nYou’ve been invited to join ${tenant.name} on Fides. Accept your invitation within 7 days:\n\n${url}\n\nAfter accepting, use this page to sign in:\n${signInUrl}\n\nIf you weren’t expecting this invitation, you can ignore this email.`,
+      ...message,
     });
   } catch {
     const result = await admin.from("staff_invitations").update({ cancelled_at: new Date().toISOString(), token_hash: null })
@@ -74,6 +87,97 @@ export async function sendStaffInvitationAction(input: z.input<typeof inviteSche
     return { error: "The invitation email could not be sent. Check the SMTP settings and try again." };
   }
 
+  revalidatePath(`/${tenant.slug}/dashboard/staff`);
+  return { error: null };
+}
+
+async function getInvitationManager(tenantId: string, invitationId: string) {
+  if (!z.uuid().safeParse(tenantId).success || !z.uuid().safeParse(invitationId).success) {
+    return { error: "This invitation could not be found." };
+  }
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Sign in to manage staff invitations." };
+  const admin = getAdminClient();
+  if (!admin) return { error: "Invitations are currently unavailable." };
+
+  const { data: membership } = await supabase.from("tenant_memberships").select(`role, tenants(${emailTenantColumns})`)
+    .eq("tenant_id", tenantId).eq("profile_id", user.id).maybeSingle();
+  if (!membership?.tenants || (membership.role !== "owner" && membership.role !== "admin")) {
+    return { error: "You do not have permission to manage invitations." };
+  }
+  return { admin, tenant: membership.tenants };
+}
+
+export async function cancelStaffInvitationAction(tenantId: string, invitationId: string) {
+  const manager = await getInvitationManager(tenantId, invitationId);
+  if (!manager.admin) return { error: manager.error };
+  const { admin, tenant } = manager;
+  const now = new Date().toISOString();
+  const { data, error } = await admin.from("staff_invitations")
+    .update({ cancelled_at: now, token_hash: null })
+    .eq("tenant_id", tenantId).eq("id", invitationId)
+    .is("cancelled_at", null).is("accepted_at", null).gt("expires_at", now)
+    .select("id").maybeSingle();
+  if (error) return { error: "The invitation could not be cancelled." };
+  if (!data) return { error: "This invitation is no longer pending." };
+  revalidatePath(`/${tenant.slug}/dashboard/staff`);
+  return { error: null };
+}
+
+export async function deleteStaffInvitationAction(tenantId: string, invitationId: string) {
+  const manager = await getInvitationManager(tenantId, invitationId);
+  if (!manager.admin) return { error: manager.error };
+  const { admin, tenant } = manager;
+  const { data, error } = await admin.from("staff_invitations").delete()
+    .eq("tenant_id", tenantId).eq("id", invitationId)
+    .not("cancelled_at", "is", null).is("accepted_at", null)
+    .select("id").maybeSingle();
+  if (error) return { error: "The invitation could not be deleted." };
+  if (!data) return { error: "Only cancelled invitations can be deleted." };
+  revalidatePath(`/${tenant.slug}/dashboard/staff`);
+  return { error: null };
+}
+
+export async function resendStaffInvitationAction(tenantId: string, invitationId: string) {
+  const manager = await getInvitationManager(tenantId, invitationId);
+  if (!manager.admin) return { error: manager.error };
+  if (!isSmtpMailConfigured()) return { error: "SMTP email delivery is unavailable." };
+
+  const { admin, tenant } = manager;
+  const now = new Date();
+  const timestamp = now.toISOString();
+  const cutoff = new Date(now.getTime() - 120_000).toISOString();
+  const { data: invitation, error: readError } = await admin.from("staff_invitations")
+    .select("email, full_name, token_hash, expires_at, last_resent_at")
+    .eq("tenant_id", tenantId).eq("id", invitationId)
+    .is("cancelled_at", null).is("accepted_at", null).gt("expires_at", timestamp).maybeSingle();
+  if (readError) return { error: "The invitation could not be loaded." };
+  if (!invitation) return { error: "This invitation is no longer pending." };
+
+  const token = randomBytes(32).toString("base64url");
+  const hash = hashStaffInvitation(token);
+  const message = invitationEmail(tenant, invitation.full_name, token);
+  const { data, error } = await admin.from("staff_invitations")
+    .update({ token_hash: hash, expires_at: new Date(now.getTime() + 7 * 86_400_000).toISOString(), last_resent_at: timestamp })
+    .eq("tenant_id", tenantId).eq("id", invitationId).is("accepted_at", null).is("cancelled_at", null)
+    .eq("expires_at", invitation.expires_at).gt("expires_at", timestamp)
+    .or(`last_resent_at.is.null,last_resent_at.lte.${cutoff}`).select("id").maybeSingle();
+  if (error) return { error: "The invitation could not be renewed." };
+  if (!data) return { error: "The invitation changed or was recently resent. Refresh the roster or try again in two minutes." };
+
+  try {
+    await sendSmtpMail({ to: invitation.email, ...message });
+  } catch {
+    const restore = await admin.from("staff_invitations").update({
+      token_hash: invitation.token_hash, expires_at: invitation.expires_at, last_resent_at: invitation.last_resent_at,
+    }).eq("tenant_id", tenantId).eq("id", invitationId).eq("token_hash", hash)
+      .is("accepted_at", null).is("cancelled_at", null);
+    if (restore.error) console.error("Failed to restore staff invitation after SMTP error", restore.error.code);
+    return { error: restore.error ? "Email could not be resent, and the previous link could not be restored."
+      : "The invitation email could not be resent. Try again." };
+  }
   revalidatePath(`/${tenant.slug}/dashboard/staff`);
   return { error: null };
 }
@@ -92,7 +196,7 @@ export async function accessStaffWorkspaceAction(form: FormData): Promise<{ erro
     } catch {
       return { error: "The invitation could not be checked. Try again." };
     }
-    if (!invitation) return { error: "This invitation has expired or has already been used." };
+    if (!invitation) return { error: "This invitation has expired, was cancelled, or has already been used." };
   }
 
   const email = emailSchema.safeParse(invitation?.email ?? form.get("email"));

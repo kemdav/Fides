@@ -1250,6 +1250,7 @@ type DatabaseCore = {
       };
       staff_invitations: {
         Row: {
+          last_resent_at: string | null;
           token_hash: string | null;
           service_ids: string[];
           commission_type: Database["public"]["Enums"]["commission_type"];
@@ -1266,6 +1267,7 @@ type DatabaseCore = {
           cancelled_at: string | null;
         };
         Insert: {
+          last_resent_at?: string | null;
           token_hash?: string | null;
           service_ids?: string[];
           commission_type?: Database["public"]["Enums"]["commission_type"];

@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { toggleStaffActiveAction } from "@/app/actions/staff";
 import { AdminButton } from "@/components/admin/admin-button";
-import { Icon } from "@/components/admin/icon";
-import { Modal } from "@/components/ui/modal";
+import { StaffConfirmationDialog } from "./staff-confirmation-dialog";
 
 export function StaffStatusDialog({ tenantId, staff, lastOwnerProtected = false, onClose, onChanged }: {
   tenantId: string;
@@ -35,23 +34,16 @@ export function StaffStatusDialog({ tenantId, staff, lastOwnerProtected = false,
   }
 
   return (
-    <Modal open unstyled onClose={() => { if (!saving) onClose(); }} labelledBy="staff-status-title"
-      className="m-auto w-[calc(100%-2rem)] max-w-md rounded-[14px] border border-line bg-white px-5 py-6 text-center text-ink shadow-2xl sm:p-7">
-      {staff.active && (
-        <span className="mx-auto mb-3 grid size-14 place-items-center rounded-full bg-danger-bg text-danger">
-          <Icon name="alert" weight="bold" className="size-9" />
-        </span>
-      )}
-      <h2 id="staff-status-title" className="text-lg font-semibold">
-        {protectedOwner ? "Last owner protected" : `${action} staff member?`}
-      </h2>
-      <p className="mt-2 text-sm leading-relaxed text-body">
-        {protectedOwner
+    <StaffConfirmationDialog
+      title={protectedOwner ? "Last owner protected" : `${action} staff member?`}
+      warning={staff.active}
+      busy={saving}
+      onClose={onClose}
+      error={error}
+      description={protectedOwner
           ? `${staff.fullName} is the only active owner. Assign another active owner before deactivating this staff member or changing their owner role.`
           : `${staff.fullName} will be marked as ${staff.active ? "inactive" : "active"} in the staff roster.`}
-      </p>
-      {error && <p role="alert" className="mt-3 rounded-lg bg-danger-bg px-3 py-2 text-sm text-danger-dark">{error}</p>}
-      <div className="mt-5 flex flex-wrap justify-center gap-2">
+    >
         {protectedOwner ? (
           <AdminButton variant="primary" size="xs" onClick={onClose}>Keep owner role</AdminButton>
         ) : (
@@ -62,7 +54,6 @@ export function StaffStatusDialog({ tenantId, staff, lastOwnerProtected = false,
             </AdminButton>
           </>
         )}
-      </div>
-    </Modal>
+    </StaffConfirmationDialog>
   );
 }

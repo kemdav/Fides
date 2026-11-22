@@ -10,9 +10,11 @@ import { AdminButton } from "@/components/admin/admin-button";
 import { MetricCard } from "@/components/admin/metric-card";
 import { PageContent, PageHeading, StatusPill, Surface } from "@/components/admin/primitives";
 import { EmptyState } from "@/components/ui/empty-state";
+import { cancelStaffInvitationAction, deleteStaffInvitationAction, resendStaffInvitationAction } from "@/app/actions/staff-invitations";
 import { InviteStaffModal } from "./invite-staff-modal";
 import { RoleAccessModal } from "./role-access-modal";
 import { StaffStatusDialog } from "./staff-status-dialog";
+import { StaffConfirmationDialog } from "./staff-confirmation-dialog";
 import {
   loadStaffEditorAction,
   deleteStaffMemberAction,
@@ -55,6 +57,12 @@ interface StaffViewProps {
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 const invitationLabels = { pending: "Invited", expired: "Invite expired", cancelled: "Invite cancelled" };
+const invitationActions = {
+  cancel: { label: "Cancel invitation", success: "Invitation cancelled.", run: cancelStaffInvitationAction },
+  delete: { label: "Delete invitation", success: "Invitation deleted.", run: deleteStaffInvitationAction },
+  resend: { label: "Resend email", success: "Invitation email resent.", run: resendStaffInvitationAction },
+};
+type InvitationAction = keyof typeof invitationActions;
 
 function StatusBadge({ row }: { row: StaffItem }) {
   if (row.invitationStatus) {
@@ -121,11 +129,47 @@ export function StaffView({
   const [loadingEditId, setLoadingEditId] = React.useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<StaffItem | null>(null);
   const [statusTarget, setStatusTarget] = React.useState<StaffItem | null>(null);
+  const [inviteAction, setInviteAction] = React.useState<{ row: StaffItem; type: InvitationAction } | null>(null);
+  const [runningInviteAction, setRunningInviteAction] = React.useState(false);
+  const [inviteActionError, setInviteActionError] = React.useState("");
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 2500);
   };
+
+  function openInvitationAction(row: StaffItem, type: InvitationAction) {
+    setActiveMenuId(null);
+    setInviteActionError("");
+    setInviteAction({ row, type });
+  }
+
+  async function confirmInvitationAction() {
+    if (!tenantId || !inviteAction || runningInviteAction) return;
+    const action = invitationActions[inviteAction.type];
+    setRunningInviteAction(true);
+    setInviteActionError("");
+    try {
+      const result = await action.run(tenantId, inviteAction.row.id);
+      if (result.error) {
+        setInviteActionError(result.error);
+        return;
+      }
+      setInviteAction(null);
+      showToast(action.success);
+      router.refresh();
+    } catch {
+      setInviteActionError("The invitation could not be updated. Try again.");
+    } finally {
+      setRunningInviteAction(false);
+    }
+  }
+
+  const inviteActionDescription = inviteAction && {
+    cancel: `Cancelling the invitation for ${inviteAction.row.fullName} will disable the link and free the reserved staff seat.`,
+    delete: `Delete the cancelled invitation for ${inviteAction.row.fullName} from the roster?`,
+    resend: `Send a new invitation link to ${inviteAction.row.email}? The previous link will stop working.`,
+  }[inviteAction.type];
 
   async function openEditor(staffId: string) {
     if (!tenantId || loadingEditId) return;
@@ -451,7 +495,7 @@ export function StaffView({
 
                         {/* Action */}
                         <td className="relative py-3.5">
-                          {row.invitationStatus ? (
+                          {row.invitationStatus === "expired" ? (
                             <span className="block text-center text-xs text-muted">—</span>
                           ) : (
                             <>
@@ -467,11 +511,25 @@ export function StaffView({
                               </button>
                               {activeMenuId === row.id && (
                                 <div className="absolute right-4 mt-1 w-44 rounded-[10px] bg-white border border-hairline shadow-lg py-1 z-30 text-left text-sm">
-                                  {canViewProfiles && (
-                                    <button type="button" disabled={Boolean(loadingEditId)} onClick={() => openEditor(row.id)} className="w-full px-4 py-2 text-left text-body hover:bg-mist disabled:opacity-50">Edit details</button>
+                                  {row.invitationStatus === "pending" ? (
+                                    <>
+                                      <button type="button" aria-haspopup="dialog" onClick={() => openInvitationAction(row, "resend")}
+                                        className="w-full px-4 py-2 text-left text-body hover:bg-mist">Resend email</button>
+                                      <button type="button" aria-haspopup="dialog" onClick={() => openInvitationAction(row, "cancel")}
+                                        className="w-full px-4 py-2 text-left font-medium text-danger hover:bg-danger-bg">Cancel invitation</button>
+                                    </>
+                                  ) : row.invitationStatus === "cancelled" ? (
+                                    <button type="button" aria-haspopup="dialog" onClick={() => openInvitationAction(row, "delete")}
+                                      className="w-full px-4 py-2 text-left font-medium text-danger hover:bg-danger-bg">Delete invitation</button>
+                                  ) : (
+                                    <>
+                                        {canViewProfiles && (
+                                          <button type="button" disabled={Boolean(loadingEditId)} onClick={() => openEditor(row.id)} className="w-full px-4 py-2 text-left text-body hover:bg-mist disabled:opacity-50">Edit details</button>
+                                        )}
+                                        <button type="button" aria-haspopup="dialog" onClick={() => openStatusDialog(row)} className="w-full text-left px-4 py-2 hover:bg-mist text-body">{row.active ? "Deactivate" : "Activate"}</button>
+                                        <button type="button" onClick={() => { setDeleteTarget(row); setActiveMenuId(null); }} className="w-full text-left px-4 py-2 hover:bg-danger-bg text-danger font-medium">Remove member</button>
+                                    </>
                                   )}
-                                  <button type="button" aria-haspopup="dialog" onClick={() => openStatusDialog(row)} className="w-full text-left px-4 py-2 hover:bg-mist text-body">{row.active ? "Deactivate" : "Activate"}</button>
-                                  <button type="button" onClick={() => { setDeleteTarget(row); setActiveMenuId(null); }} className="w-full text-left px-4 py-2 hover:bg-danger-bg text-danger font-medium">Remove member</button>
                                 </div>
                               )}
                             </>
@@ -550,6 +608,15 @@ export function StaffView({
                             </AdminButton>
                             <AdminButton size="xs" variant="danger" onClick={() => setDeleteTarget(row)}>Remove</AdminButton>
                           </div>}
+                          {row.invitationStatus === "pending" && (
+                            <div className="flex flex-wrap gap-2">
+                              <AdminButton size="xs" variant="outline-accent" aria-haspopup="dialog" onClick={() => openInvitationAction(row, "resend")}>Resend email</AdminButton>
+                              <AdminButton size="xs" variant="outline" aria-haspopup="dialog" onClick={() => openInvitationAction(row, "cancel")}>Cancel invitation</AdminButton>
+                            </div>
+                          )}
+                          {row.invitationStatus === "cancelled" && (
+                            <AdminButton size="xs" variant="danger" aria-haspopup="dialog" onClick={() => openInvitationAction(row, "delete")}>Delete invitation</AdminButton>
+                          )}
                         </div>
                       )}
                     </div>
@@ -570,9 +637,16 @@ export function StaffView({
 
       {isRoleAccessOpen && <RoleAccessModal onClose={() => setIsRoleAccessOpen(false)} />}
 
-      {isInviteOpen && (
+      {isInviteOpen && tenantId && (
         <InviteStaffModal
+          tenantId={tenantId}
+          canInviteAdmins={userRole === "Business owner"}
           onClose={() => setIsInviteOpen(false)}
+          onSent={() => {
+            setIsInviteOpen(false);
+            showToast("Staff invitation sent.");
+            router.refresh();
+          }}
           seatsUsed={activeMembers + pendingInvitations}
           staffLimit={staffLimit}
           services={services}
@@ -608,9 +682,23 @@ export function StaffView({
           }} />
       )}
 
+      {inviteAction && (
+        <StaffConfirmationDialog title={`${invitationActions[inviteAction.type].label}?`}
+          warning={inviteAction.type !== "resend"} busy={runningInviteAction}
+          error={inviteActionError} onClose={() => setInviteAction(null)} description={inviteActionDescription}>
+          <AdminButton size="xs" variant="outline" disabled={runningInviteAction} onClick={() => setInviteAction(null)}>
+            {inviteAction.type === "resend" ? "Cancel" : "Keep invitation"}
+          </AdminButton>
+          <AdminButton size="xs" variant={inviteAction.type === "resend" ? "primary" : "danger"}
+            disabled={runningInviteAction} onClick={confirmInvitationAction}>
+            {runningInviteAction ? "Please wait…" : invitationActions[inviteAction.type].label}
+          </AdminButton>
+        </StaffConfirmationDialog>
+      )}
+
       {/* ── Toast ──────────────────────────────────────────────────────────── */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-ink text-white px-4 py-2.5 rounded-[10px] shadow-xl text-xs font-medium">
+        <div role="status" className="fixed bottom-6 right-6 z-50 bg-ink text-white px-4 py-2.5 rounded-[10px] shadow-xl text-xs font-medium">
           {toastMessage}
         </div>
       )}

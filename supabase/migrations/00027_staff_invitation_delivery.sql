@@ -103,6 +103,9 @@ begin
   insert into public.tenant_memberships (tenant_id, profile_id, role)
   values (workspace_id, p_profile_id, invitation.role);
 
+  update public.profiles set tenant_id = workspace_id
+  where id = p_profile_id and tenant_id is null and role <> 'admin';
+
   insert into public.staff_members (tenant_id, profile_id, full_name, title, commission_type, commission_value, sort_order)
   values (workspace_id, p_profile_id, invitation.full_name, invitation.title,
     invitation.commission_type, invitation.commission_value,
@@ -117,7 +120,7 @@ begin
 end;
 $$;
 
-revoke all on function public.reserve_staff_invitation(uuid, uuid, text, text, public.app_role, text, uuid[], public.commission_type, numeric, text) from public;
-revoke all on function public.accept_staff_invitation(text, uuid) from public;
+revoke all on function public.reserve_staff_invitation(uuid, uuid, text, text, public.app_role, text, uuid[], public.commission_type, numeric, text) from public, anon, authenticated;
+revoke all on function public.accept_staff_invitation(text, uuid) from public, anon, authenticated;
 grant execute on function public.reserve_staff_invitation(uuid, uuid, text, text, public.app_role, text, uuid[], public.commission_type, numeric, text) to service_role;
 grant execute on function public.accept_staff_invitation(text, uuid) to service_role;
