@@ -18,8 +18,6 @@ export default async function TenantLayout({
   const { slug } = await params;
   const tenant = await getTenantBySlug(slug);
 
-  console.log("FETCHED TENANT:", tenant);
-
   // If the tenant does not exist or is not active, trigger 404
   if (!tenant || tenant.status !== "active") {
     notFound();
