@@ -69,7 +69,7 @@ function applySandboxRedirect(message: MailMessage, transport: MailTransport): {
   const to = recipients(message.to);
   const usingTestSender = transport === "resend" && (env.MAIL_FROM_EMAIL ?? RESEND_TEST_SENDER) === RESEND_TEST_SENDER;
   if (usingTestSender && env.MAIL_TEST_RECIPIENT) {
-    console.warn(`[mail] Sandbox sender in use: redirecting "${message.subject}" for ${to.join(", ")} to ${env.MAIL_TEST_RECIPIENT}.`);
+    console.warn(`[mail] Sandbox sender in use: redirecting "${message.subject}" for ${to.length} recipient(s) to the test recipient.`);
     return { to: [env.MAIL_TEST_RECIPIENT], subject: `[to: ${to.join(", ")}] ${message.subject}` };
   }
   return { to, subject: message.subject };
@@ -214,9 +214,15 @@ function describeSmtpError(error: unknown): string {
   return err?.message ?? "Unknown SMTP error.";
 }
 
+/** m***@example.com, so logs never hold full addresses. */
+function maskEmail(address: string): string {
+  const [local, domain] = address.split("@");
+  return domain ? `${local.slice(0, 1)}***@${domain}` : "***";
+}
+
 export async function sendMail(message: MailMessage): Promise<MailResult> {
   const transport = resolveTransport();
-  const label = `"${message.subject}" -> ${recipients(message.to).join(", ")}`;
+  const label = `"${message.subject}" -> ${recipients(message.to).map(maskEmail).join(", ")}`;
   if (!transport) {
     console.error(`[mail] NOT SENT ${label}: no email transport is configured (check SMTP_HOST / MAIL_FROM_EMAIL in .env.local, then restart the dev server).`);
     throw new MailNotConfiguredError();
@@ -224,7 +230,7 @@ export async function sendMail(message: MailMessage): Promise<MailResult> {
   try {
     const result =
       transport === "resend" ? await sendWithResend(message) : transport === "edge" ? await sendWithEdgeFunction(message) : await sendWithSmtp(message);
-    console.log(`[mail] sent via ${transport}: ${label} (accepted: ${result.accepted.join(", ") || "none"})`);
+    console.log(`[mail] sent via ${transport}: ${label} (accepted: ${result.accepted.map(maskEmail).join(", ") || "none"})`);
     return result;
   } catch (error) {
     console.error(`[mail] FAILED via ${transport}: ${label}:`, error instanceof Error ? error.message : error);
