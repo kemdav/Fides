@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
+    "test": "node --experimental-strip-types --test src/lib/__tests__/*.test.ts",
     "email:test": "node scripts/send-test-email.mjs",
     "email:check": "node scripts/check-email-setup.mjs"
   },

@@ -394,3 +394,141 @@ grant select, insert, update, delete on public.tenant_memberships to authenticat
 grant execute on function public.get_my_tenant_id() to anon, authenticated;
 grant execute on function public.is_platform_admin() to anon, authenticated;
 grant execute on function public.current_profile_role() to authenticated;
+
+-- 1. The application_status enum
+do $$
+begin
+    if not exists (select 1 from pg_type where typname = 'application_status' and typnamespace = 'public'::regnamespace) then
+        create type public.application_status as enum ('pending', 'approved', 'rejected', 'suspended');
+    end if;
+end
+$$;
+
+-- 2. The subscription_plans table and its INSERT values
+create table if not exists public.subscription_plans (
+    code text primary key,
+    name text not null,
+    eyebrow text not null default '',
+    price_php numeric(12, 2) not null check (price_php > 0),
+    billing_cycle text not null default 'monthly',
+    staff_limit integer null check (staff_limit is null or staff_limit >= 1),
+    location_limit integer null check (location_limit is null or location_limit >= 1),
+    features text[] not null default '{}',
+    is_active boolean not null default true,
+    sort_order integer not null default 0,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+    constraint subscription_plans_code_format check (code ~ '^[a-z0-9](?:[a-z0-9-]{0,40}[a-z0-9])?$')
+);
+
+drop trigger if exists set_updated_at on public.subscription_plans;
+create trigger set_updated_at before update on public.subscription_plans
+for each row execute function public.set_updated_at();
+
+insert into public.subscription_plans (code, name, eyebrow, price_php, billing_cycle, features, sort_order)
+values
+    ('starter', 'Starter', 'NEW PROVIDERS', 499, 'monthly', array['Real-Time Booking Calendar', 'Custom Service & Pricing Menu', 'Staff & Resource Allocation', 'Walk-in Registration & Booking', 'QR Code Check-in System', 'Instant Booking & Status Email Alerts', 'Status Tracking & Audit Logs', 'Daily Operations Dashboard', 'Customer Profile & Visit History', 'Basic Sales & Activity Reports', 'Annual BIR Tax-Ready Reports'], 1),
+    ('professional', 'Professional', 'GROWING PROVIDERS', 1299, 'monthly', array['Everything in Starter', '24/7 AI Booking Assistant', 'Automated Email Reminders', 'Smart Waiting List Management', 'Automated Commission Tracking', 'Detailed Sales & Operational Analytics', 'Quarterly BIR Tax-Ready Reports'], 2),
+    ('business', 'Business', 'ESTABLISHED PROVIDERS', 3999, 'monthly', array['Everything in Professional', 'Multi-Branch Management', 'Centralized Executive Dashboard & Analytics', 'Multi-Branch Inventory Tracking', 'Consolidated Multi-Branch BIR Reporting', 'Location-Based Role & Access Control'], 3)
+on conflict (code) do nothing;
+
+-- 3. The application_reference_seq sequence and account_applications table
+create sequence if not exists public.application_reference_seq start with 1001;
+
+create table if not exists public.account_applications (
+    id uuid primary key default gen_random_uuid(),
+    reference_code text not null unique default ('FID-' || nextval('public.application_reference_seq')::text),
+    user_id uuid not null unique references auth.users (id) on delete cascade,
+    full_name text not null,
+    email text not null,
+    phone text not null,
+    status public.application_status not null default 'pending',
+    plan_code text not null references public.subscription_plans (code) on update cascade,
+    terms_accepted_at timestamptz not null,
+    consent_accepted_at timestamptz not null,
+    submitted_at timestamptz not null default now(),
+    reviewed_at timestamptz null,
+    reviewed_by text null,
+    review_notes text null,
+    approved_at timestamptz null,
+    tenant_id uuid null references public.tenants (id) on delete set null,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
+);
+
+create unique index if not exists account_applications_email_key on public.account_applications (lower(email));
+create index if not exists account_applications_status_idx on public.account_applications (status, submitted_at);
+create index if not exists account_applications_plan_idx on public.account_applications (plan_code);
+create index if not exists account_applications_tenant_idx on public.account_applications (tenant_id);
+
+drop trigger if exists set_updated_at on public.account_applications;
+create trigger set_updated_at before update on public.account_applications
+for each row execute function public.set_updated_at();
+
+-- 4. The application_identities, application_businesses, and admin_activity_log tables
+create table if not exists public.application_identities (
+    application_id uuid primary key references public.account_applications (id) on delete cascade,
+    owner_legal_name text not null,
+    date_of_birth date not null,
+    id_type text not null check (id_type in ('passport', 'drivers license', 'national id', 'sss gsis', 'philhealth')),
+    id_document_path text null,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
+);
+
+drop trigger if exists set_updated_at on public.application_identities;
+create trigger set_updated_at before update on public.application_identities
+for each row execute function public.set_updated_at();
+
+create table if not exists public.application_businesses (
+    application_id uuid primary key references public.account_applications (id) on delete cascade,
+    business_name text not null,
+    business_type text not null,
+    established_year integer not null check (established_year between 1800 and 2100),
+    street_address text not null,
+    city text not null,
+    province text not null,
+    zip_code text not null,
+    logo_path text null,
+    logo_url text null,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
+);
+
+drop trigger if exists set_updated_at on public.application_businesses;
+create trigger set_updated_at before update on public.application_businesses
+for each row execute function public.set_updated_at();
+
+create table if not exists public.admin_activity_log (
+    id uuid primary key default gen_random_uuid(),
+    application_id uuid null references public.account_applications (id) on delete set null,
+    business_name text not null,
+    actor text not null default 'Platform administrator',
+    action text not null,
+    category text not null check (category in ('verification', 'account', 'pricing')),
+    before_value text not null default '',
+    after_value text not null default '',
+    reason text not null default '',
+    created_at timestamptz not null default now()
+);
+
+create index if not exists admin_activity_log_created_idx on public.admin_activity_log (created_at desc);
+create index if not exists admin_activity_log_application_idx on public.admin_activity_log(application_id);
+
+-- 5. The storage.buckets insert for business-logos and its RLS policy
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+    'business-logos',
+    'business-logos',
+    true,
+    2097152,
+    array['image/jpeg', 'image/png', 'image/webp']
+) on conflict (id) do update set
+    public = excluded.public,
+    file_size_limit = excluded.file_size_limit,
+    allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists business_logos_public_read on storage.objects;
+create policy business_logos_public_read on storage.objects
+for select to anon, authenticated
+using (bucket_id = 'business-logos');

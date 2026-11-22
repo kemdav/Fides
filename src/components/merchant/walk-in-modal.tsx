@@ -1,7 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { createAppointmentBookingAction } from "@/app/actions/appointments";
+import {
+  createAppointmentBookingAction,
+  addToWaitlistAction,
+} from "@/app/actions/appointments";
 import {
   CalendarPicker,
   Listbox,
@@ -124,6 +127,37 @@ export function WalkInModal({
     }
   };
 
+  const handleAddToWaitlist = async () => {
+    if (!customer.trim()) {
+      setError("Customer name is required to add to waitlist.");
+      return;
+    }
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const result = await addToWaitlistAction({
+        customerName: customer.trim(),
+        customerPhone: phone.trim() || undefined,
+        serviceName: service.split(" · ")[0],
+        staffName: staff,
+        notes: notes.trim() || undefined,
+        tenantIdParam: tenantId,
+      });
+
+      if (!result.success) {
+        setError(result.error || "Failed to add to waiting list.");
+        return;
+      }
+
+      showToast(`${customer.trim()} added to waiting list.`);
+      onClose();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to add to waiting list.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-2 backdrop-blur-xs sm:p-5"
@@ -223,7 +257,12 @@ export function WalkInModal({
           <p className="text-xs tracking-wide text-muted">Existing scheduled bookings are protected. If a slot becomes unavailable, use the waiting list.</p>
 
           <div className="flex flex-col-reverse items-stretch justify-between gap-3 border-t border-hairline pt-4 sm:flex-row sm:items-center">
-            <button type="button" onClick={() => showToast("Waiting-list action is available after selecting an open slot.")} className="h-10 rounded-md border-2 border-burnt px-3 text-sm font-semibold text-burnt hover:bg-mist">
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={handleAddToWaitlist}
+              className="h-10 rounded-md border-2 border-burnt px-3 text-sm font-semibold text-burnt hover:bg-mist disabled:opacity-60"
+            >
               Add to waiting list
             </button>
             <button type="submit" disabled={isSubmitting} className="h-10 rounded-md bg-burnt px-6 text-sm font-semibold text-white hover:bg-burnt/90 disabled:opacity-60">
