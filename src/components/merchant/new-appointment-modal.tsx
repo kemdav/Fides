@@ -78,14 +78,7 @@ const fieldCls =
 // ─── Chevron SVG ─────────────────────────────────────────────────────────────
 
 function ChevronSvg({ open }: { open: boolean }) {
-  return (
-    <svg aria-hidden viewBox="0 0 16 10"
-      className={`size-4 text-glyph shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
-      fill="currentColor"
-    >
-      <path d="M1.2 1.4a1 1 0 0 1 1.4-.2L8 5.7l5.4-4.5a1 1 0 1 1 1.2 1.6l-6 5a1 1 0 0 1-1.2 0l-6-5a1 1 0 0 1-.2-1.4Z" />
-    </svg>
-  );
+  return <Icon name="chevron-down" className={`size-4 text-glyph shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />;
 }
 
 // ─── Listbox (contact-page dropdown pattern) ─────────────────────────────────
@@ -225,10 +218,7 @@ export function CalendarPicker({ id, label, required, value, onChange }: Calenda
         <span className={value ? "text-ink" : "text-glyph"}>
           {value ? formatDateDisplay(value) : "Select a date"}
         </span>
-        <svg aria-hidden viewBox="0 0 24 24" className="size-4 text-glyph shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8">
-          <rect x="4" y="5.5" width="16" height="14" rx="1.5" />
-          <path d="M8 3.5v4M16 3.5v4M4 10h16" strokeLinecap="round" />
-        </svg>
+        <Icon name="calendar" className="size-4 text-glyph shrink-0" />
       </button>
 
       {open && (
@@ -340,9 +330,7 @@ function StepperIndicator({ step }: { step: 1 | 2 }) {
             : "bg-burnt text-white ring-burnt"
         }`}>
           {step === 2 ? (
-            <svg viewBox="0 0 14 14" fill="none" className="size-3.5" aria-hidden>
-              <path d="M2 7l3.5 3.5L12 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <Icon name="check" weight="bold" className="size-3.5" />
           ) : "1"}
         </span>
         <span className={`text-center text-xs font-semibold transition-colors ${step === 1 ? "text-ink" : "text-muted"}`}>
@@ -375,9 +363,7 @@ function StepperIndicator({ step }: { step: 1 | 2 }) {
 function ErrorBanner({ message }: { message: string }) {
   return (
     <div className="flex items-start gap-2 rounded-lg border border-danger/30 bg-danger-bg px-4 py-3 text-sm text-danger">
-      <svg viewBox="0 0 20 20" fill="currentColor" className="size-4 shrink-0 mt-0.5" aria-hidden>
-        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clipRule="evenodd" />
-      </svg>
+      <Icon name="alert" className="size-4 shrink-0 mt-0.5" />
       <span>{message}</span>
     </div>
   );
@@ -386,9 +372,7 @@ function ErrorBanner({ message }: { message: string }) {
 function WarningBanner({ message }: { message: string }) {
   return (
     <div className="flex items-start gap-2 rounded-lg border border-warn-fg/30 bg-warn-bg px-4 py-3 text-sm text-warn-fg">
-      <svg viewBox="0 0 20 20" fill="currentColor" className="size-4 shrink-0 mt-0.5" aria-hidden>
-        <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-      </svg>
+      <Icon name="warning" className="size-4 shrink-0 mt-0.5" />
       <span>{message} Choose an available slot to continue.</span>
     </div>
   );
@@ -886,9 +870,7 @@ export function NewAppointmentModal({
               {/* Slot verification note */}
               {!conflictWarning && serviceName && staffName && date && time && (
                 <p className="text-xs text-muted flex items-center gap-1.5">
-                  <svg viewBox="0 0 14 14" fill="none" className="size-3.5 text-success shrink-0" aria-hidden>
-                    <path d="M2 7l3.5 3.5L12 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+                  <Icon name="check" weight="bold" className="size-3.5 text-success shrink-0" />
                   Slot checked against staff shifts, breaks, leave, closures, resource allocation, and cleanup buffer.
                 </p>
               )}

@@ -15,6 +15,7 @@ import {
   ConfirmDiscardModal,
 } from "./booking-settings-modals";
 import { cn } from "@/lib/utils";
+import { Icon } from "@/components/admin/icon";
 
 interface SelectOption {
   value: number;
@@ -121,35 +122,14 @@ function CheckBadgeIcon() {
       className="inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-white text-[#C35000]"
       aria-hidden="true"
     >
-      <svg
-        viewBox="0 0 16 16"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="size-2.5"
-      >
-        <path d="M3.5 8.2L6.5 11.2L12.5 5" />
-      </svg>
+      <Icon name="check" weight="bold" className="size-2.5" />
     </span>
   );
 }
 
 function ChevronDownSvg() {
   return (
-    <svg
-      viewBox="0 0 20 20"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[#475569]"
-      aria-hidden="true"
-    >
-      <path d="M5.5 7.5L10 12L14.5 7.5" />
-    </svg>
+    <Icon name="chevron-down" className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[#475569]" />
   );
 }
 

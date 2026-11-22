@@ -500,16 +500,7 @@ export function AppointmentsView({
                     onClick={() => setIsFilterOpen(!isFilterOpen)}
                     className="h-11 rounded-lg border border-hairline bg-white px-3 text-sm font-semibold text-ink hover:bg-mist flex items-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
                   >
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                      className="size-3.5 text-glyph"
-                      aria-hidden
-                    >
-                      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-                    </svg>
+                    <Icon name="filter" className="size-3.5 text-glyph" />
                     <span>
                       Filter {filterStatus !== "All" ? `(${filterStatus})` : ""}
                     </span>
@@ -555,16 +546,7 @@ export function AppointmentsView({
                     }`}
                   >
                     {/* rows / list icon */}
-                    <svg
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                      className="size-4"
-                      aria-hidden
-                    >
-                      <rect x="3" y="4" width="14" height="2" rx="1" />
-                      <rect x="3" y="9" width="14" height="2" rx="1" />
-                      <rect x="3" y="14" width="14" height="2" rx="1" />
-                    </svg>
+                    <Icon name="list" className="size-4" />
                   </button>
                   {/* Calendar / grid icon */}
                   <button
@@ -579,22 +561,7 @@ export function AppointmentsView({
                     }`}
                   >
                     {/* calendar grid icon */}
-                    <svg
-                      viewBox="0 0 20 20"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                      className="size-4"
-                      aria-hidden
-                    >
-                      <rect x="2.5" y="3.5" width="15" height="14" rx="1.5" />
-                      <line x1="2.5" y1="7.5" x2="17.5" y2="7.5" />
-                      <line x1="7.5" y1="3.5" x2="7.5" y2="7.5" />
-                      <line x1="12.5" y1="3.5" x2="12.5" y2="7.5" />
-                      <line x1="7.5" y1="10.5" x2="7.5" y2="17.5" />
-                      <line x1="12.5" y1="10.5" x2="12.5" y2="17.5" />
-                      <line x1="2.5" y1="13.5" x2="17.5" y2="13.5" />
-                    </svg>
+                    <Icon name="calendar" className="size-4" />
                   </button>
                 </div>
               </div>
@@ -617,20 +584,7 @@ export function AppointmentsView({
                       }
                       className="flex size-8 items-center justify-center rounded-full border border-hairline bg-white hover:bg-mist transition-colors text-ink"
                     >
-                      <svg
-                        viewBox="0 0 16 16"
-                        fill="currentColor"
-                        className="size-3.5"
-                      >
-                        <path
-                          d="M10.5 3L5.5 8l5 5"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          fill="none"
-                        />
-                      </svg>
+                      <Icon name="chevron-left" className="size-3.5" />
                     </button>
 
                     <span className="text-sm font-semibold text-ink min-w-[220px] text-center">
@@ -652,20 +606,7 @@ export function AppointmentsView({
                       }
                       className="flex size-8 items-center justify-center rounded-full border border-hairline bg-white hover:bg-mist transition-colors text-ink"
                     >
-                      <svg
-                        viewBox="0 0 16 16"
-                        fill="currentColor"
-                        className="size-3.5"
-                      >
-                        <path
-                          d="M5.5 3L10.5 8l-5 5"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          fill="none"
-                        />
-                      </svg>
+                      <Icon name="chevron-right" className="size-3.5" />
                     </button>
 
                     <span className="hidden sm:block text-xs text-muted pl-1">

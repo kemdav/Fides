@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Icon } from "@/components/admin/icon";
 
 interface BookingSettingsSavedModalProps {
   isOpen: boolean;
@@ -37,18 +38,7 @@ export function BookingSettingsSavedModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-full border-[3px] border-[#15803D] text-[#15803D]">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="size-7"
-            aria-hidden="true"
-          >
-            <path d="M5 13l4 4L19 7" />
-          </svg>
+          <Icon name="check" weight="bold" className="size-7" />
         </div>
 
         <h2
@@ -118,19 +108,7 @@ export function ConfirmDiscardModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-full border-[3px] border-[#DC2626] text-[#DC2626]">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="size-7"
-            aria-hidden="true"
-          >
-            <line x1="12" y1="7" x2="12" y2="13" />
-            <circle cx="12" cy="17" r="0.8" fill="currentColor" />
-          </svg>
+          <Icon name="alert" className="size-7" />
         </div>
 
         <h2

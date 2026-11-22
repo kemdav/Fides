@@ -27,6 +27,7 @@ import {
   StatusFeedbackModal,
 } from "./customer-modals";
 import { formatPesoCents, formatShortDate } from "./customer-formatters";
+import { Icon } from "@/components/admin/icon";
 
 const PAGE_SIZE = 10;
 
@@ -423,17 +424,7 @@ export function CustomersRegistryView({
 
             <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
               <div className="relative">
-                <svg
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#94A3B8]"
-                  aria-hidden="true"
-                >
-                  <circle cx="9" cy="9" r="6" />
-                  <path d="M13.5 13.5L17 17" strokeLinecap="round" />
-                </svg>
+                <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#94A3B8]" />
                 <input
                   type="search"
                   value={search}

@@ -6,6 +6,7 @@ import type {
   CustomerAccountType,
   UpdateCustomerInput,
 } from "@/types/customers";
+import { Icon } from "@/components/admin/icon";
 
 /* ------------------------------------------------------------------ Shared */
 
@@ -101,32 +102,9 @@ export function StatusFeedbackModal({
           }`}
         >
           {tone === "success" ? (
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="size-7"
-              aria-hidden="true"
-            >
-              <path d="M5 13l4 4L19 7" />
-            </svg>
+            <Icon name="check" weight="bold" className="size-7" />
           ) : (
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="size-7"
-              aria-hidden="true"
-            >
-              <line x1="12" y1="7" x2="12" y2="13" />
-              <circle cx="12" cy="17" r="0.8" fill="currentColor" />
-            </svg>
+            <Icon name="alert" className="size-7" />
           )}
         </div>
 
@@ -236,19 +214,7 @@ export function ConfirmActionModal({
         <div
           className={`mx-auto mb-5 flex size-14 items-center justify-center rounded-full border-[3px] ${iconColor}`}
         >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="size-7"
-            aria-hidden="true"
-          >
-            <line x1="12" y1="7" x2="12" y2="13" />
-            <circle cx="12" cy="17" r="0.8" fill="currentColor" />
-          </svg>
+          <Icon name="alert" className="size-7" />
         </div>
 
         <h2

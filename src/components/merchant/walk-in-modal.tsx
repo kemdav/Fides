@@ -9,6 +9,7 @@ import {
 import { buttonClasses, inputClasses } from "@/components/ui";
 import type { WalkInServiceOption, WalkInStaffOption } from "@/types/walk-ins";
 import { CalendarPicker, Listbox, TimeListbox } from "./new-appointment-modal";
+import { Icon } from "@/components/admin/icon";
 
 export interface WalkInResult {
   id: string;
@@ -141,19 +142,7 @@ export function WalkInModal({
           onClick={(e) => e.stopPropagation()}
         >
           <div className="mx-auto flex size-12 items-center justify-center rounded-full border-2 border-emerald-600 text-emerald-600">
-            <svg
-              viewBox="0 0 24 24"
-              className="size-6"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2.4}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
+            <Icon name="check" weight="bold" className="size-6" />
           </div>
           <h3 className="mt-4 text-lg font-semibold text-ink">
             {isWaitlist

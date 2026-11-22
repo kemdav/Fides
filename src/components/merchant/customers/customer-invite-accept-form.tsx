@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { acceptCustomerInviteAction } from "@/app/actions/customers";
 import type { CustomerInvitePreview } from "@/types/customers";
+import { Icon } from "@/components/admin/icon";
 
 export function CustomerInviteAcceptForm({
   token,
@@ -64,18 +65,7 @@ export function CustomerInviteAcceptForm({
     return (
       <div className="w-full max-w-md rounded-2xl border border-[#ECEAE0] bg-white p-8 text-center shadow-lg">
         <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full border-[3px] border-[#15803D] text-[#15803D]">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="size-7"
-            aria-hidden="true"
-          >
-            <path d="M5 13l4 4L19 7" />
-          </svg>
+          <Icon name="check" weight="bold" className="size-7" />
         </div>
         <h1 className="font-display text-2xl text-[#1E293B]">
           Account activated
