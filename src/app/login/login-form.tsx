@@ -4,17 +4,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { useActionState, useRef, useState } from "react";
 import { login, type LoginState } from "@/app/actions/auth";
-import { buttonClasses, PasswordInput } from "@/components/ui";
+import { buttonClasses, inputClasses, PasswordInput } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { ForgotPasswordFlow } from "./forgot-password-flow";
 
 const initialState: LoginState = { error: null, email: "" };
-
-const fieldClass = (invalid: boolean) =>
-  cn(
-    "h-11 w-full rounded-md border bg-white px-3.5 text-sm text-ink placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 disabled:opacity-60",
-    invalid ? "border-danger focus-visible:ring-danger/30" : "border-outline/60 hover:border-outline focus-visible:border-burnt focus-visible:ring-burnt/30"
-  );
 
 export function LoginForm({
   submitted,
@@ -110,7 +104,7 @@ export function LoginForm({
                   placeholder="maria@bellavita.ph"
                   aria-invalid={!!emailError}
                   aria-describedby={emailError ? "email-error" : undefined}
-                  className={fieldClass(!!emailError)}
+                  className={inputClasses(!!emailError)}
                 />
                 {emailError ? (
                   <p id="email-error" role="alert" className="text-xs text-danger">
@@ -141,7 +135,7 @@ export function LoginForm({
                   placeholder="Enter your password"
                   aria-invalid={!!passwordError}
                   aria-describedby={passwordError ? "password-error" : undefined}
-                  inputClassName={fieldClass(!!passwordError)}
+                  inputClassName={inputClasses(!!passwordError)}
                 />
                 {passwordError ? (
                   <p id="password-error" role="alert" className="text-xs text-danger">

@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { CheckIcon } from "@/components/ui";
+import { buttonClasses, CheckIcon } from "@/components/ui";
 import {
   ALL_DOCUMENTS,
   BUSINESS_TYPES,
@@ -102,10 +102,8 @@ type Errors = Partial<Record<string, string>>;
 const DRAFT_KEY = "fides-registration-draft";
 const stepSchemas = [accountStepSchema, identityStepSchema, businessStepSchema, null, planStepSchema, null] as const;
 
-const primaryButton =
-  "inline-flex h-11 items-center justify-center rounded-md bg-burnt px-5 text-sm font-semibold text-white transition-colors hover:bg-burnt-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-60";
-const secondaryButton =
-  "inline-flex h-11 items-center justify-center rounded-md border border-ink/50 bg-white px-5 text-sm font-semibold text-ink transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:opacity-60";
+const primaryButton = buttonClasses({ variant: "brand", size: "form" });
+const secondaryButton = buttonClasses({ variant: "secondary", size: "form" });
 
 export function RegisterFlow() {
   const router = useRouter();
@@ -665,7 +663,7 @@ function BusinessStep({
               // eslint-disable-next-line @next/next/no-img-element
               <img src={logoUrl} alt="Business logo preview" className="size-full object-cover" />
             ) : (
-              <span className="px-2 text-[11px] text-subtle">No logo selected</span>
+              <span className="px-2 text-xs text-subtle">No logo selected</span>
             )}
           </div>
           <div className="flex min-w-0 flex-col items-start gap-2">
@@ -1062,7 +1060,7 @@ function SummaryStep({
       </SummaryCard>
 
       <section className="rounded-xl border border-line bg-white p-5 shadow-[0_3px_14px_rgb(44_58_75/0.05)]">
-        <p className="text-[11px] font-semibold tracking-wider text-muted">ACCURACY &amp; CONSENT</p>
+        <p className="text-xs font-semibold tracking-wider text-muted">ACCURACY &amp; CONSENT</p>
         <label className="mt-3 flex cursor-pointer items-start gap-3 text-sm text-body">
           <input
             type="checkbox"

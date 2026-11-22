@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, type InputHTMLAttributes, type ReactNode } from "react";
-import { PasswordInput as BasePasswordInput } from "@/components/ui";
+import { inputClasses, PasswordInput as BasePasswordInput } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { getObjectUrl, formatBytes } from "./controls";
 
@@ -125,14 +125,14 @@ export function Sidebar({ current, onJump, furthest }: { current: number; furthe
                         "flex size-[38px] shrink-0 items-center justify-center rounded-full border-2",
                         done && "border-success bg-white text-success",
                         active && "border-burnt bg-burnt text-white shadow-[0_4px_10px_-2px_rgb(195_80_0/0.45)]",
-                        !done && !active && "border-[#e3e6ee] bg-[#eceff6] text-muted"
+                        !done && !active && "border-hairline bg-[#eceff6] text-muted"
                       )}
                     >
                       <StepIcon name={step.icon} className="size-[18px]" />
                     </span>
                     <span className="flex flex-col gap-0.5">
                       <span className={cn("text-sm leading-5", active ? "font-bold text-burnt" : "font-semibold text-muted")}>{step.title}</span>
-                      <span className={cn("text-[11px] leading-4", done ? "flex items-center gap-1 text-success" : active ? "text-burnt/80" : "text-subtle")}>
+                      <span className={cn("text-xs leading-4", done ? "flex items-center gap-1 text-success" : active ? "text-burnt/80" : "text-subtle")}>
                         {done ? (
                           <>
                             <svg viewBox="0 0 24 24" aria-hidden className="size-3.5">
@@ -220,11 +220,7 @@ export function Field({
   );
 }
 
-export const inputClass = (invalid: boolean) =>
-  cn(
-    "h-11 w-full rounded-md border bg-white px-3.5 text-sm text-ink placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2",
-    invalid ? "border-danger focus-visible:ring-danger/30" : "border-outline/60 hover:border-outline focus-visible:border-burnt focus-visible:ring-burnt/30"
-  );
+export const inputClass = (invalid: boolean) => inputClasses(invalid);
 
 export function TextInput({
   id,
@@ -256,7 +252,7 @@ export function validateFile(file: File, types: readonly string[], limit: number
 
 export function InfoNote({ children, icon = "info" }: { children: ReactNode; icon?: "info" | "shield" }) {
   return (
-    <div className="flex items-start gap-3 rounded-lg bg-[#eef2ff] px-4 py-3 text-sm text-info">
+    <div className="flex items-start gap-3 rounded-lg bg-info-bg px-4 py-3 text-sm text-info">
       <StepIcon name={icon === "shield" ? "shield" : "info"} className="mt-0.5 size-4 shrink-0" />
       <p>{children}</p>
     </div>

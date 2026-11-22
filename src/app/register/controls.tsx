@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { Modal } from "@/components/ui";
+import { inputClasses, Modal } from "@/components/ui";
 import { FILE_LIMITS } from "@/lib/registration/options";
 import { cn } from "@/lib/utils";
 
@@ -9,11 +9,7 @@ import { cn } from "@/lib/utils";
 /* Shared bits                                                                */
 /* -------------------------------------------------------------------------- */
 
-export const controlClass = (invalid: boolean) =>
-  cn(
-    "flex h-11 w-full items-center justify-between gap-2 rounded-md border bg-white px-3.5 text-left text-sm text-ink focus-visible:outline-none focus-visible:ring-2",
-    invalid ? "border-danger focus-visible:ring-danger/30" : "border-outline/60 hover:border-outline focus-visible:border-burnt focus-visible:ring-burnt/30"
-  );
+export const controlClass = (invalid: boolean) => cn(inputClasses(invalid), "flex items-center justify-between gap-2 text-left");
 
 function Svg({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
@@ -615,7 +611,7 @@ export function DocumentCard({
         <span className={cn("flex size-9 items-center justify-center rounded-lg", file ? "bg-wash text-success" : "bg-mist text-glyph")}>
           <FileIcon className="size-5" />
         </span>
-        <span className={cn("rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wide", required ? "bg-danger-bg text-danger" : "bg-mist text-muted")}>
+        <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold tracking-wide", required ? "bg-danger-bg text-danger" : "bg-mist text-muted")}>
           {required ? "REQUIRED" : "OPTIONAL"}
         </span>
       </div>
@@ -751,7 +747,7 @@ export function IdUpload({
         )}
       >
         <span className="font-medium">{file ? "Upload a different file" : "Upload File"}</span>
-        <span className="text-[11px] text-subtle">PDF, JPG or PNG · max 5 MB</span>
+        <span className="text-xs text-subtle">PDF, JPG or PNG · max 5 MB</span>
       </button>
       {message ? (
         <p id={errorId} role="alert" className="text-xs text-danger">
