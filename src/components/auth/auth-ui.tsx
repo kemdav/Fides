@@ -21,7 +21,7 @@ function AlertIcon({ tone }: { tone: "error" | "warning" }) {
 
 export function AuthCard({ eyebrow, title, description, children, className }: { eyebrow?: string; title: string; description?: string; children: ReactNode; className?: string }) {
   return (
-    <section className={cn("flex w-full max-w-[520px] flex-col gap-4 rounded-2xl border border-hairline bg-white p-6 shadow-[0_3px_14px_rgb(44_58_75/0.04)] sm:p-9", className)}>
+    <section className={cn("flex w-full max-w-[520px] flex-col gap-4 rounded-2xl border border-hairline bg-white p-6 shadow-card sm:p-9", className)}>
       {eyebrow ? <p className="text-xs uppercase text-body">{eyebrow}</p> : null}
       <div className="flex flex-col gap-1">
         <h1 className="font-display text-[26px] leading-9 text-body sm:text-3xl sm:leading-[38px]">{title}</h1>

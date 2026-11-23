@@ -155,7 +155,7 @@ export function SelectField({
           id={listId}
           role="listbox"
           aria-labelledby={id}
-          className="absolute left-0 right-0 top-[calc(100%+4px)] z-30 max-h-60 overflow-auto rounded-md border border-line bg-white py-1 shadow-[0_12px_28px_-10px_rgb(44_58_75/0.35)]"
+          className="absolute left-0 right-0 top-[calc(100%+4px)] z-30 max-h-60 overflow-auto rounded-md border border-line bg-white py-1 shadow-sheet"
         >
           {options.map((option, index) => {
             const selected = option.value === value;
@@ -293,7 +293,6 @@ export function DatePicker({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={panelId}
-        aria-invalid={invalid}
         aria-describedby={describedBy}
         onClick={toggle}
         className={controlClass(invalid)}
@@ -307,7 +306,7 @@ export function DatePicker({
           id={panelId}
           role="dialog"
           aria-label="Choose date of birth"
-          className="absolute left-0 top-[calc(100%+4px)] z-30 w-[288px] rounded-lg border border-line bg-white p-3 shadow-[0_12px_28px_-10px_rgb(44_58_75/0.35)] max-sm:right-0 max-sm:w-auto"
+          className="absolute left-0 top-[calc(100%+4px)] z-30 w-[288px] rounded-lg border border-line bg-white p-3 shadow-sheet max-sm:right-0 max-sm:w-auto"
         >
           <div className="mb-2 flex items-center justify-between gap-2">
             <button

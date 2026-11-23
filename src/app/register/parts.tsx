@@ -178,7 +178,7 @@ export function Field({
 
 export const inputClass = (invalid: boolean) => inputClasses(invalid);
 
-export function TextInput({
+export function TextField({
   id,
   invalid,
   className,
@@ -187,7 +187,7 @@ export function TextInput({
   return <input id={id} aria-invalid={invalid} className={cn(inputClass(invalid), className)} {...props} />;
 }
 
-export function PasswordInput({
+export function PasswordField({
   id,
   invalid,
   fieldLabel,

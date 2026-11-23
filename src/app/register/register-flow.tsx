@@ -43,12 +43,12 @@ import {
   Field,
   InfoNote,
   MobileProgress,
-  PasswordInput,
+  PasswordField,
   SecureFooter,
   Sidebar,
   StepIcon,
   STEPS,
-  TextInput,
+  TextField,
   useObjectUrl,
   validateFile,
 } from "./parts";
@@ -413,7 +413,7 @@ function Heading({ title, subtitle, center = true }: { title: string; subtitle: 
   );
 }
 
-function Card({ children }: { children: React.ReactNode }) {
+function StepCard({ children }: { children: React.ReactNode }) {
   return (
     <div className="rounded-2xl border border-line bg-white p-5 shadow-[0_8px_24px_-12px_rgb(44_58_75/0.18)] sm:p-7">{children}</div>
   );
@@ -438,13 +438,13 @@ function AccountStep({ values, errors, set, onNext }: StepProps & { onNext: () =
       <Heading title="Create Your Account" subtitle="Start your journey with Fides — it only takes a few minutes." />
       <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
         <Field label="Full Name" htmlFor="fullName" error={errors.fullName}>
-          <TextInput id="fullName" invalid={!!errors.fullName} autoComplete="name" placeholder="Maria Santos" value={values.fullName} onChange={(e) => set("fullName", e.target.value)} />
+          <TextField id="fullName" invalid={!!errors.fullName} autoComplete="name" placeholder="Maria Santos" value={values.fullName} onChange={(e) => set("fullName", e.target.value)} />
         </Field>
         <Field label="Business Email" htmlFor="email" error={errors.email}>
-          <TextInput id="email" type="email" invalid={!!errors.email} autoComplete="email" placeholder="maria@bellavita.ph" value={values.email} onChange={(e) => set("email", e.target.value)} />
+          <TextField id="email" type="email" invalid={!!errors.email} autoComplete="email" placeholder="maria@bellavita.ph" value={values.email} onChange={(e) => set("email", e.target.value)} />
         </Field>
         <Field label="Phone Number" htmlFor="phone" error={errors.phone} hint="Use 09XXXXXXXXX (11 digits) or +63 9XX XXX XXXX.">
-          <TextInput
+          <TextField
             id="phone"
             type="tel"
             inputMode="tel"
@@ -458,10 +458,10 @@ function AccountStep({ values, errors, set, onNext }: StepProps & { onNext: () =
           />
         </Field>
         <Field label="Password" htmlFor="password" error={errors.password}>
-          <PasswordInput id="password" fieldLabel="password" invalid={!!errors.password} autoComplete="new-password" placeholder="Create a password" value={values.password} onChange={(e) => set("password", e.target.value)} />
+          <PasswordField id="password" fieldLabel="password" invalid={!!errors.password} autoComplete="new-password" placeholder="Create a password" value={values.password} onChange={(e) => set("password", e.target.value)} />
         </Field>
         <Field label="Confirm Password" htmlFor="confirmPassword" error={errors.confirmPassword} className="sm:col-span-2">
-          <PasswordInput id="confirmPassword" fieldLabel="confirm password" invalid={!!errors.confirmPassword} autoComplete="new-password" placeholder="Re-enter your password" value={values.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)} />
+          <PasswordField id="confirmPassword" fieldLabel="confirm password" invalid={!!errors.confirmPassword} autoComplete="new-password" placeholder="Re-enter your password" value={values.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)} />
         </Field>
       </div>
 
@@ -574,10 +574,10 @@ function IdentityStep({
         title="Verify Your Identity"
         subtitle="We need to confirm the identity of the business owner. This information is kept secure and used only for verification purposes."
       />
-      <Card>
+      <StepCard>
         <div className="grid gap-x-5 gap-y-5 sm:grid-cols-2">
           <Field caps label="Owner's Legal Full Name" htmlFor="ownerLegalName" error={errors.ownerLegalName}>
-            <TextInput id="ownerLegalName" invalid={!!errors.ownerLegalName} autoComplete="name" placeholder="Maria Santos" value={values.ownerLegalName} onChange={(e) => set("ownerLegalName", e.target.value)} />
+            <TextField id="ownerLegalName" invalid={!!errors.ownerLegalName} autoComplete="name" placeholder="Maria Santos" value={values.ownerLegalName} onChange={(e) => set("ownerLegalName", e.target.value)} />
           </Field>
           <Field caps label="Date of Birth" htmlFor="dateOfBirth" error={errors.dateOfBirth} hint="You must be at least 18 years old.">
             <DatePicker
@@ -626,7 +626,7 @@ function IdentityStep({
           </div>
         </div>
         <StepActions onBack={onBack} />
-      </Card>
+      </StepCard>
     </form>
   );
 }
@@ -657,7 +657,7 @@ function BusinessStep({
       }}
     >
       <Heading title="Tell us about your business" subtitle="This information powers your public booking portal on Fides." />
-      <Card>
+      <StepCard>
         <div className="flex flex-col gap-5 border-b border-line pb-6 sm:flex-row sm:items-center">
           <div className="flex size-[100px] shrink-0 items-center justify-center overflow-hidden rounded-xl border border-line bg-mist text-center">
             {logoUrl ? (
@@ -697,7 +697,7 @@ function BusinessStep({
 
         <div className="mt-6 grid gap-x-5 gap-y-5 sm:grid-cols-6">
           <Field label="Business Name" htmlFor="businessName" error={errors.businessName} className="sm:col-span-6">
-            <TextInput id="businessName" invalid={!!errors.businessName} placeholder="Bella Vita Salon & Spa" value={values.businessName} onChange={(e) => set("businessName", e.target.value)} />
+            <TextField id="businessName" invalid={!!errors.businessName} placeholder="Bella Vita Salon & Spa" value={values.businessName} onChange={(e) => set("businessName", e.target.value)} />
           </Field>
           <Field label="Business Type" htmlFor="businessType" error={errors.businessType} className="sm:col-span-4">
             <SelectField
@@ -710,23 +710,23 @@ function BusinessStep({
             />
           </Field>
           <Field label="Established Year" htmlFor="establishedYear" error={errors.establishedYear} className="sm:col-span-2">
-            <TextInput id="establishedYear" inputMode="numeric" maxLength={4} invalid={!!errors.establishedYear} placeholder="2020" value={values.establishedYear} onChange={(e) => set("establishedYear", e.target.value.replace(/\D/g, ""))} />
+            <TextField id="establishedYear" inputMode="numeric" maxLength={4} invalid={!!errors.establishedYear} placeholder="2020" value={values.establishedYear} onChange={(e) => set("establishedYear", e.target.value.replace(/\D/g, ""))} />
           </Field>
           <Field label="Street Address" htmlFor="streetAddress" error={errors.streetAddress} className="sm:col-span-6">
-            <TextInput id="streetAddress" autoComplete="address-line1" invalid={!!errors.streetAddress} placeholder="123 Main Street, Suite 4B" value={values.streetAddress} onChange={(e) => set("streetAddress", e.target.value)} />
+            <TextField id="streetAddress" autoComplete="address-line1" invalid={!!errors.streetAddress} placeholder="123 Main Street, Suite 4B" value={values.streetAddress} onChange={(e) => set("streetAddress", e.target.value)} />
           </Field>
           <Field label="City" htmlFor="city" error={errors.city} className="sm:col-span-2">
-            <TextInput id="city" autoComplete="address-level2" invalid={!!errors.city} placeholder="Makati City" value={values.city} onChange={(e) => set("city", e.target.value)} />
+            <TextField id="city" autoComplete="address-level2" invalid={!!errors.city} placeholder="Makati City" value={values.city} onChange={(e) => set("city", e.target.value)} />
           </Field>
           <Field label="Province / Region" htmlFor="province" error={errors.province} className="sm:col-span-2">
-            <TextInput id="province" autoComplete="address-level1" invalid={!!errors.province} placeholder="Metro Manila" value={values.province} onChange={(e) => set("province", e.target.value)} />
+            <TextField id="province" autoComplete="address-level1" invalid={!!errors.province} placeholder="Metro Manila" value={values.province} onChange={(e) => set("province", e.target.value)} />
           </Field>
           <Field label="ZIP Code" htmlFor="zipCode" error={errors.zipCode} className="sm:col-span-2">
-            <TextInput id="zipCode" autoComplete="postal-code" invalid={!!errors.zipCode} placeholder="1200" value={values.zipCode} onChange={(e) => set("zipCode", e.target.value)} />
+            <TextField id="zipCode" autoComplete="postal-code" invalid={!!errors.zipCode} placeholder="1200" value={values.zipCode} onChange={(e) => set("zipCode", e.target.value)} />
           </Field>
         </div>
         <StepActions onBack={onBack} />
-      </Card>
+      </StepCard>
       <div className="mt-5">
         <SecureFooter />
       </div>
@@ -917,7 +917,7 @@ function SummaryCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="overflow-hidden rounded-xl border border-line bg-white shadow-[0_3px_14px_rgb(44_58_75/0.05)]">
+    <section className="overflow-hidden rounded-xl border border-line bg-white shadow-card">
       <header className="flex items-center justify-between gap-3 border-b border-line px-5 py-3">
         <h2 className="flex items-center gap-3 text-sm font-semibold text-ink">
           <StepIcon name={icon} className="size-5 text-glyph" />
@@ -1060,7 +1060,7 @@ function SummaryStep({
         </p>
       </SummaryCard>
 
-      <section className="rounded-xl border border-line bg-white p-5 shadow-[0_3px_14px_rgb(44_58_75/0.05)]">
+      <section className="rounded-xl border border-line bg-white p-5 shadow-card">
         <p className="text-xs font-semibold tracking-wider text-muted">ACCURACY &amp; CONSENT</p>
         <label className="mt-3 flex cursor-pointer items-start gap-3 text-sm text-body">
           <input

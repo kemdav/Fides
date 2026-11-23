@@ -22,7 +22,7 @@ export function ContactForm() {
   }
 
   return (
-    <form action={action} noValidate aria-busy={pending} className="flex min-w-0 flex-col gap-4 rounded-2xl border border-hairline bg-white p-6 shadow-[0_3px_14px_rgb(44_58_75/0.04)] sm:p-9">
+    <form action={action} noValidate aria-busy={pending} className="flex min-w-0 flex-col gap-4 rounded-2xl border border-hairline bg-white p-6 shadow-card sm:p-9">
       {state.status === "error" && state.message ? <AuthBanner title={state.message} /> : null}
       <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden className="hidden" />
       <div className="grid gap-4 sm:grid-cols-2">

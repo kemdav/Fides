@@ -64,7 +64,7 @@ export function StorefrontHeader({
     <header
       className={cn(
         "sticky top-0 z-50 h-16 bg-powder transition-shadow duration-300 lg:h-[88px]",
-        scrolled && "shadow-[0_2px_12px_rgb(0_0_0/0.08)]"
+        scrolled && "shadow-header"
       )}
     >
       <div className="relative mx-auto flex h-full max-w-[1440px] items-center justify-between px-5 sm:px-8 lg:px-14">
