@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Icon } from "@/components/admin/icon";
 import Link from "next/link";
 import { MerchantSidebar } from "@/components/merchant/merchant-sidebar";
 import { Surface } from "@/components/admin/primitives";
@@ -235,7 +236,7 @@ export function CustomerProfileView({
             href={customersHref}
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-burnt hover:text-burnt-dark"
           >
-            <span aria-hidden="true">&larr;</span>
+            <Icon name="arrow-left" weight="medium" className="size-3.5" />
             <span>Back to Customers</span>
           </Link>
         </div>

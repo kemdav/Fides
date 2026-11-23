@@ -299,7 +299,7 @@ export function WalkInModal({
                 className="mt-2 text-xs font-semibold underline hover:opacity-80"
               >
                 Place {customer.trim() || "customer"} on the waiting list
-                instead →
+                instead
               </button>
             )}
           </div>

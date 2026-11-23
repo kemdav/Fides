@@ -139,7 +139,7 @@ export function computeAvailableSlotsForStaff(params: {
       slots.push({
         startsAt,
         endsAt,
-        label: `${formatManilaTime(startsAt)} → ${formatManilaTime(endsAt)}`,
+        label: `${formatManilaTime(startsAt)} – ${formatManilaTime(endsAt)}`,
         durationMinutes,
       });
     }

@@ -17,9 +17,10 @@ export function RecentDecisions() {
         <h2 className="text-[17px] font-bold leading-[27px]">Recent decisions</h2>
         <Link
           href="/admin/activity"
-          className="rounded text-sm font-semibold leading-6 text-burnt underline underline-offset-2 hover:text-burnt-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
+          className="inline-flex items-center gap-1.5 rounded text-sm font-semibold leading-6 text-burnt underline underline-offset-2 hover:text-burnt-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
         >
-          View log →
+          View log
+          <Icon name="arrow-right" weight="medium" className="size-4" />
         </Link>
       </div>
       <ul className="flex flex-col">
