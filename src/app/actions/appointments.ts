@@ -139,7 +139,6 @@ export async function createAppointmentBookingAction({
 
   // 1. Resolve tenant
   let tenantId = tenantIdParam;
-  let tenantSlug: string | undefined;
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -177,7 +176,7 @@ export async function createAppointmentBookingAction({
     .select("slug")
     .eq("id", tenantId)
     .single();
-  tenantSlug = tenant?.slug;
+  const tenantSlug: string | undefined = tenant?.slug;
 
   const cleanCustomerName = customerName?.trim();
   if (!cleanCustomerName) {
@@ -364,7 +363,6 @@ export async function addToWaitlistAction({
   }
 
   let tenantId = tenantIdParam;
-  let tenantSlug: string | undefined;
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -402,7 +400,7 @@ export async function addToWaitlistAction({
     .select("slug")
     .eq("id", tenantId)
     .single();
-  tenantSlug = tenant?.slug;
+  const tenantSlug: string | undefined = tenant?.slug;
 
   const cleanCustomerName = customerName?.trim();
   if (!cleanCustomerName) {
