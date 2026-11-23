@@ -8,7 +8,10 @@ type MetricCardProps = {
   label: string;
   value: number;
   caption: string;
-  icon: IconName;
+  /** Adds the shared arrow after the caption, for cards that link somewhere. */
+  captionArrow?: boolean;
+  /** Optional: some pages (outside the admin portal) show cards without an icon. */
+  icon?: IconName;
   progress: number;
   featured?: boolean;
   badge?: ReactNode;
@@ -23,6 +26,7 @@ export function MetricCard({
   label,
   value,
   caption,
+  captionArrow,
   icon,
   progress,
   featured,
@@ -42,11 +46,13 @@ export function MetricCard({
   const content = (
     <>
       <div className="flex min-h-5 items-start gap-2">
-        <Icon
-          name={icon}
-          weight={iconWeight ?? (featured ? "fill" : "regular")}
-          className={cn("size-5 shrink-0", featured ? "text-white" : "text-glyph")}
-        />
+        {icon ? (
+          <Icon
+            name={icon}
+            weight={iconWeight ?? (featured ? "fill" : "regular")}
+            className={cn("size-5 shrink-0", featured ? "text-white" : "text-glyph")}
+          />
+        ) : null}
         <p className="min-w-0 break-words text-sm font-semibold leading-5">{label}</p>
       </div>
       <div className="flex h-9 items-center gap-2">
@@ -78,6 +84,7 @@ export function MetricCard({
             )}
           >
             {caption}
+            {captionArrow ? <Icon name="arrow-right" weight="medium" className="ml-1 inline size-4 align-text-bottom" /> : null}
           </p>
         </div>
       ) : (
@@ -89,6 +96,7 @@ export function MetricCard({
             )}
           >
             {caption}
+            {captionArrow ? <Icon name="arrow-right" weight="medium" className="ml-1 inline size-4 align-text-bottom" /> : null}
           </p>
           <div
             className="mt-auto flex h-[5px] overflow-hidden rounded-[3px] bg-mist"

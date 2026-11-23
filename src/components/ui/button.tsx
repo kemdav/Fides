@@ -10,7 +10,7 @@ export type ButtonVariant =
   | "accent"
   | "secondary"
   | "danger";
-export type ButtonSize = "xs" | "sm" | "md" | "lg" | "form" | "formLg" | "cta" | "pill";
+export type ButtonSize = "xs" | "sm" | "md" | "lg" | "dialog" | "form" | "formLg" | "cta" | "pill";
 
 export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant;
@@ -18,9 +18,9 @@ export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const variantClasses: Record<ButtonVariant, string> = {
-  solid: "bg-neutral-900 text-white hover:bg-neutral-800",
-  outline: "border border-neutral-300 bg-transparent text-neutral-900 hover:bg-neutral-50",
-  ghost: "bg-transparent text-neutral-900 hover:bg-neutral-100",
+  solid: "bg-ink text-white hover:bg-ink",
+  outline: "border border-line bg-transparent text-ink hover:bg-mist",
+  ghost: "bg-transparent text-ink hover:bg-mist",
   brand: "bg-burnt text-white hover:bg-burnt-dark",
   "brand-outline":
     "bg-transparent text-burnt shadow-[inset_0_0_0_2px_var(--color-burnt)] hover:bg-burnt/10",
@@ -34,6 +34,7 @@ const sizeClasses: Record<ButtonSize, string> = {
   sm: "h-8 rounded-md px-3 text-sm font-medium",
   md: "h-10 rounded-md px-4 text-sm font-medium",
   lg: "h-12 rounded-md px-6 text-base font-medium",
+  dialog: "h-[42px] rounded-md px-4 text-sm/5 font-semibold",
   form: "h-12 rounded-lg px-4 text-sm/6 font-semibold",
   formLg: "h-12 rounded-lg px-4 text-base/6 font-semibold",
   cta: "rounded-lg px-5 py-3 text-base/6 font-semibold",
@@ -54,7 +55,7 @@ export function buttonClasses({
   return cn(
     "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-[color,background-color,box-shadow,scale,filter] duration-300 ease-out",
     "active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-glyph focus-visible:ring-offset-2",
     "disabled:pointer-events-none disabled:opacity-50",
     variantClasses[variant],
     sizeClasses[size],

@@ -69,7 +69,7 @@ export function Modal({
       }}
       className={cn(
         !unstyled &&
-          "w-[min(32rem,calc(100vw-2rem))] rounded-lg border border-neutral-200 bg-white p-6 text-neutral-900 shadow-lg",
+          "w-[min(32rem,calc(100vw-2rem))] rounded-lg border border-hairline bg-white p-6 text-ink shadow-lg",
         "backdrop:bg-black/40",
         className
       )}
@@ -80,7 +80,7 @@ export function Modal({
             <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
           ) : null}
           {description ? (
-            <p className="text-sm text-neutral-500">{description}</p>
+            <p className="text-sm text-subtle">{description}</p>
           ) : null}
         </header>
       )}
