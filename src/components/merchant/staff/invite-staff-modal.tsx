@@ -7,6 +7,7 @@ import { TextField } from "@/components/admin/fields";
 import { Icon } from "@/components/admin/icon";
 import { Modal } from "@/components/ui/modal";
 import { Listbox } from "../new-appointment-modal";
+import { ServiceCheckboxDropdown, type StaffServiceOption } from "./service-checkbox-dropdown";
 
 interface InviteStaffModalProps {
   onClose: () => void;
@@ -15,7 +16,7 @@ interface InviteStaffModalProps {
   canInviteAdmins: boolean;
   seatsUsed: number;
   staffLimit?: number | null;
-  services: { id: string; name: string }[];
+  services: StaffServiceOption[];
 }
 
 export function InviteStaffModal({ onClose, onSent, tenantId, canInviteAdmins, seatsUsed, staffLimit, services }: InviteStaffModalProps) {
@@ -127,7 +128,9 @@ export function InviteStaffModal({ onClose, onSent, tenantId, canInviteAdmins, s
           ) : <>
           <h3 className="border-t border-hairline pt-4 text-base font-semibold">Services and commission</h3>
           <div className="space-y-1.5">
-            <Listbox
+            {role === "staff" ? (
+              <ServiceCheckboxDropdown services={services} value={selectedServices} onChange={setSelectedServices} disabled={sending} />
+            ) : <Listbox
               id="invite-staff-services"
               label="Services this person can perform"
               describedBy="invite-services-help"
@@ -137,7 +140,7 @@ export function InviteStaffModal({ onClose, onSent, tenantId, canInviteAdmins, s
               value={selectedServices}
               onChange={setSelectedServices}
               options={services.map(({ id, name }) => ({ value: id, label: name }))}
-            />
+            />}
             <p id="invite-services-help" className="text-xs text-muted">The Services page displays these assignments.</p>
           </div>
 

@@ -13,6 +13,7 @@ import { PageContent, PageHeading, StatusPill, Surface } from "@/components/admi
 import { EmptyState } from "@/components/ui/empty-state";
 import { cancelStaffInvitationAction, removeStaffInvitationAction, resendStaffInvitationAction } from "@/app/actions/staff-invitations";
 import { InviteStaffModal } from "./invite-staff-modal";
+import type { StaffServiceOption } from "./service-checkbox-dropdown";
 import { RoleAccessModal } from "./role-access-modal";
 import { StaffStatusDialog } from "./staff-status-dialog";
 import { StaffAvatar } from "./staff-avatar";
@@ -53,7 +54,7 @@ interface StaffViewProps {
   commissionThisMonth?: number;
   initialItems?: StaffItem[];
   basePath?: string;
-  services?: { id: string; name: string }[];
+  services?: StaffServiceOption[];
   staffLimit?: number | null;
 }
 

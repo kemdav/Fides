@@ -55,7 +55,7 @@ export default async function StaffPage({ params }: StaffPageProps) {
       .eq("tenant_id", tenant.id).order("sort_order").order("full_name"),
     db.from("tenant_memberships").select("profile_id, role, profiles(full_name, email)").eq("tenant_id", tenant.id),
     db.from("staff_service_skills").select("staff_id, services!inner(name)").eq("tenant_id", tenant.id).eq("services.active", true),
-    db.from("services").select("id, name").eq("tenant_id", tenant.id).eq("active", true).order("name"),
+    db.from("services").select("id, name, duration_minutes, price_cents").eq("tenant_id", tenant.id).eq("active", true).order("name"),
     db.from("shifts").select("staff_id, starts_at, ends_at").eq("tenant_id", tenant.id)
       .lt("starts_at", todayEnd).gt("ends_at", todayStart).order("starts_at"),
     db.from("leaves").select("staff_id").eq("tenant_id", tenant.id).eq("approved", true)
