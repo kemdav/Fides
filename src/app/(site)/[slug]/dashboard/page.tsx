@@ -4,17 +4,6 @@ import { OverviewView } from "@/components/merchant/overview/overview-view";
 import { getMerchantOverview } from "@/lib/merchant/overview";
 import type { OverviewPeriod } from "@/lib/merchant/overview";
 import { createClient } from "@/lib/supabase/server";
-import {
-  formatTimeManila,
-  getManilaDateKey,
-  getManilaTodayKey,
-  getManilaWeekDays,
-  mapDbSourceToUi,
-  mapDbStatusToUi,
-  resolveCustomerName,
-  resolveServiceName,
-  resolveStaffName,
-} from "@/lib/date-utils";
 
 interface MerchantDashboardPageProps {
   params: Promise<{ slug: string }>;

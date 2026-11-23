@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { resetPasswordAction, sendResetCodeAction, verifyResetCodeAction } from "@/app/actions/password-reset";
 import { buttonClasses, inputClasses, Modal, PasswordInput } from "@/components/ui";
@@ -19,6 +20,7 @@ const secondary = buttonClasses({ variant: "secondary", size: "form" });
  * 3) choose a new password  4) reload the login page.
  */
 export function ForgotPasswordFlow({ open, initialEmail, onClose }: { open: boolean; initialEmail: string; onClose: () => void }) {
+  const router = useRouter();
   const [step, setStep] = useState<Step>("confirm");
   const [email, setEmail] = useState(initialEmail);
   const [code, setCode] = useState("");
@@ -85,7 +87,7 @@ export function ForgotPasswordFlow({ open, initialEmail, onClose }: { open: bool
       if (!result.ok) return setError(result.error);
       setStep("done");
       // Reload the login page so the user can sign in with the new password.
-      window.setTimeout(() => { window.location.href = "/login?message=" + encodeURIComponent("Your password has been updated. Please log in with your new password."); }, 1200);
+      window.setTimeout(() => router.push("/login?message=" + encodeURIComponent("Your password has been updated. Please log in with your new password.")), 1200);
     });
   }
 

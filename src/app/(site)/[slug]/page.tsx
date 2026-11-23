@@ -50,7 +50,7 @@ export default async function StorefrontPage({ params }: StorefrontPageProps) {
     notFound();
   }
 
-  const { tenant, featuredServices, staff } = data;
+  const { tenant, featuredServices } = data;
 
   const businessName = tenant.displayName?.trim() || tenant.name;
   const nav = getStorefrontNav(slug);
