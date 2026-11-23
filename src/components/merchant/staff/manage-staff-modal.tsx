@@ -10,6 +10,7 @@ import { StatusPill } from "@/components/admin/primitives";
 import { Modal } from "@/components/ui/modal";
 import type { AppRole } from "@/types/database.types";
 import { Listbox } from "../new-appointment-modal";
+import { ServiceCheckboxDropdown } from "./service-checkbox-dropdown";
 import { StaffAvailabilityDialog, StaffEmailChangeDialog } from "./staff-edit-dialogs";
 
 export interface ManagedStaff {
@@ -54,7 +55,8 @@ export function ManageStaffModal({ staff, tenantId, basePath, onClose, onSaved }
   const [bio, setBio] = useState(staff.bio);
   const [role, setRole] = useState(staff.role);
   const isServiceStaff = role === "staff";
-  const [services, setServices] = useState(staff.serviceIds);
+  const [selectedServices, setSelectedServices] = useState(staff.serviceIds);
+  const services = staff.services.map(({ value, label }) => ({ id: value, name: label }));
   const [commission, setCommission] = useState(staff.commissionValue ? staff.commissionType : "none");
   const [value, setValue] = useState(staff.commissionValue ? String(staff.commissionValue) : "");
   const [selectedPhoto, setSelectedPhoto] = useState<{ name: string; url: string } | null>(null);
@@ -76,7 +78,7 @@ export function ManageStaffModal({ staff, tenantId, basePath, onClose, onSaved }
     if (isServiceStaff) {
       form.set("commissionType", commission === "none" ? "fixed" : commission);
       form.set("commissionValue", commission === "none" ? "0" : value);
-      services.forEach((id) => form.append("serviceIds", id));
+      selectedServices.forEach((id) => form.append("serviceIds", id));
     }
     try {
       const result = await saveStaffProfileAction(form);
@@ -97,9 +99,9 @@ export function ManageStaffModal({ staff, tenantId, basePath, onClose, onSaved }
           event.preventDefault();
           if (!saving) void save(new FormData(event.currentTarget));
         }} className="flex max-h-[min(92dvh,calc(100dvh-2rem))] flex-col">
-          <header className="flex shrink-0 items-start justify-between gap-3 border-b border-hairline bg-powder px-4 py-4 sm:px-6">
+          <header className="flex shrink-0 items-start justify-between gap-3 px-4 py-4 sm:px-6">
             <div>
-              <h2 id="manage-staff-title" className="font-display text-[26px] leading-[34px]">Manage staff member</h2>
+              <h2 id="manage-staff-title" className="font-display text-[26px] leading-[34px] text-ink">Manage staff member</h2>
               <p className="mt-1 text-sm text-muted">{staff.fullName} · {staff.roleLabel}</p>
             </div>
             <button type="button" aria-label="Close" disabled={saving} onClick={onClose}
@@ -187,9 +189,31 @@ export function ManageStaffModal({ staff, tenantId, basePath, onClose, onSaved }
             </div>
             {isServiceStaff && <section className="space-y-4 border-t border-hairline pt-4" aria-labelledby="manage-staff-services-heading">
               <h3 id="manage-staff-services-heading" className="text-base font-semibold">Services and commission</h3>
-              <div className="space-y-2">
-                <Listbox id="manage-staff-services" label="Services this person can perform" multiple placement="above"
-                  value={services} onChange={setServices} options={staff.services} placeholder="Select services" />
+              <div className="space-y-1.5">
+                {role === "staff" ? (
+                  <ServiceCheckboxDropdown
+                    services={services}
+                    value={selectedServices}
+                    onChange={setSelectedServices}
+                    disabled={saving}
+                  />
+                ) : (
+                  <Listbox
+                    id="manage-staff-services"
+                    label="Services this person can perform"
+                    describedBy="manage-staff-services-help"
+                    placeholder="Select services"
+                    placement="above"
+                    multiple
+                    value={selectedServices}
+                    onChange={setSelectedServices}
+                    options={staff.services}
+                    disabled={saving}
+                  />
+                )}
+                <p id="manage-staff-services-help" className="text-xs text-muted">
+                  The Services page displays these assignments.
+                </p>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Listbox id="manage-staff-commission" label="Commission Arrangement" required placement="above"

@@ -96,6 +96,7 @@ interface BaseListboxProps {
   label: string;
   required?: boolean;
   describedBy?: string;
+  disabled?: boolean;
   placement?: "above" | "below";
   options: { value: string; label: string; disabled?: boolean }[];
   placeholder?: string;
@@ -107,7 +108,7 @@ type ListboxProps = BaseListboxProps & (
 );
 
 export function Listbox(props: ListboxProps) {
-  const { id, label, required, value, options, placeholder, describedBy, placement = "below" } = props;
+  const { id, label, required, value, options, placeholder, describedBy, disabled, placement = "below" } = props;
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
@@ -135,9 +136,9 @@ export function Listbox(props: ListboxProps) {
           triggerRef.current?.focus();
         }
       }}>
-        <button ref={triggerRef} id={id} type="button" aria-haspopup="listbox" aria-expanded={open} aria-describedby={describedBy}
+        <button ref={triggerRef} id={id} type="button" disabled={disabled} aria-haspopup="listbox" aria-expanded={open} aria-describedby={describedBy}
           onClick={() => setOpen((o) => !o)}
-          className={`${fieldOutlineClasses} flex h-11 w-full items-center justify-between px-3 text-left text-sm`}
+          className={`${fieldOutlineClasses} flex h-11 w-full items-center justify-between px-3 text-left text-sm disabled:cursor-not-allowed disabled:opacity-50`}
         >
           <span className={selected ? "text-ink" : "text-glyph"}>
             {selected ?? placeholder ?? "Select an option"}
@@ -158,7 +159,7 @@ export function Listbox(props: ListboxProps) {
 
               return (
                 <li key={option.value} role="presentation">
-                  <button type="button" role="option" aria-selected={isSelected} disabled={option.disabled}
+                  <button type="button" role="option" aria-selected={isSelected} disabled={disabled || option.disabled}
                     onClick={() => {
                       if (props.multiple) {
                         props.onChange(isSelected

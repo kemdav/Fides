@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils";
 export type StaffServiceOption = {
   id: string;
   name: string;
-  duration_minutes: number;
-  price_cents: number;
+  duration_minutes?: number;
+  price_cents?: number;
 };
 
 const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", minimumFractionDigits: 0 });
@@ -98,7 +98,11 @@ export function ServiceCheckboxDropdown({ services, value, onChange, disabled }:
                   onChange={() => checked ? remove(service.id) : onChange([...value, service.id])} />
                 <span className="min-w-0">
                   <span className="block break-words text-sm text-ink">{service.name}</span>
-                  <span className="block text-xs text-muted">{service.duration_minutes} min · {peso.format(service.price_cents / 100)}</span>
+                  {typeof service.duration_minutes === "number" && typeof service.price_cents === "number" && (
+                    <span className="block text-xs text-muted">
+                      {service.duration_minutes} min · {peso.format(service.price_cents / 100)}
+                    </span>
+                  )}
                 </span>
               </label>
             );
