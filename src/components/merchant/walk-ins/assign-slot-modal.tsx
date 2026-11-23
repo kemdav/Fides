@@ -11,6 +11,8 @@ import type {
   WalkInStaffOption,
 } from "@/types/walk-ins";
 import { Icon } from "@/components/admin/icon";
+import { inputClasses } from "@/components/ui";
+import { cn } from "@/lib/utils";
 
 interface AssignSlotModalProps {
   entry: WaitlistQueueItem | null;
@@ -86,6 +88,7 @@ export function AssignSlotModal({
   React.useEffect(() => {
     if (!entry || !selectedStaffId || !date) return;
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- starts the slot request
     setLoadingSlots(true);
     setError(null);
 
@@ -126,7 +129,7 @@ export function AssignSlotModal({
           className="w-full max-w-[360px] rounded-[12px] bg-white px-6 py-8 text-center shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="mx-auto flex size-12 items-center justify-center rounded-full border-2 border-emerald-600 text-emerald-600">
+          <div className="mx-auto flex size-12 items-center justify-center rounded-full border-2 border-success text-success">
             <Icon name="check" weight="bold" className="size-6" />
           </div>
           <h3 className="mt-4 text-lg font-semibold text-ink">Slot assigned</h3>
@@ -201,15 +204,15 @@ export function AssignSlotModal({
             type="button"
             onClick={onClose}
             aria-label="Close assign slot modal"
-            className="text-2xl leading-none text-glyph hover:text-ink"
+            className="rounded-lg p-1 text-glyph hover:text-ink"
           >
-            ×
+            <Icon name="close" className="size-5" />
           </button>
         </div>
 
         {/* Original request banner */}
-        <div className="mt-4 rounded-lg bg-[#f3f4f6] px-4 py-3">
-          <p className="text-[11px] font-medium uppercase tracking-wider text-muted">
+        <div className="mt-4 rounded-lg bg-mist px-4 py-3">
+          <p className="text-xs font-medium uppercase tracking-wider text-muted">
             Original request · Position {entry.position} of {entry.totalWaiting}
           </p>
           <p className="mt-1 text-sm font-medium text-ink">
@@ -240,7 +243,7 @@ export function AssignSlotModal({
               <select
                 value={selectedStaffId}
                 onChange={(e) => setSelectedStaffId(e.target.value)}
-                className="mt-1 h-9 w-full rounded-md border border-[#d0d5dd] bg-white px-2.5 text-sm font-medium text-ink outline-none focus:border-burnt"
+                className={cn(inputClasses(false, false), "mt-1")}
               >
                 {staff.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -274,7 +277,7 @@ export function AssignSlotModal({
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="mt-1 h-10 w-full rounded-lg border border-[#d0d5dd] bg-[#f8f9fa] px-3 text-sm text-ink outline-none focus:border-burnt"
+                className={cn(inputClasses(false, false), "mt-1")}
               />
             </label>
 
@@ -284,7 +287,7 @@ export function AssignSlotModal({
                 value={selectedSlotIso}
                 onChange={(e) => setSelectedSlotIso(e.target.value)}
                 disabled={loadingSlots || slots.length === 0}
-                className="mt-1 h-10 w-full rounded-lg border border-[#d0d5dd] bg-white px-3 text-sm text-ink outline-none focus:border-burnt disabled:bg-[#f8f9fa] disabled:text-muted"
+                className={cn(inputClasses(false, false), "mt-1")}
               >
                 {loadingSlots ? (
                   <option value="">Checking availability...</option>
@@ -317,7 +320,7 @@ export function AssignSlotModal({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="No queue notes recorded."
-            className="mt-1.5 h-10 w-full rounded-lg border border-[#d0d5dd] px-3 text-sm font-normal text-ink outline-none focus:border-burnt"
+            className={cn(inputClasses(false, false), "mt-1.5")}
           />
         </label>
 
@@ -332,14 +335,14 @@ export function AssignSlotModal({
             />
             Notify the customer: &ldquo;Your slot is ready&rdquo;
           </label>
-          <p className="mt-1 pl-6 text-[11px] text-muted">
+          <p className="mt-1 pl-6 text-xs text-muted">
             Uses the customer&apos;s recorded contact details. Notification
             status is recorded with the queue entry.
           </p>
         </div>
 
         {/* After confirmation queue-shift preview */}
-        <div className="mt-4 rounded-lg border border-burnt/15 bg-[#fdf4ee] px-4 py-3">
+        <div className="mt-4 rounded-lg border border-burnt/15 bg-burnt/10 px-4 py-3">
           <p className="text-xs font-semibold text-ink">
             After confirmation · {remainingQueue.length}{" "}
             {remainingQueue.length === 1 ? "customer" : "customers"} waiting
@@ -352,7 +355,7 @@ export function AssignSlotModal({
           </p>
         </div>
 
-        <p className="mt-3 text-[11px] text-muted">
+        <p className="mt-3 text-xs text-muted">
           If this appointment is cancelled later, it will not automatically
           return to the queue. Add the customer again if needed.
         </p>

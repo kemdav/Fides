@@ -16,6 +16,7 @@ import {
 } from "./booking-settings-modals";
 import { cn } from "@/lib/utils";
 import { Icon } from "@/components/admin/icon";
+import { inputClasses } from "@/components/ui";
 
 interface SelectOption {
   value: number;
@@ -119,7 +120,7 @@ function formatLastSavedDate(iso: string | null): string | null {
 function CheckBadgeIcon() {
   return (
     <span
-      className="inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-white text-[#C35000]"
+      className="inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-white text-burnt"
       aria-hidden="true"
     >
       <Icon name="check" weight="bold" className="size-2.5" />
@@ -129,7 +130,7 @@ function CheckBadgeIcon() {
 
 function ChevronDownSvg() {
   return (
-    <Icon name="chevron-down" className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[#475569]" />
+    <Icon name="chevron-down" className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
   );
 }
 
@@ -359,7 +360,7 @@ export function BookingSettingsView({
   const formattedSavedDate = formatLastSavedDate(lastSavedAt);
 
   return (
-    <div className="flex min-h-dvh flex-col bg-[#FCFAE8] text-[#1E293B] lg:flex-row">
+    <div className="flex min-h-dvh flex-col bg-mist text-ink lg:flex-row">
       <MerchantSidebar
         businessName={meta.businessName}
         userName={meta.userName}
@@ -372,28 +373,28 @@ export function BookingSettingsView({
         <main className="mx-auto flex w-full max-w-[1280px] flex-1 flex-col gap-5 px-4 pb-10 pt-6 sm:px-6 lg:px-8">
           {/* Page Header */}
           <header className="flex flex-col gap-1">
-            <h1 className="font-display text-[28px] leading-[36px] text-[#1E293B] sm:text-[32px] sm:leading-[40px]">
+            <h1 className="font-display text-[28px] leading-[36px] text-ink sm:text-[32px] sm:leading-[40px]">
               Booking settings
             </h1>
-            <p className="text-sm leading-relaxed text-[#64748B]">
+            <p className="text-sm leading-relaxed text-subtle">
               Set the rules that shape your customer booking experience.
             </p>
           </header>
 
           {/* Timezone Info Banner */}
-          <div className="flex flex-col justify-between gap-3 rounded-xl border border-[#E7E9EE] bg-[#F4F5F7] px-4 py-3.5 sm:flex-row sm:items-center sm:px-5">
+          <div className="flex flex-col justify-between gap-3 rounded-xl border border-hairline bg-mist px-4 py-3.5 sm:flex-row sm:items-center sm:px-5">
             <div className="space-y-0.5">
-              <p className="text-sm font-semibold text-[#1E293B]">
+              <p className="text-sm font-semibold text-ink">
                 Business timezone: {meta.timeZone}
               </p>
-              <p className="text-xs leading-relaxed text-[#64748B]">
+              <p className="text-xs leading-relaxed text-subtle">
                 Booking slots and cancellation/rescheduling cutoffs use this
                 timezone. Buffer times are durations.
               </p>
             </div>
             <Link
               href={websiteSettingsHref}
-              className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-[#C35000] transition-colors hover:text-[#A64400]"
+              className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-burnt transition-colors hover:text-burnt-dark"
             >
               <span>Go to Website Settings</span>
               <span aria-hidden="true">&rarr;</span>
@@ -402,7 +403,7 @@ export function BookingSettingsView({
 
           {/* Read-only banner for non-owners */}
           {!canEdit && (
-            <div className="rounded-xl border border-[#F3D5B5] bg-[#FFF8F1] px-4 py-3 text-sm text-[#8A3B00]">
+            <div className="rounded-xl border border-burnt/20 bg-burnt/10 px-4 py-3 text-sm text-burnt-dark">
               You have view-only access to booking rules. Only the business
               owner can modify and save changes.
             </div>
@@ -412,7 +413,7 @@ export function BookingSettingsView({
           {errorBanner && (
             <div
               role="alert"
-              className="rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm font-medium text-[#B91C1C]"
+              className="rounded-xl border border-danger/30 bg-danger-bg px-4 py-3 text-sm font-medium text-danger-dark"
             >
               {errorBanner}
             </div>
@@ -423,16 +424,16 @@ export function BookingSettingsView({
             {/* LEFT COLUMN */}
             <div className="flex flex-col gap-5">
               {/* Card 1: Workflow & Approvals */}
-              <Surface className="rounded-xl border border-[#ECEAE0] bg-white p-5 sm:p-6">
-                <h2 className="text-base font-semibold text-[#1E293B]">
+              <Surface className="rounded-xl border border-hairline bg-white p-5 sm:p-6">
+                <h2 className="text-base font-semibold text-ink">
                   Workflow &amp; approvals
                 </h2>
-                <p className="mt-1 text-xs leading-relaxed text-[#64748B]">
+                <p className="mt-1 text-xs leading-relaxed text-subtle">
                   Choose how new booking requests are confirmed.
                 </p>
 
                 <div className="mt-4">
-                  <span className="block text-xs font-semibold text-[#1E293B]">
+                  <span className="block text-xs font-semibold text-ink">
                     Approval mode
                   </span>
                   <div
@@ -447,10 +448,10 @@ export function BookingSettingsView({
                       disabled={!canEdit}
                       onClick={() => updateField("autoConfirm", true)}
                       className={cn(
-                        "flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C35000]/40 disabled:cursor-not-allowed disabled:opacity-60",
+                        "flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-60",
                         form.autoConfirm
-                          ? "bg-[#C35000] text-white shadow-xs"
-                          : "bg-[#949BA3] text-white hover:bg-[#7F8790]",
+                          ? "bg-burnt text-white shadow-xs"
+                          : "bg-glyph text-white hover:bg-glyph",
                       )}
                     >
                       {form.autoConfirm && <CheckBadgeIcon />}
@@ -464,10 +465,10 @@ export function BookingSettingsView({
                       disabled={!canEdit}
                       onClick={() => updateField("autoConfirm", false)}
                       className={cn(
-                        "flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C35000]/40 disabled:cursor-not-allowed disabled:opacity-60",
+                        "flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-60",
                         !form.autoConfirm
-                          ? "bg-[#C35000] text-white shadow-xs"
-                          : "bg-[#949BA3] text-white hover:bg-[#7F8790]",
+                          ? "bg-burnt text-white shadow-xs"
+                          : "bg-glyph text-white hover:bg-glyph",
                       )}
                     >
                       {!form.autoConfirm && <CheckBadgeIcon />}
@@ -475,7 +476,7 @@ export function BookingSettingsView({
                     </button>
                   </div>
 
-                  <p className="mt-3 text-xs leading-relaxed text-[#64748B]">
+                  <p className="mt-3 text-xs leading-relaxed text-subtle">
                     Automatic confirms immediately. Manual approval waits for
                     the owner or receptionist to confirm.
                   </p>
@@ -483,17 +484,17 @@ export function BookingSettingsView({
               </Surface>
 
               {/* Card 2: Staff & Capacity */}
-              <Surface className="rounded-xl border border-[#ECEAE0] bg-white p-5 sm:p-6">
-                <h2 className="text-base font-semibold text-[#1E293B]">
+              <Surface className="rounded-xl border border-hairline bg-white p-5 sm:p-6">
+                <h2 className="text-base font-semibold text-ink">
                   Staff &amp; capacity
                 </h2>
-                <p className="mt-1 text-xs leading-relaxed text-[#64748B]">
+                <p className="mt-1 text-xs leading-relaxed text-subtle">
                   Choose how staff are assigned and reserve preparation time.
                 </p>
 
                 {/* Staff assignment toggle */}
                 <div className="mt-4">
-                  <span className="block text-xs font-semibold text-[#1E293B]">
+                  <span className="block text-xs font-semibold text-ink">
                     Staff assignment
                   </span>
                   <div
@@ -512,10 +513,10 @@ export function BookingSettingsView({
                         updateField("staffAssignmentMode", "specific_staff")
                       }
                       className={cn(
-                        "flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C35000]/40 disabled:cursor-not-allowed disabled:opacity-60",
+                        "flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-60",
                         form.staffAssignmentMode === "specific_staff"
-                          ? "bg-[#C35000] text-white shadow-xs"
-                          : "bg-[#949BA3] text-white hover:bg-[#7F8790]",
+                          ? "bg-burnt text-white shadow-xs"
+                          : "bg-glyph text-white hover:bg-glyph",
                       )}
                     >
                       {form.staffAssignmentMode === "specific_staff" && (
@@ -535,10 +536,10 @@ export function BookingSettingsView({
                         updateField("staffAssignmentMode", "any_available")
                       }
                       className={cn(
-                        "flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C35000]/40 disabled:cursor-not-allowed disabled:opacity-60",
+                        "flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-60",
                         form.staffAssignmentMode === "any_available"
-                          ? "bg-[#C35000] text-white shadow-xs"
-                          : "bg-[#949BA3] text-white hover:bg-[#7F8790]",
+                          ? "bg-burnt text-white shadow-xs"
+                          : "bg-glyph text-white hover:bg-glyph",
                       )}
                     >
                       {form.staffAssignmentMode === "any_available" && (
@@ -548,7 +549,7 @@ export function BookingSettingsView({
                     </button>
                   </div>
 
-                  <p className="mt-2.5 text-xs leading-relaxed text-[#64748B]">
+                  <p className="mt-2.5 text-xs leading-relaxed text-subtle">
                     {form.staffAssignmentMode === "specific_staff"
                       ? "Customers choose their preferred staff member during booking."
                       : "The system automatically assigns an eligible available staff member."}
@@ -559,7 +560,7 @@ export function BookingSettingsView({
                 <div className="mt-5">
                   <label
                     htmlFor="default-buffer-minutes"
-                    className="block text-xs font-semibold text-[#1E293B]"
+                    className="block text-xs font-semibold text-ink"
                   >
                     Business Default Buffer
                   </label>
@@ -574,7 +575,7 @@ export function BookingSettingsView({
                           Number(e.target.value),
                         )
                       }
-                      className="h-10 w-full appearance-none rounded-lg border border-[#D9DDE3] bg-white pl-3.5 pr-9 text-sm text-[#1E293B] transition-colors focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20 disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+                      className={cn(inputClasses(false, false), "appearance-none pl-3.5 pr-9")}
                     >
                       {bufferOptions.map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -585,15 +586,15 @@ export function BookingSettingsView({
                     <ChevronDownSvg />
                   </div>
                   {fieldErrors.defaultBufferMinutes && (
-                    <p className="mt-1.5 text-xs font-medium text-[#DC2626]">
+                    <p className="mt-1.5 text-xs font-medium text-danger">
                       {fieldErrors.defaultBufferMinutes}
                     </p>
                   )}
-                  <p className="mt-2 text-xs leading-relaxed text-[#64748B]">
+                  <p className="mt-2 text-xs leading-relaxed text-subtle">
                     Reserved for cleanup and preparation between appointments.
                   </p>
 
-                  <div className="mt-3 rounded-lg bg-[#F1F3F5] px-3.5 py-2.5 text-xs leading-relaxed text-[#475569]">
+                  <div className="mt-3 rounded-lg bg-mist px-3.5 py-2.5 text-xs leading-relaxed text-muted">
                     A service buffer replaces the business default; the values
                     are never added. Effective buffer: service value &rarr;
                     business default &rarr; 0.
@@ -605,8 +606,8 @@ export function BookingSettingsView({
             {/* RIGHT COLUMN */}
             <div className="flex flex-col gap-5">
               {/* Card 3: Booking Windows & Cancellations */}
-              <Surface className="rounded-xl border border-[#ECEAE0] bg-white p-5 sm:p-6">
-                <h2 className="text-base font-semibold text-[#1E293B]">
+              <Surface className="rounded-xl border border-hairline bg-white p-5 sm:p-6">
+                <h2 className="text-base font-semibold text-ink">
                   Booking Windows &amp; Cancellations
                 </h2>
 
@@ -615,7 +616,7 @@ export function BookingSettingsView({
                   <div>
                     <label
                       htmlFor="min-advance-notice"
-                      className="block text-xs font-semibold text-[#1E293B]"
+                      className="block text-xs font-semibold text-ink"
                     >
                       Minimum advance notice
                     </label>
@@ -630,7 +631,7 @@ export function BookingSettingsView({
                             Number(e.target.value),
                           )
                         }
-                        className="h-10 w-full appearance-none rounded-lg border border-[#D9DDE3] bg-white pl-3.5 pr-9 text-sm text-[#1E293B] transition-colors focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20 disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+                        className={cn(inputClasses(false, false), "appearance-none pl-3.5 pr-9")}
                       >
                         {leadTimeOptions.map((opt) => (
                           <option key={opt.value} value={opt.value}>
@@ -641,7 +642,7 @@ export function BookingSettingsView({
                       <ChevronDownSvg />
                     </div>
                     {fieldErrors.bookingLeadTimeMinutes && (
-                      <p className="mt-1.5 text-xs font-medium text-[#DC2626]">
+                      <p className="mt-1.5 text-xs font-medium text-danger">
                         {fieldErrors.bookingLeadTimeMinutes}
                       </p>
                     )}
@@ -651,7 +652,7 @@ export function BookingSettingsView({
                   <div>
                     <label
                       htmlFor="max-advance-booking"
-                      className="block text-xs font-semibold text-[#1E293B]"
+                      className="block text-xs font-semibold text-ink"
                     >
                       Maximum advance booking
                     </label>
@@ -663,7 +664,7 @@ export function BookingSettingsView({
                         onChange={(e) =>
                           updateField("maxAdvanceDays", Number(e.target.value))
                         }
-                        className="h-10 w-full appearance-none rounded-lg border border-[#D9DDE3] bg-white pl-3.5 pr-9 text-sm text-[#1E293B] transition-colors focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20 disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+                        className={cn(inputClasses(false, false), "appearance-none pl-3.5 pr-9")}
                       >
                         {maxAdvanceOptions.map((opt) => (
                           <option key={opt.value} value={opt.value}>
@@ -674,7 +675,7 @@ export function BookingSettingsView({
                       <ChevronDownSvg />
                     </div>
                     {fieldErrors.maxAdvanceDays && (
-                      <p className="mt-1.5 text-xs font-medium text-[#DC2626]">
+                      <p className="mt-1.5 text-xs font-medium text-danger">
                         {fieldErrors.maxAdvanceDays}
                       </p>
                     )}
@@ -685,7 +686,7 @@ export function BookingSettingsView({
                 <div className="mt-4">
                   <label
                     htmlFor="cancellation-deadline"
-                    className="block text-xs font-semibold text-[#1E293B]"
+                    className="block text-xs font-semibold text-ink"
                   >
                     Cancellation deadline
                   </label>
@@ -700,7 +701,7 @@ export function BookingSettingsView({
                           Number(e.target.value),
                         )
                       }
-                      className="h-10 w-full appearance-none rounded-lg border border-[#D9DDE3] bg-white pl-3.5 pr-9 text-sm text-[#1E293B] transition-colors focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20 disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+                      className={cn(inputClasses(false, false), "appearance-none pl-3.5 pr-9")}
                     >
                       {cancellationOptions.map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -711,7 +712,7 @@ export function BookingSettingsView({
                     <ChevronDownSvg />
                   </div>
                   {fieldErrors.cancellationWindowHours && (
-                    <p className="mt-1.5 text-xs font-medium text-[#DC2626]">
+                    <p className="mt-1.5 text-xs font-medium text-danger">
                       {fieldErrors.cancellationWindowHours}
                     </p>
                   )}
@@ -721,7 +722,7 @@ export function BookingSettingsView({
                 <div className="mt-4">
                   <label
                     htmlFor="reschedule-deadline"
-                    className="block text-xs font-semibold text-[#1E293B]"
+                    className="block text-xs font-semibold text-ink"
                   >
                     Rescheduling deadline
                   </label>
@@ -736,7 +737,7 @@ export function BookingSettingsView({
                           Number(e.target.value),
                         )
                       }
-                      className="h-10 w-full appearance-none rounded-lg border border-[#D9DDE3] bg-white pl-3.5 pr-9 text-sm text-[#1E293B] transition-colors focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20 disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+                      className={cn(inputClasses(false, false), "appearance-none pl-3.5 pr-9")}
                     >
                       {rescheduleOptions.map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -747,7 +748,7 @@ export function BookingSettingsView({
                     <ChevronDownSvg />
                   </div>
                   {fieldErrors.rescheduleWindowHours && (
-                    <p className="mt-1.5 text-xs font-medium text-[#DC2626]">
+                    <p className="mt-1.5 text-xs font-medium text-danger">
                       {fieldErrors.rescheduleWindowHours}
                     </p>
                   )}
@@ -758,11 +759,11 @@ export function BookingSettingsView({
                   <div className="flex items-center justify-between">
                     <label
                       htmlFor="cancellation-policy-notes"
-                      className="block text-xs font-semibold text-[#1E293B]"
+                      className="block text-xs font-semibold text-ink"
                     >
                       Cancellation policy rules
                     </label>
-                    <span className="text-[11px] text-[#94A3B8]">
+                    <span className="text-xs text-glyph">
                       {form.cancellationPolicyNotes.length}/500
                     </span>
                   </div>
@@ -776,34 +777,34 @@ export function BookingSettingsView({
                       updateField("cancellationPolicyNotes", e.target.value)
                     }
                     placeholder="Optional rules shown to customers (e.g., Late cancellations within 24 hours may require rebooking approval)."
-                    className="mt-2 w-full resize-none rounded-lg border border-[#D9DDE3] bg-white px-3.5 py-2.5 text-sm text-[#1E293B] placeholder:text-[#94A3B8] transition-colors focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20 disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+                    className={cn(inputClasses(false, true), "mt-2")}
                   />
                   {fieldErrors.cancellationPolicyNotes && (
-                    <p className="mt-1.5 text-xs font-medium text-[#DC2626]">
+                    <p className="mt-1.5 text-xs font-medium text-danger">
                       {fieldErrors.cancellationPolicyNotes}
                     </p>
                   )}
                 </div>
 
-                <p className="mt-3 text-xs leading-relaxed text-[#64748B]">
+                <p className="mt-3 text-xs leading-relaxed text-subtle">
                   Changes apply to new bookings. Existing confirmed appointments
                   keep their original schedule.
                 </p>
               </Surface>
 
               {/* Card 4: Scheduling */}
-              <Surface className="rounded-xl border border-[#ECEAE0] bg-white p-5 sm:p-6">
-                <h2 className="text-base font-semibold text-[#1E293B]">
+              <Surface className="rounded-xl border border-hairline bg-white p-5 sm:p-6">
+                <h2 className="text-base font-semibold text-ink">
                   Scheduling
                 </h2>
-                <p className="mt-1 text-xs leading-relaxed text-[#64748B]">
+                <p className="mt-1 text-xs leading-relaxed text-subtle">
                   Choose the spacing of available start times.
                 </p>
 
                 <div className="mt-4">
                   <label
                     htmlFor="slot-interval-minutes"
-                    className="block text-xs font-semibold text-[#1E293B]"
+                    className="block text-xs font-semibold text-ink"
                   >
                     Slot Interval
                   </label>
@@ -818,7 +819,7 @@ export function BookingSettingsView({
                           Number(e.target.value),
                         )
                       }
-                      className="h-10 w-full appearance-none rounded-lg border border-[#D9DDE3] bg-white pl-3.5 pr-9 text-sm text-[#1E293B] transition-colors focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20 disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+                      className={cn(inputClasses(false, false), "appearance-none pl-3.5 pr-9")}
                     >
                       {slotIntervalOptions.map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -829,11 +830,11 @@ export function BookingSettingsView({
                     <ChevronDownSvg />
                   </div>
                   {fieldErrors.slotIntervalMinutes && (
-                    <p className="mt-1.5 text-xs font-medium text-[#DC2626]">
+                    <p className="mt-1.5 text-xs font-medium text-danger">
                       {fieldErrors.slotIntervalMinutes}
                     </p>
                   )}
-                  <p className="mt-2 text-xs leading-relaxed text-[#64748B]">
+                  <p className="mt-2 text-xs leading-relaxed text-subtle">
                     Controls how frequently start times appear on your booking
                     calendar (for example, every 15 minutes: 9:00, 9:15, 9:30).
                   </p>
@@ -844,9 +845,9 @@ export function BookingSettingsView({
         </main>
 
         {/* Sticky Footer Save Bar */}
-        <footer className="sticky bottom-0 z-20 border-t border-[#E7E5DC] bg-white/95 backdrop-blur-xs">
+        <footer className="sticky bottom-0 z-20 border-t border-hairline bg-white/95 backdrop-blur-xs">
           <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-3 px-4 py-3.5 sm:px-6 lg:px-8">
-            <div className="rounded-lg bg-[#F1F3F5] px-3.5 py-2 text-xs text-[#475569]">
+            <div className="rounded-lg bg-mist px-3.5 py-2 text-xs text-muted">
               Changes apply to new bookings after saving. Existing confirmed
               appointments keep their original schedule.
             </div>
@@ -856,12 +857,12 @@ export function BookingSettingsView({
                 <p
                   className={cn(
                     "text-xs font-semibold",
-                    isDirty ? "text-[#C35000]" : "text-[#334155]",
+                    isDirty ? "text-burnt" : "text-body",
                   )}
                 >
                   {isDirty ? "Unsaved changes" : "All changes saved"}
                 </p>
-                <p className="text-xs text-[#64748B]">
+                <p className="text-xs text-subtle">
                   {formattedSavedDate
                     ? `Last saved${lastSavedByName ? ` by ${lastSavedByName}` : ""} · ${formattedSavedDate}`
                     : "Using default booking configuration"}
@@ -873,7 +874,7 @@ export function BookingSettingsView({
                   type="button"
                   disabled={!canEdit || !isDirty || isSaving}
                   onClick={() => setShowDiscardModal(true)}
-                  className="h-10 rounded-lg border border-[#D9DDE3] bg-white px-4 text-xs font-semibold text-[#334155] transition-colors hover:bg-[#F8FAFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C35000]/40 disabled:cursor-not-allowed disabled:opacity-45"
+                  className="h-10 rounded-lg border border-line bg-white px-4 text-xs font-semibold text-body transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   Discard changes
                 </button>
@@ -881,7 +882,7 @@ export function BookingSettingsView({
                   type="button"
                   disabled={!canEdit || !isDirty || isSaving}
                   onClick={handleSave}
-                  className="h-10 min-w-[124px] rounded-lg bg-[#C35000] px-5 text-xs font-semibold text-white transition-colors hover:bg-[#A64400] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C35000]/40 disabled:cursor-not-allowed disabled:opacity-45"
+                  className="h-10 min-w-[124px] rounded-lg bg-burnt px-5 text-xs font-semibold text-white transition-colors hover:bg-burnt-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   {isSaving ? "Saving..." : "Save changes"}
                 </button>

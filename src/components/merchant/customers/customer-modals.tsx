@@ -7,6 +7,8 @@ import type {
   UpdateCustomerInput,
 } from "@/types/customers";
 import { Icon } from "@/components/admin/icon";
+import { inputClasses } from "@/components/ui";
+import { cn } from "@/lib/utils";
 
 /* ------------------------------------------------------------------ Shared */
 
@@ -97,8 +99,8 @@ export function StatusFeedbackModal({
         <div
           className={`mx-auto mb-5 flex size-14 items-center justify-center rounded-full border-[3px] ${
             tone === "success"
-              ? "border-[#15803D] text-[#15803D]"
-              : "border-[#DC2626] text-[#DC2626]"
+              ? "border-success text-success"
+              : "border-danger text-danger"
           }`}
         >
           {tone === "success" ? (
@@ -110,33 +112,33 @@ export function StatusFeedbackModal({
 
         <h2
           id="customer-status-modal-title"
-          className="text-xl font-semibold text-[#1E293B]"
+          className="text-xl font-semibold text-ink"
         >
           {title}
         </h2>
-        <p className="mt-2 text-sm leading-relaxed text-[#64748B]">
+        <p className="mt-2 text-sm leading-relaxed text-subtle">
           {description}
         </p>
 
         {inviteUrl && (
-          <div className="mt-4 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-3 text-left">
+          <div className="mt-4 rounded-xl border border-hairline bg-mist p-3 text-left">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-[#475569]">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted">
                 Account Setup Link
               </span>
               <button
                 type="button"
                 onClick={handleCopy}
-                className="text-xs font-semibold text-[#C35000] hover:text-[#A64400]"
+                className="text-xs font-semibold text-burnt hover:text-burnt-dark"
               >
                 {copied ? "Copied!" : "Copy link"}
               </button>
             </div>
-            <p className="mt-1 break-all font-mono text-[11px] text-[#334155]">
+            <p className="mt-1 break-all font-mono text-xs text-body">
               {inviteUrl}
             </p>
             {deliveryWarning && (
-              <p className="mt-2 text-[11px] leading-relaxed text-[#9A3412]">
+              <p className="mt-2 text-xs leading-relaxed text-burnt-dark">
                 {deliveryWarning}
               </p>
             )}
@@ -147,7 +149,7 @@ export function StatusFeedbackModal({
           <button
             type="button"
             onClick={onClose}
-            className="min-w-[140px] rounded-lg bg-[#C35000] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#A64400]"
+            className="min-w-[140px] rounded-lg bg-burnt px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-burnt-dark"
           >
             Done
           </button>
@@ -188,20 +190,20 @@ export function ConfirmActionModal({
 }: ConfirmActionModalProps) {
   const iconColor =
     tone === "danger"
-      ? "border-[#DC2626] text-[#DC2626]"
-      : "border-[#B45309] text-[#B45309]";
+      ? "border-danger text-danger"
+      : "border-warn-fg text-warn-fg";
 
   const confirmButtonClass =
     confirmTone === "danger"
-      ? "bg-[#DC2626] text-white hover:bg-[#B91C1C]"
+      ? "bg-danger text-white hover:bg-danger-dark"
       : confirmTone === "outline"
-        ? "border border-[#D9DDE3] bg-white text-[#334155] hover:bg-[#F8FAFC]"
-        : "bg-[#C35000] text-white hover:bg-[#A64400]";
+        ? "border border-line bg-white text-body hover:bg-mist"
+        : "bg-burnt text-white hover:bg-burnt-dark";
 
   const cancelButtonClass =
     cancelTone === "brand"
-      ? "bg-[#C35000] text-white hover:bg-[#A64400]"
-      : "border border-[#D9DDE3] bg-white text-[#334155] hover:bg-[#F8FAFC]";
+      ? "bg-burnt text-white hover:bg-burnt-dark"
+      : "border border-line bg-white text-body hover:bg-mist";
 
   return (
     <ModalShell
@@ -219,11 +221,11 @@ export function ConfirmActionModal({
 
         <h2
           id="customer-confirm-modal-title"
-          className="text-xl font-semibold text-[#1E293B]"
+          className="text-xl font-semibold text-ink"
         >
           {title}
         </h2>
-        <p className="mt-2 text-sm leading-relaxed text-[#64748B]">
+        <p className="mt-2 text-sm leading-relaxed text-subtle">
           {description}
         </p>
 
@@ -332,11 +334,11 @@ export function AddCustomerModal({
           <div>
             <h2
               id="add-customer-modal-title"
-              className="font-display text-2xl text-[#1E293B]"
+              className="font-display text-2xl text-ink"
             >
               Add Customer
             </h2>
-            <p className="mt-0.5 text-xs text-[#64748B]">
+            <p className="mt-0.5 text-xs text-subtle">
               Create a walk-in record without requiring an account.
             </p>
           </div>
@@ -344,14 +346,14 @@ export function AddCustomerModal({
             type="button"
             onClick={onClose}
             aria-label="Close modal"
-            className="rounded-lg p-1 text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#1E293B]"
+            className="rounded-lg p-1 text-subtle hover:bg-mist hover:text-ink"
           >
-            ✕
+            <Icon name="close" className="size-5" />
           </button>
         </div>
 
         {error && (
-          <div className="mt-4 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-xs font-medium text-[#B91C1C]">
+          <div className="mt-4 rounded-lg border border-danger/30 bg-danger-bg px-3 py-2 text-xs font-medium text-danger-dark">
             {error}
           </div>
         )}
@@ -360,9 +362,9 @@ export function AddCustomerModal({
           <div>
             <label
               htmlFor="add-customer-name"
-              className="block text-xs font-semibold text-[#1E293B]"
+              className="block text-xs font-semibold text-ink"
             >
-              Full Name<span className="text-[#DC2626]">*</span>
+              Full Name<span className="text-danger">*</span>
             </label>
             <input
               id="add-customer-name"
@@ -371,10 +373,10 @@ export function AddCustomerModal({
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Ari Mendoza"
-              className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] px-3 text-sm text-[#1E293B] placeholder:text-[#94A3B8] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+              className={cn(inputClasses(false, false), "mt-1.5")}
             />
             {fieldErrors.fullName && (
-              <p className="mt-1 text-[11px] text-[#DC2626]">
+              <p className="mt-1 text-xs text-danger">
                 {fieldErrors.fullName}
               </p>
             )}
@@ -383,7 +385,7 @@ export function AddCustomerModal({
           <div>
             <label
               htmlFor="add-customer-email"
-              className="block text-xs font-semibold text-[#1E293B]"
+              className="block text-xs font-semibold text-ink"
             >
               Email Address
             </label>
@@ -396,10 +398,10 @@ export function AddCustomerModal({
                 if (!e.target.value.trim()) setSendInvite(false);
               }}
               placeholder="ari.mendoza@gmail.com"
-              className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] px-3 text-sm text-[#1E293B] placeholder:text-[#94A3B8] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+              className={cn(inputClasses(false, false), "mt-1.5")}
             />
             {fieldErrors.email && (
-              <p className="mt-1 text-[11px] text-[#DC2626]">
+              <p className="mt-1 text-xs text-danger">
                 {fieldErrors.email}
               </p>
             )}
@@ -408,9 +410,9 @@ export function AddCustomerModal({
           <div>
             <label
               htmlFor="add-customer-phone"
-              className="block text-xs font-semibold text-[#1E293B]"
+              className="block text-xs font-semibold text-ink"
             >
-              Phone Number<span className="text-[#DC2626]">*</span>
+              Phone Number<span className="text-danger">*</span>
             </label>
             <input
               id="add-customer-phone"
@@ -419,10 +421,10 @@ export function AddCustomerModal({
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="+63 917 555 0142"
-              className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] px-3 text-sm text-[#1E293B] placeholder:text-[#94A3B8] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+              className={cn(inputClasses(false, false), "mt-1.5")}
             />
             {fieldErrors.phone && (
-              <p className="mt-1 text-[11px] text-[#DC2626]">
+              <p className="mt-1 text-xs text-danger">
                 {fieldErrors.phone}
               </p>
             )}
@@ -431,7 +433,7 @@ export function AddCustomerModal({
           <div>
             <label
               htmlFor="add-customer-birthday"
-              className="block text-xs font-semibold text-[#1E293B]"
+              className="block text-xs font-semibold text-ink"
             >
               Birthday
             </label>
@@ -440,17 +442,17 @@ export function AddCustomerModal({
               type="date"
               value={birthday}
               onChange={(e) => setBirthday(e.target.value)}
-              className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] px-3 text-sm text-[#1E293B] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+              className={cn(inputClasses(false, false), "mt-1.5")}
             />
           </div>
         </div>
 
-        <div className="mt-5 border-t border-[#ECEAE0] pt-4">
-          <p className="text-xs font-semibold text-[#1E293B]">Account</p>
-          <p className="mt-1 text-xs font-medium text-[#334155]">
+        <div className="mt-5 border-t border-hairline pt-4">
+          <p className="text-xs font-semibold text-ink">Account</p>
+          <p className="mt-1 text-xs font-medium text-body">
             Walk-in record
           </p>
-          <p className="mt-0.5 text-[11px] text-[#94A3B8]">
+          <p className="mt-0.5 text-xs text-glyph">
             Account status is based on registration and cannot be changed here.
           </p>
 
@@ -459,8 +461,8 @@ export function AddCustomerModal({
               <label
                 className={`flex items-center gap-2.5 text-xs font-medium ${
                   hasValidEmail
-                    ? "cursor-pointer text-[#1E293B]"
-                    : "cursor-not-allowed text-[#94A3B8]"
+                    ? "cursor-pointer text-ink"
+                    : "cursor-not-allowed text-glyph"
                 }`}
               >
                 <input
@@ -468,11 +470,11 @@ export function AddCustomerModal({
                   disabled={!hasValidEmail}
                   checked={hasValidEmail && sendInvite}
                   onChange={(e) => setSendInvite(e.target.checked)}
-                  className="size-4 rounded border-[#CBD5E1] accent-[#C35000]"
+                  className="size-4 rounded border-line accent-burnt"
                 />
                 <span>Send account invite</span>
               </label>
-              <p className="mt-1 pl-6 text-[11px] text-[#94A3B8]">
+              <p className="mt-1 pl-6 text-xs text-glyph">
                 {hasValidEmail
                   ? "Sends a setup link so the customer can create a password later."
                   : "Add an email address to send an invite."}
@@ -480,16 +482,16 @@ export function AddCustomerModal({
             </div>
 
             <div>
-              <label className="flex cursor-pointer items-center gap-2.5 text-xs font-medium text-[#1E293B]">
+              <label className="flex cursor-pointer items-center gap-2.5 text-xs font-medium text-ink">
                 <input
                   type="checkbox"
                   checked={marketingOptIn}
                   onChange={(e) => setMarketingOptIn(e.target.checked)}
-                  className="size-4 rounded border-[#CBD5E1] accent-[#C35000]"
+                  className="size-4 rounded border-line accent-burnt"
                 />
                 <span>Send occasional offers (marketing consent)</span>
               </label>
-              <p className="mt-1 pl-6 text-[11px] text-[#94A3B8]">
+              <p className="mt-1 pl-6 text-xs text-glyph">
                 Optional. Unchecked by default. Record the customer&apos;s
                 permission before enabling.
               </p>
@@ -497,19 +499,19 @@ export function AddCustomerModal({
           </div>
         </div>
 
-        <div className="mt-6 flex items-center justify-end gap-2.5 border-t border-[#ECEAE0] pt-4">
+        <div className="mt-6 flex items-center justify-end gap-2.5 border-t border-hairline pt-4">
           <button
             type="button"
             disabled={submitting}
             onClick={onClose}
-            className="h-9 rounded-lg border border-[#D9DDE3] bg-white px-4 text-xs font-semibold text-[#334155] hover:bg-[#F8FAFC]"
+            className="h-9 rounded-lg border border-line bg-white px-4 text-xs font-semibold text-body hover:bg-mist"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={submitting}
-            className="h-9 rounded-lg bg-[#C35000] px-4 text-xs font-semibold text-white hover:bg-[#A64400] disabled:opacity-50"
+            className="h-9 rounded-lg bg-burnt px-4 text-xs font-semibold text-white hover:bg-burnt-dark disabled:opacity-50"
           >
             {submitting ? "Adding..." : "Add customer"}
           </button>
@@ -626,11 +628,11 @@ export function EditCustomerModal({
             <div>
               <h2
                 id="edit-customer-modal-title"
-                className="font-display text-2xl text-[#1E293B]"
+                className="font-display text-2xl text-ink"
               >
                 Edit Customer
               </h2>
-              <p className="mt-0.5 text-xs text-[#64748B]">
+              <p className="mt-0.5 text-xs text-subtle">
                 Update contact details and account preferences.
               </p>
             </div>
@@ -638,14 +640,14 @@ export function EditCustomerModal({
               type="button"
               onClick={requestClose}
               aria-label="Close modal"
-              className="rounded-lg p-1 text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#1E293B]"
+              className="rounded-lg p-1 text-subtle hover:bg-mist hover:text-ink"
             >
-              ✕
+              <Icon name="close" className="size-5" />
             </button>
           </div>
 
           {error && (
-            <div className="mt-4 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-xs font-medium text-[#B91C1C]">
+            <div className="mt-4 rounded-lg border border-danger/30 bg-danger-bg px-3 py-2 text-xs font-medium text-danger-dark">
               {error}
             </div>
           )}
@@ -654,9 +656,9 @@ export function EditCustomerModal({
             <div>
               <label
                 htmlFor="edit-customer-name"
-                className="block text-xs font-semibold text-[#1E293B]"
+                className="block text-xs font-semibold text-ink"
               >
-                Full Name<span className="text-[#DC2626]">*</span>
+                Full Name<span className="text-danger">*</span>
               </label>
               <input
                 id="edit-customer-name"
@@ -664,10 +666,10 @@ export function EditCustomerModal({
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] px-3 text-sm text-[#1E293B] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+                className={cn(inputClasses(false, false), "mt-1.5")}
               />
               {fieldErrors.fullName && (
-                <p className="mt-1 text-[11px] text-[#DC2626]">
+                <p className="mt-1 text-xs text-danger">
                   {fieldErrors.fullName}
                 </p>
               )}
@@ -676,7 +678,7 @@ export function EditCustomerModal({
             <div>
               <label
                 htmlFor="edit-customer-email"
-                className="block text-xs font-semibold text-[#1E293B]"
+                className="block text-xs font-semibold text-ink"
               >
                 Email Address
               </label>
@@ -685,10 +687,10 @@ export function EditCustomerModal({
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] px-3 text-sm text-[#1E293B] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+                className={cn(inputClasses(false, false), "mt-1.5")}
               />
               {fieldErrors.email && (
-                <p className="mt-1 text-[11px] text-[#DC2626]">
+                <p className="mt-1 text-xs text-danger">
                   {fieldErrors.email}
                 </p>
               )}
@@ -697,9 +699,9 @@ export function EditCustomerModal({
             <div>
               <label
                 htmlFor="edit-customer-phone"
-                className="block text-xs font-semibold text-[#1E293B]"
+                className="block text-xs font-semibold text-ink"
               >
-                Phone Number<span className="text-[#DC2626]">*</span>
+                Phone Number<span className="text-danger">*</span>
               </label>
               <input
                 id="edit-customer-phone"
@@ -707,10 +709,10 @@ export function EditCustomerModal({
                 required
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] px-3 text-sm text-[#1E293B] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+                className={cn(inputClasses(false, false), "mt-1.5")}
               />
               {fieldErrors.phone && (
-                <p className="mt-1 text-[11px] text-[#DC2626]">
+                <p className="mt-1 text-xs text-danger">
                   {fieldErrors.phone}
                 </p>
               )}
@@ -719,7 +721,7 @@ export function EditCustomerModal({
             <div>
               <label
                 htmlFor="edit-customer-birthday"
-                className="block text-xs font-semibold text-[#1E293B]"
+                className="block text-xs font-semibold text-ink"
               >
                 Birthday
               </label>
@@ -728,42 +730,42 @@ export function EditCustomerModal({
                 type="date"
                 value={birthday}
                 onChange={(e) => setBirthday(e.target.value)}
-                className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] px-3 text-sm text-[#1E293B] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+                className={cn(inputClasses(false, false), "mt-1.5")}
               />
             </div>
           </div>
 
-          <div className="mt-5 border-t border-[#ECEAE0] pt-4">
-            <p className="text-xs font-semibold text-[#1E293B]">Account</p>
-            <p className="mt-1 text-xs font-medium text-[#334155]">
+          <div className="mt-5 border-t border-hairline pt-4">
+            <p className="text-xs font-semibold text-ink">Account</p>
+            <p className="mt-1 text-xs font-medium text-body">
               {initialValues.accountType === "registered"
                 ? "Registered account"
                 : "Walk-in record"}
             </p>
-            <p className="mt-0.5 text-[11px] text-[#94A3B8]">
+            <p className="mt-0.5 text-xs text-glyph">
               Account status is based on registration and cannot be changed
               here.
             </p>
 
             <div className="mt-4">
-              <label className="flex cursor-pointer items-center gap-2.5 text-xs font-medium text-[#1E293B]">
+              <label className="flex cursor-pointer items-center gap-2.5 text-xs font-medium text-ink">
                 <input
                   type="checkbox"
                   checked={marketingOptIn}
                   onChange={(e) => setMarketingOptIn(e.target.checked)}
-                  className="size-4 rounded border-[#CBD5E1] accent-[#C35000]"
+                  className="size-4 rounded border-line accent-burnt"
                 />
                 <span>Send occasional offers (marketing consent)</span>
               </label>
-              <p className="mt-1 pl-6 text-[11px] text-[#94A3B8]">
+              <p className="mt-1 pl-6 text-xs text-glyph">
                 Optional. Unchecked by default. Record the customer&apos;s
                 permission before enabling.
               </p>
             </div>
           </div>
 
-          <div className="mt-6 flex items-center justify-between gap-3 border-t border-[#ECEAE0] pt-4">
-            <span className="text-xs text-[#64748B]">
+          <div className="mt-6 flex items-center justify-between gap-3 border-t border-hairline pt-4">
+            <span className="text-xs text-subtle">
               {isDirty ? "Unsaved changes" : "No unsaved changes"}
             </span>
             <div className="flex items-center gap-2.5">
@@ -771,14 +773,14 @@ export function EditCustomerModal({
                 type="button"
                 disabled={submitting}
                 onClick={requestClose}
-                className="h-9 rounded-lg border border-[#D9DDE3] bg-white px-4 text-xs font-semibold text-[#334155] hover:bg-[#F8FAFC]"
+                className="h-9 rounded-lg border border-line bg-white px-4 text-xs font-semibold text-body hover:bg-mist"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={submitting || !isDirty}
-                className="h-9 rounded-lg bg-[#C35000] px-4 text-xs font-semibold text-white hover:bg-[#A64400] disabled:opacity-45"
+                className="h-9 rounded-lg bg-burnt px-4 text-xs font-semibold text-white hover:bg-burnt-dark disabled:opacity-45"
               >
                 {submitting ? "Saving..." : "Save customer"}
               </button>

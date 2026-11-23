@@ -8,6 +8,7 @@ import {
   submitContactForm,
   type ContactFormState,
 } from "@/app/(site)/[slug]/contact/actions";
+import { Icon } from "@/components/admin/icon";
 
 const topicOptions = ["Services", "Booking", "General question"];
 
@@ -148,14 +149,7 @@ export function StorefrontContactPage({
                   <span className={topic ? "text-ink" : "text-muted"}>
                     {topic || "Select a Topic"}
                   </span>
-                  <svg
-                    aria-hidden
-                    viewBox="0 0 16 10"
-                    className={`size-4 text-muted transition-transform ${topicOpen ? "rotate-180" : ""}`}
-                    fill="currentColor"
-                  >
-                    <path d="M1.2 1.4a1 1 0 0 1 1.4-.2L8 5.7l5.4-4.5a1 1 0 1 1 1.2 1.6l-6 5a1 1 0 0 1-1.2 0l-6-5a1 1 0 0 1-.2-1.4Z" />
-                  </svg>
+                  <Icon name="chevron-down" className={`size-4 text-muted transition-transform ${topicOpen ? "rotate-180" : ""}`} />
                 </button>
                 {topicOpen && (
                   <ul
@@ -194,7 +188,7 @@ export function StorefrontContactPage({
                   name="message"
                   placeholder="How can we help you?"
                   disabled={isPending}
-                  className={cn(inputClasses(), "mt-2 h-auto min-h-32 resize-y py-3")}
+                  className={cn(inputClasses(false, true), "mt-2 min-h-32")}
                 />
               </label>
               <p className="text-sm/6 text-muted sm:col-span-2">
@@ -215,7 +209,7 @@ export function StorefrontContactPage({
                 </button>
 
                 {state.success && (
-                  <p className="mt-3 text-sm font-medium text-emerald-600">
+                  <p className="mt-3 text-sm font-medium text-success">
                     {state.message || "Thanks — we'll be in touch soon."}
                   </p>
                 )}

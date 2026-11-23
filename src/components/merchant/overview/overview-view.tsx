@@ -12,6 +12,7 @@ import { updateAppointmentStatusAction } from "@/app/actions/appointments";
 import { NewAppointmentModal, type NewAppointmentResult } from "@/components/merchant/new-appointment-modal";
 import { WalkInModal, type WalkInResult } from "@/components/merchant/walk-in-modal";
 import { EmptyState } from "@/components/ui/empty-state";
+import { AppointmentStatusPill } from "@/components/merchant/appointment-status-pill";
 
 export interface AppointmentRow {
   id: string;
@@ -59,19 +60,6 @@ export interface OverviewViewProps {
 }
 
 const EMPTY_APPOINTMENTS: AppointmentRow[] = [];
-
-function AppointmentStatusPill({ status }: { status: AppointmentRow["status"] }) {
-  const toneMap: Record<AppointmentRow["status"], { tone: React.ComponentProps<typeof StatusPill>["tone"]; label: string }> = {
-    "Confirmed":        { tone: "success",  label: "Confirmed" },
-    "Pending approval": { tone: "warning",  label: "Pending approval" },
-    "Check In":         { tone: "info",     label: "Check In" },
-    "In service":       { tone: "info",     label: "In service" },
-    "Completed":        { tone: "neutral",  label: "Completed" },
-    "Cancelled":        { tone: "danger",   label: "Cancelled" },
-  };
-  const { tone, label } = toneMap[status] ?? { tone: "neutral", label: status };
-  return <StatusPill tone={tone}>{label}</StatusPill>;
-}
 
 export function OverviewView({
   businessName = "Bella Vita",
@@ -453,12 +441,12 @@ export function OverviewView({
                     >
                       <defs>
                         <linearGradient id="bookedGrad" x1="0" x2="0" y1="0" y2="1">
-                          <stop offset="0%" stopColor="#C35000" stopOpacity="0.18" />
-                          <stop offset="100%" stopColor="#C35000" stopOpacity="0" />
+                          <stop offset="0%" style={{ stopColor: "var(--color-burnt)" }} stopOpacity="0.18" />
+                          <stop offset="100%" style={{ stopColor: "var(--color-burnt)" }} stopOpacity="0" />
                         </linearGradient>
                         <linearGradient id="completedGrad" x1="0" x2="0" y1="0" y2="1">
-                          <stop offset="0%" stopColor="#82AFC2" stopOpacity="0.15" />
-                          <stop offset="100%" stopColor="#82AFC2" stopOpacity="0" />
+                          <stop offset="0%" style={{ stopColor: "var(--color-sky-deep)" }} stopOpacity="0.15" />
+                          <stop offset="100%" style={{ stopColor: "var(--color-sky-deep)" }} stopOpacity="0" />
                         </linearGradient>
                       </defs>
 
@@ -472,14 +460,14 @@ export function OverviewView({
                               x2={lineWidth - lineRight}
                               y1={y}
                               y2={y}
-                              stroke="#EDECE8"
+                              stroke="var(--color-hairline)"
                               strokeWidth="1"
                             />
                             <text
                               x={lineLeft - 8}
                               y={y + 4}
                               textAnchor="end"
-                              className="fill-subtle text-[11px] font-medium"
+                              className="fill-subtle text-xs font-medium"
                             >
                               {tick}
                             </text>
@@ -501,7 +489,7 @@ export function OverviewView({
                             x2={todayX}
                             y1={lineTop}
                             y2={lineTop + chartHeight}
-                            stroke="#C35000"
+                            stroke="var(--color-burnt)"
                             strokeWidth="1"
                             strokeDasharray="4 3"
                             opacity="0.35"
@@ -517,7 +505,7 @@ export function OverviewView({
                       <path
                         d={smoothPath(linePointCoords("booked"))}
                         fill="none"
-                        stroke="#C35000"
+                        stroke="var(--color-burnt)"
                         strokeWidth="2.5"
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -525,7 +513,7 @@ export function OverviewView({
                       <path
                         d={smoothPath(linePointCoords("completed"))}
                         fill="none"
-                        stroke="#82AFC2"
+                        stroke="var(--color-sky-deep)"
                         strokeWidth="2.5"
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -538,7 +526,7 @@ export function OverviewView({
                           cx={pt.x}
                           cy={pt.y}
                           r={hoveredPoint?.day === stats[idx].day ? 5 : 3}
-                          fill="#C35000"
+                          fill="var(--color-burnt)"
                           stroke="white"
                           strokeWidth="2"
                           className="transition-all duration-150"
@@ -550,7 +538,7 @@ export function OverviewView({
                           cx={pt.x}
                           cy={pt.y}
                           r={hoveredPoint?.day === stats[idx].day ? 5 : 3}
-                          fill="#82AFC2"
+                          fill="var(--color-sky-deep)"
                           stroke="white"
                           strokeWidth="2"
                           className="transition-all duration-150"
@@ -576,7 +564,7 @@ export function OverviewView({
                               x={x}
                               y={lineHeight - 14}
                               textAnchor="middle"
-                              className={`text-[11px] font-medium ${isToday ? "fill-burnt" : "fill-subtle"}`}
+                              className={`text-xs font-medium ${isToday ? "fill-burnt" : "fill-subtle"}`}
                             >
                               {item.day}
                             </text>
@@ -585,7 +573,7 @@ export function OverviewView({
                                 x={x}
                                 y={lineHeight - 2}
                                 textAnchor="middle"
-                                className="fill-burnt text-[10px] font-semibold"
+                                className="fill-burnt text-xs font-semibold"
                               >
                                 Today
                               </text>
@@ -664,7 +652,7 @@ export function OverviewView({
                             className="w-4 bg-burnt rounded-t-sm transition-all duration-300 relative min-h-[4px] sm:w-7"
                             style={{ height: `${item.booked > 0 ? (item.booked / maxVal) * 100 : 4}%` }}
                           >
-                            <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-semibold text-subtle">
+                            <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-xs font-semibold text-subtle">
                               {item.booked}
                             </span>
                           </div>
@@ -672,12 +660,12 @@ export function OverviewView({
                             className="w-4 bg-sky rounded-t-sm transition-all duration-300 relative min-h-[4px] sm:w-7"
                             style={{ height: `${item.completed > 0 ? (item.completed / maxVal) * 100 : 4}%` }}
                           >
-                            <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-semibold text-subtle">
+                            <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-xs font-semibold text-subtle">
                               {item.completed}
                             </span>
                           </div>
                         </div>
-                        <span className={`text-[11px] font-medium sm:text-sm ${item.isToday ? "rounded-full bg-burnt px-2 text-white" : "text-muted"}`}>
+                        <span className={`text-xs font-medium sm:text-sm ${item.isToday ? "rounded-full bg-burnt px-2 text-white" : "text-muted"}`}>
                           {item.day}
                         </span>
                       </div>
@@ -935,13 +923,13 @@ export function OverviewView({
               <table className="w-full text-left text-sm">
                 <thead className="bg-mist border-b border-hairline text-subtle font-semibold">
                   <tr>
-                    <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Time</th>
-                    <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Customer</th>
-                    <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Service</th>
-                    <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Staff</th>
-                    <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Source</th>
-                    <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Status</th>
-                    <th className="w-24 px-6 py-4 text-[11px] leading-4 uppercase tracking-wide text-right">Action</th>
+                    <th className="px-6 py-4 text-xs leading-4 uppercase tracking-wide">Time</th>
+                    <th className="px-6 py-4 text-xs leading-4 uppercase tracking-wide">Customer</th>
+                    <th className="px-6 py-4 text-xs leading-4 uppercase tracking-wide">Service</th>
+                    <th className="px-6 py-4 text-xs leading-4 uppercase tracking-wide">Staff</th>
+                    <th className="px-6 py-4 text-xs leading-4 uppercase tracking-wide">Source</th>
+                    <th className="px-6 py-4 text-xs leading-4 uppercase tracking-wide">Status</th>
+                    <th className="w-24 px-6 py-4 text-xs leading-4 uppercase tracking-wide text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-hairline">
@@ -1028,7 +1016,7 @@ export function OverviewView({
                 className="text-burnt font-semibold hover:underline inline-flex items-center gap-1"
               >
                 <span>View All Appointments</span>
-                <span>→</span>
+                <Icon name="arrow-right" weight="medium" className="size-4" />
               </Link>
             </div>
           </Surface>

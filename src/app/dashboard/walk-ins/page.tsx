@@ -12,7 +12,7 @@ export default async function DashboardWalkInsPage() {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-[#FFFDF7] lg:flex-row">
+    <div className="flex min-h-dvh flex-col bg-powder lg:flex-row">
       <MerchantSidebar />
       <main className="min-w-0 flex-1">
         <WalkInsView initialData={initialData} />

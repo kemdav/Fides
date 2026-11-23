@@ -75,34 +75,34 @@ function ChangeAddressDialogContent({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
       <div
-        className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-neutral-200"
+        className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-hairline"
         role="dialog"
         aria-modal="true"
         aria-labelledby="change-address-title"
       >
         {/* Centered Yellow Warning Icon */}
-        <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-3">
+        <div className="w-10 h-10 rounded-full bg-warn-bg text-warn-fg flex items-center justify-center mx-auto mb-3">
           <AlertCircleIcon className="w-6 h-6" />
         </div>
 
         <div className="text-center mb-5">
           <h3
             id="change-address-title"
-            className="text-base font-semibold text-neutral-900"
+            className="text-base font-semibold text-ink"
           >
             Change your website address
           </h3>
-          <p className="mt-1 text-xs text-neutral-500 leading-relaxed">
+          <p className="mt-1 text-xs text-subtle leading-relaxed">
             Change only your website name. The .fides.app suffix stays fixed.
           </p>
         </div>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+            <label className="block text-xs font-medium text-body mb-1.5">
               New Fides address
             </label>
-            <div className="flex items-center rounded-xl border border-neutral-300 overflow-hidden focus-within:ring-1 focus-within:ring-burnt focus-within:border-burnt bg-neutral-50">
+            <div className="flex items-center rounded-xl border border-line overflow-hidden focus-within:ring-1 focus-within:ring-burnt focus-within:border-burnt bg-mist">
               <input
                 type="text"
                 value={subdomain}
@@ -111,22 +111,22 @@ function ChangeAddressDialogContent({
                   if (error) setError(null);
                 }}
                 placeholder="bellavita-studio"
-                className="w-full px-3 py-2 bg-white text-xs text-neutral-900 focus:outline-none"
+                className="w-full px-3 py-2 bg-white text-xs text-ink focus:outline-none"
               />
-              <span className="px-3 py-2 text-xs text-neutral-500 font-medium bg-neutral-100 border-l border-neutral-200 select-none">
+              <span className="px-3 py-2 text-xs text-subtle font-medium bg-mist border-l border-hairline select-none">
                 .fides.app
               </span>
             </div>
             {error && (
-              <p className="mt-1 text-xs text-red-600 font-medium">{error}</p>
+              <p className="mt-1 text-xs text-danger font-medium">{error}</p>
             )}
           </div>
 
-          <div className="rounded-xl bg-amber-50/80 border border-amber-200/80 p-3.5 space-y-1">
-            <span className="block text-xs font-semibold text-amber-950">
+          <div className="rounded-xl bg-warn-bg/80 border border-warn-bg/80 p-3.5 space-y-1">
+            <span className="block text-xs font-semibold text-warn-fg">
               Update your shared links
             </span>
-            <p className="text-xs text-amber-800 leading-relaxed">
+            <p className="text-xs text-warn-fg leading-relaxed">
               The old address may stop working. Your saved bookmarks, QR codes, and social links need to use the new URL.
             </p>
           </div>
@@ -136,7 +136,7 @@ function ChangeAddressDialogContent({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-medium text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 rounded-xl transition shadow-2xs"
+            className="px-4 py-2 text-xs font-medium text-body bg-white border border-line hover:bg-mist rounded-xl transition shadow-2xs"
           >
             Close
           </button>
@@ -170,7 +170,7 @@ export function AddressUpdatedModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
       <div
-        className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-neutral-200"
+        className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-hairline"
         role="dialog"
         aria-modal="true"
         aria-labelledby="address-updated-title"
@@ -178,20 +178,20 @@ export function AddressUpdatedModal({
         <div className="mb-4">
           <h3
             id="address-updated-title"
-            className="text-base font-semibold text-neutral-900"
+            className="text-base font-semibold text-ink"
           >
             Website address updated
           </h3>
-          <p className="mt-1 text-xs text-neutral-500 leading-relaxed">
+          <p className="mt-1 text-xs text-subtle leading-relaxed">
             Your new website address is ready. Remember to update your shared links and QR codes.
           </p>
         </div>
 
-        <div className="mt-4 rounded-xl bg-neutral-50/80 border border-neutral-200 p-3.5 space-y-1.5">
-          <span className="inline-block text-xs font-semibold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full">
+        <div className="mt-4 rounded-xl bg-mist/80 border border-hairline p-3.5 space-y-1.5">
+          <span className="inline-block text-xs font-semibold text-success-deep bg-success/80 px-2 py-0.5 rounded-full">
             Address confirmed
           </span>
-          <div className="font-mono text-xs font-semibold text-neutral-900">
+          <div className="font-mono text-xs font-semibold text-ink">
             {subdomain}.fides.app
           </div>
         </div>
@@ -200,7 +200,7 @@ export function AddressUpdatedModal({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-medium text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 rounded-xl shadow-2xs transition"
+            className="px-4 py-2 text-xs font-medium text-body bg-white border border-line hover:bg-mist rounded-xl shadow-2xs transition"
           >
             Close
           </button>

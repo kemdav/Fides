@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@/components/admin/icon";
 import { AdminButton } from "@/components/admin/admin-button";
 import { createAppointmentBookingAction } from "@/app/actions/appointments";
+import { inputClasses } from "@/components/ui";
 
 // ─── static option lists ─────────────────────────────────────────────────────
 
@@ -72,8 +73,7 @@ function formatDateDisplay(iso: string): string {
 
 // ─── Shared input class ───────────────────────────────────────────────────────
 
-const fieldCls =
-  "h-11 w-full rounded-lg border border-glyph bg-white px-3 text-sm text-ink placeholder:text-glyph focus:border-burnt focus:outline-none transition-shadow";
+const fieldCls = inputClasses();
 
 // ─── Chevron SVG ─────────────────────────────────────────────────────────────
 
@@ -625,7 +625,7 @@ export function NewAppointmentModal({
                   </div>
                   {customerSearch.trim() && (
                     <div className={`flex items-center justify-between gap-4 rounded-lg px-3 py-3 ${
-                      selectedCustomer ? "border border-green-200 bg-green-50" : "bg-mist"
+                      selectedCustomer ? "border border-success/30 bg-wash" : "bg-mist"
                     }`}>
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-ink">
@@ -642,7 +642,7 @@ export function NewAppointmentModal({
                         aria-pressed={Boolean(selectedCustomer)}
                         className={`flex shrink-0 items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold ${
                           selectedCustomer
-                            ? "bg-green-600 text-white"
+                            ? "bg-success text-white"
                             : "bg-burnt text-white hover:bg-burnt/90"
                         }`}
                       >
@@ -652,7 +652,7 @@ export function NewAppointmentModal({
                     </div>
                   )}
                   {selectedCustomer && (
-                    <p className="flex items-center gap-1.5 text-xs font-medium text-green-700" role="status">
+                    <p className="flex items-center gap-1.5 text-xs font-medium text-success-deep" role="status">
                       <Icon name="verified" className="size-3.5" />
                       Customer selected. Continue to the next step to schedule the appointment.
                     </p>
@@ -720,7 +720,7 @@ export function NewAppointmentModal({
                 <textarea id="appt-notes" rows={3} value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Add notes (optional)..."
-                  className="w-full resize-none rounded-lg border border-glyph bg-white px-3 py-2.5 text-sm text-ink placeholder:text-glyph focus:border-burnt focus:outline-none transition-shadow"
+                  className={inputClasses(false, true)}
                 />
               </div>
 

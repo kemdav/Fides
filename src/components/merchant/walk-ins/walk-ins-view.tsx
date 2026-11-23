@@ -13,6 +13,10 @@ import type {
   WalkInStaffOption,
   WalkInWorkspaceData,
 } from "@/types/walk-ins";
+import { Icon } from "@/components/admin/icon";
+import { MetricCard } from "@/components/admin/metric-card";
+import { buttonClasses, inputClasses } from "@/components/ui";
+import { cn } from "@/lib/utils";
 
 interface WalkInsViewProps {
   initialData: WalkInWorkspaceData;
@@ -207,79 +211,44 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
             setDefaultModalStaffId("any");
             setWalkInOpen(true);
           }}
-          className="inline-flex h-10 shrink-0 items-center justify-center rounded-md bg-burnt px-4 text-sm font-semibold text-white shadow-xs transition hover:bg-burnt/90"
+          className={buttonClasses({ variant: "brand", size: "xs", className: "shrink-0" })}
         >
           + Add walk-in
         </button>
       </div>
 
-      {/* 4 KPI Cards */}
+      {/* KPI cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {/* Waiting now (primary burnt orange card) */}
-        <div className="rounded-xl bg-burnt p-5 text-white shadow-xs">
-          <p className="text-xs font-medium text-white/90">Waiting now</p>
-          <p className="mt-3 text-3xl font-semibold">{kpis.waitingNow}</p>
-          <p className="mt-2 text-xs text-white/85">First come, first served</p>
-          <div className="mt-4 h-1 w-full rounded-full bg-white/25">
-            <div
-              className="h-1 rounded-full bg-white transition-all"
-              style={{
-                width: `${Math.max(waitRatio, kpis.waitingNow > 0 ? 20 : 0)}%`,
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Available staff */}
-        <div className="rounded-xl border border-hairline bg-white p-5 shadow-xs">
-          <p className="text-xs font-medium text-muted">Available staff</p>
-          <p className="mt-3 text-3xl font-semibold text-ink">
-            {kpis.availableStaffCount}
-          </p>
-          <p className="mt-2 truncate text-xs text-muted">
-            {kpis.availableStaffSummary}
-          </p>
-          <div className="mt-4 h-1 w-full rounded-full bg-[#eef0f3]">
-            <div
-              className="h-1 rounded-full bg-burnt transition-all"
-              style={{ width: `${staffRatio}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Walk-ins served today */}
-        <div className="rounded-xl border border-hairline bg-white p-5 shadow-xs">
-          <p className="text-xs font-medium text-muted">
-            Walk-ins served today
-          </p>
-          <p className="mt-3 text-3xl font-semibold text-ink">
-            {kpis.walkInsServedToday}
-          </p>
-          <p className="mt-2 text-xs text-muted">
-            No scheduled bookings displaced
-          </p>
-          <div className="mt-4 h-1 w-full rounded-full bg-[#eef0f3]">
-            <div
-              className="h-1 rounded-full bg-burnt transition-all"
-              style={{ width: `${servedRatio}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Typical waiting time */}
-        <div className="rounded-xl border border-hairline bg-white p-5 shadow-xs">
-          <p className="text-xs font-medium text-muted">Typical waiting time</p>
-          <p className="mt-3 text-3xl font-semibold text-ink">
-            {kpis.typicalWaitingMinutes} min
-          </p>
-          <p className="mt-2 text-xs text-muted">Based on the current queue</p>
-          <div className="mt-4 h-1 w-full rounded-full bg-[#eef0f3]">
-            <div
-              className="h-1 rounded-full bg-burnt transition-all"
-              style={{ width: `${avgWaitRatio}%` }}
-            />
-          </div>
-        </div>
+        <MetricCard
+          featured
+          label="Waiting now"
+          value={kpis.waitingNow}
+          caption="First come, first served"
+          icon="clock"
+          progress={Math.max(waitRatio, kpis.waitingNow > 0 ? 20 : 0)}
+        />
+        <MetricCard
+          label="Available staff"
+          value={kpis.availableStaffCount}
+          caption={kpis.availableStaffSummary}
+          icon="users"
+          progress={staffRatio}
+        />
+        <MetricCard
+          label="Walk-ins served today"
+          value={kpis.walkInsServedToday}
+          caption="No scheduled bookings displaced"
+          icon="chart"
+          progress={servedRatio}
+        />
+        <MetricCard
+          label="Typical waiting time"
+          value={kpis.typicalWaitingMinutes}
+          badge={<span className="text-sm font-medium text-muted">min</span>}
+          caption="Based on the current queue"
+          icon="clock"
+          progress={avgWaitRatio}
+        />
       </div>
 
       {/* Active Waiting Lists Table */}
@@ -289,7 +258,7 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
             <h2 className="text-base font-semibold text-ink">
               Active Waiting Lists
             </h2>
-            <span className="inline-flex size-6 items-center justify-center rounded-full bg-[#eef1f5] text-xs font-semibold text-ink">
+            <span className="inline-flex size-6 items-center justify-center rounded-full bg-mist text-xs font-semibold text-ink">
               {filteredQueue.length}
             </span>
           </div>
@@ -300,7 +269,7 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search customer or service"
-              className="h-9 w-full rounded-lg border border-[#d0d5dd] bg-white px-3 text-xs text-ink outline-none focus:border-burnt sm:w-56"
+              className={cn(inputClasses(false, false, true), "sm:w-72")}
             />
             <select
               aria-label="Filter waiting list"
@@ -310,7 +279,7 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
                   e.target.value as "all" | "waiting" | "notified",
                 )
               }
-              className="h-9 rounded-lg border border-[#d0d5dd] bg-white px-3 text-xs font-medium text-ink outline-none focus:border-burnt"
+              className={inputClasses(false, false, true)}
             >
               <option value="all">Filter: All</option>
               <option value="waiting">Waiting</option>
@@ -343,7 +312,7 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
                 </tr>
               ) : (
                 filteredQueue.map((item) => (
-                  <tr key={item.id} className="hover:bg-[#fafafa]">
+                  <tr key={item.id} className="hover:bg-mist">
                     <td className="py-3.5 pr-4 text-ink">
                       {item.joinedTimeLabel}
                     </td>
@@ -353,7 +322,7 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
                           {item.customerName}
                         </span>
                         {item.status === "notified" && (
-                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                          <span className="rounded-full bg-warn-bg px-2 py-0.5 text-xs font-semibold text-warn-fg">
                             Notified
                           </span>
                         )}
@@ -383,7 +352,7 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
                         }}
                         className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-mist hover:text-ink"
                       >
-                        •••
+                        <Icon name="more" weight="fill" className="size-5" />
                       </button>
 
                       {openRowMenuId === item.id && menuPos && (
@@ -475,7 +444,7 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
                 </tr>
               ) : (
                 data.availableNow.map((member) => (
-                  <tr key={member.id} className="hover:bg-[#fafafa]">
+                  <tr key={member.id} className="hover:bg-mist">
                     <td className="py-3.5 pr-4 font-medium text-ink">
                       {member.fullName}
                     </td>
@@ -505,7 +474,7 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
                         }}
                         className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-mist hover:text-ink"
                       >
-                        •••
+                        <Icon name="more" weight="fill" className="size-5" />
                       </button>
 
                       {openStaffMenuId === member.id && menuPos && (

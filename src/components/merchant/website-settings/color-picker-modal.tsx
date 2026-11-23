@@ -94,7 +94,7 @@ function ColorPickerContent({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
       <div
-        className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-neutral-200"
+        className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-hairline"
         role="dialog"
         aria-modal="true"
         aria-labelledby="color-modal-title"
@@ -102,11 +102,11 @@ function ColorPickerContent({
         <div className="mb-4">
           <h3
             id="color-modal-title"
-            className="text-base font-semibold text-neutral-900"
+            className="text-base font-semibold text-ink"
           >
             {config.title}
           </h3>
-          <p className="mt-1 text-xs text-neutral-500 leading-relaxed">
+          <p className="mt-1 text-xs text-subtle leading-relaxed">
             {config.description}
           </p>
         </div>
@@ -120,7 +120,7 @@ function ColorPickerContent({
         <div className="space-y-3.5">
           {/* HEX Input */}
           <div>
-            <label className="block text-xs font-medium text-neutral-700 mb-1">
+            <label className="block text-xs font-medium text-body mb-1">
               HEX color*
             </label>
             <input
@@ -129,9 +129,9 @@ function ColorPickerContent({
               onChange={(e) => setSelectedHex(e.target.value)}
               maxLength={7}
               placeholder="#000000"
-              className="w-full px-3 py-2 rounded-xl border border-neutral-300 font-mono text-xs uppercase text-neutral-900 focus:outline-none focus:ring-1 focus:ring-burnt focus:border-burnt transition"
+              className="w-full px-3 py-2 rounded-xl border border-line font-mono text-xs uppercase text-ink focus:outline-none focus:ring-1 focus:ring-burnt focus:border-burnt transition"
             />
-            <p className="mt-1 text-xs text-neutral-400">
+            <p className="mt-1 text-xs text-glyph">
               Choose a color or enter a 6-digit HEX value.
             </p>
           </div>
@@ -148,8 +148,8 @@ function ColorPickerContent({
                   onClick={() => setSelectedHex(preset.hex)}
                   className={`flex items-center justify-center px-3 py-2 rounded-xl border text-xs font-medium transition ${
                     isSelected
-                      ? "border-neutral-900 bg-neutral-50 ring-1 ring-neutral-900 text-neutral-900 font-semibold"
-                      : "border-neutral-200 hover:border-neutral-300 bg-white text-neutral-700"
+                      ? "border-ink bg-mist ring-1 ring-ink text-ink font-semibold"
+                      : "border-hairline hover:border-line bg-white text-body"
                   }`}
                 >
                   <span className="truncate">{preset.name}</span>
@@ -160,11 +160,11 @@ function ColorPickerContent({
         </div>
 
         {/* Action Buttons */}
-        <div className="mt-6 flex items-center justify-end gap-2.5 pt-3 border-t border-neutral-100">
+        <div className="mt-6 flex items-center justify-end gap-2.5 pt-3 border-t border-mist">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-medium text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 rounded-xl shadow-2xs transition"
+            className="px-4 py-2 text-xs font-medium text-body bg-white border border-line hover:bg-mist rounded-xl shadow-2xs transition"
           >
             Cancel
           </button>

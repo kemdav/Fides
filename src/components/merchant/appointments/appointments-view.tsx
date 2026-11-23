@@ -22,6 +22,7 @@ import {
   type WalkInResult,
 } from "@/components/merchant/walk-in-modal";
 import { EmptyState } from "@/components/ui/empty-state";
+import { AppointmentStatusPill } from "@/components/merchant/appointment-status-pill";
 
 export interface AppointmentItem {
   id: string;
@@ -55,26 +56,6 @@ interface AppointmentsViewProps {
 }
 
 // ─── helpers ────────────────────────────────────────────────────────────────
-
-function AppointmentStatusPill({
-  status,
-}: {
-  status: AppointmentItem["status"];
-}) {
-  const toneMap: Record<
-    AppointmentItem["status"],
-    { tone: React.ComponentProps<typeof StatusPill>["tone"]; label: string }
-  > = {
-    Confirmed: { tone: "success", label: "Confirmed" },
-    "Pending approval": { tone: "warning", label: "Pending approval" },
-    "Check In": { tone: "info", label: "Check In" },
-    "In service": { tone: "info", label: "In service" },
-    Completed: { tone: "neutral", label: "Completed" },
-    Cancelled: { tone: "danger", label: "Cancelled" },
-  };
-  const { tone, label } = toneMap[status] ?? { tone: "neutral", label: status };
-  return <StatusPill tone={tone}>{label}</StatusPill>;
-}
 
 /** Parse "10:30 AM" → minutes-since-midnight */
 function parseTimeToMinutes(timeStr: string): number {
@@ -615,7 +596,7 @@ export function AppointmentsView({
                   </div>
 
                   {/* Status legend */}
-                  <div className="hidden md:flex items-center gap-3 text-[11px] text-muted">
+                  <div className="hidden md:flex items-center gap-3 text-xs text-muted">
                     {[
                       {
                         label: "Confirmed",
@@ -685,7 +666,7 @@ export function AppointmentsView({
                             className={`flex-1 border-b border-l border-hairline px-2 py-2 text-center ${isToday ? "bg-burnt/5" : "bg-white"}`}
                           >
                             <p
-                              className={`text-[11px] font-semibold uppercase tracking-wide ${isToday ? "text-burnt" : "text-subtle"}`}
+                              className={`text-xs font-semibold uppercase tracking-wide ${isToday ? "text-burnt" : "text-subtle"}`}
                             >
                               {date.toLocaleDateString("en-US", {
                                 weekday: "short",
@@ -718,7 +699,7 @@ export function AppointmentsView({
                               className="border-b border-hairline flex items-start justify-end pr-2 pt-1"
                               style={{ height: `${HOUR_HEIGHT}px` }}
                             >
-                              <span className="text-[10px] text-subtle font-medium">
+                              <span className="text-xs text-subtle font-medium">
                                 {h === 12
                                   ? "12:00"
                                   : h < 12
@@ -789,17 +770,17 @@ export function AppointmentsView({
                                     }}
                                   >
                                     <p
-                                      className={`text-[11px] font-bold leading-tight truncate ${colors.text}`}
+                                      className={`text-xs font-bold leading-tight truncate ${colors.text}`}
                                     >
                                       {item.customer}
                                     </p>
                                     <p
-                                      className={`text-[10px] leading-tight truncate ${colors.text} opacity-80`}
+                                      className={`text-xs leading-tight truncate ${colors.text} opacity-80`}
                                     >
                                       {formatTime24(item.time)} · {item.service}
                                     </p>
                                     <p
-                                      className={`text-[10px] leading-tight truncate ${colors.text} opacity-70`}
+                                      className={`text-xs leading-tight truncate ${colors.text} opacity-70`}
                                     >
                                       {item.staff}
                                     </p>
@@ -890,7 +871,7 @@ export function AppointmentsView({
                                 className="relative border-b border-hairline flex items-start justify-end pr-3 pt-1"
                                 style={{ height: `${HOUR_HEIGHT}px` }}
                               >
-                                <span className="text-[11px] font-medium text-subtle -translate-y-2.5">
+                                <span className="text-xs font-medium text-subtle -translate-y-2.5">
                                   {h === 12
                                     ? "12:00 PM"
                                     : h < 12
@@ -986,18 +967,18 @@ export function AppointmentsView({
                                     {item.customer}
                                   </p>
                                   <p
-                                    className={`text-[11px] leading-snug truncate ${colors.text} opacity-80`}
+                                    className={`text-xs leading-snug truncate ${colors.text} opacity-80`}
                                   >
                                     {formatTime24(item.time)} · {item.service}
                                   </p>
                                   <p
-                                    className={`text-[11px] leading-snug truncate ${colors.text} opacity-70`}
+                                    className={`text-xs leading-snug truncate ${colors.text} opacity-70`}
                                   >
                                     {item.staff}
                                   </p>
                                   {height >= HOUR_HEIGHT && (
                                     <span
-                                      className={`mt-1 inline-flex items-center rounded-full border px-2 py-px text-[10px] font-semibold ${colors.pill}`}
+                                      className={`mt-1 inline-flex items-center rounded-full border px-2 py-px text-xs font-semibold ${colors.pill}`}
                                     >
                                       {item.status}
                                     </span>
@@ -1032,7 +1013,7 @@ export function AppointmentsView({
                       className="flex border-b border-hairline"
                       style={{ minWidth: `${staffList.length * 160 + 64}px` }}
                     >
-                      <div className="w-16 shrink-0 bg-white px-2 py-2 text-[10px] text-subtle font-semibold">
+                      <div className="w-16 shrink-0 bg-white px-2 py-2 text-xs text-subtle font-semibold">
                         GMT+8
                       </div>
                       {staffList.map((s) => (
@@ -1044,7 +1025,7 @@ export function AppointmentsView({
                           <p className="text-xs font-semibold text-ink truncate">
                             {s}
                           </p>
-                          <p className="text-[10px] text-muted">
+                          <p className="text-xs text-muted">
                             09:00 – 17:00
                           </p>
                         </div>
@@ -1067,7 +1048,7 @@ export function AppointmentsView({
                               className="border-b border-hairline flex items-start justify-end pr-2 pt-1"
                               style={{ height: `${HOUR_HEIGHT}px` }}
                             >
-                              <span className="text-[10px] text-subtle font-medium">
+                              <span className="text-xs text-subtle font-medium">
                                 {String(h).padStart(2, "0")}:00
                               </span>
                             </div>
@@ -1129,17 +1110,17 @@ export function AppointmentsView({
                                     }}
                                   >
                                     <p
-                                      className={`text-[11px] font-bold leading-tight truncate ${colors.text}`}
+                                      className={`text-xs font-bold leading-tight truncate ${colors.text}`}
                                     >
                                       {item.customer}
                                     </p>
                                     <p
-                                      className={`text-[10px] leading-tight truncate ${colors.text} opacity-80`}
+                                      className={`text-xs leading-tight truncate ${colors.text} opacity-80`}
                                     >
                                       {formatTime24(item.time)} · {item.service}
                                     </p>
                                     <span
-                                      className={`mt-0.5 inline-flex items-center rounded-full border px-1.5 py-px text-[9px] font-semibold ${colors.pill}`}
+                                      className={`mt-0.5 inline-flex items-center rounded-full border px-1.5 py-px text-xs font-semibold ${colors.pill}`}
                                     >
                                       {item.status}
                                     </span>
@@ -1148,7 +1129,7 @@ export function AppointmentsView({
                               })}
                               {staffItems.length === 0 && (
                                 <div className="absolute inset-0 flex items-center justify-center">
-                                  <span className="text-[10px] text-subtle">
+                                  <span className="text-xs text-subtle">
                                     No bookings
                                   </span>
                                 </div>
@@ -1290,7 +1271,7 @@ export function AppointmentsView({
                         ].map((h, i) => (
                           <th
                             key={h}
-                            className={`px-5 py-3 text-[11px] leading-4 uppercase tracking-wide ${i === 6 ? "text-right" : ""}`}
+                            className={`px-5 py-3 text-xs leading-4 uppercase tracking-wide ${i === 6 ? "text-right" : ""}`}
                           >
                             {h}
                           </th>

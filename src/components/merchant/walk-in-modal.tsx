@@ -82,10 +82,12 @@ export function WalkInModal({
   >(null);
 
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mirrors the services prop
     if (propServices) setServices(propServices);
   }, [propServices]);
 
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mirrors the staff prop
     if (propStaff) setStaffList(propStaff);
   }, [propStaff]);
 
@@ -122,6 +124,7 @@ export function WalkInModal({
         }
       });
     } else if (propServices[0]) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- default service for the freshly reset form
       setServiceId(propServices[0].id);
     }
   }, [isOpen, tenantId, propServices, propStaff, defaultStaffId]);
@@ -141,7 +144,7 @@ export function WalkInModal({
           className="w-full max-w-[360px] rounded-[12px] bg-white px-6 py-8 text-center shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="mx-auto flex size-12 items-center justify-center rounded-full border-2 border-emerald-600 text-emerald-600">
+          <div className="mx-auto flex size-12 items-center justify-center rounded-full border-2 border-success text-success">
             <Icon name="check" weight="bold" className="size-6" />
           </div>
           <h3 className="mt-4 text-lg font-semibold text-ink">
@@ -298,9 +301,9 @@ export function WalkInModal({
             type="button"
             onClick={onClose}
             aria-label="Close walk-in form"
-            className="text-2xl leading-none text-glyph hover:text-ink"
+            className="rounded-lg p-1 text-glyph hover:text-ink"
           >
-            ×
+            <Icon name="close" className="size-5" />
           </button>
         </div>
 
@@ -323,7 +326,7 @@ export function WalkInModal({
 
         <form onSubmit={handleCreateWalkIn} className="mt-5 space-y-4">
           <fieldset className="space-y-2.5">
-            <legend className="text-[11px] font-semibold text-muted">
+            <legend className="text-xs font-semibold text-muted">
               Customer Information
             </legend>
             <label className="block text-sm font-medium text-body">
@@ -360,7 +363,7 @@ export function WalkInModal({
           </fieldset>
 
           <fieldset className="space-y-2.5">
-            <legend className="text-[11px] font-semibold text-muted">
+            <legend className="text-xs font-semibold text-muted">
               Service &amp; staff
             </legend>
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
@@ -392,7 +395,7 @@ export function WalkInModal({
           </fieldset>
 
           <fieldset className="space-y-2.5">
-            <legend className="text-[11px] font-semibold text-muted">
+            <legend className="text-xs font-semibold text-muted">
               Schedule
             </legend>
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
@@ -423,7 +426,7 @@ export function WalkInModal({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Add customer requests or service notes..."
-              className={`${inputClasses()} mt-1.5 h-auto min-h-14 resize-y py-3`}
+              className={`${inputClasses(false, true)} mt-1.5`}
             />
           </label>
 
@@ -446,14 +449,14 @@ export function WalkInModal({
               type="button"
               onClick={handleAddToWaitlist}
               disabled={isAddingWaitlist || isSubmitting}
-              className={buttonClasses({ variant: "brand-outline", size: "form" })}
+              className={buttonClasses({ variant: "brand-outline", size: "dialog" })}
             >
               {isAddingWaitlist ? "Adding..." : "Add to waiting list"}
             </button>
             <button
               type="submit"
               disabled={isSubmitting || isAddingWaitlist}
-              className={buttonClasses({ variant: "brand", size: "form", className: "px-6" })}
+              className={buttonClasses({ variant: "brand", size: "dialog", className: "px-6" })}
             >
               {isSubmitting ? "Creating..." : "Create walk-in appointment"}
             </button>

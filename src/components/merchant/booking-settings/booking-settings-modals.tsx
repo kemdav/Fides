@@ -37,17 +37,17 @@ export function BookingSettingsSavedModal({
         className="w-full max-w-[400px] rounded-2xl bg-white px-7 py-8 text-center shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-full border-[3px] border-[#15803D] text-[#15803D]">
+        <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-full border-[3px] border-success text-success">
           <Icon name="check" weight="bold" className="size-7" />
         </div>
 
         <h2
           id="booking-saved-title"
-          className="text-xl font-semibold text-[#1E293B]"
+          className="text-xl font-semibold text-ink"
         >
           Booking settings saved
         </h2>
-        <p className="mt-2.5 text-sm leading-relaxed text-[#64748B]">
+        <p className="mt-2.5 text-sm leading-relaxed text-subtle">
           Your booking rules are saved. Time-based rules use {timeZone}.
         </p>
 
@@ -55,7 +55,7 @@ export function BookingSettingsSavedModal({
           <button
             type="button"
             onClick={onClose}
-            className="min-w-[140px] rounded-lg bg-[#C35000] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#A64400] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C35000]/40"
+            className="min-w-[140px] rounded-lg bg-burnt px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-burnt-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
           >
             Done
           </button>
@@ -107,17 +107,17 @@ export function ConfirmDiscardModal({
         className="w-full max-w-[420px] rounded-2xl bg-white px-7 py-8 text-center shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-full border-[3px] border-[#DC2626] text-[#DC2626]">
+        <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-full border-[3px] border-danger text-danger">
           <Icon name="alert" className="size-7" />
         </div>
 
         <h2
           id="booking-discard-title"
-          className="text-xl font-semibold text-[#1E293B]"
+          className="text-xl font-semibold text-ink"
         >
           {title}
         </h2>
-        <p className="mt-2.5 text-sm leading-relaxed text-[#64748B]">
+        <p className="mt-2.5 text-sm leading-relaxed text-subtle">
           {description}
         </p>
 
@@ -125,14 +125,14 @@ export function ConfirmDiscardModal({
           <button
             type="button"
             onClick={onKeepEditing}
-            className="rounded-lg border border-[#D9DDE3] bg-white px-4 py-2.5 text-sm font-semibold text-[#334155] transition-colors hover:bg-[#F8FAFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C35000]/40"
+            className="rounded-lg border border-line bg-white px-4 py-2.5 text-sm font-semibold text-body transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
           >
             Keep editing
           </button>
           <button
             type="button"
             onClick={onConfirmDiscard}
-            className="rounded-lg bg-[#DC2626] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#B91C1C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626]/40"
+            className="rounded-lg bg-danger px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-danger-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/40"
           >
             Discard changes
           </button>

@@ -36,6 +36,7 @@ import {
   ALLOWED_COVER_MIME_TYPES,
   MAX_FILE_SIZES,
 } from "@/lib/validations/website-settings";
+import { inputClasses } from "@/components/ui";
 
 const INITIAL_SETTINGS: WebsiteSettingsData = {
   businessName: "Bella Vita Salon & Spa",
@@ -82,11 +83,9 @@ const INITIAL_SETTINGS: WebsiteSettingsData = {
 };
 
 // Shared field input class
-const fieldInput =
-  "h-11 w-full rounded-lg border border-outline bg-white px-3 text-sm text-ink placeholder:text-glyph focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/30 transition-shadow";
+const fieldInput = inputClasses();
 
-const fieldTextarea =
-  "w-full rounded-lg border border-outline bg-white px-3 py-2.5 text-sm text-ink placeholder:text-glyph focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/30 transition-shadow leading-relaxed";
+const fieldTextarea = inputClasses(false, true);
 
 interface WebsiteSettingsViewProps {
   initialData?: Partial<WebsiteSettingsData>;
@@ -289,7 +288,7 @@ export function WebsiteSettingsView({
         <div className="fixed top-5 right-5 z-50 bg-danger text-white px-4 py-2.5 rounded-[10px] shadow-xl flex items-center gap-2 text-xs font-medium">
           <AlertCircleIcon className="w-4 h-4 text-white" />
           <span>{uploadError}</span>
-          <button type="button" onClick={() => setUploadError(null)} className="ml-2 font-bold hover:opacity-80">×</button>
+          <button type="button" onClick={() => setUploadError(null)} className="ml-2 font-bold hover:opacity-80"><Icon name="close" className="size-4" /></button>
         </div>
       )}
 
@@ -297,7 +296,7 @@ export function WebsiteSettingsView({
         <div className="fixed top-5 right-5 z-50 bg-danger text-white px-4 py-2.5 rounded-[10px] shadow-xl flex items-center gap-2 text-xs font-medium">
           <AlertCircleIcon className="w-4 h-4 text-white" />
           <span>{saveDraftError}</span>
-          <button type="button" onClick={() => setSaveDraftError(null)} className="ml-2 font-bold hover:opacity-80">×</button>
+          <button type="button" onClick={() => setSaveDraftError(null)} className="ml-2 font-bold hover:opacity-80"><Icon name="close" className="size-4" /></button>
         </div>
       )}
 
@@ -659,14 +658,18 @@ export function WebsiteSettingsView({
                     {form.showFeaturedServices && (
                       <div className="p-3.5 space-y-2 font-sans" style={{ backgroundColor: form.secondaryColor }}>
                         <span className="text-xs font-bold text-ink block font-serif">Find your moment of care</span>
-                        <div className="grid grid-cols-3 gap-1.5 text-xs">
+                        <div className="grid grid-cols-1 gap-2 text-xs">
                           {["Signature haircut · 45 min · ₱650", "Wellness massage · 60 min · ₱1,200", "Facial treatment · 50 min · ₱950"].map((s, i) => {
                             const [name, ...rest] = s.split(" · ");
                             return (
-                              <div key={i} className="bg-white/90 p-1.5 rounded border border-black/5">
-                                <span className="font-semibold text-ink block truncate">{name}</span>
-                                <span className="text-muted block text-[8px]">{rest.join(" · ")}</span>
-                                <span className="text-[8px] text-burnt font-medium mt-1 block">View service →</span>
+                              <div key={i} className="flex items-center justify-between gap-3 rounded-lg border border-black/5 bg-white/90 px-3 py-2">
+                                <div className="min-w-0">
+                                  <span className="block truncate font-semibold text-ink">{name}</span>
+                                  <span className="block text-muted">{rest.join(" · ")}</span>
+                                </div>
+                                <span className="inline-flex shrink-0 items-center gap-1 font-medium text-burnt">
+                                  View service <Icon name="arrow-right" weight="medium" className="size-3" />
+                                </span>
                               </div>
                             );
                           })}
@@ -986,10 +989,11 @@ export function WebsiteSettingsView({
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto">
             <AdminButton
               variant="outline"
               size="xs"
+              className="flex-1 sm:flex-none"
               type="button"
               disabled={!hasChanges}
               onClick={() => setIsDiscardOpen(true)}
@@ -999,6 +1003,7 @@ export function WebsiteSettingsView({
             <AdminButton
               variant="outline"
               size="xs"
+              className="flex-1 sm:flex-none"
               type="button"
               disabled={isSavingDraft}
               onClick={handleSaveDraft}
@@ -1007,7 +1012,8 @@ export function WebsiteSettingsView({
             </AdminButton>
             <AdminButton
               variant="primary"
-              size="sm"
+              size="xs"
+              className="flex-1 sm:flex-none"
               type="button"
               disabled={isPublishing}
               onClick={() => setIsPublishReviewOpen(true)}

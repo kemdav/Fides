@@ -20,24 +20,24 @@ export function LivePreviewModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-2xl bg-white shadow-2xl overflow-hidden border border-neutral-300">
+      <div className="relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-2xl bg-white shadow-2xl overflow-hidden border border-line">
         {/* Preview header bar */}
-        <div className="flex items-center justify-between px-5 py-3.5 bg-neutral-900 text-white select-none">
+        <div className="flex items-center justify-between px-5 py-3.5 bg-ink text-white select-none">
           <div className="flex items-center gap-3">
             <span className="flex gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
-              <span className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
-              <span className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
+              <span className="w-2.5 h-2.5 rounded-full bg-body" />
+              <span className="w-2.5 h-2.5 rounded-full bg-body" />
+              <span className="w-2.5 h-2.5 rounded-full bg-body" />
             </span>
-            <div className="px-3 py-1 rounded-md bg-neutral-800 text-xs font-mono text-neutral-300 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+            <div className="px-3 py-1 rounded-md bg-ink text-xs font-mono text-line flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-success" />
               <span>{data.subdomain}.fides.app</span>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium text-neutral-300 hover:text-white hover:bg-neutral-800 transition"
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium text-line hover:text-white hover:bg-ink transition"
           >
             <span>Close preview</span>
             <XIcon className="w-4 h-4" />
@@ -64,17 +64,17 @@ export function LivePreviewModal({
                 {data.logoInitials || "BV"}
               </div>
               <div>
-                <span className="text-base font-semibold tracking-tight text-neutral-900">
+                <span className="text-base font-semibold tracking-tight text-ink">
                   {data.businessName || "Bella Vita"}
                 </span>
-                <span className="block text-[10px] uppercase tracking-wider font-semibold text-neutral-500">
+                <span className="block text-[10px] uppercase tracking-wider font-semibold text-subtle">
                   {data.businessCategory || "BEAUTY & WELLNESS"}
                 </span>
               </div>
             </div>
 
             <nav className="flex items-center gap-6">
-              <div className="hidden sm:flex items-center gap-5 text-xs font-medium text-neutral-700">
+              <div className="hidden sm:flex items-center gap-5 text-xs font-medium text-body">
                 <span className="cursor-pointer hover:text-black">Home</span>
                 <span className="cursor-pointer hover:text-black">Services</span>
                 <span className="cursor-pointer hover:text-black">Contact</span>
@@ -98,10 +98,10 @@ export function LivePreviewModal({
               >
                 {data.businessCategory || "BEAUTY & WELLNESS"}
               </span>
-              <h1 className="text-3xl sm:text-4xl font-medium tracking-tight text-neutral-900 leading-tight">
+              <h1 className="text-3xl sm:text-4xl font-medium tracking-tight text-ink leading-tight">
                 {data.headline || "A little time for yourself."}
               </h1>
-              <p className="mt-3 text-xs sm:text-sm text-neutral-700 leading-relaxed font-sans max-w-md">
+              <p className="mt-3 text-xs sm:text-sm text-body leading-relaxed font-sans max-w-md">
                 {data.supportingMessage ||
                   "Thoughtful care, experienced specialists, and effortless booking."}
               </p>
@@ -139,16 +139,16 @@ export function LivePreviewModal({
               style={{ backgroundColor: data.secondaryColor || "#ADD8E6" }}
             >
               <div className="max-w-4xl">
-                <h2 className="text-xl sm:text-2xl font-semibold text-neutral-900 mb-6">
+                <h2 className="text-xl sm:text-2xl font-semibold text-ink mb-6">
                   Find your moment of care
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-sans">
                   <div className="rounded-xl bg-white/85 p-5 shadow-xs border border-black/5 flex flex-col justify-between">
                     <div>
-                      <h3 className="font-semibold text-sm text-neutral-900">
+                      <h3 className="font-semibold text-sm text-ink">
                         Signature haircut
                       </h3>
-                      <p className="text-xs text-neutral-500 mt-1">
+                      <p className="text-xs text-subtle mt-1">
                         45 min · ₱650
                       </p>
                     </div>
@@ -162,10 +162,10 @@ export function LivePreviewModal({
 
                   <div className="rounded-xl bg-white/85 p-5 shadow-xs border border-black/5 flex flex-col justify-between">
                     <div>
-                      <h3 className="font-semibold text-sm text-neutral-900">
+                      <h3 className="font-semibold text-sm text-ink">
                         Wellness massage
                       </h3>
-                      <p className="text-xs text-neutral-500 mt-1">
+                      <p className="text-xs text-subtle mt-1">
                         60 min · ₱1,200
                       </p>
                     </div>
@@ -179,10 +179,10 @@ export function LivePreviewModal({
 
                   <div className="rounded-xl bg-white/85 p-5 shadow-xs border border-black/5 flex flex-col justify-between">
                     <div>
-                      <h3 className="font-semibold text-sm text-neutral-900">
+                      <h3 className="font-semibold text-sm text-ink">
                         Facial treatment
                       </h3>
-                      <p className="text-xs text-neutral-500 mt-1">
+                      <p className="text-xs text-subtle mt-1">
                         50 min · ₱950
                       </p>
                     </div>
@@ -200,10 +200,10 @@ export function LivePreviewModal({
 
           {/* Contact Details Section if enabled */}
           {data.showContactDetails && (
-            <section className="px-6 sm:px-12 py-8 border-t border-black/5 text-xs text-neutral-600 font-sans">
+            <section className="px-6 sm:px-12 py-8 border-t border-black/5 text-xs text-muted font-sans">
               <div className="max-w-4xl flex flex-wrap gap-8 items-center justify-between">
                 <div>
-                  <span className="font-semibold text-neutral-900 block mb-0.5">
+                  <span className="font-semibold text-ink block mb-0.5">
                     Location
                   </span>
                   <span>
@@ -211,7 +211,7 @@ export function LivePreviewModal({
                   </span>
                 </div>
                 <div>
-                  <span className="font-semibold text-neutral-900 block mb-0.5">
+                  <span className="font-semibold text-ink block mb-0.5">
                     Contact
                   </span>
                   <span>
@@ -220,7 +220,7 @@ export function LivePreviewModal({
                 </div>
                 {data.showOpeningHours && (
                   <div>
-                    <span className="font-semibold text-neutral-900 block mb-0.5">
+                    <span className="font-semibold text-ink block mb-0.5">
                       Hours
                     </span>
                     <span>
@@ -233,9 +233,9 @@ export function LivePreviewModal({
           )}
 
           {/* Client Site Footer */}
-          <footer className="px-6 sm:px-12 py-6 border-t border-black/10 flex items-center justify-between text-xs text-neutral-600 font-sans">
+          <footer className="px-6 sm:px-12 py-6 border-t border-black/10 flex items-center justify-between text-xs text-muted font-sans">
             <div>{data.businessName || "Bella Vita Salon & Spa"}</div>
-            <div className="text-[11px] text-neutral-500">Powered by Fides</div>
+            <div className="text-[11px] text-subtle">Powered by Fides</div>
           </footer>
         </div>
       </div>

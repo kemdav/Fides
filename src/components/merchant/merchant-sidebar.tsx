@@ -66,7 +66,7 @@ export function MerchantSidebar({
       return (
         <div
           key={item.label}
-          className="flex min-h-[clamp(32px,4.2vh,40px)] items-center gap-3 rounded-[9px] px-3 py-1.5 text-sm leading-[21px] text-neutral-400"
+          className="flex min-h-[clamp(32px,4.2vh,40px)] items-center gap-3 rounded-[9px] px-3 py-1.5 text-sm leading-[21px] text-glyph"
         >
           <Icon name={item.icon} className="size-5" />
           <span>{item.label}</span>
@@ -83,7 +83,7 @@ export function MerchantSidebar({
           "flex min-h-[clamp(32px,4.2vh,40px)] items-center gap-3 whitespace-nowrap rounded-[9px] px-3 py-1.5 text-sm font-semibold leading-[21px] transition-colors",
           active
             ? "bg-burnt/10 text-burnt"
-            : "text-body hover:bg-[#F4F1EA]",
+            : "text-body hover:bg-mist",
         )}
       >
         <Icon
@@ -98,7 +98,7 @@ export function MerchantSidebar({
 
   return (
     <>
-      <div className="sticky top-0 z-40 flex items-center justify-between border-b border-[#EDECE8] bg-white px-5 py-4 lg:hidden">
+      <div className="sticky top-0 z-40 flex items-center justify-between border-b border-hairline bg-white px-5 py-4 lg:hidden">
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
@@ -110,7 +110,7 @@ export function MerchantSidebar({
         <span className="font-display text-2xl text-burnt">
           {businessName}
         </span>
-        <span className="text-xs font-semibold uppercase tracking-[1.2px] text-neutral-400">
+        <span className="text-xs font-semibold uppercase tracking-[1.2px] text-glyph">
           Merchant
         </span>
       </div>
@@ -126,31 +126,31 @@ export function MerchantSidebar({
 
       <aside
         className={cn(
-          "fixed bottom-0 left-0 top-0 z-50 flex w-full shrink-0 lg:w-[248px] flex-col gap-[clamp(4px,1vh,12px)] overflow-hidden border-r border-[#EDECE8] bg-white p-4 transition-transform duration-200 lg:sticky lg:z-10 lg:flex lg:h-dvh",
+          "fixed bottom-0 left-0 top-0 z-50 flex w-full shrink-0 lg:w-[248px] flex-col gap-[clamp(4px,1vh,12px)] overflow-hidden border-r border-hairline bg-white p-4 transition-transform duration-200 lg:sticky lg:z-10 lg:flex lg:h-dvh",
           mobileOpen
             ? "translate-x-0 shadow-2xl"
             : "-translate-x-full lg:translate-x-0",
         )}
       >
-        <div className="flex shrink-0 items-start justify-between border-b border-[#EDECE8] pb-4">
+        <div className="flex shrink-0 items-start justify-between border-b border-hairline pb-4">
           <div>
             <h1 className="break-words font-display text-[clamp(24px,3.2vh,32px)] leading-[clamp(29px,4vh,38px)] tracking-tight text-burnt">
               {businessName}
             </h1>
-            <p className="text-xs font-semibold uppercase leading-[18px] tracking-[1.3px] text-neutral-400">
+            <p className="text-xs font-semibold uppercase leading-[18px] tracking-[1.3px] text-glyph">
               Merchant Workspace
             </p>
           </div>
           <button
             type="button"
             onClick={() => setMobileOpen(false)}
-            className="p-1 text-neutral-400 lg:hidden"
+            className="p-1 text-glyph lg:hidden"
             aria-label="Close navigation menu"
           >
             <Icon name="close" className="size-5" />
           </button>
         </div>
-        <p className="text-xs leading-[18px] tracking-[1.3px] text-neutral-400">
+        <p className="text-xs leading-[18px] tracking-[1.3px] text-glyph">
           WORKSPACE
         </p>
         <nav
@@ -159,7 +159,7 @@ export function MerchantSidebar({
         >
           {manageItems.map((item) => renderItem(item))}
         </nav>
-        <p className="mt-2 text-xs leading-[18px] tracking-[1.3px] text-neutral-400">
+        <p className="mt-2 text-xs leading-[18px] tracking-[1.3px] text-glyph">
           CONFIGURATION
         </p>
         <nav
@@ -178,7 +178,7 @@ export function MerchantSidebar({
           {renderItem({ label: "Subscription", icon: "card" })}
         </nav>
         <div className="flex-1" />
-        <div className="flex shrink-0 items-center gap-3 border-t border-[#EDECE8] pt-4">
+        <div className="flex shrink-0 items-center gap-3 border-t border-hairline pt-4">
           <div className="flex size-10 items-center justify-center rounded-full bg-burnt text-sm font-semibold text-white">
             MS
           </div>
@@ -186,7 +186,7 @@ export function MerchantSidebar({
             <span className="block truncate text-sm font-semibold leading-[21px] text-body">
               {displayName}
             </span>
-            <span className="block text-xs leading-[18px] text-neutral-400">
+            <span className="block text-xs leading-[18px] text-glyph">
               {userRole}
             </span>
           </div>

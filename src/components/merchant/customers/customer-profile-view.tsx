@@ -29,25 +29,9 @@ import {
   formatShortDate,
   getInitials,
 } from "./customer-formatters";
-
-function AppointmentStatusPill({ status }: { status: string }) {
-  const tone =
-    status === "completed" || status === "confirmed"
-      ? "bg-[#DCFCE7] text-[#15803D]"
-      : status === "cancelled" || status === "no_show"
-        ? "bg-[#FEE2E2] text-[#DC2626]"
-        : status === "pending_approval"
-          ? "bg-[#FEF3C7] text-[#B45309]"
-          : "bg-[#E0F2FE] text-[#0369A1]";
-
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${tone}`}
-    >
-      {formatAppointmentStatusLabel(status)}
-    </span>
-  );
-}
+import { inputClasses } from "@/components/ui";
+import { cn } from "@/lib/utils";
+import { DbAppointmentStatusPill } from "@/components/merchant/appointment-status-pill";
 
 function PaymentStatusPill({
   status,
@@ -58,17 +42,17 @@ function PaymentStatusPill({
     CustomerVisitItem["paymentStatus"],
     { label: string; cls: string }
   > = {
-    paid: { label: "Paid", cls: "bg-[#DCFCE7] text-[#15803D]" },
-    unpaid: { label: "Unpaid", cls: "bg-[#FEE2E2] text-[#DC2626]" },
-    pending: { label: "Pending", cls: "bg-[#FEF3C7] text-[#B45309]" },
-    refunded: { label: "Refunded", cls: "bg-[#E2E8F0] text-[#475569]" },
-    voided: { label: "Voided", cls: "bg-[#E2E8F0] text-[#475569]" },
-    failed: { label: "Failed", cls: "bg-[#FEE2E2] text-[#DC2626]" },
+    paid: { label: "Paid", cls: "bg-success/15 text-success" },
+    unpaid: { label: "Unpaid", cls: "bg-danger-bg text-danger" },
+    pending: { label: "Pending", cls: "bg-warn-bg text-warn-fg" },
+    refunded: { label: "Refunded", cls: "bg-hairline text-muted" },
+    voided: { label: "Voided", cls: "bg-hairline text-muted" },
+    failed: { label: "Failed", cls: "bg-danger-bg text-danger" },
   };
   const cfg = map[status];
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${cfg.cls}`}
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${cfg.cls}`}
     >
       {cfg.label}
     </span>
@@ -225,18 +209,18 @@ export function CustomerProfileView({
 
   const inviteBadge =
     customer.inviteStatus === "registered"
-      ? { label: "Registered", cls: "bg-[#DCFCE7] text-[#15803D]" }
+      ? { label: "Registered", cls: "bg-success/15 text-success" }
       : customer.inviteStatus === "invite_sent"
-        ? { label: "Invite sent", cls: "bg-[#FEF3C7] text-[#B45309]" }
+        ? { label: "Invite sent", cls: "bg-warn-bg text-warn-fg" }
         : customer.inviteStatus === "invite_expired"
-          ? { label: "Invite expired", cls: "bg-[#FEE2E2] text-[#DC2626]" }
-          : { label: "Invite not sent", cls: "bg-[#EEF2FF] text-[#4338CA]" };
+          ? { label: "Invite expired", cls: "bg-danger-bg text-danger" }
+          : { label: "Invite not sent", cls: "bg-info-bg text-info" };
 
   const customersHref = `${basePath}/dashboard/customers`;
   const appointmentsHref = `${basePath}/dashboard/appointments`;
 
   return (
-    <div className="flex min-h-dvh flex-col bg-[#FCFAE8] text-[#1E293B] lg:flex-row">
+    <div className="flex min-h-dvh flex-col bg-mist text-ink lg:flex-row">
       <MerchantSidebar
         businessName={meta.businessName}
         userName={meta.userName}
@@ -249,7 +233,7 @@ export function CustomerProfileView({
         <div>
           <Link
             href={customersHref}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#C35000] hover:text-[#A64400]"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-burnt hover:text-burnt-dark"
           >
             <span aria-hidden="true">&larr;</span>
             <span>Back to Customers</span>
@@ -259,17 +243,17 @@ export function CustomerProfileView({
         {/* Page Heading */}
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="font-display text-[28px] leading-[36px] text-[#1E293B] sm:text-[32px] sm:leading-[40px]">
+            <h1 className="font-display text-[28px] leading-[36px] text-ink sm:text-[32px] sm:leading-[40px]">
               Customer profile
             </h1>
-            <p className="mt-1 text-sm text-[#64748B]">
+            <p className="mt-1 text-sm text-subtle">
               View customer information, account access, notes, and visit
               history.
             </p>
           </div>
           <Link
             href={appointmentsHref}
-            className="inline-flex h-10 items-center justify-center rounded-lg border-2 border-[#C35000] bg-white px-4 text-xs font-semibold text-[#C35000] transition-colors hover:bg-[#FFF7ED]"
+            className="inline-flex h-10 items-center justify-center rounded-lg border-2 border-burnt bg-white px-4 text-xs font-semibold text-burnt transition-colors hover:bg-burnt/10"
           >
             Book Appointment
           </Link>
@@ -278,35 +262,35 @@ export function CustomerProfileView({
         {errorBanner && (
           <div
             role="alert"
-            className="rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm font-medium text-[#B91C1C]"
+            className="rounded-xl border border-danger/30 bg-danger-bg px-4 py-3 text-sm font-medium text-danger-dark"
           >
             {errorBanner}
           </div>
         )}
 
         {/* Top Summary Card */}
-        <Surface className="rounded-xl border border-[#ECEAE0] bg-white p-5 sm:p-6">
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#F1EFE7] pb-5">
+        <Surface className="rounded-xl border border-hairline bg-white p-5 sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-mist pb-5">
             <div className="flex items-center gap-4">
-              <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#ECEEF2] text-sm font-semibold text-[#334155]">
+              <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-mist text-sm font-semibold text-body">
                 {getInitials(customer.fullName)}
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-[#1E293B]">
+                <h2 className="text-lg font-semibold text-ink">
                   {customer.fullName}
                 </h2>
                 <div className="mt-1 flex flex-wrap items-center gap-2">
                   {customer.accountType === "registered" ? (
-                    <span className="inline-flex items-center rounded-full bg-[#DCFCE7] px-2.5 py-0.5 text-[11px] font-semibold text-[#15803D]">
+                    <span className="inline-flex items-center rounded-full bg-success/15 px-2.5 py-0.5 text-xs font-semibold text-success">
                       Registered account
                     </span>
                   ) : (
-                    <span className="inline-flex items-center rounded-full bg-[#FFEDD5] px-2.5 py-0.5 text-[11px] font-semibold text-[#C2410C]">
+                    <span className="inline-flex items-center rounded-full bg-burnt/10 px-2.5 py-0.5 text-xs font-semibold text-burnt-dark">
                       Walk-in record
                     </span>
                   )}
                   {customer.archivedAt && (
-                    <span className="inline-flex items-center rounded-full bg-[#E2E8F0] px-2.5 py-0.5 text-[11px] font-semibold text-[#475569]">
+                    <span className="inline-flex items-center rounded-full bg-hairline px-2.5 py-0.5 text-xs font-semibold text-muted">
                       Archived
                     </span>
                   )}
@@ -318,7 +302,7 @@ export function CustomerProfileView({
               <button
                 type="button"
                 onClick={() => setShowEditModal(true)}
-                className="h-9 rounded-lg border border-[#D9DDE3] bg-white px-4 text-xs font-semibold text-[#334155] transition-colors hover:bg-[#F8FAFC]"
+                className="h-9 rounded-lg border border-line bg-white px-4 text-xs font-semibold text-body transition-colors hover:bg-mist"
               >
                 Edit Customer
               </button>
@@ -327,7 +311,7 @@ export function CustomerProfileView({
                   type="button"
                   disabled={actionBusy}
                   onClick={() => void handleArchiveToggle(false)}
-                  className="h-9 rounded-lg bg-[#15803D] px-4 text-xs font-semibold text-white transition-colors hover:bg-[#166534] disabled:opacity-50"
+                  className="h-9 rounded-lg bg-success px-4 text-xs font-semibold text-white transition-colors hover:bg-success-deep disabled:opacity-50"
                 >
                   Restore Customer
                 </button>
@@ -335,7 +319,7 @@ export function CustomerProfileView({
                 <button
                   type="button"
                   onClick={() => setShowArchiveModal(true)}
-                  className="h-9 rounded-lg bg-[#DC2626] px-4 text-xs font-semibold text-white transition-colors hover:bg-[#B91C1C]"
+                  className="h-9 rounded-lg bg-danger px-4 text-xs font-semibold text-white transition-colors hover:bg-danger-dark"
                 >
                   Archive Customer
                 </button>
@@ -346,46 +330,46 @@ export function CustomerProfileView({
           {/* 5-Column Contact & Metrics Strip */}
           <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
             <div>
-              <p className="text-[11px] font-medium text-[#64748B]">
+              <p className="text-xs font-medium text-subtle">
                 Email address
               </p>
               <p
                 className={`mt-1 text-sm font-medium ${
-                  customer.email ? "text-[#1E293B]" : "italic text-[#94A3B8]"
+                  customer.email ? "text-ink" : "italic text-glyph"
                 }`}
               >
                 {customer.email ?? "No email added"}
               </p>
             </div>
             <div>
-              <p className="text-[11px] font-medium text-[#64748B]">
+              <p className="text-xs font-medium text-subtle">
                 Phone number
               </p>
-              <p className="mt-1 text-sm font-medium text-[#1E293B]">
+              <p className="mt-1 text-sm font-medium text-ink">
                 {customer.phone ?? "—"}
               </p>
             </div>
             <div>
-              <p className="text-[11px] font-medium text-[#64748B]">
+              <p className="text-xs font-medium text-subtle">
                 Last visit
               </p>
-              <p className="mt-1 text-sm font-medium text-[#1E293B]">
+              <p className="mt-1 text-sm font-medium text-ink">
                 {formatShortDate(customer.lastVisitAt)}
               </p>
             </div>
             <div>
-              <p className="text-[11px] font-medium text-[#64748B]">
+              <p className="text-xs font-medium text-subtle">
                 Total visits
               </p>
-              <p className="mt-1 text-xl font-bold text-[#1E293B]">
+              <p className="mt-1 text-xl font-bold text-ink">
                 {customer.totalVisits}
               </p>
             </div>
             <div>
-              <p className="text-[11px] font-medium text-[#64748B]">
+              <p className="text-xs font-medium text-subtle">
                 Lifetime spend
               </p>
-              <p className="mt-1 text-xl font-bold text-[#1E293B]">
+              <p className="mt-1 text-xl font-bold text-ink">
                 {formatPesoCents(customer.lifetimeSpendCents)}
               </p>
             </div>
@@ -395,34 +379,34 @@ export function CustomerProfileView({
         {/* Middle 2-Column Row: Account Status + Internal Notes */}
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
           {/* Account Status Card */}
-          <Surface className="rounded-xl border border-[#ECEAE0] bg-white p-5 sm:p-6 lg:col-span-5">
+          <Surface className="rounded-xl border border-hairline bg-white p-5 sm:p-6 lg:col-span-5">
             <div className="flex items-center gap-2.5">
-              <h3 className="text-base font-semibold text-[#1E293B]">
+              <h3 className="text-base font-semibold text-ink">
                 Account Status
               </h3>
               <span
-                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${inviteBadge.cls}`}
+                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${inviteBadge.cls}`}
               >
                 {inviteBadge.label}
               </span>
             </div>
 
             {customer.accountType === "registered" ? (
-              <p className="mt-3 text-xs leading-relaxed text-[#475569]">
+              <p className="mt-3 text-xs leading-relaxed text-muted">
                 This customer has a registered account. No invitation is needed.
               </p>
             ) : customer.activeInvite ? (
               <div className="mt-3 space-y-3">
-                <p className="text-xs leading-relaxed text-[#334155]">
+                <p className="text-xs leading-relaxed text-body">
                   Sent {formatShortDate(customer.activeInvite.sentAt)}
                   {customer.activeInvite.invitedByName
                     ? ` by ${customer.activeInvite.invitedByName}`
                     : ""}
                   . Awaiting acceptance.
                 </p>
-                <p className="text-xs text-[#64748B]">
+                <p className="text-xs text-subtle">
                   Invite email:{" "}
-                  <span className="font-medium text-[#334155]">
+                  <span className="font-medium text-body">
                     {customer.activeInvite.email}
                   </span>
                 </p>
@@ -431,7 +415,7 @@ export function CustomerProfileView({
                     type="button"
                     disabled={actionBusy}
                     onClick={() => setShowResendModal(true)}
-                    className="h-9 rounded-lg border-2 border-[#C35000] bg-white px-4 text-xs font-semibold text-[#C35000] transition-colors hover:bg-[#FFF7ED] disabled:opacity-50"
+                    className="h-9 rounded-lg border-2 border-burnt bg-white px-4 text-xs font-semibold text-burnt transition-colors hover:bg-burnt/10 disabled:opacity-50"
                   >
                     Resend Invite
                   </button>
@@ -439,29 +423,29 @@ export function CustomerProfileView({
                     type="button"
                     disabled={actionBusy}
                     onClick={() => setShowCancelInviteModal(true)}
-                    className="h-9 rounded-lg border border-[#D9DDE3] bg-white px-4 text-xs font-semibold text-[#475569] transition-colors hover:bg-[#F8FAFC] disabled:opacity-50"
+                    className="h-9 rounded-lg border border-line bg-white px-4 text-xs font-semibold text-muted transition-colors hover:bg-mist disabled:opacity-50"
                   >
                     Cancel Invite
                   </button>
                 </div>
-                <p className="text-[11px] leading-relaxed text-[#94A3B8]">
+                <p className="text-xs leading-relaxed text-glyph">
                   An invite connects the existing record after acceptance;
                   visits and notes stay together.
                 </p>
               </div>
             ) : (
               <div className="mt-3 space-y-3">
-                <p className="text-xs leading-relaxed text-[#334155]">
+                <p className="text-xs leading-relaxed text-body">
                   This walk-in record is not linked to a registered account.
                 </p>
-                <p className="text-xs text-[#64748B]">
+                <p className="text-xs text-subtle">
                   Invite email:{" "}
                   {customer.email ? (
-                    <span className="font-medium text-[#334155]">
+                    <span className="font-medium text-body">
                       {customer.email}
                     </span>
                   ) : (
-                    <span className="italic text-[#94A3B8]">
+                    <span className="italic text-glyph">
                       Add an email address to send an invite.
                     </span>
                   )}
@@ -479,7 +463,7 @@ export function CustomerProfileView({
                           void handleSendInvite();
                         }
                       }}
-                      className="h-9 rounded-lg border-2 border-[#C35000] bg-white px-4 text-xs font-semibold text-[#C35000] transition-colors hover:bg-[#FFF7ED] disabled:opacity-50"
+                      className="h-9 rounded-lg border-2 border-burnt bg-white px-4 text-xs font-semibold text-burnt transition-colors hover:bg-burnt/10 disabled:opacity-50"
                     >
                       {customer.invitations.length > 0
                         ? "Resend Invite"
@@ -491,14 +475,14 @@ export function CustomerProfileView({
                     <button
                       type="button"
                       onClick={() => setShowEditModal(true)}
-                      className="h-9 rounded-lg border border-[#D9DDE3] bg-white px-4 text-xs font-semibold text-[#334155] hover:bg-[#F8FAFC]"
+                      className="h-9 rounded-lg border border-line bg-white px-4 text-xs font-semibold text-body hover:bg-mist"
                     >
                       Add Email Address
                     </button>
                   </div>
                 )}
 
-                <p className="text-[11px] leading-relaxed text-[#94A3B8]">
+                <p className="text-xs leading-relaxed text-glyph">
                   An invite connects the existing record after acceptance;
                   visits and notes stay together.
                 </p>
@@ -506,11 +490,11 @@ export function CustomerProfileView({
             )}
 
             {/* Expandable Invitation History */}
-            <div className="mt-5 border-t border-[#F1EFE7] pt-3">
+            <div className="mt-5 border-t border-mist pt-3">
               <button
                 type="button"
                 onClick={() => setShowInviteHistory((prev) => !prev)}
-                className="flex items-center gap-2 text-xs font-medium text-[#64748B] hover:text-[#1E293B]"
+                className="flex items-center gap-2 text-xs font-medium text-subtle hover:text-ink"
               >
                 <span aria-hidden="true">✉</span>
                 <span>Invitation History ({customer.invitations.length})</span>
@@ -519,24 +503,24 @@ export function CustomerProfileView({
               {showInviteHistory && (
                 <div className="mt-3 space-y-2">
                   {customer.invitations.length === 0 ? (
-                    <p className="text-xs text-[#94A3B8]">
+                    <p className="text-xs text-glyph">
                       No invitations have been sent yet.
                     </p>
                   ) : (
                     customer.invitations.map((inv) => (
                       <div
                         key={inv.id}
-                        className="rounded-lg border border-[#F1EFE7] bg-[#FCFBF7] px-3 py-2 text-xs"
+                        className="rounded-lg border border-mist bg-mist px-3 py-2 text-xs"
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="font-medium text-[#1E293B]">
+                          <span className="font-medium text-ink">
                             {inv.email}
                           </span>
-                          <span className="rounded-full bg-[#ECEEF2] px-2 py-0.5 text-[10px] font-semibold capitalize text-[#475569]">
+                          <span className="rounded-full bg-mist px-2 py-0.5 text-xs font-semibold capitalize text-muted">
                             {inv.effectiveStatus}
                           </span>
                         </div>
-                        <p className="mt-0.5 text-[11px] text-[#64748B]">
+                        <p className="mt-0.5 text-xs text-subtle">
                           Sent {formatDateTimeManila(inv.sentAt)}
                           {inv.invitedByName
                             ? ` · by ${inv.invitedByName}`
@@ -551,18 +535,18 @@ export function CustomerProfileView({
           </Surface>
 
           {/* Internal Notes Card */}
-          <Surface className="rounded-xl border border-[#ECEAE0] bg-white p-5 sm:p-6 lg:col-span-7">
-            <h3 className="text-base font-semibold text-[#1E293B]">
+          <Surface className="rounded-xl border border-hairline bg-white p-5 sm:p-6 lg:col-span-7">
+            <h3 className="text-base font-semibold text-ink">
               Internal Notes
             </h3>
-            <p className="mt-1 text-xs text-[#64748B]">
+            <p className="mt-1 text-xs text-subtle">
               Visible to staff only. Newest notes appear first.
             </p>
 
             <form onSubmit={handlePostNote} className="mt-4">
               <label
                 htmlFor="internal-note-input"
-                className="block text-xs font-semibold text-[#1E293B]"
+                className="block text-xs font-semibold text-ink"
               >
                 Add a note for staff
               </label>
@@ -573,13 +557,13 @@ export function CustomerProfileView({
                 value={noteInput}
                 onChange={(e) => setNoteInput(e.target.value)}
                 placeholder="Add a note (not visible to the customer)"
-                className="mt-2 w-full resize-none rounded-lg border border-[#D9DDE3] bg-white px-3.5 py-2.5 text-sm text-[#1E293B] placeholder:text-[#94A3B8] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+                className={cn(inputClasses(false, true), "mt-2")}
               />
               <div className="mt-2.5">
                 <button
                   type="submit"
                   disabled={!noteInput.trim() || postingNote}
-                  className="h-9 rounded-lg border border-[#D9DDE3] bg-white px-4 text-xs font-semibold text-[#334155] transition-colors hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-45"
+                  className="h-9 rounded-lg border border-line bg-white px-4 text-xs font-semibold text-body transition-colors hover:bg-mist disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   {postingNote ? "Posting..." : "Post note"}
                 </button>
@@ -587,13 +571,13 @@ export function CustomerProfileView({
             </form>
 
             {customer.notes.length > 0 && (
-              <div className="mt-5 divide-y divide-[#F1EFE7] border-t border-[#F1EFE7]">
+              <div className="mt-5 divide-y divide-mist border-t border-mist">
                 {customer.notes.map((note) => (
                   <div key={note.id} className="py-3.5">
-                    <p className="whitespace-pre-wrap text-xs leading-relaxed text-[#1E293B]">
+                    <p className="whitespace-pre-wrap text-xs leading-relaxed text-ink">
                       {note.body}
                     </p>
-                    <p className="mt-1 text-[11px] text-[#94A3B8]">
+                    <p className="mt-1 text-xs text-glyph">
                       {note.authorName} &middot;{" "}
                       {formatDateTimeManila(note.createdAt)}
                     </p>
@@ -605,16 +589,16 @@ export function CustomerProfileView({
         </div>
 
         {/* Visit History Card */}
-        <Surface className="rounded-xl border border-[#ECEAE0] bg-white p-0">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#F1EFE7] px-6 py-4">
-            <h3 className="text-base font-semibold text-[#1E293B]">
+        <Surface className="rounded-xl border border-hairline bg-white p-0">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-mist px-6 py-4">
+            <h3 className="text-base font-semibold text-ink">
               Visit history
             </h3>
             {customer.visits.length > 5 && (
               <button
                 type="button"
                 onClick={() => setShowAllVisits((prev) => !prev)}
-                className="h-8 rounded-lg border border-[#D9DDE3] bg-white px-3 text-xs font-semibold text-[#334155] hover:bg-[#F8FAFC]"
+                className="h-8 rounded-lg border border-line bg-white px-3 text-xs font-semibold text-body hover:bg-mist"
               >
                 {showAllVisits
                   ? "Show recent 5"
@@ -626,7 +610,7 @@ export function CustomerProfileView({
           <div className="overflow-x-auto">
             <table className="w-full min-w-[700px] border-collapse text-left">
               <thead>
-                <tr className="border-b border-[#F1EFE7] text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">
+                <tr className="border-b border-mist text-xs font-semibold uppercase tracking-wide text-subtle">
                   <th className="px-6 py-3.5">Visit date</th>
                   <th className="px-4 py-3.5">Service</th>
                   <th className="px-4 py-3.5">Staff</th>
@@ -635,34 +619,35 @@ export function CustomerProfileView({
                   <th className="px-6 py-3.5 text-right">Payment status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#F4F2EA] text-xs">
+              <tbody className="divide-y divide-mist text-xs">
                 {visibleVisits.length === 0 ? (
                   <tr>
                     <td
                       colSpan={6}
-                      className="px-6 py-10 text-center text-sm text-[#64748B]"
+                      className="px-6 py-10 text-center text-sm text-subtle"
                     >
                       No appointments recorded for this customer yet.
                     </td>
                   </tr>
                 ) : (
                   visibleVisits.map((visit) => (
-                    <tr key={visit.id} className="hover:bg-[#FCFBF4]">
-                      <td className="px-6 py-4 font-medium text-[#1E293B]">
+                    <tr key={visit.id} className="hover:bg-mist">
+                      <td className="px-6 py-4 font-medium text-ink">
                         {formatShortDate(visit.visitDate)}
                       </td>
-                      <td className="px-4 py-4 text-[#334155]">
+                      <td className="px-4 py-4 text-body">
                         {visit.serviceName}
                       </td>
-                      <td className="px-4 py-4 text-[#334155]">
+                      <td className="px-4 py-4 text-body">
                         {visit.staffName}
                       </td>
                       <td className="px-4 py-4">
-                        <AppointmentStatusPill
+                        <DbAppointmentStatusPill
                           status={visit.appointmentStatus}
+                          label={formatAppointmentStatusLabel(visit.appointmentStatus)}
                         />
                       </td>
-                      <td className="px-4 py-4 text-right font-semibold text-[#1E293B]">
+                      <td className="px-4 py-4 text-right font-semibold text-ink">
                         {formatPesoCents(visit.amountCents)}
                       </td>
                       <td className="px-6 py-4 text-right">
@@ -675,7 +660,7 @@ export function CustomerProfileView({
             </table>
           </div>
 
-          <div className="border-t border-[#F1EFE7] px-6 py-3 text-[11px] text-[#94A3B8]">
+          <div className="border-t border-mist px-6 py-3 text-xs text-glyph">
             Showing {visibleVisits.length} of {customer.visits.length} visits
             &middot; Includes completed, upcoming, no-show, and cancelled
             appointments.
