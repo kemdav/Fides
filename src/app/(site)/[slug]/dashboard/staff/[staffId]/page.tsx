@@ -1,11 +1,12 @@
 import { notFound, redirect } from "next/navigation";
 import { StaffProfileActions } from "@/components/merchant/staff/staff-profile-actions";
+import { StaffSchedulePreview } from "@/components/merchant/staff/staff-schedule-preview";
 import { MerchantSidebar } from "@/components/merchant/merchant-sidebar";
 import { PageContent, StatusPill, Surface } from "@/components/admin/primitives";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { StaffAvatar } from "@/components/merchant/staff/staff-avatar";
-import { getStaffProfile } from "@/lib/merchant/staff-profile";
+import { getStaffProfile, staffDateKey } from "@/lib/merchant/staff-profile";
 
 export const metadata = { title: "Staff Profile" };
 
@@ -32,7 +33,12 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ s
     supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
   ]);
   if (!profile) notFound();
-  const { managedStaff, services, shiftsThisWeek, commissionRule, timezone, formatRange } = profile;
+  const { managedStaff, services, workWeek, commissionRule, timezone } = profile;
+  const dateLabel = new Intl.DateTimeFormat("en-PH", { timeZone: "UTC", month: "short", day: "numeric" });
+  const weekday = new Intl.DateTimeFormat("en-PH", { timeZone: "UTC", weekday: "short" });
+  const time = new Intl.DateTimeFormat("en-PH", { timeZone: timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  const firstDay = new Date(`${workWeek[0].date}T00:00:00Z`);
+  const lastDay = new Date(`${workWeek[6].date}T00:00:00Z`);
   const contact = [
     ["Email address", managedStaff.email || "Not provided"],
     ["Phone number", managedStaff.phone || "Not provided"],
@@ -110,28 +116,32 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ s
           </Surface>
 
           <Surface className="space-y-4 border border-hairline">
-            <div id="staff-working-hours">
-              <h2 className="text-lg font-semibold">Working hours &amp; breaks</h2>
-              <p className="mt-1 text-xs text-muted">Next 7 days · {timezone}</p>
-            </div>
-            {shiftsThisWeek.length ? (
-              <ul className="divide-y divide-hairline rounded-lg bg-mist px-4">
-                {shiftsThisWeek.map((shift) => (
-                  <li key={shift.id} className="py-3 text-sm">
-                    <p className="font-medium">{formatRange(shift.starts_at, shift.ends_at)}</p>
-                    {shift.overlapsLeave && <p className="mt-1 text-xs text-muted">Overlaps approved leave</p>}
-                    {shift.breaks.toSorted((a, b) => a.starts_at.localeCompare(b.starts_at)).map((pause) => (
-                      <p key={pause.id} className="mt-1 text-xs text-muted">Break · {formatRange(pause.starts_at, pause.ends_at)}</p>
-                    ))}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="space-y-1 rounded-lg bg-mist p-5 text-sm">
-                <p className="font-medium">No working hours assigned</p>
-                <p className="text-muted">There are no scheduled shifts in the next 7 days.</p>
+            <div id="staff-working-hours" className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold">Working hours &amp; breaks</h2>
+                <p className="mt-1 text-xs text-muted">{dateLabel.formatRange(firstDay, lastDay)} · {timezone}</p>
               </div>
-            )}
+              <StaffSchedulePreview tenantId={tenant.id} staffId={staffId} name={managedStaff.fullName}
+                role={managedStaff.roleLabel} timezone={timezone} today={staffDateKey(new Date(), timezone)} />
+            </div>
+            <ul className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,7.5rem),1fr))] gap-2" aria-label="Weekly working hours">
+              {workWeek.map(({ date, dayEnd, onLeave, blocks }) => (
+                <li key={date} className="flex min-w-0 flex-col gap-1.5">
+                  <h3 className="text-xs font-semibold text-ink"><time dateTime={date}>{weekday.format(new Date(`${date}T00:00:00Z`))}</time></h3>
+                  <div className="min-h-20 flex-1 space-y-1 rounded-lg bg-mist p-2">
+                    {onLeave || blocks.length === 0 ? (
+                      <p className="px-1 py-1 text-xs text-muted">{onLeave ? "On leave" : "Day off"}</p>
+                    ) : blocks.map((block, index) => (
+                      <div key={`${block.start}-${index}`} className={`rounded-md px-1.5 py-1.5 ${block.type === "break" ? "bg-white" : ""}`}>
+                        <p className="whitespace-nowrap text-xs font-semibold tabular-nums">{time.format(block.start)}–{block.end === dayEnd ? "24:00" : time.format(block.end)}</p>
+                        <p className="mt-0.5 text-xs text-muted">{block.type === "break" ? "Break · Unavailable" : "Working hours"}</p>
+                      </div>
+                    ))}
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-muted">Assigned appointments are shown in the appointment calendar.</p>
           </Surface>
         </PageContent>
       </div>

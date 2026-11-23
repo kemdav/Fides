@@ -28,7 +28,7 @@ export function RoleAccessModal({ onClose }: { onClose: () => void }) {
       className="m-auto w-[calc(100%-2rem)] max-w-5xl overflow-hidden rounded-[14px] border border-line bg-white p-0 text-ink shadow-2xl backdrop:backdrop-blur-xs"
     >
       <div className="flex max-h-[min(92dvh,calc(100dvh-2rem))] flex-col">
-        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-hairline bg-powder px-4 py-4 sm:px-6">
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-hairline px-4 py-4 sm:px-6">
           <div>
             <h2 id="role-access-title" className="font-display text-[26px] leading-[34px]">
               Dashboard roles &amp; permissions

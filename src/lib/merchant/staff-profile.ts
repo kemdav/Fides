@@ -2,6 +2,7 @@ import "server-only";
 import type { ManagedStaff } from "@/components/merchant/staff/manage-staff-modal";
 import { getAdminClient, type AdminClient } from "@/lib/supabase/admin";
 import { zonedDateToUtc } from "@/lib/merchant/overview";
+import { addScheduleDays, scheduleWeekStart, type StaffWorkDay } from "./staff-schedule";
 
 import { staffRoleLabels } from "./workspace-roles";
 export { staffRoleLabels };
@@ -79,6 +80,39 @@ export async function isLastActiveStaffOwner(db: AdminClient, tenantId: string, 
   return activeOwners?.length === 1 && activeOwners[0].id === staffId;
 }
 
+export function buildStaffWorkWeek(
+  monday: string,
+  timezone: string,
+  shifts: { starts_at: string; ends_at: string; breaks: { starts_at: string; ends_at: string }[] }[],
+  leaves: { starts_on: string; ends_on: string }[],
+): StaffWorkDay[] {
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = addScheduleDays(monday, index);
+    const dayStart = zonedDateToUtc(date, timezone).getTime();
+    const dayEnd = zonedDateToUtc(addScheduleDays(date, 1), timezone).getTime();
+    const onLeave = leaves.some((leave) => leave.starts_on <= date && leave.ends_on >= date);
+    const blocks = shifts.flatMap((shift) => {
+      const start = Math.max(dayStart, Date.parse(shift.starts_at));
+      const end = Math.min(dayEnd, Date.parse(shift.ends_at));
+      if (start >= end) return [];
+
+      let cursor = start;
+      const entries: { start: number; end: number; type: "work" | "break" }[] = [];
+      for (const pause of shift.breaks.toSorted((a, b) => Date.parse(a.starts_at) - Date.parse(b.starts_at))) {
+        const pauseStart = Math.max(cursor, Date.parse(pause.starts_at));
+        const pauseEnd = Math.min(end, Date.parse(pause.ends_at));
+        if (pauseStart >= pauseEnd) continue;
+        if (cursor < pauseStart) entries.push({ start: cursor, end: pauseStart, type: "work" });
+        entries.push({ start: pauseStart, end: pauseEnd, type: "break" });
+        cursor = pauseEnd;
+      }
+      if (cursor < end) entries.push({ start: cursor, end, type: "work" });
+      return entries;
+    });
+    return { date, onLeave, dayEnd, blocks: blocks.sort((a, b) => a.start - b.start) };
+  });
+}
+
 // Callers must verify the viewer manages this tenant before loading private profile data.
 export async function getStaffProfile(tenantId: string, staffId: string, tenantTimezone: string | null, viewerId: string) {
   const db = getAdminClient();
@@ -99,6 +133,7 @@ export async function getStaffProfile(tenantId: string, staffId: string, tenantT
   const timezone = tenantTimezone || "Asia/Manila";
   const now = new Date();
   const today = staffDateKey(now, timezone);
+  const firstDay = scheduleWeekStart(today);
   const weekEnd = new Date(`${today}T00:00:00Z`);
   weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
   const lastDayExclusive = weekEnd.toISOString().slice(0, 10);
@@ -107,7 +142,7 @@ export async function getStaffProfile(tenantId: string, staffId: string, tenantT
     db.from("staff_service_skills").select("service_id, services!inner(name, active)").eq("tenant_id", tenantId)
       .eq("staff_id", staff.id),
     db.from("shifts").select("id, starts_at, ends_at, breaks(id, starts_at, ends_at)")
-      .eq("tenant_id", tenantId).eq("staff_id", staff.id).gt("ends_at", zonedDateToUtc(today, timezone).toISOString())
+      .eq("tenant_id", tenantId).eq("staff_id", staff.id).gt("ends_at", zonedDateToUtc(firstDay, timezone).toISOString())
       .lt("starts_at", zonedDateToUtc(lastDayExclusive, timezone).toISOString())
       .order("starts_at"),
     staff.profile_id
@@ -119,7 +154,7 @@ export async function getStaffProfile(tenantId: string, staffId: string, tenantT
       .in("status", ["pending_approval", "confirmed", "checked_in", "in_service"])
       .eq("assigned.staff_id", staff.id).or(`staff_id.eq.${staff.id},assigned.not.is.null`),
     db.from("leaves").select("starts_on, ends_on").eq("tenant_id", tenantId).eq("staff_id", staff.id)
-      .eq("approved", true).lt("starts_on", lastDayExclusive).gte("ends_on", today),
+      .eq("approved", true).lt("starts_on", lastDayExclusive).gte("ends_on", firstDay),
   ]);
   for (const { error } of results) {
     if (error) throw error;
@@ -144,6 +179,7 @@ export async function getStaffProfile(tenantId: string, staffId: string, tenantT
       overlapsLeave: (leaves.data ?? []).some((leave) => leave.starts_on <= endDay && leave.ends_on >= startDay),
     };
   });
+  const workWeek = buildStaffWorkWeek(firstDay, timezone, shiftsThisWeek, leaves.data ?? []);
   const services = (skills.data ?? []).filter(({ services }) => services.active)
     .map(({ service_id, services }) => ({ id: service_id, name: services.name }))
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -182,5 +218,5 @@ export async function getStaffProfile(tenantId: string, staffId: string, tenantT
     upcomingCount: upcoming.count ?? 0,
   };
   const lastOwnerProtected = staff.active && role === "owner" && await isLastActiveStaffOwner(db, tenantId, staff.id);
-  return { managedStaff, services, shiftsThisWeek, commissionRule, timezone, formatRange, lastOwnerProtected };
+  return { managedStaff, services, workWeek, commissionRule, timezone, lastOwnerProtected };
 }

@@ -268,7 +268,6 @@ export function StaffView({
         <PageContent>
           {/* ── Page Heading ─────────────────────────────────────────────── */}
           <PageHeading
-            eyebrow="MERCHANT WORKSPACE"
             title="Staff & permissions"
             description="Manage team access, service eligibility, invitations, and commission rules."
             actions={

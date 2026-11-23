@@ -61,12 +61,12 @@ export function InviteStaffModal({ onClose, onSent, tenantId, canInviteAdmins, s
       className="m-auto w-[calc(100%-2rem)] max-w-2xl overflow-hidden rounded-[14px] border border-line bg-white p-0 text-ink shadow-2xl backdrop:backdrop-blur-xs"
     >
       <form onSubmit={(event) => { event.preventDefault(); void send(); }} className="flex max-h-[min(92dvh,calc(100dvh-2rem))] flex-col">
-        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-hairline bg-powder px-4 py-4 sm:px-6">
+        <header className="flex shrink-0 items-start justify-between gap-3 px-4 py-4 sm:px-6">
           <div>
             <h2 id="invite-staff-title" className="font-display text-[26px] leading-[34px] text-ink">
               Invite staff member
             </h2>
-            <p className="mt-1 text-sm text-muted">Set a role, service eligibility, and commission for your teammate.</p>
+            <p className="mt-1 text-sm text-muted">Invite a teammate to this workspace.</p>
           </div>
           <button
             type="button"
@@ -79,7 +79,7 @@ export function InviteStaffModal({ onClose, onSent, tenantId, canInviteAdmins, s
           </button>
         </header>
 
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-5 sm:px-6">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-5 pt-1 sm:px-6">
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-hairline bg-mist px-3 py-2.5 text-sm">
             <span className="font-medium">Staff seats</span>
             <span className="text-body">
