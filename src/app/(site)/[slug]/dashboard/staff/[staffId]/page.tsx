@@ -100,7 +100,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ s
           <Surface className="space-y-5 border border-hairline">
             <h2 className="text-lg font-semibold">Staff details</h2>
             <div className="grid gap-5 lg:grid-cols-2">
-              <dl className="space-y-4 rounded-lg bg-mist p-4">
+              <dl className="space-y-4 rounded-lg border border-hairline p-4">
                 <div>
                   <dt className="text-sm font-semibold">Public title</dt>
                   <dd className="mt-1 break-words text-sm text-body">{managedStaff.title || "No public title added."}</dd>
