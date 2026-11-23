@@ -10,15 +10,15 @@ import {
   type SubmissionDocument,
 } from "@/lib/admin/verification";
 import { cn } from "@/lib/utils";
-import { AdminButton } from "./admin-button";
 import { Icon } from "./icon";
 import { AssetImage } from "./asset-icon";
 import { Checkbox } from "./primitives";
+import { Button } from "@/components/ui/button";
 
 export const DIALOG_TITLE_ID = "admin-dialog-title";
 
 export const dialogSurface =
-  "max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-[10px] bg-white shadow-[0_3px_14px_rgb(44_58_75/0.04)] [scrollbar-width:thin]";
+  "max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-[10px] bg-white shadow-card [scrollbar-width:thin]";
 
 export function ConfirmationCard({
   icon,
@@ -86,12 +86,12 @@ export function ApproveDialog({
         Approving {business} activates their Business account. This decision will be recorded.
       </p>
       <div className="flex flex-wrap items-center justify-center gap-3">
-        <AdminButton variant="outline" className="min-w-[100px]" onClick={onCancel}>
+        <Button size="form" variant="secondary" className="min-w-[100px]" onClick={onCancel}>
           Cancel
-        </AdminButton>
-        <AdminButton onClick={onConfirm} className="min-w-[147px]" autoFocus>
+        </Button>
+        <Button size="form" variant="brand" onClick={onConfirm} className="min-w-[147px]" autoFocus>
           Confirm approval
-        </AdminButton>
+        </Button>
       </div>
     </ConfirmationCard>
   );
@@ -157,12 +157,12 @@ export function RejectDialog({
             : "Reason required · Stored with the decision"}
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3">
-          <AdminButton variant="outline" className="min-w-[100px]" onClick={onCancel}>
+          <Button size="form" variant="secondary" className="min-w-[100px]" onClick={onCancel}>
             Cancel
-          </AdminButton>
-          <AdminButton variant="danger" type="submit" className="min-w-[147px]">
+          </Button>
+          <Button size="form" variant="danger" type="submit" className="min-w-[147px]">
             Confirm Rejection
-          </AdminButton>
+          </Button>
         </div>
       </ConfirmationCard>
     </form>
@@ -242,12 +242,12 @@ export function RequestChangesDialog({
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-[10px]">
-          <AdminButton variant="outline" className="min-w-[100px]" onClick={onClose}>
+          <Button size="form" variant="secondary" className="min-w-[100px]" onClick={onClose}>
             Cancel
-          </AdminButton>
-          <AdminButton type="submit" className="min-w-[119px]">
+          </Button>
+          <Button size="form" variant="brand" type="submit" className="min-w-[119px]">
             Send request
-          </AdminButton>
+          </Button>
         </div>
       </FormCard>
     </form>
@@ -272,12 +272,12 @@ export function DocumentDialog({
         Sample {document.label}
       </div>
       <div className="flex flex-wrap items-center justify-end gap-[10px]">
-        <AdminButton variant="outline" className="min-w-[100px]" onClick={onClose}>
+        <Button size="form" variant="secondary" className="min-w-[100px]" onClick={onClose}>
           Cancel
-        </AdminButton>
-        <AdminButton className="min-w-[135px]" onClick={onClose} autoFocus>
+        </Button>
+        <Button size="form" variant="brand" className="min-w-[135px]" onClick={onClose} autoFocus>
           Done Reviewing
-        </AdminButton>
+        </Button>
       </div>
     </FormCard>
   );
@@ -296,9 +296,9 @@ export function ResultDialog({
     <ConfirmationCard icon="status-success" title={title}>
       <p className="text-center text-sm leading-[21px]">{message}</p>
       <div className="flex justify-center">
-        <AdminButton size="md" className="min-w-[147px]" onClick={onDone} autoFocus>
+        <Button variant="brand" size="formLg" className="min-w-[147px]" onClick={onDone} autoFocus>
           Done
-        </AdminButton>
+        </Button>
       </div>
     </ConfirmationCard>
   );

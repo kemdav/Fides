@@ -12,13 +12,13 @@ import {
   type CategoryFilter,
   type DateFilter,
 } from "@/lib/admin/activity";
-import { AdminButton } from "./admin-button";
 import { ActivityDetailsDialog } from "./activity-details-dialog";
 import { AdminModal } from "./admin-modal";
 import { Icon } from "./icon";
 import { PageContent, PageHeading, StatusPill, Surface } from "./primitives";
 import { Select } from "./select";
 import { ResultDialog } from "./verification-dialogs";
+import { Button } from "@/components/ui/button";
 
 type DialogState = { type: "event"; event: ActivityEvent } | { type: "exported" } | null;
 
@@ -56,9 +56,9 @@ export function ActivityLog() {
         title="Activity log"
         description="A clear record of verification, account, and pricing decisions."
         actions={
-          <AdminButton variant="outline" onClick={exportLog} disabled={events.length === 0}>
+          <Button size="form" variant="secondary" onClick={exportLog} disabled={events.length === 0}>
             Export log
-          </AdminButton>
+          </Button>
         }
       />
 

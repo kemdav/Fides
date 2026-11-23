@@ -3,12 +3,12 @@
 import { useMemo, useState } from "react";
 import { defaultTiers, pluralize, subscribedLabel, type Tier } from "@/lib/admin/tiers";
 import { sampleTenants } from "@/lib/admin/tenants";
-import { AdminButton } from "./admin-button";
 import { AdminModal } from "./admin-modal";
 import { Icon } from "./icon";
 import { PageContent, PageHeading, Surface } from "./primitives";
 import { DeleteTierDialog, TierFormDialog } from "./tier-dialogs";
 import { ResultDialog } from "./verification-dialogs";
+import { Button } from "@/components/ui/button";
 
 type DialogState =
   | { type: "create" }
@@ -34,15 +34,15 @@ function TierCard({ tier, subscribed, onEdit }: { tier: Tier; subscribed: number
           )
         )}
       </ul>
-      <AdminButton
-        variant="outline"
+      <Button
+        variant="secondary"
         size="xs"
         className="mt-auto w-fit"
         onClick={onEdit}
         aria-label={`Edit ${tier.name} tier`}
       >
         Edit tier
-      </AdminButton>
+      </Button>
     </article>
   );
 }
@@ -125,9 +125,9 @@ export function TiersScreen() {
         title="Subscription tiers"
         description="Clear limits, predictable pricing, controlled changes."
         actions={
-          <AdminButton variant="outline" onClick={() => setDialog({ type: "create" })}>
+          <Button size="form" variant="secondary" onClick={() => setDialog({ type: "create" })}>
             Create tier
-          </AdminButton>
+          </Button>
         }
       />
 

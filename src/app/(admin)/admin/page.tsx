@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { AdminLinkButton } from "@/components/admin/admin-button";
+import Link from "next/link";
 import { MetricCard, OverdueBadge } from "@/components/admin/metric-card";
 import { AccountFollowUp } from "@/components/admin/overview/account-follow-up";
 import { ActivityChart } from "@/components/admin/overview/activity-chart";
@@ -10,6 +10,7 @@ import { RecentDecisions } from "@/components/admin/overview/recent-decisions";
 import { UserDistribution } from "@/components/admin/overview/user-distribution";
 import { PageContent, PageHeading } from "@/components/admin/primitives";
 import { isOverdue, sampleSubmissions } from "@/lib/admin/verification";
+import { buttonClasses } from "@/components/ui/button";
 
 export const metadata: Metadata = {
   title: "Platform overview",
@@ -32,9 +33,9 @@ export default function AdminPage() {
         title="Platform Overview"
         description="Review merchant submissions and keep provider account on track."
         actions={
-          <AdminLinkButton variant="outline" size="md" href="/admin/subscription-tiers">
+          <Link href="/admin/subscription-tiers" className={buttonClasses({ variant: "secondary", size: "formLg" })}>
             Subscription tiers
-          </AdminLinkButton>
+          </Link>
         }
       />
 

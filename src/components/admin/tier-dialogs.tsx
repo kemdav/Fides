@@ -12,10 +12,10 @@ import {
   type TierErrors,
 } from "@/lib/admin/tiers";
 import { cn } from "@/lib/utils";
-import { AdminButton } from "./admin-button";
 import { Icon } from "./icon";
 import { TextField } from "./fields";
 import { ConfirmationCard, FormCard } from "./verification-dialogs";
+import { Button } from "@/components/ui/button";
 
 export function TierFormDialog({
   tier,
@@ -101,17 +101,17 @@ export function TierFormDialog({
         </div>
         <div className={cn("flex flex-wrap items-center gap-[10px]", editing ? "justify-between" : "justify-end")}>
           {editing ? (
-            <AdminButton variant="danger" onClick={onDelete}>
+            <Button size="form" variant="danger" onClick={onDelete}>
               Delete tier
-            </AdminButton>
+            </Button>
           ) : null}
           <div className="flex flex-wrap items-center gap-3">
-            <AdminButton variant="outline" className="min-w-[100px]" onClick={onClose}>
+            <Button size="form" variant="secondary" className="min-w-[100px]" onClick={onClose}>
               Cancel
-            </AdminButton>
-            <AdminButton type="submit" className="min-w-[101px]">
+            </Button>
+            <Button size="form" variant="brand" type="submit" className="min-w-[101px]">
               {editing ? "Save changes" : "Create Tier"}
-            </AdminButton>
+            </Button>
           </div>
         </div>
       </FormCard>
@@ -137,12 +137,12 @@ export function DeleteTierDialog({
         Existing tenant subscriptions will remain active ({subscribedLabel(subscribed)}).
       </p>
       <div className="flex flex-wrap items-center justify-center gap-3">
-        <AdminButton variant="outline" size="md" className="min-w-[120px]" onClick={onCancel}>
+        <Button variant="secondary" size="formLg" className="min-w-[120px]" onClick={onCancel}>
           Cancel
-        </AdminButton>
-        <AdminButton variant="danger" size="md" className="min-w-[147px]" onClick={onConfirm} autoFocus>
+        </Button>
+        <Button variant="danger" size="formLg" className="min-w-[147px]" onClick={onConfirm} autoFocus>
           Delete tier
-        </AdminButton>
+        </Button>
       </div>
     </ConfirmationCard>
   );

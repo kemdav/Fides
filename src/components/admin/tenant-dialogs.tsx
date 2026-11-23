@@ -12,10 +12,10 @@ import {
 } from "@/lib/admin/tenants";
 import { pluralize } from "@/lib/admin/tiers";
 import { cn } from "@/lib/utils";
-import { AdminButton } from "./admin-button";
 import { Icon } from "./icon";
 import { Select } from "./select";
 import { ConfirmationCard, FormCard } from "./verification-dialogs";
+import { Button } from "@/components/ui/button";
 
 const selectLabel = "text-sm";
 
@@ -137,17 +137,17 @@ export function TenantDialog({
         ) : null}
         <div className={cn("flex flex-wrap items-center gap-[10px]", reviewing ? "justify-end" : "justify-between")}>
           {reviewing ? (
-            <AdminButton variant="outline" className="min-w-[100px]" onClick={onClose}>
+            <Button size="form" variant="secondary" className="min-w-[100px]" onClick={onClose}>
               Cancel
-            </AdminButton>
+            </Button>
           ) : (
-            <AdminButton variant="danger" className="min-w-[147px]" onClick={onSuspend}>
+            <Button size="form" variant="danger" className="min-w-[147px]" onClick={onSuspend}>
               Suspend Tenant
-            </AdminButton>
+            </Button>
           )}
-          <AdminButton type="submit" disabled={!changed} className="min-w-[124px]">
+          <Button size="form" variant="brand" type="submit" disabled={!changed} className="min-w-[124px]">
             Save changes
-          </AdminButton>
+          </Button>
         </div>
       </FormCard>
     </form>
@@ -183,12 +183,12 @@ export function SuspendDialog({
         </p>
         <ReasonField value={reason} onChange={setReason} showError={showError} autoFocus />
         <div className="flex flex-wrap items-center justify-center gap-3">
-          <AdminButton variant="outline" className="min-w-[100px]" onClick={onCancel}>
+          <Button size="form" variant="secondary" className="min-w-[100px]" onClick={onCancel}>
             Cancel
-          </AdminButton>
-          <AdminButton variant="danger" type="submit" className="min-w-[147px]">
+          </Button>
+          <Button size="form" variant="danger" type="submit" className="min-w-[147px]">
             Suspend Tenant
-          </AdminButton>
+          </Button>
         </div>
       </ConfirmationCard>
     </form>
@@ -236,12 +236,12 @@ export function BulkAccessDialog({
         </p>
         <ReasonField value={reason} onChange={setReason} showError={showError} autoFocus />
         <div className="flex flex-wrap items-center justify-center gap-3">
-          <AdminButton variant="outline" className="min-w-[100px]" onClick={onCancel}>
+          <Button size="form" variant="secondary" className="min-w-[100px]" onClick={onCancel}>
             Cancel
-          </AdminButton>
-          <AdminButton variant={suspending ? "danger" : "primary"} type="submit" className="min-w-[147px]">
+          </Button>
+          <Button size="form" variant={suspending ? "danger" : "brand"} type="submit" className="min-w-[147px]">
             {suspending ? "Suspend" : "Reactivate"} {pluralize(count, "tenant")}
-          </AdminButton>
+          </Button>
         </div>
       </ConfirmationCard>
     </form>
@@ -288,12 +288,12 @@ export function SchedulePlanDialog({
         <ReasonField value={reason} onChange={setReason} showError={showError} autoFocus />
         <Notice>New pricing starts at the next renewal. There is no immediate charge.</Notice>
         <div className="flex flex-wrap items-center justify-center gap-3">
-          <AdminButton variant="outline" className="min-w-[100px]" onClick={onCancel}>
+          <Button size="form" variant="secondary" className="min-w-[100px]" onClick={onCancel}>
             Cancel
-          </AdminButton>
-          <AdminButton type="submit" className="min-w-[125px]">
+          </Button>
+          <Button size="form" variant="brand" type="submit" className="min-w-[125px]">
             Schedule Plan
-          </AdminButton>
+          </Button>
         </div>
       </ConfirmationCard>
     </form>

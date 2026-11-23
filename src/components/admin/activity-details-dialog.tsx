@@ -2,8 +2,8 @@
 
 import { formatEventTime, type ActivityEvent } from "@/lib/admin/activity";
 import { cn } from "@/lib/utils";
-import { AdminButton } from "./admin-button";
 import { DIALOG_TITLE_ID, dialogSurface } from "./verification-dialogs";
+import { Button } from "@/components/ui/button";
 
 export function ActivityDetailsDialog({ event, onClose }: { event: ActivityEvent; onClose: () => void }) {
   return (
@@ -30,9 +30,9 @@ export function ActivityDetailsDialog({ event, onClose }: { event: ActivityEvent
         {event.actor} · {event.action}
       </p>
       <div className="flex justify-end">
-        <AdminButton variant="outline" size="md" className="min-w-[100px]" onClick={onClose} autoFocus>
+        <Button variant="secondary" size="formLg" className="min-w-[100px]" onClick={onClose} autoFocus>
           Close
-        </AdminButton>
+        </Button>
       </div>
     </div>
   );

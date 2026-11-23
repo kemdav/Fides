@@ -38,7 +38,7 @@ export function MetricCard({
   iconWeight,
 }: MetricCardProps) {
   const className = cn(
-    "flex min-h-[184px] flex-col gap-3 overflow-hidden rounded-[10px] p-6 text-left shadow-[0_3px_7px_rgb(44_58_75/0.04)]",
+    "flex min-h-[184px] flex-col gap-3 overflow-hidden rounded-[10px] p-6 text-left shadow-card-sm",
     featured ? "bg-burnt text-white" : "bg-white text-ink",
     (href || onClick) && interactiveRing,
   );

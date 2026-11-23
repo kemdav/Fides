@@ -105,7 +105,7 @@ export function Select<T extends string>({
             id={listId}
             role="listbox"
             aria-labelledby={labelId}
-            className="absolute left-0 right-0 top-[calc(100%+6px)] z-20 flex flex-col gap-0.5 rounded-lg border border-hairline bg-white p-1 shadow-[0_8px_24px_rgb(44_58_75/0.14)]"
+            className="absolute left-0 right-0 top-[calc(100%+6px)] z-20 flex flex-col gap-0.5 rounded-lg border border-hairline bg-white p-1 shadow-popover"
           >
             {options.map((option, index) => (
               <li

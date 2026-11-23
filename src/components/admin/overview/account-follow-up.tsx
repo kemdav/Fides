@@ -1,9 +1,9 @@
 "use client";
 
-import { AdminButton } from "../admin-button";
 import { Icon, type IconName } from "../icon";
 import { Surface } from "../primitives";
 import { useTenants } from "../tenant-provider";
+import { Button } from "@/components/ui/button";
 
 export function AccountFollowUp() {
   const { tenants, openTenant } = useTenants();
@@ -27,7 +27,7 @@ export function AccountFollowUp() {
   ];
 
   return (
-    <Surface className="flex flex-col gap-3 shadow-[0_3px_7px_rgb(44_58_75/0.04)]">
+    <Surface className="flex flex-col gap-3 shadow-card-sm">
       <h2 className="text-base font-semibold leading-6">Account follow-up</h2>
       {followUps.map((item) => (
         <div key={item.title} className="flex min-h-[72px] items-center gap-3">
@@ -36,15 +36,15 @@ export function AccountFollowUp() {
             <p className="text-sm font-semibold leading-5">{item.title}</p>
             <p className="text-xs text-muted">{item.detail}</p>
           </div>
-          <AdminButton
-            variant="outline"
-            size="md"
+          <Button
+            variant="secondary"
+            size="formLg"
             className="min-w-[104px] shrink-0"
             disabled={!item.onClick}
             onClick={item.onClick}
           >
             {item.action}
-          </AdminButton>
+          </Button>
         </div>
       ))}
     </Surface>

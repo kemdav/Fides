@@ -17,7 +17,6 @@ import {
   statusLabels,
 } from "@/lib/admin/verification";
 import { cn } from "@/lib/utils";
-import { AdminButton } from "./admin-button";
 import { AdminModal } from "./admin-modal";
 import { Icon } from "./icon";
 import { MetricCard } from "./metric-card";
@@ -30,6 +29,7 @@ import {
   RequestChangesDialog,
   ResultDialog,
 } from "./verification-dialogs";
+import { Button } from "@/components/ui/button";
 
 type DialogState =
   | { type: "approve" }
@@ -302,15 +302,15 @@ function EvidencePanel({
         Complete all three checks to approve this merchant.
       </p>
       <div className="flex flex-wrap items-center gap-2">
-        <AdminButton disabled={!allChecked} aria-describedby="approval-hint" onClick={onApprove}>
+        <Button size="form" variant="brand" disabled={!allChecked} aria-describedby="approval-hint" onClick={onApprove}>
           Approve merchant
-        </AdminButton>
-        <AdminButton variant="outline" onClick={onRequest}>
+        </Button>
+        <Button size="form" variant="secondary" onClick={onRequest}>
           Request changes
-        </AdminButton>
-        <AdminButton variant="danger" onClick={onReject}>
+        </Button>
+        <Button size="form" variant="danger" onClick={onReject}>
           Reject
-        </AdminButton>
+        </Button>
       </div>
         </>
       ) : null}

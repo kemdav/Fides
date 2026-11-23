@@ -4,12 +4,12 @@ import { useId, useMemo, useState } from "react";
 import { formatNextBilling, isRenewingSoon, type Tenant } from "@/lib/admin/tenants";
 import { pluralize } from "@/lib/admin/tiers";
 import { cn } from "@/lib/utils";
-import { AdminButton } from "./admin-button";
 import { Icon } from "./icon";
 import { MetricCard } from "./metric-card";
 import { Checkbox, PageContent, PageHeading, StatusPill, Surface } from "./primitives";
 import { Select } from "./select";
 import { TenantsProvider, useTenants } from "./tenant-provider";
+import { Button } from "@/components/ui/button";
 
 export type StatusFilter = "all" | "active" | "suspended" | "renewing";
 
@@ -77,17 +77,17 @@ function MobileActions({ tenant }: { tenant: Tenant }) {
   const { openTenant, showResult } = useTenants();
   return (
     <div className="grid grid-cols-2 gap-2 border-t border-hairline pt-3">
-      <AdminButton
-        variant="outline"
+      <Button
+        variant="secondary"
         size="xs"
         disabled={!isRenewingSoon(tenant)}
         onClick={() => showResult("Reminder sent", `A billing reminder was sent to ${tenant.name}.`)}
       >
         Send reminder
-      </AdminButton>
-      <AdminButton variant="outline" size="xs" onClick={() => openTenant(tenant.id)}>
+      </Button>
+      <Button variant="secondary" size="xs" onClick={() => openTenant(tenant.id)}>
         Manage
-      </AdminButton>
+      </Button>
     </div>
   );
 }
@@ -161,9 +161,9 @@ function TenantsContent({ initialFilter }: { initialFilter: StatusFilter }) {
         title="Tenants & subscriptions"
         description="Manage account access and upcoming renewals."
         actions={
-          <AdminButton variant="outline" onClick={exportTenants} disabled={rows.length === 0}>
+          <Button size="form" variant="secondary" onClick={exportTenants} disabled={rows.length === 0}>
             {selectedRows.length ? `Export ${selectedRows.length} selected` : "Export tenants"}
-          </AdminButton>
+          </Button>
         }
       />
 
@@ -255,8 +255,8 @@ function TenantsContent({ initialFilter }: { initialFilter: StatusFilter }) {
               </button>
             </div>
             <div className="grid gap-2 sm:grid-cols-3 lg:flex lg:flex-1 lg:flex-wrap lg:items-center">
-              <AdminButton
-                variant="outline"
+              <Button
+                variant="secondary"
                 size="xs"
                 className="w-full lg:w-auto"
                 disabled={dueSelected.length === 0}
@@ -266,25 +266,25 @@ function TenantsContent({ initialFilter }: { initialFilter: StatusFilter }) {
                 }}
               >
                 Send reminder ({dueSelected.length})
-              </AdminButton>
-              <AdminButton
-                variant="outline"
+              </Button>
+              <Button
+                variant="secondary"
                 size="xs"
                 className="w-full lg:w-auto"
                 disabled={activeSelected.length === 0}
                 onClick={() => openBulkAccess("suspend", activeSelected.map((tenant) => tenant.id), clearSelection)}
               >
                 Suspend ({activeSelected.length})
-              </AdminButton>
-              <AdminButton
-                variant="outline"
+              </Button>
+              <Button
+                variant="secondary"
                 size="xs"
                 className="w-full lg:w-auto"
                 disabled={suspendedSelected.length === 0}
                 onClick={() => openBulkAccess("reactivate", suspendedSelected.map((tenant) => tenant.id), clearSelection)}
               >
                 Reactivate ({suspendedSelected.length})
-              </AdminButton>
+              </Button>
             </div>
           </div>
         ) : null}
