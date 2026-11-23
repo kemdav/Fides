@@ -41,6 +41,12 @@ export class ServiceError extends Error {
   }
 }
 
+export class DocumentUploadError extends ServiceError {
+  constructor(public readonly key: DocumentKey, message: string) {
+    super(message, 422);
+  }
+}
+
 function fail(error: { message: string } | null, fallback: string): never {
   throw new ServiceError(error?.message ? `${fallback} (${error.message})` : fallback, 500);
 }
@@ -95,13 +101,13 @@ async function prepareDocuments(documents: DocumentUploads): Promise<PreparedDoc
   for (const key of REQUIRED_DOCUMENT_KEYS) {
     const title = ALL_DOCUMENTS.find((doc) => doc.key === key)?.title ?? key;
     const file = documents[key];
-    if (!file || file.size === 0) throw new ServiceError(`${title} is required. Please upload this document.`, 400);
+    if (!file || file.size === 0) throw new DocumentUploadError(key, `${title} is required. Please upload this document.`);
     if (file.size > FILE_LIMITS.documentBytes) {
-      throw new ServiceError(`${title} must be ${Math.round(FILE_LIMITS.documentBytes / (1024 * 1024))} MB or smaller.`, 400);
+      throw new DocumentUploadError(key, `${title} must be ${Math.round(FILE_LIMITS.documentBytes / (1024 * 1024))} MB or smaller.`);
     }
     const bytes = Buffer.from(await file.arrayBuffer());
     const kind = sniffDocument(bytes);
-    if (!kind) throw new ServiceError(`${title} must be a PDF, JPG or PNG file.`, 400);
+    if (!kind) throw new DocumentUploadError(key, `${title} must be a PDF, JPG or PNG file.`);
     prepared.push({ key, file, bytes, ...kind });
   }
   return prepared;

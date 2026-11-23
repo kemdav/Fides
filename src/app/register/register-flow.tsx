@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
@@ -9,14 +8,13 @@ import {
   ALL_DOCUMENTS,
   BUSINESS_TYPES,
   DOCUMENT_SLOTS,
-  documentFieldName,
   FILE_LIMITS,
-  formatPeso,
   GOVERNMENT_ID_SLOT,
   ID_TYPES,
   PLAN_OPTIONS,
   TRIAL_DAYS,
   type BusinessDocumentKey,
+  type DocumentKey,
 } from "@/lib/registration/options";
 import {
   accountStepSchema,
@@ -28,6 +26,10 @@ import {
   validateStep,
 } from "@/lib/registration/schema";
 import { cn } from "@/lib/utils";
+import { PlanCardGrid, PlanComparisonRow, SelectedPlanSummary } from "./plan-selection";
+import { SlugBadge } from "./slug-badge";
+import { uploadDocument } from "./upload-document";
+import { normalizeSlugInput } from "@/lib/account-request/schema";
 import {
   DatePicker,
   DocumentCard,
@@ -54,6 +56,9 @@ import {
 } from "./parts";
 
 type DocMap = Partial<Record<BusinessDocumentKey, File>>;
+type UploadReceipt = Awaited<ReturnType<typeof uploadDocument>>;
+type UploadState = { file: File; percent: number; receipt?: UploadReceipt; error?: string };
+type Uploads = Partial<Record<DocumentKey, UploadState>>;
 
 type Values = {
   fullName: string;
@@ -66,6 +71,7 @@ type Values = {
   dateOfBirth: string;
   idType: string;
   businessName: string;
+  requestedSlug: string;
   businessType: string;
   establishedYear: string;
   streetAddress: string;
@@ -87,6 +93,7 @@ const initialValues: Values = {
   dateOfBirth: "",
   idType: "passport",
   businessName: "",
+  requestedSlug: "",
   businessType: BUSINESS_TYPES[0],
   establishedYear: "",
   streetAddress: "",
@@ -99,7 +106,7 @@ const initialValues: Values = {
 
 type Errors = Partial<Record<string, string>>;
 
-const DRAFT_KEY = "fides-registration-draft";
+const documentSizeMb = FILE_LIMITS.documentBytes / (1024 * 1024);
 const stepSchemas = [accountStepSchema, identityStepSchema, businessStepSchema, null, planStepSchema, null] as const;
 
 const primaryButton =
@@ -107,7 +114,8 @@ const primaryButton =
 const secondaryButton =
   "inline-flex h-11 items-center justify-center rounded-md border border-ink/50 bg-white px-5 text-sm font-semibold text-ink transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:opacity-60";
 
-export function RegisterFlow() {
+export function RegisterFlow({ requestAccount = false }: { requestAccount?: boolean }) {
+  const draftKey = requestAccount ? "fides-account-request-draft" : "fides-registration-draft";
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [furthest, setFurthest] = useState(0);
@@ -122,19 +130,27 @@ export function RegisterFlow() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [draftNote, setDraftNote] = useState<string | null>(null);
+  const [uploads, setUploads] = useState<Uploads>({});
+  const [uploading, setUploading] = useState(false);
+  const busy = uploading || submitting;
+  const payload = { ...values, requestedSlug: requestAccount ? values.requestedSlug : undefined };
+
+  function fileFor(key: DocumentKey) {
+    return key === GOVERNMENT_ID_SLOT.key ? idFile : docs[key];
+  }
 
   const hasDraft = useSyncExternalStore(
     () => () => {},
-    () => window.sessionStorage.getItem(DRAFT_KEY) !== null,
+    () => window.sessionStorage.getItem(draftKey) !== null,
     () => false
   );
 
   function restoreDraft() {
     try {
-      const saved = window.sessionStorage.getItem(DRAFT_KEY);
+      const saved = window.sessionStorage.getItem(draftKey);
       if (saved) setValues((current) => ({ ...current, ...(JSON.parse(saved) as Partial<Values>), password: "", confirmPassword: "" }));
     } catch {
-      window.sessionStorage.removeItem(DRAFT_KEY);
+      window.sessionStorage.removeItem(draftKey);
     }
   }
 
@@ -143,7 +159,12 @@ export function RegisterFlow() {
   }, [step]);
 
   function set<K extends keyof Values>(key: K, value: Values[K]) {
-    setValues((current) => ({ ...current, [key]: value }));
+    setValues((current) => {
+      const requestedSlug = requestAccount && key === "businessName" && current.requestedSlug === normalizeSlugInput(current.businessName).replace(/-$/, "")
+        ? normalizeSlugInput(String(value)).replace(/-$/, "")
+        : current.requestedSlug;
+      return { ...current, requestedSlug, [key]: value };
+    });
     setErrors((current) => (current[key] ? { ...current, [key]: undefined } : current));
   }
 
@@ -158,7 +179,7 @@ export function RegisterFlow() {
 
   function validateCurrent(): boolean {
     const schema = stepSchemas[step];
-    let found: Errors = schema ? validateStep(schema, values) : {};
+    let found: Errors = schema ? validateStep(schema, payload) : {};
     if (step === 0 && !found.confirmPassword && values.password !== values.confirmPassword) {
       found = { ...found, confirmPassword: "Passwords do not match." };
     }
@@ -167,8 +188,14 @@ export function RegisterFlow() {
     }
     if (step === 3) {
       const missing: Errors = {};
+      if (!idFile) {
+        setErrors({ idFile: "Upload a government-issued ID (front) to continue." });
+        setStep(1);
+        focusFirstError();
+        return false;
+      }
       for (const slot of DOCUMENT_SLOTS) {
-        if (!docs[slot.key]) missing[slot.key] = `${slot.title} is required. Please upload a PDF, JPG or PNG file (max 5 MB).`;
+        if (!docs[slot.key]) missing[slot.key] = `${slot.title} is required. Please upload a PDF, JPG or PNG file (max ${documentSizeMb} MB).`;
       }
       setDocErrors(missing);
       const count = Object.keys(missing).length;
@@ -218,9 +245,38 @@ export function RegisterFlow() {
     setFurthest((current) => Math.max(current, next));
   }
 
-  function next() {
+  async function next() {
+    if (busy) return;
     if (!validateCurrent()) return;
+    if (step === 3 && !await uploadVerificationDocuments()) return;
     goTo(Math.min(step + 1, STEPS.length - 1));
+  }
+
+  async function uploadVerificationDocuments() {
+    setUploading(true);
+    try {
+      const results = await Promise.all(ALL_DOCUMENTS.map(async ({ key }) => {
+        const file = fileFor(key);
+        if (!file) return false;
+        if (uploads[key]?.file === file && uploads[key]?.receipt) return true;
+
+        const update = (state: Omit<UploadState, "file">) => {
+          setUploads((current) => ({ ...current, [key]: { ...state, file } }));
+        };
+        update({ percent: 0 });
+        try {
+          const receipt = await uploadDocument(key, file, (percent) => update({ percent }));
+          update({ percent: 100, receipt });
+          return true;
+        } catch (error) {
+          update({ percent: 0, error: error instanceof Error ? error.message : "Upload failed. Please retry." });
+          return false;
+        }
+      }));
+      return results.every(Boolean);
+    } finally {
+      setUploading(false);
+    }
   }
 
   function back() {
@@ -232,7 +288,7 @@ export function RegisterFlow() {
     const { password: _password, confirmPassword: _confirm, ...safe } = values;
     void _password;
     void _confirm;
-    window.sessionStorage.setItem(DRAFT_KEY, JSON.stringify(safe));
+    window.sessionStorage.setItem(draftKey, JSON.stringify(safe));
     setDraftNote("Draft saved on this device. Passwords and files are not included.");
   }
 
@@ -242,7 +298,8 @@ export function RegisterFlow() {
       setErrors({ confirmAccuracy: "Please confirm that your information is accurate." });
       return;
     }
-    const parsed = registrationSchema.safeParse(values);
+    if (busy) return;
+    const parsed = registrationSchema.safeParse(payload);
     if (!parsed.success) {
       const issue = parsed.error.issues[0];
       const field = String(issue.path[0] ?? "");
@@ -275,34 +332,53 @@ export function RegisterFlow() {
       return;
     }
 
+    const receipts: Partial<Record<DocumentKey, UploadReceipt>> = {};
+    for (const { key, title } of ALL_DOCUMENTS) {
+      const upload = uploads[key];
+      if (!upload?.receipt || upload.file !== fileFor(key)) {
+        setErrors({ documents: `Upload ${title} before submitting.` });
+        setStep(3);
+        return;
+      }
+      receipts[key] = upload.receipt;
+    }
+
     setSubmitting(true);
     try {
       const body = new FormData();
       body.set("payload", JSON.stringify(parsed.data));
       if (logo) body.set("logo", logo);
-      if (idFile) body.set(documentFieldName(GOVERNMENT_ID_SLOT.key), idFile);
-      for (const slot of DOCUMENT_SLOTS) {
-        const file = docs[slot.key];
-        if (file) body.set(documentFieldName(slot.key), file);
-      }
+      body.set("uploadedDocuments", JSON.stringify(receipts));
       const response = await fetch("/api/applications", { method: "POST", body });
-      const result = (await response.json().catch(() => ({}))) as { error?: string };
+      const result = (await response.json().catch(() => ({}))) as { error?: string; documentKey?: DocumentKey; referenceCode?: string };
       if (!response.ok) {
         setSubmitError(result.error ?? "We could not submit your application. Please try again.");
-        setSubmitting(false);
+        const failedKey = result.documentKey;
+        if (failedKey) {
+          setUploads((current) => ({ ...current, [failedKey]: undefined }));
+          setErrors({ documents: result.error });
+          setStep(3);
+        }
+        if (response.status === 409 && result.error?.includes("subdomain")) {
+          setErrors({ requestedSlug: result.error });
+          setStep(2);
+        }
         return;
       }
-      window.sessionStorage.removeItem(DRAFT_KEY);
-      router.push("/login?registered=1");
+      window.sessionStorage.removeItem(draftKey);
+      router.push(requestAccount && result.referenceCode
+        ? `/request-account/status/${encodeURIComponent(result.referenceCode)}`
+        : "/login?registered=1");
     } catch {
       setSubmitError("We could not reach the server. Check your connection and try again.");
+    } finally {
       setSubmitting(false);
     }
   }
 
   return (
     <div className="flex min-h-dvh flex-col bg-powder text-ink lg:flex-row">
-      <Sidebar current={step} furthest={furthest} onJump={(index) => setStep(index)} />
+      <Sidebar current={step} furthest={busy ? -1 : furthest} onJump={(index) => setStep(index)} />
       <MobileProgress current={step} />
       <main className="flex min-w-0 flex-1 flex-col items-center px-4 py-6 sm:px-8 lg:px-12 lg:py-10">
         <div className={cn("flex w-full flex-1 flex-col", step === 4 ? "max-w-[1100px]" : step === 5 ? "max-w-[820px]" : step === 3 ? "max-w-[900px]" : step === 0 ? "max-w-[560px]" : "max-w-[680px]")}>
@@ -314,6 +390,11 @@ export function RegisterFlow() {
               >
                 <span aria-hidden>←</span> Back to home
               </Link>
+              {requestAccount && (
+                <Link href="/reset-request?mode=application" className="mb-4 w-fit text-sm font-semibold text-burnt hover:underline">
+                  Track an existing application
+                </Link>
+              )}
               <div className="my-auto">
                 {hasDraft ? (
                   <button type="button" onClick={restoreDraft} className="mb-4 w-full rounded-lg bg-[#faece3] px-4 py-2.5 text-sm font-semibold text-burnt hover:bg-[#f6dfd0]">
@@ -339,6 +420,7 @@ export function RegisterFlow() {
           )}
           {step === 2 && (
             <BusinessStep
+              requestAccount={requestAccount}
               values={values}
               errors={errors}
               set={set}
@@ -364,6 +446,9 @@ export function RegisterFlow() {
           )}
           {step === 3 && (
             <DocumentsStep
+              uploads={uploads}
+              idFile={idFile}
+              uploading={uploading}
               docs={docs}
               docErrors={docErrors}
               summaryError={errors.documents}
@@ -386,7 +471,7 @@ export function RegisterFlow() {
               submitting={submitting}
               submitError={submitError}
               draftNote={draftNote}
-              onEdit={goTo}
+              onEdit={(index) => { if (!busy) goTo(index); }}
               onBack={back}
               onSaveDraft={saveDraft}
               onSubmit={submit}
@@ -633,6 +718,7 @@ function IdentityStep({
 }
 
 function BusinessStep({
+  requestAccount,
   values,
   errors,
   set,
@@ -642,6 +728,7 @@ function BusinessStep({
   onBack,
   onNext,
 }: StepProps & {
+  requestAccount: boolean;
   logo: File | null;
   logoError: string | null;
   onLogo: (file: File | null) => void;
@@ -658,6 +745,11 @@ function BusinessStep({
       }}
     >
       <Heading title="Tell us about your business" subtitle="This information powers your public booking portal on Fides." />
+      {requestAccount && (
+        <div className="mb-5">
+          <SlugBadge slug={values.requestedSlug} onChange={(slug) => set("requestedSlug", slug)} error={errors.requestedSlug} />
+        </div>
+      )}
       <Card>
         <div className="flex flex-col gap-5 border-b border-line pb-6 sm:flex-row sm:items-center">
           <div className="flex size-[100px] shrink-0 items-center justify-center overflow-hidden rounded-xl border border-line bg-mist text-center">
@@ -736,6 +828,9 @@ function BusinessStep({
 }
 
 function DocumentsStep({
+  uploads,
+  idFile,
+  uploading,
   docs,
   docErrors,
   summaryError,
@@ -745,6 +840,9 @@ function DocumentsStep({
   onBack,
   onNext,
 }: {
+  uploads: Uploads;
+  idFile: File | null;
+  uploading: boolean;
   docs: DocMap;
   docErrors: Errors;
   summaryError?: string;
@@ -754,7 +852,14 @@ function DocumentsStep({
   onBack: () => void;
   onNext: () => void;
 }) {
-  const uploaded = DOCUMENT_SLOTS.filter((slot) => docs[slot.key]).length;
+  const files = ALL_DOCUMENTS.flatMap(({ key, title }) => {
+    const file = key === GOVERNMENT_ID_SLOT.key ? idFile : docs[key];
+    if (!file) return [];
+    const upload = uploads[key];
+    return [{ key, title, upload: upload?.file === file ? upload : undefined }];
+  });
+  const uploaded = files.filter(({ upload }) => upload?.receipt).length;
+  const hasFailures = files.some(({ upload }) => upload?.error);
   return (
     <form
       noValidate
@@ -773,9 +878,21 @@ function DocumentsStep({
         </p>
       ) : null}
       <p className="mb-3 text-xs font-semibold text-muted" aria-live="polite">
-        {uploaded} of {DOCUMENT_SLOTS.length} required documents uploaded
+        {uploaded} of {ALL_DOCUMENTS.length} required documents uploaded
       </p>
-      <div className="grid gap-5 md:grid-cols-2">
+      <ul className="mb-4 grid gap-2 text-sm" aria-label="Verification upload progress">
+        {files.map(({ key, title, upload }) => (
+          <li key={key} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white p-3">
+            <span>{title}</span>
+            {upload?.error ? <span role="alert" className="text-danger">{upload.error}</span> : upload?.receipt ? (
+              <span className="text-success">Uploaded</span>
+            ) : uploading ? (
+              <progress aria-label={`${title} upload progress`} value={upload?.percent ?? 0} max={100} />
+            ) : <span className="text-muted">Ready to upload</span>}
+          </li>
+        ))}
+      </ul>
+      <fieldset disabled={uploading} className="grid gap-5 md:grid-cols-2">
         {DOCUMENT_SLOTS.map((slot) => (
           <DocumentCard
             key={slot.key}
@@ -789,32 +906,24 @@ function DocumentsStep({
             onPreview={(file) => onPreview(file, slot.title)}
           />
         ))}
-      </div>
+      </fieldset>
       <div className="mt-6 flex flex-col gap-4">
         <InfoNote>
           These documents will be included in your application summary on the final step. Review by our team begins only after you submit your complete application. This typically takes 1–2 business days.
         </InfoNote>
-        <p className="text-xs text-subtle">Accepted formats: PDF, JPG, PNG — Max 5 MB per file. Documents are encrypted and stored securely. Questions? Contact our support team.</p>
+        <p className="text-xs text-subtle">PDF, JPG or PNG · Max {documentSizeMb} MB per file</p>
         <div className="flex flex-col-reverse items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
-          <button type="button" onClick={onBack} className={secondaryButton}>
+          <button type="button" onClick={onBack} disabled={uploading} className={secondaryButton}>
             Back
           </button>
-          <button type="submit" className={primaryButton}>
-            Continue to Subscription Package
+          <button type="submit" disabled={uploading} className={primaryButton}>
+            {uploading ? "Uploading documents…" : hasFailures ? "Retry failed uploads" : "Continue to Subscription Package"}
           </button>
         </div>
       </div>
     </form>
   );
 }
-
-const planBackgrounds: Record<string, string> = {
-  starter: "/images/landing/plan-starter-bg.svg",
-  professional: "/images/landing/plan-pro-bg.svg",
-  business: "/images/landing/plan-business-bg.svg",
-};
-
-const checkTones = { starter: "success", professional: "powder", business: "deep" } as const;
 
 function PlanStep({ values, errors, set, onBack, onNext }: StepProps & { onBack: () => void; onNext: () => void }) {
   return (
@@ -829,61 +938,22 @@ function PlanStep({ values, errors, set, onBack, onNext }: StepProps & { onBack:
         title="Select your subscription package"
         subtitle="The Professional plan is pre-selected. You can change your plan anytime after launch."
       />
-      <div role="radiogroup" aria-label="Subscription package" className="mx-auto flex max-w-[420px] flex-col items-stretch gap-6 xl:max-w-none xl:flex-row xl:items-stretch xl:gap-5">
-        {PLAN_OPTIONS.map((plan) => {
-          const selected = values.planCode === plan.code;
-          const featured = plan.code === "professional";
-          return (
-            <button
-              key={plan.code}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              onClick={() => set("planCode", plan.code)}
-              className={cn(
-                "relative flex flex-1 flex-col rounded-[30px] p-[14px] text-left transition-[transform,box-shadow] duration-300 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-burnt/40",
-                featured ? "bg-sky" : "bg-transparent",
-                selected ? "-translate-y-1 shadow-[0_14px_30px_-12px_rgb(9_16_29/0.45)] ring-4 ring-burnt" : "hover:-translate-y-1"
-              )}
-            >
-              <span className={cn("relative flex h-full flex-col px-7 pb-8 pt-8", featured ? "text-white" : "text-ink")}>
-                <Image src={planBackgrounds[plan.code]} alt="" fill aria-hidden className="rounded-[24px]" />
-                <span className="relative flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                  <span className="text-xl font-semibold xl:text-2xl">{plan.name}</span>
-                  {featured ? <span className="-mr-7 shrink-0 whitespace-nowrap text-xs font-semibold text-info xl:text-sm">Most Popular</span> : null}
-                </span>
-                <span className="relative mt-5 flex flex-wrap items-end gap-x-3 gap-y-1 font-semibold">
-                  <span className="text-[30px] leading-10 xl:text-[34px]">{formatPeso(plan.price)}</span>
-                  <span className="whitespace-nowrap pb-1 text-xs leading-5 xl:text-sm">
-                    /month (Php)
-                    <br />
-                    Billed monthly
-                  </span>
-                </span>
-                <span className="relative mt-3 min-h-[84px] text-sm">{plan.description}</span>
-                <span aria-hidden className={cn("relative mt-5 block border-t border-dashed", featured ? "border-white/60" : "border-ink/30")} />
-                {plan.includes ? <span className="relative mt-4 text-xs font-semibold italic">{plan.includes}</span> : null}
-                <span className="relative mt-4 flex flex-col gap-3">
-                  {plan.features.map((feature) => (
-                    <span key={feature} className="flex items-center gap-3 text-sm">
-                      <CheckIcon tone={checkTones[plan.code]} className="size-5" />
-                      {feature}
-                    </span>
-                  ))}
-                </span>
-                <span
-                  className={cn(
-                    "relative mt-auto inline-flex items-center justify-center self-stretch rounded-[32px] px-4 py-3 text-sm font-semibold",
-                    selected ? "bg-ink text-white" : "bg-sky text-ink",
-                    "mt-8"
-                  )}
-                >
-                  {selected ? "Selected" : "Choose plan"}
-                </span>
-              </span>
-            </button>
-          );
-        })}
+      <PlanCardGrid selectedCode={values.planCode} onSelect={(code) => set("planCode", code)} />
+      <div className="mx-auto mt-6 w-full max-w-3xl overflow-x-auto rounded-xl border border-line bg-white">
+        <table className="w-full text-xs sm:text-sm">
+          <caption className="p-3 text-left font-semibold">Compare plans</caption>
+          <thead>
+            <tr>
+              <th scope="col" className="px-2 py-2 text-left">Feature</th>
+              {PLAN_OPTIONS.map((plan) => <th key={plan.code} scope="col" className="px-2 py-2">{plan.name}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {PLAN_OPTIONS.map((tier, tierIndex) => (
+              <PlanComparisonRow key={tier.code} feature={tier.features[0]} availability={PLAN_OPTIONS.map((_, index) => index >= tierIndex)} />
+            ))}
+          </tbody>
+        </table>
       </div>
       {errors.planCode ? (
         <p role="alert" className="mt-3 text-center text-xs text-danger">
@@ -980,7 +1050,6 @@ function SummaryStep({
   onSaveDraft: () => void;
   onSubmit: () => void;
 }) {
-  const plan = PLAN_OPTIONS.find((item) => item.code === values.planCode) ?? PLAN_OPTIONS[1];
   const idLabel = ID_TYPES.find((item) => item.value === values.idType)?.label ?? values.idType;
   const dob = values.dateOfBirth
     ? new Date(`${values.dateOfBirth}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
@@ -1020,6 +1089,7 @@ function SummaryStep({
 
       <SummaryCard title="Business Information" icon="building" onEdit={() => onEdit(2)}>
         <Row label="Business Name" value={values.businessName} />
+        {values.requestedSlug && <Row label="Requested subdomain" value={values.requestedSlug} />}
         <Row label="Category" value={values.businessType} />
         <Row label="Established" value={values.establishedYear} />
         <Row
@@ -1052,13 +1122,7 @@ function SummaryStep({
       </SummaryCard>
 
       <SummaryCard title="Subscription Package" icon="card" onEdit={() => onEdit(4)}>
-        <Row label="Plan" value={<span className="font-semibold text-burnt">{plan.name}</span>} />
-        <Row label="Price" value={`${formatPeso(plan.price)} / month`} />
-        <Row label="Billing Cycle" value="Monthly" />
-        <p className="flex items-center gap-2 rounded-lg bg-[#faece3] px-3 py-2.5 text-xs text-burnt">
-          <StepIcon name="check" className="size-4 rounded-full bg-burnt p-0.5 text-white" />
-          {TRIAL_DAYS}-day free trial included — no charge until trial ends
-        </p>
+        <SelectedPlanSummary code={values.planCode} />
       </SummaryCard>
 
       <section className="rounded-xl border border-line bg-white p-5 shadow-[0_3px_14px_rgb(44_58_75/0.05)]">

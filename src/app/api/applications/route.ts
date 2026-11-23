@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ServiceError, submitApplication, type DocumentUploads } from "@/lib/applications/service";
+import { DocumentUploadError, ServiceError, submitApplication, type DocumentUploads } from "@/lib/applications/service";
 import { ALL_DOCUMENTS, documentFieldName } from "@/lib/registration/options";
 import { loadStagedDocuments } from "@/lib/applications/staged-documents";
 
@@ -35,6 +35,9 @@ export async function POST(request: Request) {
     const result = await submitApplication(raw, logo instanceof File && logo.size > 0 ? logo : null, documents);
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
+    if (error instanceof DocumentUploadError) {
+      return NextResponse.json({ error: error.message, documentKey: error.key }, { status: error.status });
+    }
     if (error instanceof ServiceError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }

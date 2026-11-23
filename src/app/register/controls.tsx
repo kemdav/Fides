@@ -751,7 +751,7 @@ export function IdUpload({
         )}
       >
         <span className="font-medium">{file ? "Upload a different file" : "Upload File"}</span>
-        <span className="text-[11px] text-subtle">PDF, JPG or PNG · max 5 MB</span>
+        <span className="text-[11px] text-subtle">PDF, JPG or PNG · max {FILE_LIMITS.documentBytes / (1024 * 1024)} MB</span>
       </button>
       {message ? (
         <p id={errorId} role="alert" className="text-xs text-danger">

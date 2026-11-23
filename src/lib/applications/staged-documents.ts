@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ALL_DOCUMENTS, DOCUMENT_BUCKET, FILE_LIMITS } from "@/lib/registration/options";
-import { ServiceError, type DocumentUploads } from "./service";
+import { DocumentUploadError, ServiceError, type DocumentUploads } from "./service";
 
 const fileNameSchema = z.string().min(1).max(255);
 const keys = ALL_DOCUMENTS.map(({ key }) => key);
@@ -15,7 +15,7 @@ export async function signDocumentUpload(raw: unknown) {
     type: z.enum(FILE_LIMITS.documentTypes),
     size: z.number().int().positive().max(FILE_LIMITS.documentBytes),
   }).safeParse(raw);
-  if (!parsed.success) throw new ServiceError("Choose a PDF, JPG or PNG file up to 5 MB.");
+  if (!parsed.success) throw new ServiceError(`Choose a PDF, JPG or PNG file up to ${FILE_LIMITS.documentBytes / (1024 * 1024)} MB.`);
 
   const path = `staged/${randomUUID()}/${parsed.data.key}`;
   const { data, error } = await createAdminClient().storage.from(DOCUMENT_BUCKET).createSignedUploadUrl(path);
@@ -41,7 +41,7 @@ export async function loadStagedDocuments(raw: FormDataEntryValue | null) {
     const { path, name } = parsed.data[key];
     if (!path.endsWith(`/${key}`)) throw new ServiceError(`Invalid upload for ${title}.`);
     const { data, error } = await bucket.download(path);
-    if (error || !data) throw new ServiceError(`Upload ${title} again.`, 422);
+    if (error || !data) throw new DocumentUploadError(key, `Upload ${title} again.`);
     documents[key] = new File([data], name, { type: data.type });
     paths.push(path);
   }
@@ -49,8 +49,12 @@ export async function loadStagedDocuments(raw: FormDataEntryValue | null) {
   return {
     documents,
     async cleanup() {
-      const { error } = await bucket.remove(paths);
-      if (error) console.error("Could not remove staged application documents", error.message);
+      try {
+        const { error } = await bucket.remove(paths);
+        if (error) console.error("Could not remove staged application documents", error.message);
+      } catch (error) {
+        console.error("Could not remove staged application documents", error);
+      }
     },
   };
 }

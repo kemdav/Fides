@@ -375,6 +375,10 @@ export async function sendSubmissionEmail(input: {
       { label: "Business", value: input.businessName },
       { label: "Reference", value: input.referenceCode },
     ],
+    button: {
+      label: "Track application",
+      url: `${publicEnv.siteUrl.replace(/\/$/, "")}/request-account/status/${encodeURIComponent(input.referenceCode)}`,
+    },
     closing: "Thank you for choosing Fides.",
   };
   return sendMail({
