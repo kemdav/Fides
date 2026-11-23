@@ -1,7 +1,6 @@
 "use client";
 
 import { useId, useLayoutEffect, useRef, useState } from "react";
-import { AdminButton } from "@/components/admin/admin-button";
 import { fieldOutlineClasses } from "@/components/admin/fields";
 import { Icon } from "@/components/admin/icon";
 import { cn } from "@/lib/utils";
@@ -88,8 +87,8 @@ export function ServiceCheckboxDropdown({ services, value, onChange, disabled }:
       </button>
       <div ref={panel} id={`${id}-options`} popover="auto" style={{ visibility: "hidden" }}
         onToggle={(event) => setOpen(event.newState === "open")}
-        className="fixed inset-auto m-0 flex-col overflow-hidden rounded-lg border border-hairline bg-white px-2 py-2 shadow-lg [&:popover-open]:flex">
-        <fieldset disabled={disabled} aria-labelledby={`${id}-label`} className="max-h-52 min-h-0 min-w-0 overflow-y-auto overscroll-contain">
+        className="fixed inset-auto m-0 flex-col overflow-hidden rounded-lg border border-hairline bg-white p-0 shadow-lg [&:popover-open]:flex">
+        <fieldset disabled={disabled} aria-labelledby={`${id}-label`} className="max-h-52 min-h-0 min-w-0 overflow-y-auto overscroll-contain px-2 py-2">
           {services.length === 0 && <p className="p-3 text-sm text-muted">No active services available.</p>}
           {services.map((service) => {
             const checked = value.includes(service.id);
@@ -105,9 +104,10 @@ export function ServiceCheckboxDropdown({ services, value, onChange, disabled }:
             );
           })}
         </fieldset>
-        <div className="mt-1 flex shrink-0 justify-center">
-          <AdminButton size="xs" variant="outline-accent" className="border-transparent" onClick={close}>Done</AdminButton>
-        </div>
+        <button type="button" onClick={close}
+          className="min-h-10 w-full shrink-0 border-t border-hairline bg-mist px-3 text-sm font-semibold text-burnt-dark transition-colors hover:bg-burnt/10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-burnt">
+          Done
+        </button>
       </div>
       {selected.length > 0 && (
         <ul aria-label="Selected services" className="flex flex-wrap gap-2">
