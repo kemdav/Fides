@@ -51,6 +51,24 @@ import {
 const DEFAULT_COVER_IMAGE =
   "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80";
 
+const TYPOGRAPHY_OPTIONS = [
+  { value: "Ovo + Mulish", label: "Ovo + Mulish" },
+  { value: "Playfair + Inter", label: "Playfair + Inter" },
+  {
+    value: "Cormorant + Plus Jakarta Sans",
+    label: "Cormorant + Plus Jakarta Sans",
+  },
+  { value: "DM Serif + Montserrat", label: "DM Serif + Montserrat" },
+  { value: "Lora + Source Sans 3", label: "Lora + Source Sans 3" },
+];
+
+const BUSINESS_CATEGORY_OPTIONS = [
+  { value: "Beauty & wellness", label: "Beauty & wellness" },
+  { value: "Healthcare", label: "Healthcare" },
+  { value: "Fitness", label: "Fitness" },
+  { value: "Professional services", label: "Professional services" },
+];
+
 const FALLBACK_PREVIEW_SERVICES: PreviewServiceItem[] = [
   {
     id: "fallback-1",
@@ -117,12 +135,133 @@ const INITIAL_SETTINGS: WebsiteSettingsData = {
   socialImageName: "",
 };
 
-// Shared field input classes
+// Shared field & section header classes
 const fieldInput =
   "h-11 w-full min-w-0 rounded-lg border border-outline bg-white px-3 text-sm text-ink placeholder:text-glyph focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/30 transition-shadow disabled:bg-mist disabled:text-muted disabled:cursor-not-allowed";
 
 const fieldTextarea =
   "w-full min-w-0 rounded-lg border border-outline bg-white px-3 py-2.5 text-sm text-ink placeholder:text-glyph focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/30 transition-shadow leading-relaxed disabled:bg-mist disabled:text-muted disabled:cursor-not-allowed";
+
+const sectionEyebrow =
+  "text-[11px] font-bold uppercase tracking-[0.06em] text-burnt block";
+
+const sectionTitle =
+  "text-lg font-semibold tracking-tight text-ink mt-1 leading-snug";
+
+const sectionSubtitle = "text-xs text-muted mt-0.5";
+
+interface CustomSelectOption {
+  value: string;
+  label: string;
+}
+
+interface CustomSelectProps {
+  value: string;
+  options: CustomSelectOption[];
+  disabled?: boolean;
+  onChange: (value: string) => void;
+  ariaLabel?: string;
+}
+
+function CustomSelect({
+  value,
+  options,
+  disabled = false,
+  onChange,
+  ariaLabel,
+}: CustomSelectProps) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
+  const selectedLabel =
+    options.find((opt) => opt.value === value)?.label ?? value;
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        disabled={disabled}
+        aria-label={ariaLabel}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        onClick={() => {
+          if (!disabled) setIsOpen((prev) => !prev);
+        }}
+        className={`h-11 w-full min-w-0 rounded-lg border bg-white px-3 text-left text-sm text-ink flex items-center justify-between gap-2 transition-all focus:outline-none disabled:bg-mist disabled:text-muted disabled:cursor-not-allowed ${
+          isOpen
+            ? "border-burnt ring-2 ring-burnt/20"
+            : "border-outline hover:border-ink/40 focus:border-burnt focus:ring-2 focus:ring-burnt/30"
+        }`}
+      >
+        <span className="truncate">{selectedLabel}</span>
+        <ChevronDownIcon
+          className={`w-4 h-4 shrink-0 text-glyph transition-transform duration-150 ${
+            isOpen ? "rotate-180 text-burnt" : ""
+          }`}
+        />
+      </button>
+
+      {isOpen && !disabled && (
+        <div
+          role="listbox"
+          className="absolute left-0 right-0 z-40 mt-1.5 rounded-xl border border-hairline bg-white py-1.5 shadow-lg max-h-60 overflow-y-auto"
+        >
+          {options.map((opt) => {
+            const isSelected = opt.value === value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                role="option"
+                aria-selected={isSelected}
+                onClick={() => {
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+                className={`w-full px-3.5 py-2.5 text-left text-sm flex items-center justify-between gap-2 transition-colors ${
+                  isSelected
+                    ? "bg-burnt/10 text-burnt font-semibold"
+                    : "text-ink hover:bg-mist"
+                }`}
+              >
+                <span className="truncate">{opt.label}</span>
+                {isSelected && (
+                  <CheckIcon className="w-4 h-4 shrink-0 text-burnt" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface WebsiteSettingsViewProps {
   initialData?: Partial<WebsiteSettingsData>;
@@ -511,16 +650,12 @@ export function WebsiteSettingsView({
               <div className="xl:col-span-7 min-w-0 space-y-5">
                 {/* 01 Brand identity */}
                 <Surface className="space-y-5">
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-hairline pb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-subtle">01</span>
-                      <h2 className="text-sm font-semibold text-ink">
-                        Brand identity
-                      </h2>
-                    </div>
-                    <span className="text-xs text-muted">
-                      Visible across your website
-                    </span>
+                  <div>
+                    <span className={sectionEyebrow}>01 · BRAND IDENTITY</span>
+                    <h2 className={sectionTitle}>Brand identity</h2>
+                    <p className={sectionSubtitle}>
+                      Visible across your website.
+                    </p>
                   </div>
 
                   {/* Logo, Display Name, Typography */}
@@ -605,28 +740,13 @@ export function WebsiteSettingsView({
                         <label className="block text-xs font-semibold text-ink mb-1.5">
                           Website typography
                         </label>
-                        <div className="relative">
-                          <select
-                            disabled={!canEdit}
-                            value={form.typography}
-                            onChange={(e) =>
-                              handleChange("typography", e.target.value)
-                            }
-                            className={`${fieldInput} appearance-none pr-8`}
-                          >
-                            <option value="Ovo + Mulish">Ovo + Mulish</option>
-                            <option value="Playfair + Inter">
-                              Playfair + Inter
-                            </option>
-                            <option value="Cormorant + Plus Jakarta Sans">
-                              Cormorant + Plus Jakarta Sans
-                            </option>
-                            <option value="DM Serif + Montserrat">
-                              DM Serif + Montserrat
-                            </option>
-                          </select>
-                          <ChevronDownIcon className="w-3.5 h-3.5 text-glyph absolute right-3 top-3.5 pointer-events-none" />
-                        </div>
+                        <CustomSelect
+                          ariaLabel="Website typography"
+                          value={form.typography}
+                          options={TYPOGRAPHY_OPTIONS}
+                          disabled={!canEdit}
+                          onChange={(val) => handleChange("typography", val)}
+                        />
                       </div>
                     </div>
                   </div>
@@ -722,16 +842,15 @@ export function WebsiteSettingsView({
 
                 {/* 02 Homepage content */}
                 <Surface className="space-y-5">
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-hairline pb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-subtle">02</span>
-                      <h2 className="text-sm font-semibold text-ink">
-                        Homepage content
-                      </h2>
-                    </div>
-                    <span className="text-xs text-muted">
-                      Make it feel like you
+                  <div>
+                    <span className={sectionEyebrow}>
+                      02 · HOMEPAGE CONTENT
                     </span>
+                    <h2 className={sectionTitle}>Make it feel like you</h2>
+                    <p className={sectionSubtitle}>
+                      Set the headline, supporting message, and hero imagery on
+                      your storefront.
+                    </p>
                   </div>
 
                   <div>
@@ -1113,15 +1232,13 @@ export function WebsiteSettingsView({
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
               {/* Left: Public Profile & Contact */}
               <div className="min-w-0 space-y-5">
-                <Surface className="space-y-4">
-                  <div className="border-b border-hairline pb-4">
-                    <span className="text-xs font-bold text-subtle block">
-                      01 · PUBLIC PROFILE
-                    </span>
-                    <h2 className="text-sm font-semibold text-ink mt-1">
+                <Surface className="space-y-5">
+                  <div>
+                    <span className={sectionEyebrow}>01 · PUBLIC PROFILE</span>
+                    <h2 className={sectionTitle}>
                       Help customers get to know you
                     </h2>
-                    <p className="text-xs text-muted">
+                    <p className={sectionSubtitle}>
                       These details appear on your About &amp; contact page.
                     </p>
                   </div>
@@ -1144,26 +1261,15 @@ export function WebsiteSettingsView({
                       <label className="block text-xs font-semibold text-ink mb-1.5">
                         Business category
                       </label>
-                      <div className="relative">
-                        <select
-                          disabled={!canEdit}
-                          value={form.businessCategory}
-                          onChange={(e) =>
-                            handleChange("businessCategory", e.target.value)
-                          }
-                          className={`${fieldInput} appearance-none pr-8`}
-                        >
-                          <option value="Beauty & wellness">
-                            Beauty &amp; wellness
-                          </option>
-                          <option value="Healthcare">Healthcare</option>
-                          <option value="Fitness">Fitness</option>
-                          <option value="Professional services">
-                            Professional services
-                          </option>
-                        </select>
-                        <ChevronDownIcon className="w-3.5 h-3.5 text-glyph absolute right-3 top-3.5 pointer-events-none" />
-                      </div>
+                      <CustomSelect
+                        ariaLabel="Business category"
+                        value={form.businessCategory}
+                        options={BUSINESS_CATEGORY_OPTIONS}
+                        disabled={!canEdit}
+                        onChange={(val) =>
+                          handleChange("businessCategory", val)
+                        }
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-ink mb-1.5">
@@ -1180,15 +1286,13 @@ export function WebsiteSettingsView({
                   </div>
                 </Surface>
 
-                <Surface className="space-y-4">
-                  <div className="border-b border-hairline pb-4">
-                    <span className="text-xs font-bold text-subtle block">
+                <Surface className="space-y-5">
+                  <div>
+                    <span className={sectionEyebrow}>
                       02 · CUSTOMER CONTACT
                     </span>
-                    <h2 className="text-sm font-semibold text-ink mt-1">
-                      Make it easy to reach you
-                    </h2>
-                    <p className="text-xs text-muted">
+                    <h2 className={sectionTitle}>Make it easy to reach you</h2>
+                    <p className={sectionSubtitle}>
                       Use contact details your customers can access.
                     </p>
                   </div>
@@ -1243,15 +1347,13 @@ export function WebsiteSettingsView({
 
               {/* Right: Location & Opening Hours */}
               <div className="min-w-0 space-y-5">
-                <Surface className="space-y-4">
-                  <div className="border-b border-hairline pb-4">
-                    <span className="text-xs font-bold text-subtle block">
-                      03 · LOCATION
-                    </span>
-                    <h2 className="text-sm font-semibold text-ink mt-1">
+                <Surface className="space-y-5">
+                  <div>
+                    <span className={sectionEyebrow}>03 · LOCATION</span>
+                    <h2 className={sectionTitle}>
                       Where customers can find you
                     </h2>
-                    <p className="text-xs text-muted">
+                    <p className={sectionSubtitle}>
                       Shown with your contact details on the website.
                     </p>
                   </div>
@@ -1303,20 +1405,16 @@ export function WebsiteSettingsView({
                   </div>
                 </Surface>
 
-                <Surface className="space-y-4">
-                  <div className="border-b border-hairline pb-4">
-                    <span className="text-xs font-bold text-subtle block">
-                      04 · OPENING HOURS
-                    </span>
-                    <h2 className="text-sm font-semibold text-ink mt-1">
-                      Set clear expectations
-                    </h2>
-                    <p className="text-xs text-muted">
+                <Surface className="space-y-5">
+                  <div>
+                    <span className={sectionEyebrow}>04 · OPENING HOURS</span>
+                    <h2 className={sectionTitle}>Set clear expectations</h2>
+                    <p className={sectionSubtitle}>
                       These are display hours. Appointment availability follows
                       Booking settings.
                     </p>
                   </div>
-                  <div className="space-y-2 text-sm">
+                  <div className="divide-y divide-hairline text-sm">
                     {[
                       { label: "Monday – Friday", value: form.hoursMonFri },
                       { label: "Saturday", value: form.hoursSat },
@@ -1324,39 +1422,44 @@ export function WebsiteSettingsView({
                     ].map(({ label, value }) => (
                       <div
                         key={label}
-                        className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-lg bg-mist border border-hairline"
+                        className="flex flex-wrap items-center justify-between gap-2 py-2.5 first:pt-0"
                       >
-                        <span className="text-body font-medium">{label}</span>
-                        <span className="font-semibold text-ink">{value}</span>
+                        <span className="font-semibold text-ink">{label}</span>
+                        <span className="text-muted">{value}</span>
                       </div>
                     ))}
-                    <p className="text-xs text-muted pt-1">
+                  </div>
+                  <div className="border-t border-hairline pt-3 space-y-3">
+                    <p className="text-xs text-muted">
                       Time zone · {form.timeZone}
                     </p>
-                  </div>
-                  <div className="flex items-center justify-between gap-3 pt-1">
-                    <div className="min-w-0">
-                      <span className="text-xs font-semibold text-ink block">
-                        Show opening hours
-                      </span>
-                      <span className="text-xs text-muted block">
-                        Display your weekly hours on the contact page.
-                      </span>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <span className="text-xs font-semibold text-ink block">
+                          Show opening hours
+                        </span>
+                        <span className="text-xs text-muted block">
+                          Display your weekly hours on the contact page.
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={form.showOpeningHours}
+                        disabled={!canEdit}
+                        onClick={() =>
+                          handleChange(
+                            "showOpeningHours",
+                            !form.showOpeningHours,
+                          )
+                        }
+                        className={`w-10 h-5 shrink-0 flex items-center rounded-full p-0.5 transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:opacity-50 disabled:cursor-not-allowed ${form.showOpeningHours ? "bg-burnt" : "bg-line"}`}
+                      >
+                        <div
+                          className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ${form.showOpeningHours ? "translate-x-5" : "translate-x-0"}`}
+                        />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={form.showOpeningHours}
-                      disabled={!canEdit}
-                      onClick={() =>
-                        handleChange("showOpeningHours", !form.showOpeningHours)
-                      }
-                      className={`w-10 h-5 shrink-0 flex items-center rounded-full p-0.5 transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:opacity-50 disabled:cursor-not-allowed ${form.showOpeningHours ? "bg-burnt" : "bg-line"}`}
-                    >
-                      <div
-                        className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ${form.showOpeningHours ? "translate-x-5" : "translate-x-0"}`}
-                      />
-                    </button>
                   </div>
                 </Surface>
               </div>
@@ -1370,15 +1473,13 @@ export function WebsiteSettingsView({
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
               <div className="xl:col-span-7 min-w-0 space-y-5">
                 <Surface className="space-y-5">
-                  <div className="flex flex-wrap items-start justify-between gap-3 border-b border-hairline pb-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <span className="text-xs font-bold text-subtle block">
+                      <span className={sectionEyebrow}>
                         01 · WEBSITE ADDRESS
                       </span>
-                      <h2 className="text-sm font-semibold text-ink mt-1">
-                        Your home on the web
-                      </h2>
-                      <p className="text-xs text-muted">
+                      <h2 className={sectionTitle}>Your home on the web</h2>
+                      <p className={sectionSubtitle}>
                         Share this address with customers so they can book
                         directly.
                       </p>
@@ -1443,14 +1544,10 @@ export function WebsiteSettingsView({
                 </Surface>
 
                 <Surface className="space-y-5">
-                  <div className="border-b border-hairline pb-4">
-                    <span className="text-xs font-bold text-subtle block">
-                      02 · CUSTOM DOMAIN
-                    </span>
-                    <h2 className="text-sm font-semibold text-ink mt-1">
-                      Bring your own domain
-                    </h2>
-                    <p className="text-xs text-muted">
+                  <div>
+                    <span className={sectionEyebrow}>02 · CUSTOM DOMAIN</span>
+                    <h2 className={sectionTitle}>Bring your own domain</h2>
+                    <p className={sectionSubtitle}>
                       Connect a domain you already own. Keep the Fides address
                       as a fallback.
                     </p>
@@ -1495,12 +1592,12 @@ export function WebsiteSettingsView({
 
               <div className="xl:col-span-5 min-w-0 space-y-4">
                 <Surface className="space-y-4">
-                  <span className="text-xs font-bold text-subtle block">
-                    CUSTOMER LINK
-                  </span>
-                  <h3 className="text-sm font-semibold text-ink">
-                    One link. A simple way to book.
-                  </h3>
+                  <div>
+                    <span className={sectionEyebrow}>CUSTOMER LINK</span>
+                    <h3 className={sectionTitle}>
+                      One link. A simple way to book.
+                    </h3>
+                  </div>
                   <div className="rounded-lg border border-hairline bg-mist p-4 space-y-1">
                     <span className="text-sm font-bold text-ink block break-words">
                       {form.businessName}
@@ -1541,11 +1638,9 @@ export function WebsiteSettingsView({
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
               <div className="xl:col-span-7 min-w-0 space-y-5">
                 <Surface className="space-y-5">
-                  <div className="border-b border-hairline pb-4">
-                    <span className="text-xs font-bold text-subtle block">
-                      01 · SEARCH LISTING
-                    </span>
-                    <h2 className="text-sm font-semibold text-ink mt-1">
+                  <div>
+                    <span className={sectionEyebrow}>01 · SEARCH LISTING</span>
+                    <h2 className={sectionTitle}>
                       Help the right customers find you
                     </h2>
                   </div>
@@ -1620,11 +1715,9 @@ export function WebsiteSettingsView({
                 </Surface>
 
                 <Surface className="space-y-5">
-                  <div className="border-b border-hairline pb-4">
-                    <span className="text-xs font-bold text-subtle block">
-                      02 · SOCIAL SHARING
-                    </span>
-                    <h2 className="text-sm font-semibold text-ink mt-1">
+                  <div>
+                    <span className={sectionEyebrow}>02 · SOCIAL SHARING</span>
+                    <h2 className={sectionTitle}>
                       Look good when your link is shared
                     </h2>
                   </div>
@@ -1716,9 +1809,7 @@ export function WebsiteSettingsView({
               {/* Right: Previews */}
               <div className="xl:col-span-5 xl:sticky xl:top-6 min-w-0 space-y-4">
                 <Surface className="space-y-3">
-                  <span className="text-xs font-bold text-subtle block">
-                    SEARCH ENGINE RESULT
-                  </span>
+                  <span className={sectionEyebrow}>SEARCH ENGINE RESULT</span>
                   <div className="text-sm text-ink font-medium break-words">
                     {form.businessName}
                   </div>

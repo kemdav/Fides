@@ -102,7 +102,7 @@ function ColorPickerContent({
         <div className="mb-4">
           <h3
             id="color-modal-title"
-            className="text-base font-semibold text-neutral-900"
+            className="text-lg font-semibold text-neutral-900"
           >
             {config.title}
           </h3>
@@ -113,7 +113,7 @@ function ColorPickerContent({
 
         {/* Large Horizontal Color Preview Rectangle */}
         <div
-          className="w-full h-10 rounded-xl border border-black/10 shadow-inner mb-4 transition-colors"
+          className="w-full h-10 rounded-lg border border-black/10 shadow-inner mb-4 transition-colors"
           style={{ backgroundColor: selectedHex }}
         />
 
@@ -129,7 +129,7 @@ function ColorPickerContent({
               onChange={(e) => setSelectedHex(e.target.value)}
               maxLength={7}
               placeholder="#000000"
-              className="w-full px-3 py-2 rounded-xl border border-neutral-300 font-mono text-xs uppercase text-neutral-900 focus:outline-none focus:ring-1 focus:ring-[#C35000] focus:border-[#C35000] transition"
+              className="w-full px-3 py-2.5 rounded-lg border border-neutral-300 font-mono text-xs uppercase text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#C35000]/25 focus:border-[#C35000] transition"
             />
             <p className="mt-1 text-[11px] text-neutral-400">
               Choose a color or enter a 6-digit HEX value.
@@ -146,7 +146,7 @@ function ColorPickerContent({
                   key={preset.name}
                   type="button"
                   onClick={() => setSelectedHex(preset.hex)}
-                  className={`flex items-center justify-center px-3 py-2 rounded-xl border text-xs font-medium transition ${
+                  className={`flex items-center justify-center px-3 py-2 rounded-lg border text-xs font-medium transition cursor-pointer ${
                     isSelected
                       ? "border-neutral-900 bg-neutral-50 ring-1 ring-neutral-900 text-neutral-900 font-semibold"
                       : "border-neutral-200 hover:border-neutral-300 bg-white text-neutral-700"
@@ -160,18 +160,18 @@ function ColorPickerContent({
         </div>
 
         {/* Action Buttons */}
-        <div className="mt-6 flex items-center justify-end gap-2.5 pt-3 border-t border-neutral-100">
+        <div className="mt-6 flex items-center justify-end gap-3 pt-3 border-t border-neutral-100">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-medium text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 rounded-xl shadow-2xs transition"
+            className="inline-flex items-center justify-center h-10 px-4 text-sm font-medium text-neutral-800 bg-white border border-neutral-400/80 hover:bg-neutral-50 rounded-lg transition cursor-pointer"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={handleApply}
-            className="px-4 py-2 text-xs font-semibold text-white bg-[#C35000] hover:bg-[#A94400] rounded-xl shadow-xs transition"
+            className="inline-flex items-center justify-center h-10 px-5 text-sm font-semibold text-white bg-[#C35000] hover:bg-[#A94400] rounded-lg transition cursor-pointer"
           >
             Apply color
           </button>
