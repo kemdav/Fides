@@ -3,9 +3,10 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/admin/icon";
-import { AdminButton } from "@/components/admin/admin-button";
 import { createAppointmentBookingAction } from "@/app/actions/appointments";
 import { inputClasses } from "@/components/ui";
+import { Modal } from "@/components/ui/modal";
+import { Button } from "@/components/ui/button";
 
 // ─── static option lists ─────────────────────────────────────────────────────
 
@@ -553,13 +554,7 @@ export function NewAppointmentModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-200" onClick={onClose}>
-      <div
-        role="dialog" aria-modal="true" aria-labelledby="appt-modal-title"
-        className="relative w-full max-w-lg rounded-[14px] bg-white shadow-2xl border border-line flex flex-col animate-in fade-in zoom-in-95 slide-in-from-bottom-3 duration-200"
-        style={{ maxHeight: "92dvh" }}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal open onClose={onClose} labelledBy="appt-modal-title" closeOnBackdrop unstyled className="w-[calc(100%-1rem)] max-w-lg rounded-[14px] bg-white shadow-2xl border border-line flex flex-col animate-in fade-in zoom-in-95 slide-in-from-bottom-3 duration-200 overflow-visible p-0 text-ink" style={{ maxHeight: "92dvh" }}>
         {/* ── Header ───────────────────────────────────────────────────── */}
         <div className="px-6 pt-6 pb-5 border-b border-hairline shrink-0 space-y-4">
           <div className="flex items-start justify-between">
@@ -881,37 +876,36 @@ export function NewAppointmentModal({
         {/* ── Footer ───────────────────────────────────────────────────── */}
         <div className="shrink-0 px-6 py-4 border-t border-hairline flex items-center justify-between gap-3">
           {step === 2 ? (
-            <AdminButton variant="outline" size="sm" type="button"
+            <Button variant="secondary" size="form" type="button"
               onClick={() => { setStep(1); setStep2Error(null); setConflictWarning(null); }}
             >
               Back
-            </AdminButton>
+            </Button>
           ) : (
             <div />
           )}
 
           <div className="flex items-center gap-2">
-            <AdminButton variant="outline" size="sm" type="button" onClick={onClose} disabled={isSubmitting}>
+            <Button variant="secondary" size="form" type="button" onClick={onClose} disabled={isSubmitting}>
               Cancel
-            </AdminButton>
+            </Button>
 
             {step === 1 ? (
-              <AdminButton variant="primary" size="sm" type="button" onClick={handleNext}
+              <Button variant="brand" size="form" type="button" onClick={handleNext}
                 className={`transition-opacity ${(customerType === "existing" ? customerSearch.trim() : customerName.trim()) ? "" : "opacity-60"}`}
               >
                 Next: Select Service
-              </AdminButton>
+              </Button>
             ) : (
-              <AdminButton variant="primary" size="sm" type="button"
+              <Button variant="brand" size="form" type="button"
                 disabled={isSubmitting || !serviceName || !staffName || !date || !time}
                 onClick={handleSubmit}
               >
                 {isSubmitting ? "Creating..." : "Create Appointment"}
-              </AdminButton>
+              </Button>
             )}
           </div>
         </div>
-      </div>
-    </div>
+      </Modal>
   );
 }

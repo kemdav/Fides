@@ -5,14 +5,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MerchantSidebar } from "../merchant-sidebar";
 import { Icon } from "@/components/admin/icon";
-import { AdminButton } from "@/components/admin/admin-button";
 import { MetricCard } from "@/components/admin/metric-card";
-import { PageContent, PageHeading, StatusPill, Surface } from "@/components/admin/primitives";
+import { PageContent, PageHeading, Surface } from "@/components/admin/primitives";
 import { updateAppointmentStatusAction } from "@/app/actions/appointments";
 import { NewAppointmentModal, type NewAppointmentResult } from "@/components/merchant/new-appointment-modal";
 import { WalkInModal, type WalkInResult } from "@/components/merchant/walk-in-modal";
 import { EmptyState } from "@/components/ui/empty-state";
 import { AppointmentStatusPill } from "@/components/merchant/appointment-status-pill";
+import { Modal } from "@/components/ui/modal";
+import { Button } from "@/components/ui/button";
 
 export interface AppointmentRow {
   id: string;
@@ -257,18 +258,6 @@ export function OverviewView({
     y: number;
   } | null>(null);
 
-  const linePoints = (key: "booked" | "completed") =>
-    stats.map((item, index) => {
-      const x =
-        stats.length === 1
-          ? lineWidth / 2
-          : 12 + (index / (stats.length - 1)) * (lineWidth - 24);
-      const y =
-        lineHeight -
-        12 -
-        (item[key] / lineMaxVal) * (lineHeight - 24);
-      return `${x},${y}`;
-    }).join(" ");
   const today = new Date();
   const currentMonthLabel = calendarMonth.toLocaleDateString("en-US", {
     month: "long",
@@ -353,20 +342,20 @@ export function OverviewView({
                     </div>
                   )}
                 </div>
-                <AdminButton
-                  variant="primary"
-                  size="sm"
+                <Button
+                  variant="brand"
+                  size="form"
                   onClick={() => setIsNewBookingOpen(true)}
                 >
                   + New Booking
-                </AdminButton>
-                <AdminButton
-                  variant="outline"
-                  size="sm"
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="form"
                   onClick={() => setIsWalkInOpen(true)}
                 >
                   + Add Walk-in
-                </AdminButton>
+                </Button>
               </div>
             }
           />
@@ -897,18 +886,18 @@ export function OverviewView({
                           </div>
                           <div className="flex flex-wrap gap-2 pt-1">
                             {row.status !== "Confirmed" && (
-                              <AdminButton size="xs" variant="primary" onClick={() => handleStatusChange(row.id, "Confirmed")}>
+                              <Button size="xs" variant="brand" onClick={() => handleStatusChange(row.id, "Confirmed")}>
                                 Confirm
-                              </AdminButton>
+                              </Button>
                             )}
                             {row.status !== "Check In" && (
-                              <AdminButton size="xs" variant="outline" onClick={() => handleStatusChange(row.id, "Check In")}>
+                              <Button size="xs" variant="secondary" onClick={() => handleStatusChange(row.id, "Check In")}>
                                 Check In
-                              </AdminButton>
+                              </Button>
                             )}
-                            <AdminButton size="xs" variant="danger" onClick={() => setCancelTarget(row)}>
+                            <Button size="xs" variant="danger" onClick={() => setCancelTarget(row)}>
                               Cancel
-                            </AdminButton>
+                            </Button>
                           </div>
                         </div>
                       )}
@@ -1032,8 +1021,7 @@ export function OverviewView({
 
       {/* Cancel Confirmation Modal (QA #3) */}
       {cancelTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div className="relative w-full max-w-sm rounded-[10px] bg-white p-6 shadow-2xl border border-line">
+        <Modal open onClose={() => setCancelTarget(null)} unstyled className="w-[calc(100%-1rem)] max-w-sm rounded-[10px] bg-white p-6 shadow-2xl border border-line overflow-visible text-ink">
             <h3 className="font-display text-[22px] leading-tight text-ink">
               Cancel Appointment?
             </h3>
@@ -1042,15 +1030,14 @@ export function OverviewView({
               <span className="font-semibold text-ink">{cancelTarget.customer}</span> ({cancelTarget.service}) at {cancelTarget.time}?
             </p>
             <div className="mt-5 flex items-center justify-end gap-2.5">
-              <AdminButton variant="outline" size="xs" onClick={() => setCancelTarget(null)}>
+              <Button variant="secondary" size="xs" onClick={() => setCancelTarget(null)}>
                 Keep
-              </AdminButton>
-              <AdminButton variant="danger" size="xs" onClick={handleConfirmCancel}>
+              </Button>
+              <Button variant="danger" size="xs" onClick={handleConfirmCancel}>
                 Confirm Cancel
-              </AdminButton>
+              </Button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* New Appointment Modal (QA #4) */}

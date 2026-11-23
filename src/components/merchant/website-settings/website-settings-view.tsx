@@ -3,16 +3,8 @@
 import * as React from "react";
 import Image from "next/image";
 import { WebsiteSettingsData, ActiveTab, ColorType } from "./types";
-import {
-  CheckIcon,
-  CopyIcon,
-  ChevronDownIcon,
-  AlertCircleIcon,
-  EyeIcon,
-} from "./icons";
 import { MerchantSidebar } from "../merchant-sidebar";
 import { Icon } from "@/components/admin/icon";
-import { AdminButton } from "@/components/admin/admin-button";
 import { PageContent, PageHeading, Surface } from "@/components/admin/primitives";
 import { ColorPickerModal } from "./color-picker-modal";
 import { ConnectDomainModal, WaitingDnsModal } from "./dns-modals";
@@ -37,6 +29,7 @@ import {
   MAX_FILE_SIZES,
 } from "@/lib/validations/website-settings";
 import { inputClasses } from "@/components/ui";
+import { Button } from "@/components/ui/button";
 
 const INITIAL_SETTINGS: WebsiteSettingsData = {
   businessName: "Bella Vita Salon & Spa",
@@ -279,14 +272,14 @@ export function WebsiteSettingsView({
       {/* Toast notifications */}
       {linkCopiedToast && (
         <div className="fixed top-5 right-5 z-50 bg-ink text-white px-4 py-2.5 rounded-[10px] shadow-xl flex items-center gap-2 text-xs font-medium">
-          <CheckIcon className="w-4 h-4 text-mint" />
+          <Icon name="check" weight="bold" className="w-4 h-4 text-mint" />
           <span>Website link copied to clipboard</span>
         </div>
       )}
 
       {uploadError && (
         <div className="fixed top-5 right-5 z-50 bg-danger text-white px-4 py-2.5 rounded-[10px] shadow-xl flex items-center gap-2 text-xs font-medium">
-          <AlertCircleIcon className="w-4 h-4 text-white" />
+          <Icon name="alert" className="w-4 h-4 text-white" />
           <span>{uploadError}</span>
           <button type="button" onClick={() => setUploadError(null)} className="ml-2 font-bold hover:opacity-80"><Icon name="close" className="size-4" /></button>
         </div>
@@ -294,7 +287,7 @@ export function WebsiteSettingsView({
 
       {saveDraftError && (
         <div className="fixed top-5 right-5 z-50 bg-danger text-white px-4 py-2.5 rounded-[10px] shadow-xl flex items-center gap-2 text-xs font-medium">
-          <AlertCircleIcon className="w-4 h-4 text-white" />
+          <Icon name="alert" className="w-4 h-4 text-white" />
           <span>{saveDraftError}</span>
           <button type="button" onClick={() => setSaveDraftError(null)} className="ml-2 font-bold hover:opacity-80"><Icon name="close" className="size-4" /></button>
         </div>
@@ -320,14 +313,14 @@ export function WebsiteSettingsView({
                   <span className="w-1.5 h-1.5 rounded-full bg-success" />
                   Website is live
                 </span>
-                <AdminButton
-                  variant="outline"
+                <Button
+                  variant="secondary"
                   size="xs"
                   onClick={() => setIsLivePreviewOpen(true)}
                 >
-                  <EyeIcon className="w-3.5 h-3.5" />
+                  <Icon name="eye" className="w-3.5 h-3.5" />
                   Preview website
-                </AdminButton>
+                </Button>
               </div>
             }
           />
@@ -440,7 +433,7 @@ export function WebsiteSettingsView({
                           <option value="Cormorant + Plus Jakarta Sans">Cormorant + Plus Jakarta Sans</option>
                           <option value="DM Serif + Montserrat">DM Serif + Montserrat</option>
                         </select>
-                        <ChevronDownIcon className="w-3.5 h-3.5 text-glyph absolute right-3 top-3.5 pointer-events-none" />
+                        <Icon name="chevron-down" className="w-3.5 h-3.5 text-glyph absolute right-3 top-3.5 pointer-events-none" />
                       </div>
                     </div>
                   </div>
@@ -683,7 +676,7 @@ export function WebsiteSettingsView({
                   </div>
 
                   <p className="text-xs text-muted flex items-center gap-1.5 pt-1">
-                    <CheckIcon className="w-3.5 h-3.5 text-glyph" />
+                    <Icon name="check" weight="bold" className="w-3.5 h-3.5 text-glyph" />
                     <span>Only you can see these updates until you publish.</span>
                   </p>
                 </Surface>
@@ -718,7 +711,7 @@ export function WebsiteSettingsView({
                           <option value="Fitness">Fitness</option>
                           <option value="Professional services">Professional services</option>
                         </select>
-                        <ChevronDownIcon className="w-3.5 h-3.5 text-glyph absolute right-3 top-3.5 pointer-events-none" />
+                        <Icon name="chevron-down" className="w-3.5 h-3.5 text-glyph absolute right-3 top-3.5 pointer-events-none" />
                       </div>
                     </div>
                     <div>
@@ -840,24 +833,24 @@ export function WebsiteSettingsView({
                     <div className="flex items-center justify-between bg-white border border-hairline rounded-lg px-3 py-2 font-mono text-sm text-ink">
                       <span>{form.subdomain}.fides.app</span>
                       <button type="button" onClick={handleCopyLink} className="inline-flex items-center gap-1 text-xs text-muted hover:text-ink font-sans transition-colors">
-                        <CopyIcon className="w-3.5 h-3.5" />
+                        <Icon name="copy" className="w-3.5 h-3.5" />
                         <span>Copy link</span>
                       </button>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 pt-1">
-                      <AdminButton variant="primary" size="xs" onClick={() => setIsChangeAddressOpen(true)}>
+                      <Button variant="brand" size="xs" onClick={() => setIsChangeAddressOpen(true)}>
                         Change website address
-                      </AdminButton>
-                      <AdminButton variant="outline" size="xs" onClick={() => setIsShareModalOpen(true)}>
+                      </Button>
+                      <Button variant="secondary" size="xs" onClick={() => setIsShareModalOpen(true)}>
                         Share
-                      </AdminButton>
+                      </Button>
                     </div>
                     <p className="text-xs text-muted">Use 3–40 lowercase letters, numbers, or hyphens. No spaces.</p>
                   </div>
 
                   <div className="rounded-lg bg-warn-bg border border-warn-bg p-4 space-y-1">
                     <div className="flex items-center gap-2 text-sm font-semibold text-warn-fg">
-                      <AlertCircleIcon className="w-4 h-4 shrink-0" />
+                      <Icon name="alert" className="w-4 h-4 shrink-0" />
                       <span>Changing your address affects shared links</span>
                     </div>
                     <p className="text-sm text-warn-fg leading-relaxed pl-6">
@@ -877,9 +870,9 @@ export function WebsiteSettingsView({
                     <input type="text" value={form.customDomain} onChange={(e) => handleChange("customDomain", e.target.value)} className={`${fieldInput} font-mono`} />
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-lg bg-mist border border-hairline">
-                    <AdminButton variant="primary" size="xs" onClick={() => setIsConnectDomainOpen(true)}>
+                    <Button variant="brand" size="xs" onClick={() => setIsConnectDomainOpen(true)}>
                       View connection steps
-                    </AdminButton>
+                    </Button>
                     <span className="inline-flex items-center rounded-md bg-warn-bg px-2 py-1 text-xs font-semibold leading-[18px] text-warn-fg">
                       <span className="w-1.5 h-1.5 rounded-full bg-warn-fg mr-1.5" />
                       Pending DNS setup
@@ -990,8 +983,8 @@ export function WebsiteSettingsView({
           </div>
 
           <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto">
-            <AdminButton
-              variant="outline"
+            <Button
+              variant="secondary"
               size="xs"
               className="flex-1 sm:flex-none"
               type="button"
@@ -999,9 +992,9 @@ export function WebsiteSettingsView({
               onClick={() => setIsDiscardOpen(true)}
             >
               Discard changes
-            </AdminButton>
-            <AdminButton
-              variant="outline"
+            </Button>
+            <Button
+              variant="secondary"
               size="xs"
               className="flex-1 sm:flex-none"
               type="button"
@@ -1009,9 +1002,9 @@ export function WebsiteSettingsView({
               onClick={handleSaveDraft}
             >
               {isSavingDraft ? "Saving..." : "Save draft"}
-            </AdminButton>
-            <AdminButton
-              variant="primary"
+            </Button>
+            <Button
+              variant="brand"
               size="xs"
               className="flex-1 sm:flex-none"
               type="button"
@@ -1019,7 +1012,7 @@ export function WebsiteSettingsView({
               onClick={() => setIsPublishReviewOpen(true)}
             >
               {isPublishing ? "Publishing..." : "Publish changes"}
-            </AdminButton>
+            </Button>
           </div>
         </div>
       </div>

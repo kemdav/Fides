@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { CheckIcon, AlertCircleIcon } from "./icons";
+import { Modal } from "@/components/ui/modal";
+import { Icon } from "@/components/admin/icon";
 
 interface ShareWebsiteModalProps {
   isOpen: boolean;
@@ -19,13 +20,7 @@ export function ShareWebsiteModal({
   const displayUrl = url.replace(/^https?:\/\//, "");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
-      <div
-        className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-hairline"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="share-website-title"
-      >
+    <Modal open onClose={onClose} labelledBy="share-website-title" unstyled className="w-[calc(100%-1rem)] max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-hairline overflow-visible text-ink">
         <div className="mb-4">
           <h3
             id="share-website-title"
@@ -56,8 +51,7 @@ export function ShareWebsiteModal({
             Close
           </button>
         </div>
-      </div>
-    </div>
+      </Modal>
   );
 }
 
@@ -83,16 +77,10 @@ export function PublishReviewModal({
   const cleanAddress = siteAddress.replace(/^https?:\/\//, "");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
-      <div
-        className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-hairline"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="publish-review-title"
-      >
+    <Modal open onClose={onClose} labelledBy="publish-review-title" unstyled className="w-[calc(100%-1rem)] max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-hairline overflow-visible text-ink">
         {/* Centered Blue Icon */}
         <div className="w-10 h-10 rounded-full bg-info-bg text-info flex items-center justify-center mx-auto mb-3">
-          <AlertCircleIcon className="w-6 h-6" />
+          <Icon name="alert" className="w-6 h-6" />
         </div>
 
         <div className="text-center mb-4">
@@ -115,15 +103,15 @@ export function PublishReviewModal({
           </h4>
           <ul className="space-y-1.5 text-xs text-ink font-medium">
             <li className="flex items-center gap-2">
-              <CheckIcon className="w-3.5 h-3.5 text-success shrink-0 stroke-3" />
+              <Icon name="check" weight="bold" className="w-3.5 h-3.5 text-success shrink-0 stroke-3" />
               <span>Branding and homepage content</span>
             </li>
             <li className="flex items-center gap-2">
-              <CheckIcon className="w-3.5 h-3.5 text-success shrink-0 stroke-3" />
+              <Icon name="check" weight="bold" className="w-3.5 h-3.5 text-success shrink-0 stroke-3" />
               <span>Public business and contact information</span>
             </li>
             <li className="flex items-center gap-2">
-              <CheckIcon className="w-3.5 h-3.5 text-success shrink-0 stroke-3" />
+              <Icon name="check" weight="bold" className="w-3.5 h-3.5 text-success shrink-0 stroke-3" />
               <span>Search listing and social sharing previews</span>
             </li>
           </ul>
@@ -156,8 +144,7 @@ export function PublishReviewModal({
             {isPublishing ? "Publishing..." : "Publish website"}
           </button>
         </div>
-      </div>
-    </div>
+      </Modal>
   );
 }
 
@@ -177,16 +164,10 @@ export function PublishedModal({
   const cleanAddress = siteAddress.replace(/^https?:\/\//, "");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
-      <div
-        className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-hairline text-center"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="published-modal-title"
-      >
+    <Modal open onClose={onClose} labelledBy="published-modal-title" unstyled className="w-[calc(100%-1rem)] max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-hairline text-center overflow-visible text-ink">
         {/* Centered Green Checkmark Icon */}
         <div className="w-10 h-10 rounded-full bg-success/15 text-success flex items-center justify-center mx-auto mb-3">
-          <CheckIcon className="w-6 h-6 stroke-3" />
+          <Icon name="check" weight="bold" className="w-6 h-6 stroke-3" />
         </div>
 
         <h3
@@ -217,8 +198,7 @@ export function PublishedModal({
             Close
           </button>
         </div>
-      </div>
-    </div>
+      </Modal>
   );
 }
 
@@ -231,16 +211,10 @@ export function DraftSavedModal({ isOpen, onClose }: DraftSavedModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
-      <div
-        className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-hairline text-center"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="draft-saved-title"
-      >
+    <Modal open onClose={onClose} labelledBy="draft-saved-title" unstyled className="w-[calc(100%-1rem)] max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-hairline text-center overflow-visible text-ink">
         {/* Centered Green Checkmark Icon */}
         <div className="w-10 h-10 rounded-full bg-success/15 text-success flex items-center justify-center mx-auto mb-3">
-          <CheckIcon className="w-6 h-6 stroke-3" />
+          <Icon name="check" weight="bold" className="w-6 h-6 stroke-3" />
         </div>
 
         <h3
@@ -271,8 +245,7 @@ export function DraftSavedModal({ isOpen, onClose }: DraftSavedModalProps) {
             Close
           </button>
         </div>
-      </div>
-    </div>
+      </Modal>
   );
 }
 
@@ -290,16 +263,10 @@ export function DiscardModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
-      <div
-        className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-hairline text-center"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="discard-modal-title"
-      >
+    <Modal open onClose={onClose} labelledBy="discard-modal-title" unstyled className="w-[calc(100%-1rem)] max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-hairline text-center overflow-visible text-ink">
         {/* Centered Red Icon */}
         <div className="w-10 h-10 rounded-full bg-danger-bg text-danger flex items-center justify-center mx-auto mb-3">
-          <AlertCircleIcon className="w-6 h-6" />
+          <Icon name="alert" className="w-6 h-6" />
         </div>
 
         <h3
@@ -331,7 +298,6 @@ export function DiscardModal({
             Discard changes
           </button>
         </div>
-      </div>
-    </div>
+      </Modal>
   );
 }

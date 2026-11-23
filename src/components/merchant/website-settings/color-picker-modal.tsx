@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { ColorType, ColorOption } from "./types";
+import { Modal } from "@/components/ui/modal";
 
 const COLOR_CONFIG: Record<
   ColorType,
@@ -92,13 +93,7 @@ function ColorPickerContent({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
-      <div
-        className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-hairline"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="color-modal-title"
-      >
+    <Modal open onClose={onClose} labelledBy="color-modal-title" unstyled className="w-[calc(100%-1rem)] max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-hairline overflow-visible text-ink">
         <div className="mb-4">
           <h3
             id="color-modal-title"
@@ -176,7 +171,6 @@ function ColorPickerContent({
             Apply color
           </button>
         </div>
-      </div>
-    </div>
+      </Modal>
   );
 }

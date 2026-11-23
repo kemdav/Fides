@@ -357,7 +357,7 @@ export function CustomersRegistryView({
             </div>
           </div>
 
-          <div className="rounded-xl border border-hairline bg-white p-5 shadow-[0_3px_14px_rgb(44_58_75/0.04)]">
+          <div className="rounded-xl border border-hairline bg-white p-5 shadow-card">
             <p className="text-xs font-semibold text-ink">
               New this month
             </p>
@@ -377,7 +377,7 @@ export function CustomersRegistryView({
             </div>
           </div>
 
-          <div className="rounded-xl border border-hairline bg-white p-5 shadow-[0_3px_14px_rgb(44_58_75/0.04)]">
+          <div className="rounded-xl border border-hairline bg-white p-5 shadow-card">
             <p className="text-xs font-semibold text-ink">
               Returning customers
             </p>
@@ -395,7 +395,7 @@ export function CustomersRegistryView({
             </div>
           </div>
 
-          <div className="rounded-xl border border-hairline bg-white p-5 shadow-[0_3px_14px_rgb(44_58_75/0.04)]">
+          <div className="rounded-xl border border-hairline bg-white p-5 shadow-card">
             <p className="text-xs font-semibold text-ink">
               Invites pending
             </p>

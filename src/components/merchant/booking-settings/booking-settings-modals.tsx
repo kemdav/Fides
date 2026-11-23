@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Icon } from "@/components/admin/icon";
+import { Modal } from "@/components/ui/modal";
 
 interface BookingSettingsSavedModalProps {
   isOpen: boolean;
@@ -14,29 +15,10 @@ export function BookingSettingsSavedModal({
   timeZone,
   onClose,
 }: BookingSettingsSavedModalProps) {
-  React.useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
-
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]"
-      onClick={onClose}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="booking-saved-title"
-        className="w-full max-w-[400px] rounded-2xl bg-white px-7 py-8 text-center shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal open onClose={onClose} labelledBy="booking-saved-title" closeOnBackdrop unstyled className="w-[calc(100%-1rem)] max-w-[400px] rounded-2xl bg-white px-7 py-8 text-center shadow-2xl overflow-visible text-ink">
         <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-full border-[3px] border-success text-success">
           <Icon name="check" weight="bold" className="size-7" />
         </div>
@@ -60,8 +42,7 @@ export function BookingSettingsSavedModal({
             Done
           </button>
         </div>
-      </div>
-    </div>
+      </Modal>
   );
 }
 
@@ -78,15 +59,6 @@ export function ConfirmDiscardModal({
   onKeepEditing,
   onConfirmDiscard,
 }: ConfirmDiscardModalProps) {
-  React.useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onKeepEditing();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onKeepEditing]);
-
   if (!isOpen) return null;
 
   const isLeave = variant === "leave";
@@ -96,17 +68,7 @@ export function ConfirmDiscardModal({
     : "Your unsaved booking settings will be lost. This cannot be undone. Your last saved settings will remain in effect.";
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]"
-      onClick={onKeepEditing}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="booking-discard-title"
-        className="w-full max-w-[420px] rounded-2xl bg-white px-7 py-8 text-center shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal open onClose={onKeepEditing} labelledBy="booking-discard-title" closeOnBackdrop unstyled className="w-[calc(100%-1rem)] max-w-[420px] rounded-2xl bg-white px-7 py-8 text-center shadow-2xl overflow-visible text-ink">
         <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-full border-[3px] border-danger text-danger">
           <Icon name="alert" className="size-7" />
         </div>
@@ -137,7 +99,6 @@ export function ConfirmDiscardModal({
             Discard changes
           </button>
         </div>
-      </div>
-    </div>
+      </Modal>
   );
 }

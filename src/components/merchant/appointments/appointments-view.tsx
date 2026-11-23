@@ -4,12 +4,10 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { MerchantSidebar } from "../merchant-sidebar";
 import { Icon } from "@/components/admin/icon";
-import { AdminButton } from "@/components/admin/admin-button";
 import { MetricCard } from "@/components/admin/metric-card";
 import {
   PageContent,
   PageHeading,
-  StatusPill,
   Surface,
 } from "@/components/admin/primitives";
 import { updateAppointmentStatusAction } from "@/app/actions/appointments";
@@ -23,6 +21,8 @@ import {
 } from "@/components/merchant/walk-in-modal";
 import { EmptyState } from "@/components/ui/empty-state";
 import { AppointmentStatusPill } from "@/components/merchant/appointment-status-pill";
+import { Modal } from "@/components/ui/modal";
+import { Button } from "@/components/ui/button";
 
 export interface AppointmentItem {
   id: string;
@@ -388,20 +388,20 @@ export function AppointmentsView({
             description="Manage bookings, approvals, and appointment outcomes in one place."
             actions={
               <div className="flex flex-wrap items-center gap-2">
-                <AdminButton
-                  variant="primary"
-                  size="sm"
+                <Button
+                  variant="brand"
+                  size="form"
                   onClick={() => setIsNewBookingOpen(true)}
                 >
                   + New Booking
-                </AdminButton>
-                <AdminButton
-                  variant="outline"
-                  size="sm"
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="form"
                   onClick={() => setIsWalkInOpen(true)}
                 >
                   + Add Walk-in
-                </AdminButton>
+                </Button>
               </div>
             }
           />
@@ -1218,34 +1218,34 @@ export function AppointmentsView({
                               </div>
                               <div className="flex flex-wrap gap-2 border-t border-hairline pt-3">
                                 {row.status !== "Confirmed" && (
-                                  <AdminButton
+                                  <Button
                                     size="xs"
-                                    variant="primary"
+                                    variant="brand"
                                     onClick={() =>
                                       handleStatusChange(row.id, "Confirmed")
                                     }
                                   >
                                     Confirm
-                                  </AdminButton>
+                                  </Button>
                                 )}
                                 {row.status !== "Check In" && (
-                                  <AdminButton
+                                  <Button
                                     size="xs"
-                                    variant="outline"
+                                    variant="secondary"
                                     onClick={() =>
                                       handleStatusChange(row.id, "Check In")
                                     }
                                   >
                                     Check In
-                                  </AdminButton>
+                                  </Button>
                                 )}
-                                <AdminButton
+                                <Button
                                   size="xs"
                                   variant="danger"
                                   onClick={() => setCancelTarget(row)}
                                 >
                                   Cancel
-                                </AdminButton>
+                                </Button>
                               </div>
                             </div>
                           )}
@@ -1412,14 +1412,7 @@ export function AppointmentsView({
 
       {/* ── Appointment detail popover (from calendar click) ───────────────── */}
       {popoverItem && (
-        <div
-          className="fixed inset-0 z-40 flex items-end justify-center sm:items-center p-4 bg-black/30 backdrop-blur-xs"
-          onClick={() => setPopoverItem(null)}
-        >
-          <div
-            className="w-full max-w-sm rounded-[10px] bg-white border border-line shadow-2xl p-5 space-y-4"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <Modal open onClose={() => setPopoverItem(null)} closeOnBackdrop unstyled className="w-[calc(100%-1rem)] max-w-sm rounded-[10px] bg-white border border-line shadow-2xl p-5 space-y-4 overflow-visible text-ink backdrop:bg-black/30">
             {/* header */}
             <div className="flex items-start justify-between">
               <div>
@@ -1454,26 +1447,26 @@ export function AppointmentsView({
             {/* actions */}
             <div className="flex flex-wrap gap-2 pt-1 border-t border-hairline">
               {popoverItem.status !== "Confirmed" && (
-                <AdminButton
+                <Button
                   size="xs"
-                  variant="primary"
+                  variant="brand"
                   onClick={() =>
                     handleStatusChange(popoverItem.id, "Confirmed")
                   }
                 >
                   Confirm
-                </AdminButton>
+                </Button>
               )}
               {popoverItem.status !== "Check In" && (
-                <AdminButton
+                <Button
                   size="xs"
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => handleStatusChange(popoverItem.id, "Check In")}
                 >
                   Check In
-                </AdminButton>
+                </Button>
               )}
-              <AdminButton
+              <Button
                 size="xs"
                 variant="danger"
                 onClick={() => {
@@ -1482,18 +1475,17 @@ export function AppointmentsView({
                 }}
               >
                 Cancel
-              </AdminButton>
-              <AdminButton
+              </Button>
+              <Button
                 size="xs"
-                variant="outline"
+                variant="secondary"
                 onClick={() => setPopoverItem(null)}
                 className="ml-auto"
               >
                 Close
-              </AdminButton>
+              </Button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Toast */}
@@ -1505,8 +1497,7 @@ export function AppointmentsView({
 
       {/* Cancel Confirmation Modal */}
       {cancelTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div className="relative w-full max-w-sm rounded-[10px] bg-white p-6 shadow-2xl border border-line">
+        <Modal open onClose={() => setCancelTarget(null)} unstyled className="w-[calc(100%-1rem)] max-w-sm rounded-[10px] bg-white p-6 shadow-2xl border border-line overflow-visible text-ink">
             <h3 className="font-display text-[22px] leading-tight text-ink">
               Cancel Appointment?
             </h3>
@@ -1518,23 +1509,22 @@ export function AppointmentsView({
               ({cancelTarget.service}) at {cancelTarget.time}?
             </p>
             <div className="mt-5 flex items-center justify-end gap-2.5">
-              <AdminButton
-                variant="outline"
+              <Button
+                variant="secondary"
                 size="xs"
                 onClick={() => setCancelTarget(null)}
               >
                 Keep
-              </AdminButton>
-              <AdminButton
+              </Button>
+              <Button
                 variant="danger"
                 size="xs"
                 onClick={handleConfirmCancel}
               >
                 Confirm Cancel
-              </AdminButton>
+              </Button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* New Appointment Modal (QA #4) */}

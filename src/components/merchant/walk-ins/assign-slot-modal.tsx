@@ -13,6 +13,7 @@ import type {
 import { Icon } from "@/components/admin/icon";
 import { inputClasses } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { Modal } from "@/components/ui/modal";
 
 interface AssignSlotModalProps {
   entry: WaitlistQueueItem | null;
@@ -119,16 +120,7 @@ export function AssignSlotModal({
 
   if (assignedSuccess) {
     return (
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4 backdrop-blur-xs"
-        onClick={onClose}
-      >
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="w-full max-w-[360px] rounded-[12px] bg-white px-6 py-8 text-center shadow-2xl"
-          onClick={(e) => e.stopPropagation()}
-        >
+      <Modal open onClose={onClose} closeOnBackdrop unstyled className="w-[calc(100%-1rem)] max-w-[360px] rounded-[12px] bg-white px-6 py-8 text-center shadow-2xl overflow-visible text-ink backdrop:bg-black/35">
           <div className="mx-auto flex size-12 items-center justify-center rounded-full border-2 border-success text-success">
             <Icon name="check" weight="bold" className="size-6" />
           </div>
@@ -143,8 +135,7 @@ export function AssignSlotModal({
           >
             Done
           </button>
-        </div>
-      </div>
+        </Modal>
     );
   }
 
@@ -182,17 +173,7 @@ export function AssignSlotModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-3 backdrop-blur-xs sm:p-5"
-      onClick={onClose}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="assign-slot-title"
-        className="max-h-[96dvh] w-full max-w-[660px] overflow-y-auto rounded-[12px] bg-white px-6 py-5 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal open onClose={onClose} labelledBy="assign-slot-title" closeOnBackdrop unstyled className="max-h-[96dvh] w-[calc(100%-1rem)] max-w-[660px] overflow-y-auto rounded-[12px] bg-white px-6 py-5 shadow-2xl text-ink backdrop:bg-black/35">
         <div className="flex items-start justify-between">
           <h2
             id="assign-slot-title"
@@ -383,7 +364,6 @@ export function AssignSlotModal({
             {isSubmitting ? "Confirming..." : "Confirm Appointment"}
           </button>
         </div>
-      </div>
-    </div>
+      </Modal>
   );
 }

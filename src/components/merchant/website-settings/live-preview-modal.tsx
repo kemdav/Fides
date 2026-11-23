@@ -3,7 +3,8 @@
 import * as React from "react";
 import Image from "next/image";
 import { WebsiteSettingsData } from "./types";
-import { XIcon, ArrowRightIcon } from "./icons";
+import { Modal } from "@/components/ui/modal";
+import { Icon } from "@/components/admin/icon";
 
 interface LivePreviewModalProps {
   isOpen: boolean;
@@ -19,8 +20,7 @@ export function LivePreviewModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-2xl bg-white shadow-2xl overflow-hidden border border-line">
+    <Modal open onClose={onClose} unstyled className="w-[calc(100%-1rem)] max-w-4xl max-h-[92vh] flex flex-col rounded-2xl bg-white shadow-2xl overflow-hidden border border-line p-0 text-ink backdrop:bg-black/60">
         {/* Preview header bar */}
         <div className="flex items-center justify-between px-5 py-3.5 bg-ink text-white select-none">
           <div className="flex items-center gap-3">
@@ -40,7 +40,7 @@ export function LivePreviewModal({
             className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium text-line hover:text-white hover:bg-ink transition"
           >
             <span>Close preview</span>
-            <XIcon className="w-4 h-4" />
+            <Icon name="close" className="w-4 h-4" />
           </button>
         </div>
 
@@ -156,7 +156,7 @@ export function LivePreviewModal({
                       className="mt-4 inline-flex items-center gap-1 text-xs font-semibold"
                       style={{ color: data.accentColor || "#CC5000" }}
                     >
-                      View service <ArrowRightIcon className="w-3.5 h-3.5" />
+                      View service <Icon name="arrow-right" className="w-3.5 h-3.5" />
                     </span>
                   </div>
 
@@ -173,7 +173,7 @@ export function LivePreviewModal({
                       className="mt-4 inline-flex items-center gap-1 text-xs font-semibold"
                       style={{ color: data.accentColor || "#CC5000" }}
                     >
-                      View service <ArrowRightIcon className="w-3.5 h-3.5" />
+                      View service <Icon name="arrow-right" className="w-3.5 h-3.5" />
                     </span>
                   </div>
 
@@ -190,7 +190,7 @@ export function LivePreviewModal({
                       className="mt-4 inline-flex items-center gap-1 text-xs font-semibold"
                       style={{ color: data.accentColor || "#CC5000" }}
                     >
-                      View service <ArrowRightIcon className="w-3.5 h-3.5" />
+                      View service <Icon name="arrow-right" className="w-3.5 h-3.5" />
                     </span>
                   </div>
                 </div>
@@ -238,7 +238,6 @@ export function LivePreviewModal({
             <div className="text-[11px] text-subtle">Powered by Fides</div>
           </footer>
         </div>
-      </div>
-    </div>
+      </Modal>
   );
 }

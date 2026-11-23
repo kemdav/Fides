@@ -9,6 +9,7 @@ import type {
 import { Icon } from "@/components/admin/icon";
 import { inputClasses } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { Modal } from "@/components/ui/modal";
 
 /* ------------------------------------------------------------------ Shared */
 
@@ -25,32 +26,12 @@ function ModalShell({
   ariaLabelledBy: string;
   children: React.ReactNode;
 }) {
-  React.useEffect(() => {
-    if (!isOpen) return;
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [isOpen, onClose]);
-
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]"
-      onClick={onClose}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={ariaLabelledBy}
-        className={`w-full ${maxWidthClass} rounded-2xl bg-white shadow-2xl`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {children}
-      </div>
-    </div>
+    <Modal open onClose={onClose} labelledBy={ariaLabelledBy} closeOnBackdrop unstyled className={`w-[calc(100%-1rem)] ${maxWidthClass} overflow-visible rounded-2xl bg-white p-0 text-ink shadow-2xl`}>
+      {children}
+    </Modal>
   );
 }
 
