@@ -7,7 +7,7 @@ import type {
   UpdateCustomerInput,
 } from "@/types/customers";
 import { Icon } from "@/components/admin/icon";
-import { inputClasses } from "@/components/ui";
+import { DatePicker, inputClasses } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { Modal } from "@/components/ui/modal";
 
@@ -418,12 +418,15 @@ export function AddCustomerModal({
             >
               Birthday
             </label>
-            <input
+            <DatePicker
               id="add-customer-birthday"
-              type="date"
+              className="mt-1.5"
               value={birthday}
-              onChange={(e) => setBirthday(e.target.value)}
-              className={cn(inputClasses(false, false), "mt-1.5")}
+              max={new Date().toISOString().slice(0, 10)}
+              minYear={1900}
+              placeholder="Select birthday"
+              ariaLabel="Choose birthday"
+              onChange={setBirthday}
             />
           </div>
         </div>
@@ -706,13 +709,16 @@ export function EditCustomerModal({
               >
                 Birthday
               </label>
-              <input
-                id="edit-customer-birthday"
-                type="date"
-                value={birthday}
-                onChange={(e) => setBirthday(e.target.value)}
-                className={cn(inputClasses(false, false), "mt-1.5")}
-              />
+              <DatePicker
+              id="edit-customer-birthday"
+              className="mt-1.5"
+              value={birthday}
+              max={new Date().toISOString().slice(0, 10)}
+              minYear={1900}
+              placeholder="Select birthday"
+              ariaLabel="Choose birthday"
+              onChange={setBirthday}
+            />
             </div>
           </div>
 

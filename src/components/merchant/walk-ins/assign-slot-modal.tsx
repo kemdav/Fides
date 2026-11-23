@@ -11,7 +11,7 @@ import type {
   WalkInStaffOption,
 } from "@/types/walk-ins";
 import { Icon } from "@/components/admin/icon";
-import { inputClasses } from "@/components/ui";
+import { DatePicker, inputClasses, SelectField } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { Modal } from "@/components/ui/modal";
 
@@ -221,17 +221,13 @@ export function AssignSlotModal({
                   : entry.requestedStaffName}
               </p>
             ) : (
-              <select
+              <SelectField
+                ariaLabel="Assigned staff and resource"
+                className="mt-1"
                 value={selectedStaffId}
-                onChange={(e) => setSelectedStaffId(e.target.value)}
-                className={cn(inputClasses(false, false), "mt-1")}
-              >
-                {staff.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.fullName} · {s.resourceLabel}
-                  </option>
-                ))}
-              </select>
+                options={staff.map((s) => ({ value: s.id, label: `${s.fullName} · ${s.resourceLabel}` }))}
+                onChange={setSelectedStaffId}
+              />
             )}
           </div>
         </div>
@@ -240,7 +236,7 @@ export function AssignSlotModal({
           {entry.requestedStaffId
             ? `Requested staff ${entry.requestedStaffName} is retained for this appointment.`
             : assignedStaff
-              ? `Any available → ${assignedStaff.fullName} (first available eligible staff).`
+              ? `Any available staff: assigned to ${assignedStaff.fullName} (first available eligible staff).`
               : "Select an eligible staff member."}
         </p>
 
@@ -252,37 +248,30 @@ export function AssignSlotModal({
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="block text-xs text-muted">
-              Appointment date
-              <input
-                type="date"
+            <div className="block text-xs text-muted">
+              <label htmlFor="assign-slot-date">Appointment date</label>
+              <DatePicker
+                id="assign-slot-date"
+                className="mt-1"
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className={cn(inputClasses(false, false), "mt-1")}
+                min={getTodayManila()}
+                ariaLabel="Choose appointment date"
+                onChange={(next) => setDate(next || getTodayManila())}
               />
-            </label>
+            </div>
 
-            <label className="block text-xs text-muted">
-              Start time → End time · {entry.serviceDurationMinutes} minutes
-              <select
-                value={selectedSlotIso}
-                onChange={(e) => setSelectedSlotIso(e.target.value)}
+            <div className="block text-xs text-muted">
+              <span id="assign-slot-time-label">Start time to end time · {entry.serviceDurationMinutes} minutes</span>
+              <SelectField
+                labelledBy="assign-slot-time-label"
+                className="mt-1"
                 disabled={loadingSlots || slots.length === 0}
-                className={cn(inputClasses(false, false), "mt-1")}
-              >
-                {loadingSlots ? (
-                  <option value="">Checking availability...</option>
-                ) : slots.length === 0 ? (
-                  <option value="">No open slots on this date</option>
-                ) : (
-                  slots.map((slot) => (
-                    <option key={slot.startsAt} value={slot.startsAt}>
-                      {slot.label}
-                    </option>
-                  ))
-                )}
-              </select>
-            </label>
+                placeholder={loadingSlots ? "Checking availability..." : "No open slots on this date"}
+                value={selectedSlotIso}
+                options={slots.map((slot) => ({ value: slot.startsAt, label: slot.label }))}
+                onChange={setSelectedSlotIso}
+              />
+            </div>
           </div>
 
           <p

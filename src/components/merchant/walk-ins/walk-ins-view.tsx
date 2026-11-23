@@ -15,12 +15,17 @@ import type {
 } from "@/types/walk-ins";
 import { Icon } from "@/components/admin/icon";
 import { MetricCard } from "@/components/admin/metric-card";
-import { buttonClasses, inputClasses } from "@/components/ui";
-import { cn } from "@/lib/utils";
+import { buttonClasses, SearchField, SelectField, type SelectOption } from "@/components/ui";
 
 interface WalkInsViewProps {
   initialData: WalkInWorkspaceData;
 }
+
+const waitingFilterOptions: SelectOption<"all" | "waiting" | "notified">[] = [
+  { value: "all", label: "Filter: All" },
+  { value: "waiting", label: "Waiting" },
+  { value: "notified", label: "Notified" },
+];
 
 export function WalkInsView({ initialData }: WalkInsViewProps) {
   const [data, setData] = React.useState<WalkInWorkspaceData>(initialData);
@@ -263,28 +268,22 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
-            <input
-              type="search"
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+            <SearchField
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search customer or service"
-              className={cn(inputClasses(false, false, true), "sm:w-72")}
+              aria-label="Search waiting list"
+              className="sm:w-96"
             />
-            <select
-              aria-label="Filter waiting list"
+            <SelectField
+              ariaLabel="Filter waiting list"
+              compact
+              className="sm:w-44"
               value={statusFilter}
-              onChange={(e) =>
-                setStatusFilter(
-                  e.target.value as "all" | "waiting" | "notified",
-                )
-              }
-              className={inputClasses(false, false, true)}
-            >
-              <option value="all">Filter: All</option>
-              <option value="waiting">Waiting</option>
-              <option value="notified">Notified</option>
-            </select>
+              options={waitingFilterOptions}
+              onChange={setStatusFilter}
+            />
           </div>
         </div>
 

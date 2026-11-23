@@ -14,6 +14,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { AppointmentStatusPill } from "@/components/merchant/appointment-status-pill";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField, type SelectOption } from "@/components/ui/select-field";
+import { statusFilterOptions } from "@/components/merchant/appointment-filter-options";
 
 export interface AppointmentRow {
   id: string;
@@ -62,6 +65,12 @@ export interface OverviewViewProps {
 
 const EMPTY_APPOINTMENTS: AppointmentRow[] = [];
 
+const periodOptions: SelectOption<"Today" | "This Week" | "This Month">[] = [
+  { value: "Today", label: "Today" },
+  { value: "This Week", label: "This Week" },
+  { value: "This Month", label: "This Month" },
+];
+
 export function OverviewView({
   businessName = "Bella Vita",
   userName = "Maria Santos",
@@ -90,9 +99,7 @@ export function OverviewView({
   const [appointments, setAppointments] = React.useState<AppointmentRow[]>(initialRows);
 
   const [filterStatus, setFilterStatus] = React.useState<string>("All");
-  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [period, setPeriod] = React.useState(initialPeriod);
-  const [isPeriodOpen, setIsPeriodOpen] = React.useState(false);
   const [activeMenuId, setActiveMenuId] = React.useState<string | null>(null);
   const [cancelTarget, setCancelTarget] = React.useState<AppointmentRow | null>(null);
   const [isNewBookingOpen, setIsNewBookingOpen] = React.useState(false);
@@ -312,36 +319,18 @@ export function OverviewView({
             description="Here's the latest update on your business. Let's make today a great one."
             actions={
               <div className="flex flex-wrap items-center gap-2">
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setIsPeriodOpen(!isPeriodOpen)}
-                    className="h-12 w-36 rounded-lg border-2 border-outline bg-white px-4 text-sm font-semibold text-ink flex items-center justify-between gap-3 hover:bg-mist transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
-                  >
-                    <span>{period}</span>
-                    <Icon name="chevron-down" className="size-4 text-glyph" />
-                  </button>
-                  {isPeriodOpen && (
-                    <div className="absolute right-0 mt-2 w-44 rounded-[10px] bg-white border border-hairline shadow-lg py-2 z-30 text-sm">
-                      {["Today", "This Week", "This Month"].map((p) => (
-                        <button
-                          key={p}
-                          type="button"
-                          onClick={() => {
-                            setPeriod(p as typeof initialPeriod);
-                            setIsPeriodOpen(false);
-                            setHoveredPoint(null);
-                            router.push(`${basePath}/dashboard?period=${encodeURIComponent(p)}`);
-                            router.refresh();
-                          }}
-                          className={`w-full text-left px-4 py-2.5 hover:bg-mist ${period === p ? "text-burnt font-semibold" : "text-body"}`}
-                        >
-                          {p}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <SelectField
+                  ariaLabel="Overview period"
+                  className="w-40"
+                  value={period}
+                  options={periodOptions}
+                  onChange={(p) => {
+                    setPeriod(p);
+                    setHoveredPoint(null);
+                    router.push(`${basePath}/dashboard?period=${encodeURIComponent(p)}`);
+                    router.refresh();
+                  }}
+                />
                 <Button
                   variant="brand"
                   size="form"
@@ -694,9 +683,9 @@ export function OverviewView({
                         setCalendarMonth((month) => new Date(month.getFullYear(), month.getMonth() - 1, 1));
                         setSelectedCalendarDay(null);
                       }}
-                      className="flex size-8 items-center justify-center rounded-md text-2xl leading-none text-glyph hover:bg-mist hover:text-ink"
+                      className="flex size-8 items-center justify-center rounded-md text-glyph hover:bg-mist hover:text-ink"
                     >
-                      ‹
+                      <Icon name="chevron-left" weight="medium" className="size-4" />
                     </button>
                     <span className="font-semibold">{currentMonthLabel}</span>
                     <button
@@ -706,9 +695,9 @@ export function OverviewView({
                         setCalendarMonth((month) => new Date(month.getFullYear(), month.getMonth() + 1, 1));
                         setSelectedCalendarDay(null);
                       }}
-                      className="flex size-8 items-center justify-center rounded-md text-2xl leading-none text-glyph hover:bg-mist hover:text-ink"
+                      className="flex size-8 items-center justify-center rounded-md text-glyph hover:bg-mist hover:text-ink"
                     >
-                      ›
+                      <Icon name="chevron-right" weight="medium" className="size-4" />
                     </button>
                   </div>
                   <div className="grid grid-cols-7 gap-1.5 text-center text-xs text-subtle mb-2">
@@ -792,43 +781,22 @@ export function OverviewView({
                 </span>
               </div>
 
-              <div className="flex items-center gap-2.5">
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search customer or service"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="h-11 pl-10 pr-3 rounded-lg border border-hairline bg-white text-sm text-ink focus:outline-none focus:ring-2 focus:ring-burnt/40 focus:bg-white w-48 sm:w-64 transition-shadow"
-                  />
-                  <Icon name="search" className="size-4 text-glyph absolute left-3 top-3 pointer-events-none" />
-                </div>
+              <div className="flex w-full flex-wrap items-center gap-2.5 sm:w-auto">
+                <SearchField
+                  placeholder="Search customer or service"
+                  aria-label="Search appointments"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
 
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setIsFilterOpen(!isFilterOpen)}
-                    className="h-11 rounded-lg border border-hairline bg-white px-3 text-sm font-semibold text-ink hover:bg-mist flex items-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
-                  >
-                    <Icon name="filter" className="size-3.5 text-glyph" />
-                    <span>Filter</span>
-                    <Icon name="chevron-down" className="size-3.5 text-glyph" />
-                  </button>
-                  {isFilterOpen && (
-                    <div className="absolute right-0 mt-1 w-40 rounded-[10px] bg-white border border-hairline shadow-lg py-1 z-20 text-sm">
-                      {["All", "Confirmed", "Pending approval", "Check In"].map((status) => (
-                        <button
-                          key={status}
-                          type="button"
-                          onClick={() => { setFilterStatus(status); setIsFilterOpen(false); }}
-                          className={`w-full text-left px-4 py-2 hover:bg-mist ${filterStatus === status ? "text-burnt font-semibold" : "text-body"}`}
-                        >
-                          {status}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <SelectField
+                  ariaLabel="Filter appointments by status"
+                  compact
+                  className="w-full sm:w-52"
+                  value={filterStatus}
+                  options={statusFilterOptions}
+                  onChange={setFilterStatus}
+                />
                 {filterStatus !== "All" && (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-burnt/10 px-2.5 py-1 text-xs font-semibold text-burnt">
                     {filterStatus}

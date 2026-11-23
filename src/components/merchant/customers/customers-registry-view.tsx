@@ -28,10 +28,19 @@ import {
 } from "./customer-modals";
 import { formatPesoCents, formatShortDate } from "./customer-formatters";
 import { Icon } from "@/components/admin/icon";
-import { inputClasses } from "@/components/ui";
-import { cn } from "@/lib/utils";
+import { SearchField, SelectField, type SelectOption } from "@/components/ui";
 
 const PAGE_SIZE = 10;
+
+const customerFilterOptions: SelectOption<CustomerFilterOption>[] = [
+  { value: "all", label: "Filter: All active" },
+  { value: "registered", label: "Registered accounts" },
+  { value: "walk_in", label: "Walk-in records" },
+  { value: "invite_sent", label: "Invite sent" },
+  { value: "invite_not_sent", label: "Invite not sent" },
+  { value: "invite_expired", label: "Invite expired" },
+  { value: "archived", label: "Archived records" },
+];
 
 function AccountBadges({ item }: { item: CustomerRegistryItem }) {
   return (
@@ -425,37 +434,28 @@ export function CustomersRegistryView({
             </h2>
 
             <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
-              <div className="relative">
-                <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-glyph" />
-                <input
-                  type="search"
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setPage(1);
-                  }}
-                  placeholder="Search name, email, or phone"
-                  className={cn(inputClasses(false, false, true), "pl-9 sm:w-[300px]")}
-                />
-              </div>
-
-              <select
-                aria-label="Filter customers"
-                value={filter}
+              <SearchField
+                value={search}
                 onChange={(e) => {
-                  setFilter(e.target.value as CustomerFilterOption);
+                  setSearch(e.target.value);
                   setPage(1);
                 }}
-                className={inputClasses(false, false, true)}
-              >
-                <option value="all">Filter: All active</option>
-                <option value="registered">Registered accounts</option>
-                <option value="walk_in">Walk-in records</option>
-                <option value="invite_sent">Invite sent</option>
-                <option value="invite_not_sent">Invite not sent</option>
-                <option value="invite_expired">Invite expired</option>
-                <option value="archived">Archived records</option>
-              </select>
+                placeholder="Search name, email, or phone"
+                aria-label="Search customers"
+                className="sm:w-96"
+              />
+
+              <SelectField
+                ariaLabel="Filter customers"
+                compact
+                className="sm:w-56"
+                value={filter}
+                options={customerFilterOptions}
+                onChange={(next) => {
+                  setFilter(next);
+                  setPage(1);
+                }}
+              />
             </div>
           </div>
 

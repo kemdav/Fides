@@ -2,13 +2,12 @@
 
 import Image from "next/image";
 import { useActionState, useState } from "react";
-import { buttonClasses, inputClasses } from "@/components/ui";
+import { buttonClasses, inputClasses, SelectField } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import {
   submitContactForm,
   type ContactFormState,
 } from "@/app/(site)/[slug]/contact/actions";
-import { Icon } from "@/components/admin/icon";
 
 const topicOptions = ["Services", "Booking", "General question"];
 
@@ -36,7 +35,6 @@ export function StorefrontContactPage({
   servicesHref = "#services",
 }: StorefrontContactPageProps) {
   const [topic, setTopic] = useState("");
-  const [topicOpen, setTopicOpen] = useState(false);
   const [topicError, setTopicError] = useState(false);
 
   const [state, formAction, isPending] = useActionState(
@@ -136,45 +134,20 @@ export function StorefrontContactPage({
                   className={cn(inputClasses(), "mt-2")}
                 />
               </label>
-              <div className="relative text-base/6 text-ink">
-                Service/Topic*
-                <button
-                  type="button"
-                  aria-haspopup="listbox"
-                  aria-expanded={topicOpen}
+              <div className="text-base/6 text-ink">
+                <label htmlFor="storefront-topic">Service/Topic*</label>
+                <SelectField
+                  id="storefront-topic"
+                  className="mt-2"
                   disabled={isPending}
-                  onClick={() => setTopicOpen((open) => !open)}
-                  className={cn(inputClasses(), "mt-2 flex items-center justify-between text-left")}
-                >
-                  <span className={topic ? "text-ink" : "text-muted"}>
-                    {topic || "Select a Topic"}
-                  </span>
-                  <Icon name="chevron-down" className={`size-4 text-muted transition-transform ${topicOpen ? "rotate-180" : ""}`} />
-                </button>
-                {topicOpen && (
-                  <ul
-                    role="listbox"
-                    className="absolute inset-x-0 top-full z-10 mt-2 overflow-hidden rounded-lg border border-glyph bg-white py-1 shadow-md"
-                  >
-                    {topicOptions.map((option) => (
-                      <li key={option}>
-                        <button
-                          type="button"
-                          role="option"
-                          aria-selected={topic === option}
-                          onClick={() => {
-                            setTopic(option);
-                            setTopicOpen(false);
-                            setTopicError(false);
-                          }}
-                          className="w-full px-4 py-3 text-left text-base text-ink transition-colors hover:bg-mist"
-                        >
-                          {option}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                  value={topic}
+                  placeholder="Select a Topic"
+                  options={topicOptions.map((option) => ({ value: option, label: option }))}
+                  onChange={(next) => {
+                    setTopic(next);
+                    setTopicError(false);
+                  }}
+                />
                 {topicError && (
                   <p className="mt-1 text-sm text-burnt">
                     Please choose a service or topic.

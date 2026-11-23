@@ -28,7 +28,7 @@ import {
   ALLOWED_COVER_MIME_TYPES,
   MAX_FILE_SIZES,
 } from "@/lib/validations/website-settings";
-import { inputClasses } from "@/components/ui";
+import { inputClasses, SelectField, type SelectOption } from "@/components/ui";
 import { Button } from "@/components/ui/button";
 
 const INITIAL_SETTINGS: WebsiteSettingsData = {
@@ -77,6 +77,8 @@ const INITIAL_SETTINGS: WebsiteSettingsData = {
 
 // Shared field input class
 const fieldInput = inputClasses();
+const typographyOptions: SelectOption[] = ["Ovo + Mulish", "Playfair + Inter", "Cormorant + Plus Jakarta Sans", "DM Serif + Montserrat"].map((value) => ({ value, label: value }));
+const categoryOptions: SelectOption[] = ["Beauty & wellness", "Healthcare", "Fitness", "Professional services"].map((value) => ({ value, label: value }));
 
 const fieldTextarea = inputClasses(false, true);
 
@@ -422,19 +424,12 @@ export function WebsiteSettingsView({
                       <label className="block text-xs font-semibold text-ink mb-1.5">
                         Website typography
                       </label>
-                      <div className="relative">
-                        <select
-                          value={form.typography}
-                          onChange={(e) => handleChange("typography", e.target.value)}
-                          className={`${fieldInput} appearance-none pr-8`}
-                        >
-                          <option value="Ovo + Mulish">Ovo + Mulish</option>
-                          <option value="Playfair + Inter">Playfair + Inter</option>
-                          <option value="Cormorant + Plus Jakarta Sans">Cormorant + Plus Jakarta Sans</option>
-                          <option value="DM Serif + Montserrat">DM Serif + Montserrat</option>
-                        </select>
-                        <Icon name="chevron-down" className="w-3.5 h-3.5 text-glyph absolute right-3 top-3.5 pointer-events-none" />
-                      </div>
+                      <SelectField
+                        ariaLabel="Website typography"
+                        value={form.typography}
+                        options={typographyOptions}
+                        onChange={(next) => handleChange("typography", next)}
+                      />
                     </div>
                   </div>
 
@@ -704,15 +699,12 @@ export function WebsiteSettingsView({
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-ink mb-1.5">Business category</label>
-                      <div className="relative">
-                        <select value={form.businessCategory} onChange={(e) => handleChange("businessCategory", e.target.value)} className={`${fieldInput} appearance-none pr-8`}>
-                          <option value="Beauty & wellness">Beauty &amp; wellness</option>
-                          <option value="Healthcare">Healthcare</option>
-                          <option value="Fitness">Fitness</option>
-                          <option value="Professional services">Professional services</option>
-                        </select>
-                        <Icon name="chevron-down" className="w-3.5 h-3.5 text-glyph absolute right-3 top-3.5 pointer-events-none" />
-                      </div>
+                      <SelectField
+                        ariaLabel="Business category"
+                        value={form.businessCategory}
+                        options={categoryOptions}
+                        onChange={(next) => handleChange("businessCategory", next)}
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-ink mb-1.5">About your business</label>

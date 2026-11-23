@@ -23,6 +23,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { AppointmentStatusPill } from "@/components/merchant/appointment-status-pill";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField } from "@/components/ui/select-field";
+import { statusFilterOptions } from "@/components/merchant/appointment-filter-options";
 
 export interface AppointmentItem {
   id: string;
@@ -203,7 +206,6 @@ export function AppointmentsView({
   const [calendarAnchor, setCalendarAnchor] = React.useState<Date>(
     () => new Date(),
   );
-  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [activeMenuId, setActiveMenuId] = React.useState<string | null>(null);
   const [cancelTarget, setCancelTarget] =
     React.useState<AppointmentItem | null>(null);
@@ -459,54 +461,21 @@ export function AppointmentsView({
 
               {/* Right: search + filter + view toggle */}
               <div className="flex flex-wrap items-center gap-2.5">
-                {/* Search */}
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search customer or service"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="h-11 pl-10 pr-3 rounded-lg border border-hairline bg-white text-sm text-ink focus:outline-none focus:ring-2 focus:ring-burnt/40 w-48 sm:w-60 transition-shadow"
-                  />
-                  <Icon
-                    name="search"
-                    className="size-4 text-glyph absolute left-3 top-3 pointer-events-none"
-                  />
-                </div>
+                <SearchField
+                  placeholder="Search customer or service"
+                  aria-label="Search appointments"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
 
-                {/* Filter */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setIsFilterOpen(!isFilterOpen)}
-                    className="h-11 rounded-lg border border-hairline bg-white px-3 text-sm font-semibold text-ink hover:bg-mist flex items-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
-                  >
-                    <Icon name="filter" className="size-3.5 text-glyph" />
-                    <span>
-                      Filter {filterStatus !== "All" ? `(${filterStatus})` : ""}
-                    </span>
-                    <Icon name="chevron-down" className="size-3.5 text-glyph" />
-                  </button>
-                  {isFilterOpen && (
-                    <div className="absolute right-0 mt-1 w-44 rounded-[10px] bg-white border border-hairline shadow-lg py-1 z-20 text-sm">
-                      {["All", "Confirmed", "Pending approval", "Check In"].map(
-                        (s) => (
-                          <button
-                            key={s}
-                            type="button"
-                            onClick={() => {
-                              setFilterStatus(s);
-                              setIsFilterOpen(false);
-                            }}
-                            className={`w-full text-left px-4 py-2 hover:bg-mist ${filterStatus === s ? "text-burnt font-semibold" : "text-body"}`}
-                          >
-                            {s}
-                          </button>
-                        ),
-                      )}
-                    </div>
-                  )}
-                </div>
+                <SelectField
+                  ariaLabel="Filter appointments by status"
+                  compact
+                  className="w-full sm:w-52"
+                  value={filterStatus}
+                  options={statusFilterOptions}
+                  onChange={setFilterStatus}
+                />
 
                 {/* View toggle — ICON buttons */}
                 <div

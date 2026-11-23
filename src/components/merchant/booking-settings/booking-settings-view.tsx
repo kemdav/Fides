@@ -16,7 +16,7 @@ import {
 } from "./booking-settings-modals";
 import { cn } from "@/lib/utils";
 import { Icon } from "@/components/admin/icon";
-import { inputClasses } from "@/components/ui";
+import { inputClasses, NumberSelectField } from "@/components/ui";
 
 interface SelectOption {
   value: number;
@@ -125,12 +125,6 @@ function CheckBadgeIcon() {
     >
       <Icon name="check" weight="bold" className="size-2.5" />
     </span>
-  );
-}
-
-function ChevronDownSvg() {
-  return (
-    <Icon name="chevron-down" className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
   );
 }
 
@@ -397,7 +391,7 @@ export function BookingSettingsView({
               className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-burnt transition-colors hover:text-burnt-dark"
             >
               <span>Go to Website Settings</span>
-              <span aria-hidden="true">&rarr;</span>
+              <Icon name="arrow-right" weight="medium" className="size-3.5" />
             </Link>
           </div>
 
@@ -564,27 +558,14 @@ export function BookingSettingsView({
                   >
                     Business Default Buffer
                   </label>
-                  <div className="relative mt-2">
-                    <select
-                      id="default-buffer-minutes"
-                      disabled={!canEdit}
-                      value={form.defaultBufferMinutes}
-                      onChange={(e) =>
-                        updateField(
-                          "defaultBufferMinutes",
-                          Number(e.target.value),
-                        )
-                      }
-                      className={cn(inputClasses(false, false), "appearance-none pl-3.5 pr-9")}
-                    >
-                      {bufferOptions.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDownSvg />
-                  </div>
+                  <NumberSelectField
+                    id="default-buffer-minutes"
+                    className="mt-2"
+                    disabled={!canEdit}
+                    value={form.defaultBufferMinutes}
+                    options={bufferOptions}
+                    onChange={(next) => updateField("defaultBufferMinutes", next)}
+                  />
                   {fieldErrors.defaultBufferMinutes && (
                     <p className="mt-1.5 text-xs font-medium text-danger">
                       {fieldErrors.defaultBufferMinutes}
@@ -596,8 +577,8 @@ export function BookingSettingsView({
 
                   <div className="mt-3 rounded-lg bg-mist px-3.5 py-2.5 text-xs leading-relaxed text-muted">
                     A service buffer replaces the business default; the values
-                    are never added. Effective buffer: service value &rarr;
-                    business default &rarr; 0.
+                    are never added. Effective buffer: the service value, then
+                    the business default, then 0.
                   </div>
                 </div>
               </Surface>
@@ -620,27 +601,14 @@ export function BookingSettingsView({
                     >
                       Minimum advance notice
                     </label>
-                    <div className="relative mt-2">
-                      <select
-                        id="min-advance-notice"
-                        disabled={!canEdit}
-                        value={form.bookingLeadTimeMinutes}
-                        onChange={(e) =>
-                          updateField(
-                            "bookingLeadTimeMinutes",
-                            Number(e.target.value),
-                          )
-                        }
-                        className={cn(inputClasses(false, false), "appearance-none pl-3.5 pr-9")}
-                      >
-                        {leadTimeOptions.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDownSvg />
-                    </div>
+                    <NumberSelectField
+                    id="min-advance-notice"
+                    className="mt-2"
+                    disabled={!canEdit}
+                    value={form.bookingLeadTimeMinutes}
+                    options={leadTimeOptions}
+                    onChange={(next) => updateField("bookingLeadTimeMinutes", next)}
+                  />
                     {fieldErrors.bookingLeadTimeMinutes && (
                       <p className="mt-1.5 text-xs font-medium text-danger">
                         {fieldErrors.bookingLeadTimeMinutes}
@@ -656,24 +624,14 @@ export function BookingSettingsView({
                     >
                       Maximum advance booking
                     </label>
-                    <div className="relative mt-2">
-                      <select
-                        id="max-advance-booking"
-                        disabled={!canEdit}
-                        value={form.maxAdvanceDays}
-                        onChange={(e) =>
-                          updateField("maxAdvanceDays", Number(e.target.value))
-                        }
-                        className={cn(inputClasses(false, false), "appearance-none pl-3.5 pr-9")}
-                      >
-                        {maxAdvanceOptions.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDownSvg />
-                    </div>
+                    <NumberSelectField
+                    id="max-advance-booking"
+                    className="mt-2"
+                    disabled={!canEdit}
+                    value={form.maxAdvanceDays}
+                    options={maxAdvanceOptions}
+                    onChange={(next) => updateField("maxAdvanceDays", next)}
+                  />
                     {fieldErrors.maxAdvanceDays && (
                       <p className="mt-1.5 text-xs font-medium text-danger">
                         {fieldErrors.maxAdvanceDays}
@@ -690,27 +648,14 @@ export function BookingSettingsView({
                   >
                     Cancellation deadline
                   </label>
-                  <div className="relative mt-2">
-                    <select
-                      id="cancellation-deadline"
-                      disabled={!canEdit}
-                      value={form.cancellationWindowHours}
-                      onChange={(e) =>
-                        updateField(
-                          "cancellationWindowHours",
-                          Number(e.target.value),
-                        )
-                      }
-                      className={cn(inputClasses(false, false), "appearance-none pl-3.5 pr-9")}
-                    >
-                      {cancellationOptions.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDownSvg />
-                  </div>
+                  <NumberSelectField
+                    id="cancellation-deadline"
+                    className="mt-2"
+                    disabled={!canEdit}
+                    value={form.cancellationWindowHours}
+                    options={cancellationOptions}
+                    onChange={(next) => updateField("cancellationWindowHours", next)}
+                  />
                   {fieldErrors.cancellationWindowHours && (
                     <p className="mt-1.5 text-xs font-medium text-danger">
                       {fieldErrors.cancellationWindowHours}
@@ -726,27 +671,14 @@ export function BookingSettingsView({
                   >
                     Rescheduling deadline
                   </label>
-                  <div className="relative mt-2">
-                    <select
-                      id="reschedule-deadline"
-                      disabled={!canEdit}
-                      value={form.rescheduleWindowHours}
-                      onChange={(e) =>
-                        updateField(
-                          "rescheduleWindowHours",
-                          Number(e.target.value),
-                        )
-                      }
-                      className={cn(inputClasses(false, false), "appearance-none pl-3.5 pr-9")}
-                    >
-                      {rescheduleOptions.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDownSvg />
-                  </div>
+                  <NumberSelectField
+                    id="reschedule-deadline"
+                    className="mt-2"
+                    disabled={!canEdit}
+                    value={form.rescheduleWindowHours}
+                    options={rescheduleOptions}
+                    onChange={(next) => updateField("rescheduleWindowHours", next)}
+                  />
                   {fieldErrors.rescheduleWindowHours && (
                     <p className="mt-1.5 text-xs font-medium text-danger">
                       {fieldErrors.rescheduleWindowHours}
@@ -808,27 +740,14 @@ export function BookingSettingsView({
                   >
                     Slot Interval
                   </label>
-                  <div className="relative mt-2">
-                    <select
-                      id="slot-interval-minutes"
-                      disabled={!canEdit}
-                      value={form.slotIntervalMinutes}
-                      onChange={(e) =>
-                        updateField(
-                          "slotIntervalMinutes",
-                          Number(e.target.value),
-                        )
-                      }
-                      className={cn(inputClasses(false, false), "appearance-none pl-3.5 pr-9")}
-                    >
-                      {slotIntervalOptions.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDownSvg />
-                  </div>
+                  <NumberSelectField
+                    id="slot-interval-minutes"
+                    className="mt-2"
+                    disabled={!canEdit}
+                    value={form.slotIntervalMinutes}
+                    options={slotIntervalOptions}
+                    onChange={(next) => updateField("slotIntervalMinutes", next)}
+                  />
                   {fieldErrors.slotIntervalMinutes && (
                     <p className="mt-1.5 text-xs font-medium text-danger">
                       {fieldErrors.slotIntervalMinutes}

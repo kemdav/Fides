@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/admin/icon";
 import { createAppointmentBookingAction } from "@/app/actions/appointments";
-import { inputClasses } from "@/components/ui";
+import { DatePicker, inputClasses, SelectField } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 
@@ -44,7 +44,6 @@ const TIME_SLOTS = [
   "03:30 PM","04:00 PM","04:30 PM","05:00 PM",
 ];
 
-const CALENDAR_WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -64,25 +63,21 @@ function addMinutes(timeStr: string, mins: number): string {
   return `${String(displayH).padStart(2, "0")}:${String(nm).padStart(2, "0")} ${ap}`;
 }
 
-function formatDateDisplay(iso: string): string {
-  if (!iso) return "";
-  const [y, mo, d] = iso.split("-").map(Number);
-  return new Date(y, mo - 1, d).toLocaleDateString("en-US", {
-    month: "long", day: "numeric", year: "numeric",
-  });
-}
 
 // ─── Shared input class ───────────────────────────────────────────────────────
 
 const fieldCls = inputClasses();
 
-// ─── Chevron SVG ─────────────────────────────────────────────────────────────
+// ─── labelled pickers (thin wrappers over the shared dropdown and date picker) ──
 
-function ChevronSvg({ open }: { open: boolean }) {
-  return <Icon name="chevron-down" className={`size-4 text-glyph shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />;
+function PickerLabel({ id, label, required }: { id: string; label: string; required?: boolean }) {
+  return (
+    <label htmlFor={id} className="mb-1.5 block text-sm font-semibold text-ink">
+      {label}
+      {required && <span className="text-burnt"> *</span>}
+    </label>
+  );
 }
-
-// ─── Listbox (contact-page dropdown pattern) ─────────────────────────────────
 
 interface ListboxProps {
   id: string;
@@ -95,52 +90,13 @@ interface ListboxProps {
 }
 
 export function Listbox({ id, label, required, value, onChange, options, placeholder }: ListboxProps) {
-  const [open, setOpen] = React.useState(false);
-  const ref = React.useRef<HTMLDivElement>(null);
-  React.useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-  const selected = options.find((o) => o.value === value);
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-sm font-semibold text-ink">
-        {label}{required && <span className="text-burnt"> *</span>}
-      </label>
-      <div ref={ref} className="relative">
-        <button id={id} type="button" aria-haspopup="listbox" aria-expanded={open}
-          onClick={() => setOpen((o) => !o)}
-          className="flex h-11 w-full items-center justify-between rounded-lg border border-glyph bg-white px-3 text-left text-sm outline-none focus:border-burnt"
-        >
-          <span className={selected ? "text-ink" : "text-glyph"}>
-            {selected ? selected.label : (placeholder ?? "Select an option")}
-          </span>
-          <ChevronSvg open={open} />
-        </button>
-        {open && (
-          <ul role="listbox" className="absolute inset-x-0 top-full z-30 mt-1 max-h-56 overflow-y-auto rounded-lg border border-glyph bg-white py-1 shadow-md">
-            {options.map((opt) => (
-              <li key={opt.value}>
-                <button type="button" role="option" aria-selected={value === opt.value}
-                  onClick={() => { onChange(opt.value); setOpen(false); }}
-                  className={`w-full px-4 py-2.5 text-left text-sm transition-colors hover:bg-mist ${value === opt.value ? "text-burnt font-semibold" : "text-ink"}`}
-                >
-                  {opt.label}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <PickerLabel id={id} label={label} required={required} />
+      <SelectField id={id} value={value} options={options} onChange={onChange} placeholder={placeholder} />
     </div>
   );
 }
-
-// ─── Calendar picker — fixed-position panel (never clipped) ──────────────────
 
 interface CalendarPickerProps {
   id: string;
@@ -151,169 +107,21 @@ interface CalendarPickerProps {
 }
 
 export function CalendarPicker({ id, label, required, value, onChange }: CalendarPickerProps) {
-  const [open, setOpen] = React.useState(false);
-  const [month, setMonth] = React.useState<Date>(() => {
-    if (value) { const [y, mo] = value.split("-").map(Number); return new Date(y, mo - 1, 1); }
-    return new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-  });
-  const triggerRef  = React.useRef<HTMLButtonElement>(null);
-  const panelRef    = React.useRef<HTMLDivElement>(null);
-  const [panelStyle, setPanelStyle] = React.useState<React.CSSProperties>({});
-
-  // position the fixed panel under the trigger button
-  const positionPanel = React.useCallback(() => {
-    if (!triggerRef.current) return;
-    const rect = triggerRef.current.getBoundingClientRect();
-    setPanelStyle({
-      position:  "fixed",
-      top:       rect.bottom + 4,
-      left:      rect.left,
-      width:     rect.width,
-      minWidth:  260,
-      zIndex:    9999,
-    });
-  }, []);
-
-  const handleOpen = () => {
-    if (!open) positionPanel();
-    setOpen((o) => !o);
-  };
-
-  React.useEffect(() => {
-    if (!open) return;
-    const closeHandler = (e: MouseEvent) => {
-      if (
-        triggerRef.current && triggerRef.current.contains(e.target as Node)
-      ) return;
-      if (
-        panelRef.current && panelRef.current.contains(e.target as Node)
-      ) return;
-      setOpen(false);
-    };
-    document.addEventListener("mousedown", closeHandler);
-    return () => document.removeEventListener("mousedown", closeHandler);
-  }, [open]);
-
-  const monthLabel   = month.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  const firstDay     = new Date(month.getFullYear(), month.getMonth(), 1).getDay();
-  const daysInMonth  = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
-  const cells: Array<number | null> = [
-    ...Array.from({ length: firstDay }, () => null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
-  ];
-
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-sm font-semibold text-ink">
-        {label}{required && <span className="text-burnt"> *</span>}
-      </label>
-      <button
-        ref={triggerRef}
-        id={id}
-        type="button"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        onClick={handleOpen}
-        className="flex h-11 w-full items-center justify-between rounded-lg border border-glyph bg-white px-3 text-left text-sm outline-none focus:border-burnt"
-      >
-        <span className={value ? "text-ink" : "text-glyph"}>
-          {value ? formatDateDisplay(value) : "Select a date"}
-        </span>
-        <Icon name="calendar" className="size-4 text-glyph shrink-0" />
-      </button>
-
-      {open && (
-        <div
-          ref={panelRef}
-          role="dialog"
-          aria-label="Choose appointment date"
-          style={panelStyle}
-          className="rounded-lg border border-glyph bg-white p-3 shadow-lg"
-        >
-          <div className="mb-2 flex items-center justify-between">
-            <button type="button" aria-label="Previous month"
-              onClick={() => setMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
-              className="rounded-md px-2 py-1 text-body hover:bg-mist text-sm"
-            >‹</button>
-            <span className="text-sm font-semibold text-ink">{monthLabel}</span>
-            <button type="button" aria-label="Next month"
-              onClick={() => setMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
-              className="rounded-md px-2 py-1 text-body hover:bg-mist text-sm"
-            >›</button>
-          </div>
-          <div className="grid grid-cols-7 text-center text-xs font-semibold text-subtle mb-1">
-            {CALENDAR_WEEKDAYS.map((d, i) => <span key={`${d}-${i}`}>{d}</span>)}
-          </div>
-          <div className="grid grid-cols-7 gap-y-0.5 text-center">
-            {cells.map((day, index) => {
-              if (!day) return <span key={`empty-${index}`} />;
-              const iso = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-              const sel = iso === value;
-              return (
-                <button key={iso} type="button"
-                  onClick={() => { onChange(iso); setOpen(false); }}
-                  className={`mx-auto flex h-8 w-8 items-center justify-center rounded-md text-sm transition-colors ${sel ? "bg-burnt text-white font-bold" : "text-body hover:bg-mist"}`}
-                >
-                  {day}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      <PickerLabel id={id} label={label} required={required} />
+      <DatePicker id={id} value={value} onChange={onChange} placeholder="Select a date" ariaLabel="Choose appointment date" />
     </div>
   );
 }
 
-// ─── Time listbox ─────────────────────────────────────────────────────────────
+const timeOptions = TIME_SLOTS.map((slot) => ({ value: slot, label: slot }));
 
-interface TimeListboxProps {
-  id: string;
-  label: string;
-  required?: boolean;
-  value: string;
-  onChange: (v: string) => void;
-}
-
-export function TimeListbox({ id, label, required, value, onChange }: TimeListboxProps) {
-  const [open, setOpen] = React.useState(false);
-  const ref = React.useRef<HTMLDivElement>(null);
-  React.useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
+export function TimeListbox({ id, label, required, value, onChange }: { id: string; label: string; required?: boolean; value: string; onChange: (v: string) => void }) {
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-sm font-semibold text-ink">
-        {label}{required && <span className="text-burnt"> *</span>}
-      </label>
-      <div ref={ref} className="relative">
-        <button id={id} type="button" aria-haspopup="listbox" aria-expanded={open}
-          onClick={() => setOpen((o) => !o)}
-          className="flex h-11 w-full items-center justify-between rounded-lg border border-glyph bg-white px-3 text-left text-sm outline-none focus:border-burnt"
-        >
-          <span className={value ? "text-ink" : "text-glyph"}>{value || "Select a time"}</span>
-          <Icon name="clock" className="size-4 text-glyph" />
-        </button>
-        {open && (
-          <ul role="listbox" className="absolute inset-x-0 top-full z-30 mt-1 max-h-48 overflow-y-auto rounded-lg border border-glyph bg-white py-1 shadow-md">
-            {TIME_SLOTS.map((t) => (
-              <li key={t}>
-                <button type="button" role="option" aria-selected={value === t}
-                  onClick={() => { onChange(t); setOpen(false); }}
-                  className={`w-full px-4 py-2.5 text-left text-sm transition-colors hover:bg-mist ${value === t ? "text-burnt font-semibold" : "text-ink"}`}
-                >
-                  {t}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <PickerLabel id={id} label={label} required={required} />
+      <SelectField id={id} value={value} options={timeOptions} onChange={onChange} placeholder="Select a time" />
     </div>
   );
 }
