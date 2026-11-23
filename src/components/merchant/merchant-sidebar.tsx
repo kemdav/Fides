@@ -175,7 +175,14 @@ export function MerchantSidebar({
             },
             true,
           )}
-          {renderItem({ label: "Subscription", icon: "card" })}
+          {renderItem(
+            {
+              label: "Subscription",
+              icon: "card",
+              suffix: "/settings/subscription",
+            },
+            true,
+          )}
         </nav>
         <div className="flex-1" />
         <div className="flex shrink-0 items-center gap-3 border-t border-[#EDECE8] pt-4">
