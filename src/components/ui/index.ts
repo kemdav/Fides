@@ -20,3 +20,7 @@ export { Modal } from "./modal";
 export type { ModalProps } from "./modal";
 export { PasswordInput } from "./password-input";
 export type { PasswordInputProps } from "./password-input";
+export { NumberSelectField, SelectField } from "./select-field";
+export type { SelectOption } from "./select-field";
+export { SearchField } from "./search-field";
+export { DatePicker, formatDisplayDate, toIsoDate } from "./date-picker";

@@ -585,6 +585,8 @@ function IdentityStep({
               value={values.dateOfBirth}
               onChange={(value) => set("dateOfBirth", value)}
               max={latest}
+              minYear={1900}
+              ariaLabel="Choose date of birth"
               invalid={!!errors.dateOfBirth}
               placeholder="Select date of birth"
               describedBy={errors.dateOfBirth ? "dateOfBirth-error" : "dateOfBirth-hint"}
