@@ -1941,6 +1941,10 @@ type DatabaseCore = {
         Args: { p_expected_expiry: string; p_invitation_id: string; p_tenant_id: string; p_token_hash: string }
         Returns: boolean
       }
+      reschedule_appointment: {
+        Args: { p_tenant_id: string; p_appointment_id: string; p_date: string; p_time: string; p_expected_start: string }
+        Returns: undefined
+      }
       reserve_staff_invitation: {
         Args: {
           p_actor_id: string; p_tenant_id: string; p_full_name: string; p_email: string;

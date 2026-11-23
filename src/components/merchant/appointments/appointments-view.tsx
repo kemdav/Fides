@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { canManageBookings, workspaceRoleFromLabel } from "@/lib/merchant/workspace-roles";
 import { MerchantSidebar } from "../merchant-sidebar";
+import { AppointmentDetailsModal } from "@/components/merchant/overview/appointment-details-modal";
 import { Icon } from "@/components/admin/icon";
 import { AdminButton } from "@/components/admin/admin-button";
 import { MetricCard } from "@/components/admin/metric-card";
@@ -228,7 +229,7 @@ export function AppointmentsView({
     () => new Date(),
   );
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
-  const [activeMenuId, setActiveMenuId] = React.useState<string | null>(null);
+  const [selectedAppointmentId, setSelectedAppointmentId] = React.useState<string | null>(null);
   const [cancelTarget, setCancelTarget] =
     React.useState<AppointmentItem | null>(null);
   const [isNewBookingOpen, setIsNewBookingOpen] = React.useState(false);
@@ -297,7 +298,6 @@ export function AppointmentsView({
     id: string,
     newStatus: AppointmentItem["status"],
   ) => {
-    setActiveMenuId(null);
     setPopoverItem(null);
     const prevItems = items;
     setItems((prev) =>
@@ -1300,37 +1300,10 @@ export function AppointmentsView({
                                   </strong>
                                 </span>
                               </div>
-                              {canManage && (<div className="flex flex-wrap gap-2 border-t border-hairline pt-3">
-                                {row.status !== "Confirmed" && (
-                                  <AdminButton
-                                    size="xs"
-                                    variant="primary"
-                                    onClick={() =>
-                                      handleStatusChange(row.id, "Confirmed")
-                                    }
-                                  >
-                                    Confirm
-                                  </AdminButton>
-                                )}
-                                {row.status !== "Check In" && (
-                                  <AdminButton
-                                    size="xs"
-                                    variant="outline"
-                                    onClick={() =>
-                                      handleStatusChange(row.id, "Check In")
-                                    }
-                                  >
-                                    Check In
-                                  </AdminButton>
-                                )}
-                                <AdminButton
-                                  size="xs"
-                                  variant="danger"
-                                  onClick={() => setCancelTarget(row)}
-                                >
-                                  Cancel
-                                </AdminButton>
-                              </div>)}
+                              {canManage && (
+                                <AdminButton size="xs" variant="outline" aria-haspopup="dialog"
+                                  onClick={() => setSelectedAppointmentId(row.id)}>Appointment details</AdminButton>
+                              )}
                             </div>
                           )}
                         </div>
@@ -1351,15 +1324,19 @@ export function AppointmentsView({
                           "Staff",
                           "Source",
                           "Status",
-                          ...(canManage ? ["Action"] : []),
-                        ].map((h, i) => (
+                        ].map((h) => (
                           <th
                             key={h}
-                            className={`px-5 py-3 text-[11px] leading-4 uppercase tracking-wide ${i === 6 ? "text-right" : ""}`}
+                            className={`py-3 pl-5 text-[11px] leading-4 uppercase tracking-wide ${h === "Status" && canManage ? "w-32 pr-2" : "pr-5"}`}
                           >
                             {h}
                           </th>
                         ))}
+                        {canManage && (
+                          <th className="w-[12%] px-2 py-3 text-center text-[11px] leading-4 uppercase tracking-wide">
+                            Action
+                          </th>
+                        )}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-hairline">
@@ -1406,75 +1383,19 @@ export function AppointmentsView({
                                 {row.source}
                               </span>
                             </td>
-                            <td className="px-5 py-3.5">
-                              {canManage && (row.status === "Check In" ||
-                              row.status === "Pending approval") ? (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleStatusChange(row.id, "Confirmed")
-                                  }
-                                  className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 rounded-md"
-                                >
-                                  <AppointmentStatusPill status={row.status} />
-                                </button>
-                              ) : (
-                                <AppointmentStatusPill status={row.status} />
-                              )}
+                            <td className="whitespace-nowrap py-3.5 pl-5 pr-2">
+                              <AppointmentStatusPill status={row.status} />
                             </td>
-                            {canManage && (<td className="px-5 py-3.5 text-right relative">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setActiveMenuId(
-                                    activeMenuId === row.id ? null : row.id,
-                                  )
-                                }
-                                className="flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 text-glyph ml-auto"
-                              >
-                                <Icon
-                                  name="more"
-                                  weight="fill"
-                                  className="size-5"
-                                />
-                              </button>
-                              {activeMenuId === row.id && (
-                                <div className="absolute right-4 mt-1 w-44 rounded-[10px] bg-white border border-hairline shadow-lg py-1 z-30 text-left text-sm">
-                                  {row.status !== "Confirmed" && (
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        handleStatusChange(row.id, "Confirmed")
-                                      }
-                                      className="w-full text-left px-4 py-2 hover:bg-mist text-body"
-                                    >
-                                      Confirm
-                                    </button>
-                                  )}
-                                  {row.status !== "Check In" && (
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        handleStatusChange(row.id, "Check In")
-                                      }
-                                      className="w-full text-left px-4 py-2 hover:bg-mist text-body"
-                                    >
-                                      Check In
-                                    </button>
-                                  )}
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setCancelTarget(row);
-                                      setActiveMenuId(null);
-                                    }}
-                                    className="w-full text-left px-4 py-2 hover:bg-danger-bg text-danger font-medium"
-                                  >
-                                    Cancel booking
-                                  </button>
-                                </div>
-                              )}
-                            </td>)}
+                            {canManage && (
+                              <td className="px-2 py-3.5 align-middle">
+                                <button type="button" aria-haspopup="dialog"
+                                  aria-label={`Appointment details for ${row.customer}`}
+                                  onClick={() => setSelectedAppointmentId(row.id)}
+                                  className="mx-auto flex h-9 w-10 items-center justify-center rounded-lg text-glyph transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40">
+                                  <Icon name="more" weight="fill" className="size-5" />
+                                </button>
+                              </td>
+                            )}
                           </tr>
                         ))
                       )}
@@ -1495,6 +1416,12 @@ export function AppointmentsView({
       </div>
 
       {/* ── Appointment detail popover (from calendar click) ───────────────── */}
+      {canManage && tenantId && selectedAppointmentId && (
+        <AppointmentDetailsModal key={selectedAppointmentId} tenantId={tenantId} appointmentId={selectedAppointmentId}
+          onClose={() => setSelectedAppointmentId(null)}
+          onUpdated={() => router.refresh()} />
+      )}
+
       {popoverItem && (
         <div
           className="fixed inset-0 z-40 flex items-end justify-center sm:items-center p-4 bg-black/30 backdrop-blur-xs"

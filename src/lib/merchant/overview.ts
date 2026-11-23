@@ -239,7 +239,7 @@ export function toAppointmentRow(
     customer: customer?.full_name?.trim() || "Customer",
     service: service?.name || "Signature service",
     staff: staff?.full_name?.trim() || "Specialist",
-    source: appointment.source === "walk_in" ? "Walk-In" : "Online",
+    source: appointment.source === "walk_in" ? "Walk-In" : appointment.source === "phone" ? "Phone" : "Online",
     status: labels[appointment.status] ?? "Confirmed",
     startsAt: appointment.starts_at,
     calendarDate: dateKeyInTimezone(appointment.starts_at, timezone),

@@ -9,7 +9,7 @@ import { Icon } from "@/components/admin/icon";
 import { AdminButton } from "@/components/admin/admin-button";
 import { MetricCard } from "@/components/admin/metric-card";
 import { PageContent, PageHeading, StatusPill, Surface } from "@/components/admin/primitives";
-import { updateAppointmentStatusAction } from "@/app/actions/appointments";
+import { AppointmentDetailsModal } from "./appointment-details-modal";
 import { NewAppointmentModal, type NewAppointmentResult } from "@/components/merchant/new-appointment-modal";
 import { WalkInModal, type WalkInResult } from "@/components/merchant/walk-in-modal";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -20,7 +20,7 @@ export interface AppointmentRow {
   customer: string;
   service: string;
   staff: string;
-  source: "Online" | "Walk-In";
+  source: "Online" | "Walk-In" | "Phone";
   status: "Confirmed" | "Pending approval" | "Check In" | "In service" | "Completed" | "Cancelled";
   startsAt?: string;
   calendarDate?: string;
@@ -106,16 +106,23 @@ export function OverviewView({
   const router = useRouter();
   const [searchQuery, setSearchQuery] = React.useState("");
   const [appointments, setAppointments] = React.useState<AppointmentRow[]>(initialRows);
+  const [previousRows, setPreviousRows] = React.useState(initialRows);
+  if (previousRows !== initialRows) {
+    setPreviousRows(initialRows);
+    setAppointments(initialRows);
+  }
 
-  const [filterStatus, setFilterStatus] = React.useState<string>("All");
+  const [filterStatus, setFilterStatus] = React.useState("");
+  const [filterStaff, setFilterStaff] = React.useState("");
+  const [filterSource, setFilterSource] = React.useState("");
+  const filterTrigger = React.useRef<HTMLButtonElement>(null);
   const canManage = canManageBookings(userRole);
   const isServiceStaff = userRole === "staff";
   const canViewBusinessMetrics = userRole === "owner" || userRole === "admin";
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [period, setPeriod] = React.useState(initialPeriod);
   const [isPeriodOpen, setIsPeriodOpen] = React.useState(false);
-  const [activeMenuId, setActiveMenuId] = React.useState<string | null>(null);
-  const [cancelTarget, setCancelTarget] = React.useState<AppointmentRow | null>(null);
+  const [selectedAppointmentId, setSelectedAppointmentId] = React.useState<string | null>(null);
   const [isNewBookingOpen, setIsNewBookingOpen] = React.useState(false);
   const [isWalkInOpen, setIsWalkInOpen] = React.useState(false);
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
@@ -136,6 +143,14 @@ export function OverviewView({
     setTimeout(() => setToastMessage(null), 2500);
   };
 
+  const activeFilterCount = [filterStatus, filterStaff, filterSource].filter(Boolean).length;
+  const hasFilters = Boolean(searchQuery || activeFilterCount);
+  const staffOptions = [...new Set(appointments.map(({ staff }) => staff))].sort((a, b) => a.localeCompare(b));
+  const filterFields = [
+    { label: "Status", value: filterStatus, onChange: setFilterStatus, options: ["Confirmed", "Pending approval", "Check In", "In service", "Completed", "Cancelled"], placeholder: "All statuses" },
+    { label: "Staff", value: filterStaff, onChange: setFilterStaff, options: staffOptions, placeholder: "All staff" },
+    { label: "Source", value: filterSource, onChange: setFilterSource, options: ["Online", "Walk-In", "Phone"], placeholder: "All sources" },
+  ];
   const filtered = appointments.filter((app) => {
     const matchesSearch =
       !searchQuery ||
@@ -143,67 +158,10 @@ export function OverviewView({
       app.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
       app.staff.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesStatus =
-      filterStatus === "All" || app.status === filterStatus;
-
-    return matchesSearch && matchesStatus;
+    return matchesSearch && (!filterStatus || app.status === filterStatus)
+      && (!filterStaff || app.staff === filterStaff) && (!filterSource || app.source === filterSource);
   });
 
-  // QA #3: Row action persists status changes to Supabase
-  const handleStatusChange = async (id: string, newStatus: AppointmentRow["status"]) => {
-    setActiveMenuId(null);
-    const prevRows = appointments;
-    setAppointments((prev) =>
-      prev.map((row) => (row.id === id ? { ...row, status: newStatus } : row))
-    );
-
-    try {
-      const res = await updateAppointmentStatusAction({
-        appointmentId: id,
-        newStatus,
-        tenantIdParam: tenantId,
-      });
-
-      if (!res.success) {
-        setAppointments(prevRows);
-        showToast(res.error || "Failed to update appointment status.");
-        return;
-      }
-      showToast(`Appointment status updated to ${newStatus}`);
-      router.refresh();
-    } catch (err: unknown) {
-      setAppointments(prevRows);
-      showToast(err instanceof Error ? err.message : "Failed to update appointment status.");
-    }
-  };
-
-  // QA #3: Cancel row action persists cancellation to Supabase
-  const handleConfirmCancel = async () => {
-    if (!cancelTarget) return;
-    const target = cancelTarget;
-    setCancelTarget(null);
-    const prevRows = appointments;
-    setAppointments((prev) => prev.filter((row) => row.id !== target.id));
-
-    try {
-      const res = await updateAppointmentStatusAction({
-        appointmentId: target.id,
-        newStatus: "Cancelled",
-        tenantIdParam: tenantId,
-      });
-
-      if (!res.success) {
-        setAppointments(prevRows);
-        showToast(res.error || "Failed to cancel appointment.");
-        return;
-      }
-      showToast(`Appointment for ${target.customer} cancelled.`);
-      router.refresh();
-    } catch (err: unknown) {
-      setAppointments(prevRows);
-      showToast(err instanceof Error ? err.message : "Failed to cancel appointment.");
-    }
-  };
 
   // Chart statistics data (QA #1: dynamic chart bars from loaded records)
   const stats =
@@ -838,11 +796,18 @@ export function OverviewView({
                   <Icon name="search" className="size-4 text-glyph absolute left-3 top-3 pointer-events-none" />
                 </div>
 
-                <div className="relative shrink-0">
+                <div className="relative shrink-0" onKeyDown={(event) => {
+                  if (event.key === "Escape" && isFilterOpen) {
+                    setIsFilterOpen(false);
+                    filterTrigger.current?.focus();
+                  }
+                }}>
                   <button
+                    ref={filterTrigger}
                     type="button"
                     aria-expanded={isFilterOpen}
-                    aria-label={filterStatus === "All" ? "Filter" : `Filter, status: ${filterStatus}`}
+                    aria-controls="overview-appointment-filters"
+                    aria-label={activeFilterCount ? `Filter, ${activeFilterCount} active` : "Filter"}
                     onClick={() => setIsFilterOpen(!isFilterOpen)}
                     className="h-11 rounded-lg border border-hairline bg-white px-3 text-sm font-semibold text-ink hover:bg-mist flex items-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
                   >
@@ -851,33 +816,38 @@ export function OverviewView({
                     </svg>
                     <span className="relative">
                       Filter
-                      {filterStatus !== "All" && (
+                      {activeFilterCount > 0 && (
                         <span aria-hidden="true" className="absolute -right-1.5 top-0 size-1.5 rounded-full bg-burnt" />
                       )}
                     </span>
                     <Icon name="chevron-down" className={`size-3.5 text-glyph transition-transform ${isFilterOpen ? "rotate-180" : ""}`} />
                   </button>
                   {isFilterOpen && (
-                    <details className="group absolute right-0 z-20 mt-1 w-56 overflow-hidden rounded-[10px] border border-hairline bg-white text-sm shadow-lg">
-                      <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-subtle hover:bg-mist [&::-webkit-details-marker]:hidden">
-                        Status
-                        <span aria-hidden="true" className="group-open:hidden">+</span>
-                        <span aria-hidden="true" className="hidden group-open:inline">−</span>
-                      </summary>
-                      <div className="pb-2">
-                        {["All", "Confirmed", "Pending approval", "Check In"].map((status) => (
-                          <button
-                            key={status}
-                            type="button"
-                            aria-pressed={filterStatus === status}
-                            onClick={() => setFilterStatus(status)}
-                            className={`w-full px-4 py-2 text-left hover:bg-mist ${filterStatus === status ? "font-semibold text-burnt" : "text-body"}`}
-                          >
-                            {status}
-                          </button>
-                        ))}
-                      </div>
-                    </details>
+                    <div id="overview-appointment-filters" className="absolute right-0 z-20 mt-1 w-56 divide-y divide-hairline overflow-hidden rounded-[10px] border border-hairline bg-white text-sm shadow-lg">
+                      {filterFields.map(({ label, value, onChange, options, placeholder }) => (
+                        <details key={label} name="overview-filter-section" className="group">
+                          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-subtle hover:bg-mist [&::-webkit-details-marker]:hidden">
+                            <span className="flex items-center gap-2">
+                              {label}
+                              {value && <span aria-label="Filter active" className="size-1.5 rounded-full bg-burnt" />}
+                            </span>
+                            <span aria-hidden="true" className="group-open:hidden">+</span>
+                            <span aria-hidden="true" className="hidden group-open:inline">−</span>
+                          </summary>
+                          <div className="max-h-48 overflow-y-auto pb-2">
+                            {["", ...(value && !options.includes(value) ? [value] : []), ...options].map((option) => (
+                              <button key={option} type="button" aria-pressed={value === option}
+                                onClick={() => onChange(option)}
+                                className={`w-full break-words px-4 py-2 text-left hover:bg-mist ${value === option ? "font-semibold text-burnt" : "text-body"}`}>
+                                {option || placeholder}
+                              </button>
+                            ))}
+                          </div>
+                        </details>
+                      ))}
+                      {activeFilterCount > 0 && <button type="button" className="w-full px-4 py-2.5 text-left text-xs font-semibold text-burnt hover:bg-mist"
+                        onClick={() => { setFilterStatus(""); setFilterStaff(""); setFilterSource(""); filterTrigger.current?.focus(); }}>Clear filters</button>}
+                    </div>
                   )}
                 </div>
               </div>
@@ -888,10 +858,10 @@ export function OverviewView({
               {filtered.length === 0 ? (
                 <EmptyState
                   compact
-                  title={searchQuery || filterStatus !== "All"
+                  title={hasFilters
                     ? "No appointments match your search."
                     : "No appointments scheduled."}
-                  description={searchQuery || filterStatus !== "All"
+                  description={hasFilters
                     ? "Try a different name, service, staff member, or status."
                     : "New bookings will appear here automatically."}
                 />
@@ -922,21 +892,8 @@ export function OverviewView({
                             <span>Staff <strong className="block text-ink">{row.staff}</strong></span>
                             <span>Source <strong className="block text-ink">{row.source}</strong></span>
                           </div>
-                          {canManage && <div className="flex flex-wrap gap-2 pt-1">
-                            {row.status !== "Confirmed" && (
-                              <AdminButton size="xs" variant="primary" onClick={() => handleStatusChange(row.id, "Confirmed")}>
-                                Confirm
-                              </AdminButton>
-                            )}
-                            {row.status !== "Check In" && (
-                              <AdminButton size="xs" variant="outline" onClick={() => handleStatusChange(row.id, "Check In")}>
-                                Check In
-                              </AdminButton>
-                            )}
-                            <AdminButton size="xs" variant="danger" onClick={() => setCancelTarget(row)}>
-                              Cancel
-                            </AdminButton>
-                          </div>}
+                          {canManage && <AdminButton size="xs" variant="outline" aria-haspopup="dialog"
+                            onClick={() => setSelectedAppointmentId(row.id)}>Appointment details</AdminButton>}
                         </div>
                       )}
                     </div>
@@ -954,8 +911,8 @@ export function OverviewView({
                   <col className="w-[18%]" />
                   <col className="w-[16%]" />
                   <col className="w-[12%]" />
-                  <col className="w-[15%]" />
-                  {canManage && <col className="w-[9%]" />}
+                  <col className={canManage ? "w-32" : "w-[15%]"} />
+                  {canManage && <col />}
                 </colgroup>
                 <thead className="bg-mist border-b border-hairline text-subtle font-semibold">
                   <tr>
@@ -964,7 +921,7 @@ export function OverviewView({
                     <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Service</th>
                     <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Staff</th>
                     <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Source</th>
-                    <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Status</th>
+                    <th className="py-4 pl-6 pr-2 text-[11px] leading-4 uppercase tracking-wide">Status</th>
                     {canManage && <th className="px-2 py-4 text-center text-[11px] leading-4 uppercase tracking-wide">Action</th>}
                   </tr>
                 </thead>
@@ -974,10 +931,10 @@ export function OverviewView({
                       <td colSpan={canManage ? 7 : 6} className="px-5 py-2">
                         <EmptyState
                           compact
-                          title={searchQuery || filterStatus !== "All"
+                          title={hasFilters
                             ? "No appointments match your search."
                             : "No appointments scheduled."}
-                          description={searchQuery || filterStatus !== "All"
+                          description={hasFilters
                             ? "Try a different name, service, staff member, or status."
                             : "New bookings will appear here automatically."}
                         />
@@ -995,47 +952,20 @@ export function OverviewView({
                             {row.source}
                           </span>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="whitespace-nowrap py-4 pl-6 pr-2">
                           <AppointmentStatusPill status={row.status} />
                         </td>
-                        {canManage && <td className="relative px-2 py-4 text-center align-middle">
+                        {canManage && <td className="px-2 py-4 align-middle">
                           <button
                             type="button"
-                            onClick={() => setActiveMenuId(activeMenuId === row.id ? null : row.id)}
-                            className="mx-auto flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 text-glyph"
+                            aria-label={`Appointment details for ${row.customer}`}
+                            aria-haspopup="dialog"
+                            onClick={() => setSelectedAppointmentId(row.id)}
+                            className="mx-auto flex h-9 w-10 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 text-glyph"
                           >
                             <Icon name="more" weight="fill" className="size-5" />
                           </button>
 
-                          {activeMenuId === row.id && (
-                            <div className="absolute right-4 mt-1 w-40 rounded-[10px] bg-white border border-hairline shadow-lg py-1 z-30 text-left text-sm">
-                              {row.status !== "Confirmed" && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleStatusChange(row.id, "Confirmed")}
-                                  className="w-full text-left px-4 py-2 hover:bg-mist text-body"
-                                >
-                                  Confirm
-                                </button>
-                              )}
-                              {row.status !== "Check In" && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleStatusChange(row.id, "Check In")}
-                                  className="w-full text-left px-4 py-2 hover:bg-mist text-body"
-                                >
-                                  Check In
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => { setCancelTarget(row); setActiveMenuId(null); }}
-                                className="w-full text-left px-4 py-2 hover:bg-danger-bg text-danger font-medium"
-                              >
-                                Cancel booking
-                              </button>
-                            </div>
-                          )}
                         </td>}
                       </tr>
                     ))
@@ -1067,26 +997,10 @@ export function OverviewView({
       )}
 
       {/* Cancel Confirmation Modal (QA #3) */}
-      {cancelTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div className="relative w-full max-w-sm rounded-[10px] bg-white p-6 shadow-2xl border border-line">
-            <h3 className="font-display text-[22px] leading-tight text-ink">
-              Cancel Appointment?
-            </h3>
-            <p className="mt-2 text-sm text-muted leading-relaxed">
-              Are you sure you want to cancel the appointment for{" "}
-              <span className="font-semibold text-ink">{cancelTarget.customer}</span> ({cancelTarget.service}) at {cancelTarget.time}?
-            </p>
-            <div className="mt-5 flex items-center justify-end gap-2.5">
-              <AdminButton variant="outline" size="xs" onClick={() => setCancelTarget(null)}>
-                Keep
-              </AdminButton>
-              <AdminButton variant="danger" size="xs" onClick={handleConfirmCancel}>
-                Confirm Cancel
-              </AdminButton>
-            </div>
-          </div>
-        </div>
+      {canManage && tenantId && selectedAppointmentId && (
+        <AppointmentDetailsModal key={selectedAppointmentId} tenantId={tenantId} appointmentId={selectedAppointmentId}
+          onClose={() => setSelectedAppointmentId(null)}
+          onUpdated={() => router.refresh()} />
       )}
 
       {/* New Appointment Modal (QA #4) */}
