@@ -2,6 +2,7 @@
 
 import { useState, type ChangeEvent } from "react";
 import { cn } from "@/lib/utils";
+import { Icon } from "@/components/admin/icon";
 
 export interface SearchInputProps {
   /** Placeholder text shown inside the input. */
@@ -13,21 +14,7 @@ export interface SearchInputProps {
 }
 
 function SearchIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-      className={className}
-    >
-      <circle cx="9" cy="9" r="6.5" />
-      <path d="M14 14l4 4" />
-    </svg>
-  );
+  return <Icon name="search" className={className} />;
 }
 
 export function SearchInput({

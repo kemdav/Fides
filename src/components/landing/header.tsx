@@ -16,9 +16,8 @@ const actions = [
 export function Header() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [active, setActive] = useState<string>(navLinks[0].id);
-
   const onHome = usePathname() === "/";
+  const [active, setActive] = useState<string>(onHome ? navLinks[0].id : "");
 
   useEffect(() => {
     const onScroll = () => {

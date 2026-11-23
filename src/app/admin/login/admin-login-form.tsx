@@ -5,6 +5,7 @@ import { adminLogin, type AdminLoginState } from "@/app/actions/admin-auth";
 import { AdminAuthShell } from "@/components/auth/admin-auth-shell";
 import { AuthBanner, AuthCard, AuthField, AuthFootnote, AuthPasswordField, AuthSubmit, authButtonClass } from "@/components/auth/auth-ui";
 import { cn } from "@/lib/utils";
+import { Icon } from "@/components/admin/icon";
 
 const initialState: AdminLoginState = { status: "idle", email: "" };
 
@@ -20,7 +21,7 @@ export function AdminLoginForm() {
         {view === "forgot" ? (
           <AuthCard eyebrow="Fides admin" title="Reset your password" description="Enter your administrator email to receive a password reset link." className="gap-[18px]">
             <button type="button" onClick={() => setView("login")} className="-ml-3 -mt-1 inline-flex w-fit cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-[11px] font-semibold text-burnt hover:text-burnt-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40">
-              <span aria-hidden>←</span> Back to login
+              <Icon name="arrow-left" weight="medium" className="size-4" /> Back to login
             </button>
             <form
               onSubmit={(event) => {

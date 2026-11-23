@@ -7,6 +7,7 @@ import { login, type LoginState } from "@/app/actions/auth";
 import { buttonClasses, inputClasses, PasswordInput } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { ForgotPasswordFlow } from "./forgot-password-flow";
+import { Icon } from "@/components/admin/icon";
 
 const initialState: LoginState = { error: null, email: "" };
 
@@ -39,11 +40,11 @@ export function LoginForm({
           href="/"
           className="inline-flex w-fit items-center gap-1.5 rounded-md py-1 pr-2 text-sm font-semibold text-burnt hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
         >
-          <span aria-hidden>←</span> Back to home
+          <Icon name="arrow-left" weight="medium" className="size-4" /> Back to home
         </Link>
 
         <div className="grid w-full overflow-hidden rounded-3xl bg-white shadow-[0_12px_40px_-12px_rgb(44_58_75/0.25)] md:grid-cols-[1fr_1.05fr]">
-          <aside className="relative flex flex-col items-center justify-between gap-4 bg-[#faecd3] px-6 pb-8 pt-8 text-center md:px-10 md:pb-12 md:pt-12 md:text-left">
+          <aside className="relative flex flex-col items-center justify-between gap-4 bg-sand px-6 pb-8 pt-8 text-center md:px-10 md:pb-12 md:pt-12 md:text-left">
             <div className="flex w-full flex-col gap-1 md:items-start">
               <Link href="/" className="font-display text-4xl text-burnt md:text-[40px]">
                 Fides

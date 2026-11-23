@@ -40,7 +40,7 @@ export function ContactForm() {
       <div className="flex flex-col gap-2">
         <label htmlFor="message" className="text-sm font-semibold text-ink">
           <span className="opacity-80">Message</span>
-          <span aria-hidden className="text-[#991b1b] opacity-80">*</span>
+          <span aria-hidden className="text-danger-text opacity-80">*</span>
         </label>
         <textarea
           id="message"
@@ -50,10 +50,10 @@ export function ContactForm() {
           disabled={pending}
           aria-invalid={!!fieldErrors?.message}
           placeholder="How can we help?"
-          className={`${inputClasses(!!fieldErrors?.message)} h-auto resize-y py-3`}
+          className={inputClasses(!!fieldErrors?.message, true)}
         />
         {fieldErrors?.message ? (
-          <p role="alert" className="text-[13px] text-[#991b1b]">
+          <p role="alert" className="text-[13px] text-danger-text">
             {fieldErrors.message}
           </p>
         ) : null}

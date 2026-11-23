@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { buttonClasses, type ButtonVariant } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { Icon } from "@/components/admin/icon";
 
 export type MobileMenuLink = { label: string; href: string; active?: boolean };
 export type MobileMenuAction = { label: string; href: string; variant: ButtonVariant };
@@ -34,9 +35,7 @@ export function MobileMenu({
           onClick={onClose}
           className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-lg text-burnt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
         >
-          <svg viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="size-6">
-            <path d="M6 6l12 12M18 6 6 18" />
-          </svg>
+          <Icon name="close" weight="medium" className="size-6" />
         </button>
       </div>
 

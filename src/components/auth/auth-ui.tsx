@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { InputHTMLAttributes, ReactNode } from "react";
 import { buttonClasses, inputClasses, PasswordInput } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { Icon } from "@/components/admin/icon";
 
 export const authButtonClass = buttonClasses({ variant: "brand", size: "form", className: "w-full rounded-md" });
 
@@ -15,21 +16,7 @@ function Spinner() {
 }
 
 function AlertIcon({ tone }: { tone: "error" | "warning" }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden className="mt-px size-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      {tone === "error" ? (
-        <>
-          <circle cx="12" cy="12" r="9" />
-          <path d="M12 7.5v5.5M12 16.5h.01" />
-        </>
-      ) : (
-        <>
-          <path d="M10.3 4.2 2.8 17.5A2 2 0 0 0 4.5 20.5h15a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z" />
-          <path d="M12 9.5v4.5M12 17.2h.01" />
-        </>
-      )}
-    </svg>
-  );
+  return <Icon name={tone === "error" ? "alert" : "warning"} className="mt-px size-5 shrink-0" />;
 }
 
 export function AuthCard({ eyebrow, title, description, children, className }: { eyebrow?: string; title: string; description?: string; children: ReactNode; className?: string }) {
@@ -62,11 +49,11 @@ function FieldShell({ id, label, error, children }: { id: string; label: string;
     <div className="flex flex-col gap-2">
       <label htmlFor={id} className="text-sm font-semibold text-ink">
         <span className="opacity-80">{label}</span>
-        <span aria-hidden className="text-[#991b1b] opacity-80">*</span>
+        <span aria-hidden className="text-danger-text opacity-80">*</span>
       </label>
       {children}
       {error ? (
-        <p id={`${id}-error`} role="alert" className="flex items-center gap-1.5 text-[13px] text-[#991b1b]">
+        <p id={`${id}-error`} role="alert" className="flex items-center gap-1.5 text-[13px] text-danger-text">
           <span aria-hidden className="size-3.5 shrink-0 rounded-full bg-danger text-center text-[10px] font-bold leading-[14px] text-white">!</span>
           {error}
         </p>

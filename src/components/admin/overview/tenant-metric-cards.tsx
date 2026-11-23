@@ -14,7 +14,8 @@ export function TenantMetricCards() {
         href="/admin/tenants?status=active"
         label="Active tenants"
         value={active}
-        caption="View active accounts →"
+        caption="View active accounts"
+        captionArrow
         icon="users"
         progress={65}
       />
@@ -22,7 +23,8 @@ export function TenantMetricCards() {
         href="/admin/tenants?status=renewing"
         label="Renewing in 7 days"
         value={1}
-        caption="Review the upcoming renewal →"
+        caption="Review the upcoming renewal"
+        captionArrow
         icon="card"
         progress={65}
       />
@@ -30,7 +32,8 @@ export function TenantMetricCards() {
         href="/admin/tenants?status=suspended"
         label="Suspended accounts"
         value={suspended.length}
-        caption="Review account access →"
+        caption="Review account access"
+        captionArrow
         icon="lock"
         progress={65}
       />

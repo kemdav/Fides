@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { BackToTop } from "./back-to-top";
 import { landingLinks } from "./links";
 import { Reveal } from "./reveal";
+import { Icon } from "@/components/admin/icon";
 
 const columns = [
   {
@@ -30,23 +31,6 @@ const columns = [
   },
 ];
 
-function ArrowIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="M5 12h14M13 6l6 6-6 6" />
-    </svg>
-  );
-}
-
 function FooterLink({ href, children }: { href: string; children: ReactNode }) {
   return (
     <Link
@@ -63,7 +47,7 @@ function FooterLink({ href, children }: { href: string; children: ReactNode }) {
           className="absolute inset-x-0 -bottom-1 h-px origin-left scale-x-0 bg-sky transition-transform duration-300 ease-out group-hover:scale-x-100 motion-reduce:transition-none"
         />
       </span>
-      <ArrowIcon className="size-4 -translate-x-2 opacity-0 transition-[opacity,translate] duration-300 ease-out group-hover:translate-x-0 group-hover:opacity-100 motion-reduce:transition-none" />
+      <Icon name="arrow-right" weight="medium" className="size-4 -translate-x-2 opacity-0 transition-[opacity,translate] duration-300 ease-out group-hover:translate-x-0 group-hover:opacity-100 motion-reduce:transition-none" />
     </Link>
   );
 }

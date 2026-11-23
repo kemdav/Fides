@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { Icon } from "@/components/admin/icon";
 
 const benefits = ["Platform oversight", "Tenant management", "Account verification"];
 
@@ -20,7 +21,12 @@ export function AdminAuthShell({ children, eyebrow }: { children: ReactNode; eye
           <p className="max-w-[620px] text-lg">A dedicated workspace for authorized Fides administrators.</p>
           <ul className="flex flex-col gap-4 pt-8 text-[15px] font-semibold">
             {benefits.map((benefit) => (
-              <li key={benefit}>✓&nbsp; {benefit}</li>
+              <li key={benefit} className="flex items-center gap-3">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-white/15 text-white">
+                  <Icon name="check" weight="bold" className="size-3.5" />
+                </span>
+                {benefit}
+              </li>
             ))}
           </ul>
         </div>
@@ -33,7 +39,7 @@ export function AdminAuthShell({ children, eyebrow }: { children: ReactNode; eye
             Fides.
           </Link>
           <Link href="/" className="ml-auto inline-flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-[11px] font-semibold text-subtle hover:text-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40">
-            Go to fides.app <span aria-hidden>→</span>
+            Go to fides.app <Icon name="arrow-right" weight="medium" className="size-4" />
           </Link>
         </div>
         <div className="flex w-full flex-1 items-center justify-center">{children}</div>

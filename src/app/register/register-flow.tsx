@@ -52,6 +52,7 @@ import {
   useObjectUrl,
   validateFile,
 } from "./parts";
+import { Icon } from "@/components/admin/icon";
 
 type DocMap = Partial<Record<BusinessDocumentKey, File>>;
 
@@ -310,11 +311,11 @@ export function RegisterFlow() {
                 href="/"
                 className="mb-4 inline-flex w-fit items-center gap-1.5 rounded-md py-1 pr-2 text-sm font-semibold text-burnt hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
               >
-                <span aria-hidden>←</span> Back to home
+                <Icon name="arrow-left" weight="medium" className="size-4" /> Back to home
               </Link>
               <div className="my-auto">
                 {hasDraft ? (
-                  <button type="button" onClick={restoreDraft} className="mb-4 w-full rounded-lg bg-[#faece3] px-4 py-2.5 text-sm font-semibold text-burnt hover:bg-[#f6dfd0]">
+                  <button type="button" onClick={restoreDraft} className="mb-4 w-full rounded-lg bg-blush px-4 py-2.5 text-sm font-semibold text-burnt hover:bg-blush-deep">
                     Restore your saved draft
                   </button>
                 ) : null}
@@ -504,7 +505,7 @@ function AccountStep({ values, errors, set, onNext }: StepProps & { onNext: () =
 
       <div className="mt-7 flex flex-col items-center gap-4">
         <button type="submit" className={primaryButton}>
-          Create Account →
+          Create Account <Icon name="arrow-right" weight="medium" className="size-4" />
         </button>
         <p className="text-sm text-muted">
           Already have an account?{" "}
@@ -520,10 +521,10 @@ function AccountStep({ values, errors, set, onNext }: StepProps & { onNext: () =
 
 function StepActions({
   onBack,
-  nextLabel = "Save & Continue →",
+  nextLabel = <>Save &amp; Continue <Icon name="arrow-right" weight="medium" className="size-4" /></>,
 }: {
   onBack?: () => void;
-  nextLabel?: string;
+  nextLabel?: React.ReactNode;
 }) {
   return (
     <div className="mt-6 flex flex-col-reverse items-stretch gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-end">
@@ -894,10 +895,10 @@ function PlanStep({ values, errors, set, onBack, onNext }: StepProps & { onBack:
       </p>
       <div className="mt-8 flex items-center justify-between gap-3">
         <button type="button" onClick={onBack} className={cn(secondaryButton, "border-burnt text-burnt hover:bg-burnt/5")}>
-          ← Back
+          <Icon name="arrow-left" weight="medium" className="size-4" /> Back
         </button>
         <button type="submit" className={primaryButton}>
-          Continue to Summary →
+          Continue to Summary <Icon name="arrow-right" weight="medium" className="size-4" />
         </button>
       </div>
     </form>
@@ -942,7 +943,7 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 
 function FileRow({ name, size }: { name: string; size: number }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg bg-[#eceff6] px-3 py-2.5 text-xs text-body">
+    <div className="flex items-center gap-3 rounded-lg bg-mist px-3 py-2.5 text-xs text-body">
       <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-burnt text-white">
         <StepIcon name="check" className="size-3" />
       </span>
@@ -1053,7 +1054,7 @@ function SummaryStep({
         <Row label="Plan" value={<span className="font-semibold text-burnt">{plan.name}</span>} />
         <Row label="Price" value={`${formatPeso(plan.price)} / month`} />
         <Row label="Billing Cycle" value="Monthly" />
-        <p className="flex items-center gap-2 rounded-lg bg-[#faece3] px-3 py-2.5 text-xs text-burnt">
+        <p className="flex items-center gap-2 rounded-lg bg-blush px-3 py-2.5 text-xs text-burnt">
           <StepIcon name="check" className="size-4 rounded-full bg-burnt p-0.5 text-white" />
           {TRIAL_DAYS}-day free trial included — no charge until trial ends
         </p>
@@ -1090,7 +1091,7 @@ function SummaryStep({
         </button>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <button type="button" onClick={onBack} disabled={submitting} className={cn(secondaryButton, "w-full")}>
-            ← Back
+            <Icon name="arrow-left" weight="medium" className="size-4" /> Back
           </button>
           <button type="button" onClick={onSaveDraft} disabled={submitting} className={cn(secondaryButton, "w-full")}>
             Save Draft

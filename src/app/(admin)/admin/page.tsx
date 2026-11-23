@@ -44,7 +44,8 @@ export default function AdminPage() {
           href="/admin/verification"
           label="Awaiting verification"
           value={pending.length}
-          caption="Open verification →"
+          caption="Open verification"
+          captionArrow
           icon="verified"
           progress={65}
           badge={overdue > 0 ? <OverdueBadge count={overdue} /> : undefined}

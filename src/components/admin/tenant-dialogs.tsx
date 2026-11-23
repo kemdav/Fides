@@ -45,7 +45,7 @@ function ReasonField({
   return (
     <div className="flex flex-col gap-2">
       <label htmlFor={id} className="text-base font-semibold leading-6 opacity-80">
-        Reason for change <span className="text-[13px] text-[#991b1b]">*</span>
+        Reason for change <span className="text-[13px] text-danger-text">*</span>
       </label>
       <textarea
         id={id}

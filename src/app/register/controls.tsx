@@ -4,6 +4,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { inputClasses, Modal } from "@/components/ui";
 import { FILE_LIMITS } from "@/lib/registration/options";
 import { cn } from "@/lib/utils";
+import { Icon } from "@/components/admin/icon";
 
 /* -------------------------------------------------------------------------- */
 /* Shared bits                                                                */
@@ -11,55 +12,14 @@ import { cn } from "@/lib/utils";
 
 export const controlClass = (invalid: boolean) => cn(inputClasses(invalid), "flex items-center justify-between gap-2 text-left");
 
-function Svg({ className, children }: { className?: string; children: React.ReactNode }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={cn("size-4 shrink-0", className)}>
-      {children}
-    </svg>
-  );
-}
-
-export const ChevronDown = ({ className }: { className?: string }) => (
-  <Svg className={className}>
-    <path d="m6 9 6 6 6-6" />
-  </Svg>
-);
-const ChevronLeft = () => (
-  <Svg>
-    <path d="m15 6-6 6 6 6" />
-  </Svg>
-);
-const ChevronRight = () => (
-  <Svg>
-    <path d="m9 6 6 6-6 6" />
-  </Svg>
-);
-const CalendarIcon = () => (
-  <Svg className="size-5 text-glyph">
-    <path d="M7 2v3M17 2v3M4 8h16M5 4h14a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z" />
-  </Svg>
-);
-export const FileIcon = ({ className }: { className?: string }) => (
-  <Svg className={className}>
-    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" />
-    <path d="M14 3v5h5M9 13h6M9 17h6" />
-  </Svg>
-);
-export const UploadIcon = ({ className }: { className?: string }) => (
-  <Svg className={className}>
-    <path d="M12 16V5m0 0-4 4m4-4 4 4M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" />
-  </Svg>
-);
-export const CheckCircle = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" aria-hidden className={cn("size-4 shrink-0", className)}>
-    <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.2 14.2-4-4 1.4-1.4 2.6 2.6 5.6-5.6 1.4 1.4-7 7Z" fill="currentColor" />
-  </svg>
-);
-export const ShieldIcon = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" aria-hidden className={cn("size-5 shrink-0", className)}>
-    <path d="M12 2.5 4.5 5.5v5.8c0 4.4 3 8.4 7.5 10.2 4.5-1.8 7.5-5.8 7.5-10.2V5.5L12 2.5Zm-1.2 13.2-3-3 1.4-1.4 1.6 1.6 4-4 1.4 1.4-5.4 5.4Z" fill="currentColor" />
-  </svg>
-);
+export const ChevronDown = ({ className }: { className?: string }) => <Icon name="chevron-down" className={className ?? "size-5"} />;
+const ChevronLeft = () => <Icon name="chevron-left" className="size-5" />;
+const ChevronRight = () => <Icon name="chevron-right" className="size-5" />;
+const CalendarIcon = () => <Icon name="calendar" className="size-5 text-glyph" />;
+export const FileIcon = ({ className }: { className?: string }) => <Icon name="document" className={className ?? "size-5"} />;
+export const UploadIcon = ({ className }: { className?: string }) => <Icon name="upload" className={className ?? "size-5"} />;
+export const CheckCircle = ({ className }: { className?: string }) => <Icon name="check-circle" weight="fill" className={cn("size-4 shrink-0", className)} />;
+export const ShieldIcon = ({ className }: { className?: string }) => <Icon name="shield-check" weight="fill" className={cn("size-5 shrink-0", className)} />;
 
 function useOutsideClose(open: boolean, close: () => void, ref: React.RefObject<HTMLElement | null>) {
   useEffect(() => {
@@ -707,7 +667,7 @@ export function IdUpload({
     <div className="flex flex-col gap-2">
       {picker.input(label)}
       {file ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-lg bg-[#eceff6] px-3 py-2.5">
+        <div className="flex flex-wrap items-center gap-3 rounded-lg bg-mist px-3 py-2.5">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-wash text-success">
             <ShieldIcon />
           </span>

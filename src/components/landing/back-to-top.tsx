@@ -1,5 +1,7 @@
 "use client";
 
+import { Icon } from "@/components/admin/icon";
+
 export function BackToTop() {
   return (
     <button
@@ -9,18 +11,7 @@ export function BackToTop() {
     >
       Back to top
       <span className="flex size-8 items-center justify-center rounded-full bg-sky text-ink transition-colors duration-300 group-hover:bg-ink group-hover:text-sky">
-        <svg
-          viewBox="0 0 24 24"
-          aria-hidden
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="size-4 transition-[translate] duration-300 ease-out group-hover:-translate-y-0.5 motion-reduce:transition-none"
-        >
-          <path d="M12 19V5M5 12l7-7 7 7" />
-        </svg>
+        <Icon name="arrow-up" weight="medium" className="size-4 transition-[translate] duration-300 ease-out group-hover:-translate-y-0.5 motion-reduce:transition-none" />
       </span>
     </button>
   );

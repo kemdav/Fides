@@ -268,7 +268,7 @@ export function DocumentDialog({
       <p className="text-sm leading-[21px] text-muted">
         {submission.business} · {submission.reference} · Submitted {formatSubmittedOn(submission)}
       </p>
-      <div className="flex h-[180px] items-center justify-center rounded-[10px] border border-dashed border-line bg-[#fafafa] p-5 text-sm">
+      <div className="flex h-[180px] items-center justify-center rounded-[10px] border border-dashed border-line bg-mist p-5 text-sm">
         Sample {document.label}
       </div>
       <div className="flex flex-wrap items-center justify-end gap-[10px]">

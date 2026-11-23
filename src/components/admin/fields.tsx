@@ -18,7 +18,7 @@ export function TextField({ label, required, value, onChange, error, className, 
     <div className={cn("flex min-w-0 flex-col gap-2", className)}>
       <label htmlFor={id} className="text-[13px] font-semibold leading-5 opacity-80">
         {label}
-        {required ? <span className="text-[#991b1b]"> *</span> : null}
+        {required ? <span className="text-danger-text"> *</span> : null}
       </label>
       <input
         id={id}
