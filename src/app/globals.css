@@ -67,6 +67,11 @@
   --color-blush: #faece3;
   --color-blush-deep: #f6dfd0;
   --color-fox-ink: #394452;
+  --shadow-card: 0 3px 14px rgb(44 58 75 / 0.04);
+  --shadow-card-sm: 0 3px 7px rgb(44 58 75 / 0.04);
+  --shadow-header: 0 2px 12px rgb(0 0 0 / 0.08);
+  --shadow-sheet: 0 12px 28px -10px rgb(44 58 75 / 0.35);
+  --shadow-popover: 0 8px 24px rgb(44 58 75 / 0.14);
 }
 
 .fox-point {
