@@ -51,6 +51,36 @@ import {
 const DEFAULT_COVER_IMAGE =
   "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80";
 
+const GOOGLE_FONTS_HREF =
+  "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Serif+Display&family=Inter:wght@400;500;600;700&family=Lora:wght@500;600;700&family=Montserrat:wght@400;500;600;700&family=Mulish:wght@400;500;600;700&family=Ovo&family=Playfair+Display:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap";
+
+const TYPOGRAPHY_FONT_MAP: Record<string, { display: string; body: string }> = {
+  "Ovo + Mulish": {
+    display: "'Ovo', Georgia, serif",
+    body: "'Mulish', system-ui, sans-serif",
+  },
+  "Playfair + Inter": {
+    display: "'Playfair Display', Georgia, serif",
+    body: "'Inter', system-ui, sans-serif",
+  },
+  "Cormorant + Plus Jakarta Sans": {
+    display: "'Cormorant Garamond', Georgia, serif",
+    body: "'Plus Jakarta Sans', system-ui, sans-serif",
+  },
+  "DM Serif + Montserrat": {
+    display: "'DM Serif Display', Georgia, serif",
+    body: "'Montserrat', system-ui, sans-serif",
+  },
+  "Lora + Source Sans 3": {
+    display: "'Lora', Georgia, serif",
+    body: "'Source Sans 3', system-ui, sans-serif",
+  },
+};
+
+function getTypographyFonts(typography: string) {
+  return TYPOGRAPHY_FONT_MAP[typography] ?? TYPOGRAPHY_FONT_MAP["Ovo + Mulish"];
+}
+
 const TYPOGRAPHY_OPTIONS = [
   { value: "Ovo + Mulish", label: "Ovo + Mulish" },
   { value: "Playfair + Inter", label: "Playfair + Inter" },
@@ -331,6 +361,17 @@ export function WebsiteSettingsView({
 }: WebsiteSettingsViewProps) {
   const router = useRouter();
 
+  // Load Google Fonts for all 5 typography pairings once for live preview
+  React.useEffect(() => {
+    const linkId = "fides-preview-google-fonts";
+    if (document.getElementById(linkId)) return;
+    const link = document.createElement("link");
+    link.id = linkId;
+    link.rel = "stylesheet";
+    link.href = GOOGLE_FONTS_HREF;
+    document.head.appendChild(link);
+  }, []);
+
   // Live published state
   const [savedSettings, setSavedSettings] = React.useState<WebsiteSettingsData>(
     {
@@ -563,6 +604,7 @@ export function WebsiteSettingsView({
   const resolvedCoverImage = form.coverPhotoUrl || DEFAULT_COVER_IMAGE;
   const resolvedSocialImage = form.socialImageUrl || resolvedCoverImage;
   const isMobilePreview = previewDevice === "mobile";
+  const previewFonts = getTypographyFonts(form.typography);
 
   const tabs: { id: ActiveTab; label: string }[] = [
     { id: "branding", label: "Branding & homepage" },
@@ -1116,16 +1158,17 @@ export function WebsiteSettingsView({
                     }`}
                     style={{
                       backgroundColor: form.mainColor,
-                      fontFamily: form.typography.includes("Ovo")
-                        ? "var(--font-display), Georgia, serif"
-                        : "inherit",
+                      fontFamily: previewFonts.body,
                     }}
                   >
                     <div className="px-4 py-3 flex items-center justify-between gap-2 border-b border-black/5 bg-white/40">
-                      <span className="font-serif text-sm font-semibold text-ink truncate min-w-0">
+                      <span
+                        className="text-sm font-semibold text-ink truncate min-w-0"
+                        style={{ fontFamily: previewFonts.display }}
+                      >
                         {form.businessName || "Bella Vita"}
                       </span>
-                      <div className="flex items-center gap-2.5 text-[10px] font-sans shrink-0">
+                      <div className="flex items-center gap-2.5 text-[10px] shrink-0">
                         {!isMobilePreview && (
                           <>
                             <span className="hidden sm:inline text-body">
@@ -1166,15 +1209,18 @@ export function WebsiteSettingsView({
                         >
                           {form.businessCategory.toUpperCase()}
                         </span>
-                        <h3 className="text-base font-serif font-medium text-ink leading-snug break-words">
+                        <h3
+                          className="text-base font-medium text-ink leading-snug break-words"
+                          style={{ fontFamily: previewFonts.display }}
+                        >
                           {form.headline}
                         </h3>
-                        <p className="text-[10px] text-body font-sans leading-relaxed line-clamp-2">
+                        <p className="text-[10px] text-body leading-relaxed line-clamp-2">
                           {form.supportingMessage}
                         </p>
                         <div className="pt-1">
                           <span
-                            className="inline-block px-3 py-1 rounded-md text-[10px] font-semibold text-white shadow-sm font-sans"
+                            className="inline-block px-3 py-1 rounded-md text-[10px] font-semibold text-white shadow-sm"
                             style={{ backgroundColor: form.accentColor }}
                           >
                             Book an appointment
@@ -1200,10 +1246,13 @@ export function WebsiteSettingsView({
 
                     {form.showFeaturedServices && (
                       <div
-                        className="p-3.5 space-y-2 font-sans"
+                        className="p-3.5 space-y-2"
                         style={{ backgroundColor: form.secondaryColor }}
                       >
-                        <span className="text-[10px] font-bold text-ink block font-serif">
+                        <span
+                          className="text-[11px] font-semibold text-ink block"
+                          style={{ fontFamily: previewFonts.display }}
+                        >
                           Find your moment of care
                         </span>
                         <div
@@ -1241,7 +1290,7 @@ export function WebsiteSettingsView({
                       </div>
                     )}
 
-                    <div className="px-4 py-2 border-t border-black/5 flex flex-wrap items-center justify-between gap-2 text-[9px] text-muted font-sans">
+                    <div className="px-4 py-2 border-t border-black/5 flex flex-wrap items-center justify-between gap-2 text-[9px] text-muted">
                       <span className="truncate">{form.businessName}</span>
                       <span className="shrink-0">Powered by Fides</span>
                     </div>
