@@ -1,6 +1,7 @@
 # Security notes
 
 What protects the app today, and what to remember when adding features.
+How the layers fit together (entry, DTO, guard, service, queries, database) is in [ARCHITECTURE](ARCHITECTURE.md).
 
 ## Access layers
 

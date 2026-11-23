@@ -5,8 +5,9 @@ booking website and a unified management dashboard. Online bookings, phone
 requests, and walk-in visits flow through a single scheduling engine, with
 tenant isolation enforced at the database layer.
 
-> **Docs for the team:** [environment variables](docs/ENVIRONMENT.md) ·
-> [security notes](docs/SECURITY.md) · [frontend reuse guide](docs/FRONTEND.md)
+> **Docs for the team:** [architecture guide](docs/ARCHITECTURE.md) (start here) ·
+> [environment variables](docs/ENVIRONMENT.md) · [security notes](docs/SECURITY.md) ·
+> [frontend reuse guide](docs/FRONTEND.md)
 
 ## Tech stack
 
@@ -100,6 +101,11 @@ public/                    PWA manifest, service worker, offline shell, icons
 ```
 
 ## Architecture notes
+
+The full guide is [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): why we run one Next.js app on Supabase instead of a separate
+Node backend, the entry / DTO / service / queries layering we are moving to (feature modules in `src/features`), the
+rules every change follows, an honest snapshot of where the code is today, the migration plan and the production checklist.
+Short version:
 
 - **Multi-tenant routing.** One Next.js app serves every provider website, the
   dashboard, and the admin portal. `src/proxy.ts` (Next.js 16's replacement for

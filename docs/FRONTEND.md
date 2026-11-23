@@ -1,6 +1,7 @@
 # Frontend reuse guide
 
 Use what already exists before writing new markup. This keeps spacing, heights, colours and focus styles consistent.
+Where UI code sits relative to services and queries is described in [ARCHITECTURE](ARCHITECTURE.md) (section 8).
 Colour tokens live in `src/app/globals.css` (`burnt`, `burnt-dark`, `powder`, `ink`, `muted`, `subtle`, `line`, `hairline`,
 `mist`, `glyph`, `outline`, `danger`, `info-bg`, ...). Use tokens, not hex values.
 

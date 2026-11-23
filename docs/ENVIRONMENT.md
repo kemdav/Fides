@@ -1,5 +1,7 @@
 # Environment variables
 
+Part of the [architecture guide](ARCHITECTURE.md) set (configuration rules are in section 6.4).
+
 Copy `.env.example` to `.env.local` and fill it in. Never commit `.env.local`.
 Restart `npm run dev` after any change.
 
