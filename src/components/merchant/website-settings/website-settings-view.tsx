@@ -263,6 +263,45 @@ function CustomSelect({
   );
 }
 
+interface ToggleSwitchProps {
+  checked: boolean;
+  disabled?: boolean;
+  onChange: () => void;
+  ariaLabel?: string;
+}
+
+function ToggleSwitch({
+  checked,
+  disabled = false,
+  onChange,
+  ariaLabel,
+}: ToggleSwitchProps) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={ariaLabel}
+      disabled={disabled}
+      onClick={onChange}
+      className="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      <span
+        className={`block h-3.5 w-full rounded-full transition-colors duration-200 ${
+          checked ? "bg-neutral-300/80" : "bg-neutral-200"
+        }`}
+      />
+      <span
+        className={`pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full shadow-xs transition-all duration-200 ${
+          checked
+            ? "translate-x-4 bg-burnt"
+            : "translate-x-0 bg-white border border-neutral-300"
+        }`}
+      />
+    </button>
+  );
+}
+
 interface WebsiteSettingsViewProps {
   initialData?: Partial<WebsiteSettingsData>;
   initialDraft?: Partial<WebsiteSettingsData> | null;
@@ -950,18 +989,12 @@ export function WebsiteSettingsView({
                               {desc}
                             </span>
                           </div>
-                          <button
-                            type="button"
-                            role="switch"
-                            aria-checked={form[key]}
+                          <ToggleSwitch
+                            checked={form[key]}
                             disabled={!canEdit}
-                            onClick={() => handleChange(key, !form[key])}
-                            className={`w-10 h-5 shrink-0 flex items-center rounded-full p-0.5 transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:opacity-50 disabled:cursor-not-allowed ${form[key] ? "bg-burnt" : "bg-line"}`}
-                          >
-                            <div
-                              className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ${form[key] ? "translate-x-5" : "translate-x-0"}`}
-                            />
-                          </button>
+                            ariaLabel={label}
+                            onChange={() => handleChange(key, !form[key])}
+                          />
                         </div>
                       ))}
                     </div>
@@ -1442,23 +1475,17 @@ export function WebsiteSettingsView({
                           Display your weekly hours on the contact page.
                         </span>
                       </div>
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={form.showOpeningHours}
+                      <ToggleSwitch
+                        checked={form.showOpeningHours}
                         disabled={!canEdit}
-                        onClick={() =>
+                        ariaLabel="Show opening hours"
+                        onChange={() =>
                           handleChange(
                             "showOpeningHours",
                             !form.showOpeningHours,
                           )
                         }
-                        className={`w-10 h-5 shrink-0 flex items-center rounded-full p-0.5 transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:opacity-50 disabled:cursor-not-allowed ${form.showOpeningHours ? "bg-burnt" : "bg-line"}`}
-                      >
-                        <div
-                          className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ${form.showOpeningHours ? "translate-x-5" : "translate-x-0"}`}
-                        />
-                      </button>
+                      />
                     </div>
                   </div>
                 </Surface>
@@ -1693,24 +1720,14 @@ export function WebsiteSettingsView({
                         changes.
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={form.allowIndexing}
+                    <ToggleSwitch
+                      checked={form.allowIndexing}
                       disabled={!canEdit}
-                      onClick={() =>
+                      ariaLabel="Allow search engine indexing"
+                      onChange={() =>
                         handleChange("allowIndexing", !form.allowIndexing)
                       }
-                      className={`w-10 h-5 shrink-0 flex items-center rounded-full p-0.5 transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:opacity-50 disabled:cursor-not-allowed ${
-                        form.allowIndexing ? "bg-burnt" : "bg-line"
-                      }`}
-                    >
-                      <div
-                        className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ${
-                          form.allowIndexing ? "translate-x-5" : "translate-x-0"
-                        }`}
-                      />
-                    </button>
+                    />
                   </div>
                 </Surface>
 
