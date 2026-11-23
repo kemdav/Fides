@@ -1,4 +1,6 @@
 import "server-only";
+import { randomBytes } from "node:crypto";
+import { validateSlugAvailability } from "@/lib/account-request/store";
 import { nextBillingDate } from "@/lib/billing";
 import { isMailConfigured } from "@/lib/mail/mailer";
 import { sendApprovalEmail, sendBillingReminderEmail, sendRejectionEmail, sendSubmissionEmail } from "@/lib/mail/emails";
@@ -110,6 +112,22 @@ function safeFileName(name: string): string {
   return (cleaned || "document").slice(0, 180);
 }
 
+export async function checkRequestedSlug(raw: string) {
+  const result = validateSlugAvailability(raw);
+  if (!result.available) return result;
+
+  const admin = createAdminClient();
+  const slug = result.normalizedSlug;
+  const [tenant, application] = await Promise.all([
+    admin.from("tenants").select("id").eq("slug", slug).maybeSingle(),
+    admin.from("application_businesses").select("application_id").eq("requested_slug", slug).maybeSingle(),
+  ]);
+  if (tenant.error || application.error) throw new ServiceError("Could not check subdomain availability.", 503);
+  return tenant.data || application.data
+    ? { ...result, available: false, reason: "This subdomain is already in use or requested." }
+    : { ...result, reason: "Available to request." };
+}
+
 export async function submitApplication(
   raw: unknown,
   logo: File | null,
@@ -120,6 +138,10 @@ export async function submitApplication(
     throw new ServiceError(parsed.error.issues[0]?.message ?? "Invalid application details.", 400);
   }
   const data: RegistrationInput = parsed.data;
+  if (data.requestedSlug) {
+    const availability = await checkRequestedSlug(data.requestedSlug);
+    if (!availability.available) throw new ServiceError(availability.reason, 409);
+  }
 
   if (logo) {
     if (!(FILE_LIMITS.logoTypes as readonly string[]).includes(logo.type)) {
@@ -174,6 +196,7 @@ export async function submitApplication(
     const { data: application, error: applicationError } = await admin
       .from("account_applications")
       .insert({
+        reference_code: `FID-${randomBytes(16).toString("hex").toUpperCase()}`,
         user_id: userId,
         full_name: data.fullName,
         email: data.email,
@@ -245,7 +268,11 @@ export async function submitApplication(
       zip_code: data.zipCode,
       logo_path: logoPath,
       logo_url: logoUrl,
+      ...(data.requestedSlug ? { requested_slug: data.requestedSlug } : {}),
     });
+    if (businessError?.code === "23505" && data.requestedSlug) {
+      throw new ServiceError("This subdomain is already in use or requested.", 409);
+    }
     if (businessError) fail(businessError, "Could not save the business details");
 
     const { error: documentsError } = await admin.from("application_documents").insert(documentRows);
@@ -558,7 +585,7 @@ export async function approveApplication(id: string): Promise<DecisionResult> {
   if (app.status !== "pending") throw new ServiceError("Only pending applications can be approved.", 409);
   if (!business) throw new ServiceError("This application has no business details.", 409);
 
-  const slug = await uniqueSlug(admin, business.business_name);
+  const slug = business.requested_slug ?? await uniqueSlug(admin, business.business_name);
   const { data: tenant, error: tenantError } = await admin
     .from("tenants")
     .insert({

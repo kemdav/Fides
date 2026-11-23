@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ID_TYPES, PLAN_OPTIONS } from "./options";
+import { slugSchema } from "@/lib/account-request/schema";
 
 export type PasswordChecks = {
   length: boolean;
@@ -95,6 +96,7 @@ const base = z.object({
 
   businessName: text("Business name", 120).min(2, "Business name must be at least 2 characters."),
   businessType: text("Business type", 80),
+  requestedSlug: slugSchema.optional(),
   establishedYear: z
     .string()
     .trim()
@@ -132,6 +134,7 @@ export const identityStepSchema = base.pick({
 export const businessStepSchema = base.pick({
   businessName: true,
   businessType: true,
+  requestedSlug: true,
   establishedYear: true,
   streetAddress: true,
   city: true,

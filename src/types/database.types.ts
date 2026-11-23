@@ -2126,6 +2126,7 @@ export type ApplicationIdentityRow = {
 };
 
 export type ApplicationBusinessRow = {
+  requested_slug: string | null;
   application_id: string;
   business_name: string;
   business_type: string;

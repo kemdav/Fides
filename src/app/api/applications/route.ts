@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ServiceError, submitApplication, type DocumentUploads } from "@/lib/applications/service";
 import { ALL_DOCUMENTS, documentFieldName } from "@/lib/registration/options";
+import { loadStagedDocuments } from "@/lib/applications/staged-documents";
 
 export const runtime = "nodejs";
 
@@ -20,6 +21,12 @@ export async function POST(request: Request) {
     }
 
     const logo = form.get("logo");
+    if (form.has("uploadedDocuments")) {
+      const staged = await loadStagedDocuments(form.get("uploadedDocuments"));
+      const result = await submitApplication(raw, logo instanceof File && logo.size > 0 ? logo : null, staged.documents);
+      await staged.cleanup();
+      return NextResponse.json(result, { status: 201 });
+    }
     const documents: DocumentUploads = {};
     for (const doc of ALL_DOCUMENTS) {
       const file = form.get(documentFieldName(doc.key));
