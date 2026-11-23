@@ -15,6 +15,10 @@ import {
   resolveServiceName,
   resolveStaffName,
 } from "@/lib/date-utils";
+import type {
+  AppointmentServiceOption,
+  AppointmentStaffOption,
+} from "@/types/appointments";
 
 interface MerchantAppointmentsPageProps {
   params: Promise<{ slug: string }>;
@@ -90,27 +94,74 @@ export default async function MerchantAppointmentsPage({
       ? "Business owner"
       : userRole.charAt(0).toUpperCase() + userRole.slice(1);
 
-  // Fetch all appointments scoped to tenant.id
-  const { data: allAppointments } = await supabase
-    .from("appointments")
-    .select(`
-      id,
-      starts_at,
-      ends_at,
-      source,
-      status,
-      total_cents,
-      notes,
-      customers (id, full_name, email, phone),
-      staff_members (id, full_name),
-      appointment_services (
-        price_cents,
-        duration_minutes,
-        services (id, name)
-      )
-    `)
-    .eq("tenant_id", tenant.id)
-    .order("starts_at", { ascending: true });
+  // Fetch all appointments, active services, staff members, and skill mappings scoped to tenant.id
+  const [
+    { data: allAppointments },
+    { data: activeServices },
+    { data: activeStaffMembers },
+    { data: staffSkills },
+  ] = await Promise.all([
+    supabase
+      .from("appointments")
+      .select(`
+        id,
+        starts_at,
+        ends_at,
+        source,
+        status,
+        total_cents,
+        notes,
+        customers (id, full_name, email, phone),
+        staff_members (id, full_name),
+        appointment_services (
+          price_cents,
+          duration_minutes,
+          services (id, name)
+        )
+      `)
+      .eq("tenant_id", tenant.id)
+      .order("starts_at", { ascending: true }),
+
+    supabase
+      .from("services")
+      .select("id, name, price_cents, duration_minutes")
+      .eq("tenant_id", tenant.id)
+      .eq("active", true)
+      .eq("is_archived", false)
+      .order("name", { ascending: true }),
+
+    supabase
+      .from("staff_members")
+      .select("id, full_name")
+      .eq("tenant_id", tenant.id)
+      .eq("active", true)
+      .order("full_name", { ascending: true }),
+
+    supabase
+      .from("staff_service_skills")
+      .select("service_id, staff_id")
+      .eq("tenant_id", tenant.id),
+  ]);
+
+  const skillsByServiceId = new Map<string, string[]>();
+  for (const row of staffSkills || []) {
+    const existing = skillsByServiceId.get(row.service_id) || [];
+    existing.push(row.staff_id);
+    skillsByServiceId.set(row.service_id, existing);
+  }
+
+  const serviceOptions: AppointmentServiceOption[] = (activeServices || []).map((s) => ({
+    id: s.id,
+    name: s.name,
+    priceCents: s.price_cents ?? 0,
+    durationMinutes: s.duration_minutes ?? 60,
+    eligibleStaffIds: skillsByServiceId.get(s.id) ?? [],
+  }));
+
+  const staffOptions: AppointmentStaffOption[] = (activeStaffMembers || []).map((sm) => ({
+    id: sm.id,
+    fullName: sm.full_name,
+  }));
 
   const appointments = allAppointments || [];
   const todayManilaKey = getManilaTodayKey();
@@ -156,6 +207,8 @@ export default async function MerchantAppointmentsPage({
       checkedInCount={checkedInCount}
       completedTodayCount={completedTodayCount}
       initialItems={initialItems}
+      services={serviceOptions}
+      staff={staffOptions}
     />
   );
 }

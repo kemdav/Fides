@@ -22,6 +22,10 @@ import {
   type WalkInResult,
 } from "@/components/merchant/walk-in-modal";
 import { EmptyState } from "@/components/ui/empty-state";
+import type {
+  AppointmentServiceOption,
+  AppointmentStaffOption,
+} from "@/types/appointments";
 
 export interface AppointmentItem {
   id: string;
@@ -52,6 +56,8 @@ interface AppointmentsViewProps {
   completedTodayCount?: number;
   initialItems?: AppointmentItem[];
   basePath?: string;
+  services?: AppointmentServiceOption[];
+  staff?: AppointmentStaffOption[];
 }
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -203,6 +209,8 @@ export function AppointmentsView({
   completedTodayCount = 0,
   initialItems = EMPTY_ITEMS,
   basePath = "",
+  services,
+  staff,
 }: AppointmentsViewProps) {
   const router = useRouter();
   const [items, setItems] = React.useState<AppointmentItem[]>(initialItems);
@@ -1619,6 +1627,8 @@ export function AppointmentsView({
       <NewAppointmentModal
         isOpen={isNewBookingOpen}
         tenantId={tenantId}
+        services={services}
+        staff={staff}
         onClose={() => setIsNewBookingOpen(false)}
         onCreated={(result: NewAppointmentResult) => {
           setItems((prev) => [
