@@ -4,22 +4,28 @@ import { iconBodies } from "./icon-data";
 
 export type IconName =
   | "alert"
+  | "arrow-left"
   | "arrow-right"
+  | "arrow-up"
   | "bell"
   | "book-settings"
+  | "buildings"
   | "calendar"
   | "card"
   | "chart"
   | "check"
+  | "check-circle"
   | "chevron-down"
   | "chevron-left"
   | "chevron-right"
+  | "clipboard-list"
   | "clock"
   | "close"
   | "copy"
   | "document"
   | "external-link"
   | "eye"
+  | "eye-closed"
   | "file"
   | "filter"
   | "globe"
@@ -37,11 +43,13 @@ export type IconName =
   | "smartphone"
   | "sparkles"
   | "trash"
+  | "upload"
+  | "user"
   | "users"
   | "verified"
   | "warning";
 
-export type IconWeight = "regular" | "bold" | "fill";
+export type IconWeight = "regular" | "medium" | "bold" | "fill";
 
 export function Icon({
   name,
@@ -63,7 +71,7 @@ export function Icon({
       height="1em"
       fill="none"
       className={cn("shrink-0", className)}
-      style={{ "--icon-stroke": weight === "bold" ? 2.5 : 1.5 } as CSSProperties}
+      style={{ "--icon-stroke": weight === "bold" ? 2.5 : weight === "medium" ? 2 : 1.5 } as CSSProperties}
       dangerouslySetInnerHTML={{ __html: filled ? (icon.fill as string) : icon.regular }}
     />
   );
