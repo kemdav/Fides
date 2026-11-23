@@ -9,6 +9,7 @@ interface ArchiveModalProps {
   onConfirm: () => Promise<void> | void;
   title: string;
   itemType?: "service" | "package" | "add-on";
+  actionType?: "archive" | "hide";
   isLoading?: boolean;
 }
 
@@ -18,9 +19,12 @@ export function ArchiveModal({
   onConfirm,
   title,
   itemType = "service",
+  actionType = "archive",
   isLoading = false,
 }: ArchiveModalProps) {
   if (!isOpen) return null;
+
+  const isHide = actionType === "hide";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
@@ -36,10 +40,10 @@ export function ArchiveModal({
         </div>
 
         <h3 id="archive-dialog-title" className="text-base font-semibold text-neutral-900">
-          Archive {itemType}?
+          {isHide ? `Hide ${itemType}?` : `Archive ${itemType}?`}
         </h3>
         <p className="mt-1.5 text-xs leading-relaxed text-neutral-500">
-          <span className="font-medium text-neutral-800">“{title}”</span> will be hidden from your public booking menu. Existing appointments will remain untouched. You can restore it anytime from the Archived tab.
+          <span className="font-medium text-neutral-800">“{title}”</span> will be hidden from your public booking menu. Existing appointments will remain untouched. You can restore it anytime from the Hidden services tab.
         </p>
 
         <div className="mt-6 flex items-center justify-center gap-3">
@@ -55,9 +59,15 @@ export function ArchiveModal({
             type="button"
             disabled={isLoading}
             onClick={() => void onConfirm()}
-            className="rounded-xl bg-[#C35000] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-[#A94400] disabled:opacity-50"
+            className="rounded-xl bg-[#C84B00] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-[#A94400] disabled:opacity-50"
           >
-            {isLoading ? "Archiving..." : "Archive"}
+            {isLoading
+              ? isHide
+                ? "Hiding..."
+                : "Archiving..."
+              : isHide
+              ? `Hide ${itemType}`
+              : "Archive"}
           </button>
         </div>
       </div>
@@ -181,7 +191,7 @@ export function BlockedDeleteModal({
             type="button"
             disabled={isLoading}
             onClick={() => void onArchiveInstead()}
-            className="rounded-xl bg-[#C35000] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-[#A94400] disabled:opacity-50"
+            className="rounded-xl bg-[#C84B00] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-[#A94400] disabled:opacity-50"
           >
             {isLoading ? "Archiving..." : "Archive instead"}
           </button>
@@ -227,7 +237,7 @@ export function SuccessFeedbackModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl bg-[#C35000] px-6 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-[#A94400]"
+            className="rounded-xl bg-[#C84B00] px-6 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-[#A94400]"
           >
             Done
           </button>

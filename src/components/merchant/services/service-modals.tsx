@@ -167,6 +167,28 @@ export function ServiceFormModal({
             </div>
           )}
 
+          {/* Service Photo Dropzone (Figma aligned) */}
+          <div>
+            <label className="block text-xs font-semibold text-neutral-700 mb-1">
+              Service Photo <span className="text-neutral-400 font-normal">(optional)</span>
+            </label>
+            <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-neutral-300 bg-neutral-50/50 p-4 text-center hover:bg-neutral-50 transition cursor-pointer group">
+              <div className="flex size-9 items-center justify-center rounded-full bg-white text-neutral-500 shadow-2xs mb-1.5 group-hover:text-[#C84B00] group-hover:scale-105 transition">
+                <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <polyline points="21 15 16 10 5 21" />
+                </svg>
+              </div>
+              <p className="text-xs font-medium text-neutral-700">
+                Click to upload or drag & drop photo
+              </p>
+              <p className="text-[11px] text-neutral-400 mt-0.5">
+                PNG, JPG, or WEBP up to 5MB (1:1 aspect ratio recommended)
+              </p>
+            </div>
+          </div>
+
           {/* Service Title */}
           <div>
             <label className="block text-xs font-semibold text-neutral-700 mb-1">
@@ -178,7 +200,7 @@ export function ServiceFormModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Signature Haircut, Balayage, Manicure"
-              className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-[#C35000] focus:ring-2 focus:ring-[#C35000]/20 focus:outline-none transition"
+              className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-[#C84B00] focus:ring-2 focus:ring-[#C84B00]/20 focus:outline-none transition"
             />
           </div>
 
@@ -191,7 +213,7 @@ export function ServiceFormModal({
               <select
                 value={categoryId || ""}
                 onChange={(e) => setCategoryId(e.target.value || null)}
-                className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 focus:border-[#C35000] focus:ring-2 focus:ring-[#C35000]/20 focus:outline-none transition bg-white"
+                className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 focus:border-[#C84B00] focus:ring-2 focus:ring-[#C84B00]/20 focus:outline-none transition bg-white"
               >
                 <option value="">Uncategorized</option>
                 {categories.map((c) => (
@@ -213,7 +235,7 @@ export function ServiceFormModal({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe what is included in this service..."
-              className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-[#C35000] focus:ring-2 focus:ring-[#C35000]/20 focus:outline-none transition resize-none"
+              className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-[#C84B00] focus:ring-2 focus:ring-[#C84B00]/20 focus:outline-none transition resize-none"
             />
           </div>
 
@@ -230,7 +252,7 @@ export function ServiceFormModal({
                 required
                 value={durationMinutes}
                 onChange={(e) => setDurationMinutes(Number(e.target.value))}
-                className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 focus:border-[#C35000] focus:ring-2 focus:ring-[#C35000]/20 focus:outline-none transition"
+                className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 focus:border-[#C84B00] focus:ring-2 focus:ring-[#C84B00]/20 focus:outline-none transition"
               />
             </div>
             <div>
@@ -248,7 +270,7 @@ export function ServiceFormModal({
                   required
                   value={pricePesos}
                   onChange={(e) => setPricePesos(Number(e.target.value))}
-                  className="w-full rounded-xl border border-neutral-300 pl-8 pr-3.5 py-2 text-sm text-neutral-900 focus:border-[#C35000] focus:ring-2 focus:ring-[#C35000]/20 focus:outline-none transition"
+                  className="w-full rounded-xl border border-neutral-300 pl-8 pr-3.5 py-2 text-sm text-neutral-900 focus:border-[#C84B00] focus:ring-2 focus:ring-[#C84B00]/20 focus:outline-none transition"
                 />
               </div>
             </div>
@@ -266,7 +288,7 @@ export function ServiceFormModal({
               value={bufferMinutes}
               onChange={(e) => setBufferMinutes(Number(e.target.value))}
               placeholder="e.g. 10 mins clean-up"
-              className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 focus:border-[#C35000] focus:ring-2 focus:ring-[#C35000]/20 focus:outline-none transition"
+              className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 focus:border-[#C84B00] focus:ring-2 focus:ring-[#C84B00]/20 focus:outline-none transition"
             />
           </div>
 
@@ -285,7 +307,7 @@ export function ServiceFormModal({
                 <button
                   type="button"
                   onClick={toggleAllStaff}
-                  className="text-xs font-semibold text-[#C35000] hover:underline"
+                  className="text-xs font-semibold text-[#C84B00] hover:underline"
                 >
                   {selectedStaffIds.length === staff.length
                     ? "Deselect all"
@@ -317,9 +339,9 @@ export function ServiceFormModal({
                         type="checkbox"
                         checked={checked}
                         onChange={() => toggleStaff(member.id)}
-                        className="size-4 rounded text-[#C35000] focus:ring-[#C35000]"
+                        className="size-4 rounded text-[#C84B00] focus:ring-[#C84B00]"
                       />
-                      <div className="flex size-6 items-center justify-center rounded-full bg-[#C35000]/15 text-[10px] font-bold text-[#C35000]">
+                      <div className="flex size-6 items-center justify-center rounded-full bg-[#C84B00]/15 text-[10px] font-bold text-[#C84B00]">
                         {initials}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -355,7 +377,7 @@ export function ServiceFormModal({
               aria-checked={active}
               onClick={() => setActive(!active)}
               className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                active ? "bg-[#C35000]" : "bg-neutral-200"
+                active ? "bg-[#C84B00]" : "bg-neutral-200"
               }`}
             >
               <span
@@ -369,29 +391,15 @@ export function ServiceFormModal({
           {/* Footer Actions */}
           <div className="pt-3 border-t border-neutral-100 flex items-center justify-between gap-2">
             <div>
-              {isEdit && initialService && (
-                <div className="flex items-center gap-2">
-                  {onArchive && (
-                    <button
-                      type="button"
-                      disabled={isLoading}
-                      onClick={() => onArchive(initialService)}
-                      className="px-3 py-2 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-xl transition border border-amber-200"
-                    >
-                      Archive
-                    </button>
-                  )}
-                  {onDelete && (
-                    <button
-                      type="button"
-                      disabled={isLoading}
-                      onClick={() => onDelete(initialService)}
-                      className="px-3 py-2 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition border border-red-200"
-                    >
-                      Delete
-                    </button>
-                  )}
-                </div>
+              {isEdit && initialService && onDelete && (
+                <button
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => onDelete(initialService)}
+                  className="rounded-xl bg-red-600 px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-red-700 disabled:opacity-50"
+                >
+                  Delete
+                </button>
               )}
             </div>
 
@@ -407,9 +415,9 @@ export function ServiceFormModal({
               <button
                 type="submit"
                 disabled={isLoading}
-                className="px-5 py-2 text-xs font-semibold text-white bg-[#C35000] hover:bg-[#A94400] rounded-xl shadow-xs transition disabled:opacity-50"
+                className="px-5 py-2 text-xs font-semibold text-white bg-[#C84B00] hover:bg-[#A94400] rounded-xl shadow-xs transition disabled:opacity-50"
               >
-                {isLoading ? "Saving..." : isEdit ? "Save changes" : "Create service"}
+                {isLoading ? "Saving..." : isEdit ? "Save changes" : "Add Service"}
               </button>
             </div>
           </div>
@@ -579,7 +587,7 @@ export function PackageFormModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Total Glow Makeover, Bridal Package"
-              className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-[#C35000] focus:ring-2 focus:ring-[#C35000]/20 focus:outline-none transition"
+              className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-[#C84B00] focus:ring-2 focus:ring-[#C84B00]/20 focus:outline-none transition"
             />
           </div>
 
@@ -592,7 +600,7 @@ export function PackageFormModal({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe the benefits or inclusions of this package..."
-              className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-[#C35000] focus:ring-2 focus:ring-[#C35000]/20 focus:outline-none transition resize-none"
+              className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-[#C84B00] focus:ring-2 focus:ring-[#C84B00]/20 focus:outline-none transition resize-none"
             />
           </div>
 
@@ -626,7 +634,7 @@ export function PackageFormModal({
                           type="checkbox"
                           checked={checked}
                           onChange={() => toggleService(srv.id)}
-                          className="size-4 rounded text-[#C35000] focus:ring-[#C35000]"
+                          className="size-4 rounded text-[#C84B00] focus:ring-[#C84B00]"
                         />
                         <span className="font-medium text-neutral-900 truncate">
                           {srv.name}
@@ -657,7 +665,7 @@ export function PackageFormModal({
                 required
                 value={durationMinutes}
                 onChange={(e) => setDurationMinutes(Number(e.target.value))}
-                className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 focus:border-[#C35000] focus:ring-2 focus:ring-[#C35000]/20 focus:outline-none transition"
+                className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 focus:border-[#C84B00] focus:ring-2 focus:ring-[#C84B00]/20 focus:outline-none transition"
               />
             </div>
             <div>
@@ -675,7 +683,7 @@ export function PackageFormModal({
                   required
                   value={pricePesos}
                   onChange={(e) => setPricePesos(Number(e.target.value))}
-                  className="w-full rounded-xl border border-neutral-300 pl-8 pr-3.5 py-2 text-sm text-neutral-900 focus:border-[#C35000] focus:ring-2 focus:ring-[#C35000]/20 focus:outline-none transition"
+                  className="w-full rounded-xl border border-neutral-300 pl-8 pr-3.5 py-2 text-sm text-neutral-900 focus:border-[#C84B00] focus:ring-2 focus:ring-[#C84B00]/20 focus:outline-none transition"
                 />
               </div>
             </div>
@@ -696,7 +704,7 @@ export function PackageFormModal({
               aria-checked={active}
               onClick={() => setActive(!active)}
               className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                active ? "bg-[#C35000]" : "bg-neutral-200"
+                active ? "bg-[#C84B00]" : "bg-neutral-200"
               }`}
             >
               <span
@@ -709,29 +717,15 @@ export function PackageFormModal({
 
           <div className="pt-3 border-t border-neutral-100 flex items-center justify-between gap-2">
             <div>
-              {isEdit && initialPackage && (
-                <div className="flex items-center gap-2">
-                  {onArchive && (
-                    <button
-                      type="button"
-                      disabled={isLoading}
-                      onClick={() => onArchive(initialPackage)}
-                      className="px-3 py-2 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-xl transition border border-amber-200"
-                    >
-                      Archive
-                    </button>
-                  )}
-                  {onDelete && (
-                    <button
-                      type="button"
-                      disabled={isLoading}
-                      onClick={() => onDelete(initialPackage)}
-                      className="px-3 py-2 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition border border-red-200"
-                    >
-                      Delete
-                    </button>
-                  )}
-                </div>
+              {isEdit && initialPackage && onDelete && (
+                <button
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => onDelete(initialPackage)}
+                  className="rounded-xl bg-red-600 px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-red-700 disabled:opacity-50"
+                >
+                  Delete
+                </button>
               )}
             </div>
 
@@ -747,9 +741,9 @@ export function PackageFormModal({
               <button
                 type="submit"
                 disabled={isLoading}
-                className="px-5 py-2 text-xs font-semibold text-white bg-[#C35000] hover:bg-[#A94400] rounded-xl shadow-xs transition disabled:opacity-50"
+                className="px-5 py-2 text-xs font-semibold text-white bg-[#C84B00] hover:bg-[#A94400] rounded-xl shadow-xs transition disabled:opacity-50"
               >
-                {isLoading ? "Saving..." : isEdit ? "Save changes" : "Create package"}
+                {isLoading ? "Saving..." : isEdit ? "Save changes" : "Create Package"}
               </button>
             </div>
           </div>
@@ -906,7 +900,7 @@ export function AddonFormModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Scalp Massage, Deep Conditioning, Beard Oil"
-              className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-[#C35000] focus:ring-2 focus:ring-[#C35000]/20 focus:outline-none transition"
+              className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-[#C84B00] focus:ring-2 focus:ring-[#C84B00]/20 focus:outline-none transition"
             />
           </div>
 
@@ -919,7 +913,7 @@ export function AddonFormModal({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Explain the add-on treatment or extra..."
-              className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-[#C35000] focus:ring-2 focus:ring-[#C35000]/20 focus:outline-none transition resize-none"
+              className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-[#C84B00] focus:ring-2 focus:ring-[#C84B00]/20 focus:outline-none transition resize-none"
             />
           </div>
 
@@ -934,7 +928,7 @@ export function AddonFormModal({
                 step="5"
                 value={durationMinutes}
                 onChange={(e) => setDurationMinutes(Number(e.target.value))}
-                className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 focus:border-[#C35000] focus:ring-2 focus:ring-[#C35000]/20 focus:outline-none transition"
+                className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 focus:border-[#C84B00] focus:ring-2 focus:ring-[#C84B00]/20 focus:outline-none transition"
               />
             </div>
             <div>
@@ -952,7 +946,7 @@ export function AddonFormModal({
                   required
                   value={pricePesos}
                   onChange={(e) => setPricePesos(Number(e.target.value))}
-                  className="w-full rounded-xl border border-neutral-300 pl-9 pr-3.5 py-2 text-sm text-neutral-900 focus:border-[#C35000] focus:ring-2 focus:ring-[#C35000]/20 focus:outline-none transition"
+                  className="w-full rounded-xl border border-neutral-300 pl-9 pr-3.5 py-2 text-sm text-neutral-900 focus:border-[#C84B00] focus:ring-2 focus:ring-[#C84B00]/20 focus:outline-none transition"
                 />
               </div>
             </div>
@@ -970,7 +964,7 @@ export function AddonFormModal({
                   name="applicability"
                   checked={applyToAll}
                   onChange={() => setApplyToAll(true)}
-                  className="text-[#C35000] focus:ring-[#C35000]"
+                  className="text-[#C84B00] focus:ring-[#C84B00]"
                 />
                 <span className="text-neutral-800 font-medium">All services</span>
               </label>
@@ -980,7 +974,7 @@ export function AddonFormModal({
                   name="applicability"
                   checked={!applyToAll}
                   onChange={() => setApplyToAll(false)}
-                  className="text-[#C35000] focus:ring-[#C35000]"
+                  className="text-[#C84B00] focus:ring-[#C84B00]"
                 />
                 <span className="text-neutral-800 font-medium">Specific services only</span>
               </label>
@@ -997,7 +991,7 @@ export function AddonFormModal({
                       type="checkbox"
                       checked={applicableServiceIds.includes(srv.id)}
                       onChange={() => toggleService(srv.id)}
-                      className="size-3.5 rounded text-[#C35000] focus:ring-[#C35000]"
+                      className="size-3.5 rounded text-[#C84B00] focus:ring-[#C84B00]"
                     />
                     <span className="font-medium text-neutral-800 truncate">{srv.name}</span>
                   </label>
@@ -1021,7 +1015,7 @@ export function AddonFormModal({
               aria-checked={active}
               onClick={() => setActive(!active)}
               className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                active ? "bg-[#C35000]" : "bg-neutral-200"
+                active ? "bg-[#C84B00]" : "bg-neutral-200"
               }`}
             >
               <span
@@ -1034,29 +1028,15 @@ export function AddonFormModal({
 
           <div className="pt-3 border-t border-neutral-100 flex items-center justify-between gap-2">
             <div>
-              {isEdit && initialAddon && (
-                <div className="flex items-center gap-2">
-                  {onArchive && (
-                    <button
-                      type="button"
-                      disabled={isLoading}
-                      onClick={() => onArchive(initialAddon)}
-                      className="px-3 py-2 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-xl transition border border-amber-200"
-                    >
-                      Archive
-                    </button>
-                  )}
-                  {onDelete && (
-                    <button
-                      type="button"
-                      disabled={isLoading}
-                      onClick={() => onDelete(initialAddon)}
-                      className="px-3 py-2 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition border border-red-200"
-                    >
-                      Delete
-                    </button>
-                  )}
-                </div>
+              {isEdit && initialAddon && onDelete && (
+                <button
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => onDelete(initialAddon)}
+                  className="rounded-xl bg-red-600 px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-red-700 disabled:opacity-50"
+                >
+                  Delete
+                </button>
               )}
             </div>
 
@@ -1072,9 +1052,9 @@ export function AddonFormModal({
               <button
                 type="submit"
                 disabled={isLoading}
-                className="px-5 py-2 text-xs font-semibold text-white bg-[#C35000] hover:bg-[#A94400] rounded-xl shadow-xs transition disabled:opacity-50"
+                className="px-5 py-2 text-xs font-semibold text-white bg-[#C84B00] hover:bg-[#A94400] rounded-xl shadow-xs transition disabled:opacity-50"
               >
-                {isLoading ? "Saving..." : isEdit ? "Save changes" : "Create add-on"}
+                {isLoading ? "Saving..." : isEdit ? "Save changes" : "Add Add-on"}
               </button>
             </div>
           </div>

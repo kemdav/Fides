@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { MerchantSidebar } from "@/components/merchant/merchant-sidebar";
 import { Icon } from "@/components/admin/icon";
-import { MetricCard } from "@/components/admin/metric-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   archiveAddonAction,
@@ -41,6 +41,7 @@ import {
   ArchiveModal,
   BlockedDeleteModal,
   DeleteModal,
+  SuccessFeedbackModal,
 } from "./confirmation-modals";
 
 // Hoisted constants to avoid React render-time infinite loop triggers
@@ -71,6 +72,283 @@ interface ToastState {
   id: string;
   type: "success" | "error" | "info";
   message: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Format Helpers (Figma Reference Variation Aligned)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function formatPeso(cents: number): string {
+  return `₱${(cents / 100).toLocaleString("en-PH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+function formatDurationClean(minutes: number): string {
+  if (!minutes || minutes <= 0) return "0 min";
+  const hrs = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hrs > 0 && mins > 0) return `${hrs} hr ${mins} min`;
+  if (hrs > 0) return `${hrs} hr`;
+  return `${mins} min`;
+}
+
+function formatBuffer(minutes: number | null | undefined): string {
+  return `${minutes || 0} min`;
+}
+
+function formatEligibleStaff(assignedStaff: StaffOptionDTO[]): {
+  label: string;
+  tooltip?: string;
+  isAssigned: boolean;
+} {
+  if (!assignedStaff || assignedStaff.length === 0) {
+    return { label: "No staff assigned", isAssigned: false };
+  }
+  if (assignedStaff.length === 1) {
+    return { label: assignedStaff[0].fullName, isAssigned: true };
+  }
+  const extra = assignedStaff.length - 1;
+  const tooltip = assignedStaff.map((s) => s.fullName).join(", ");
+  return {
+    label: `${assignedStaff[0].fullName} +${extra}`,
+    tooltip,
+    isAssigned: true,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Figma-Aligned Interactive KPI View Switcher Card
+// ─────────────────────────────────────────────────────────────────────────────
+interface ServiceKpiCardProps {
+  label: string;
+  count: number;
+  subtitle: string;
+  icon: "layers" | "check" | "alert";
+  isSelected: boolean;
+  onClick: () => void;
+}
+
+function ServiceKpiCard({
+  label,
+  count,
+  subtitle,
+  icon,
+  isSelected,
+  onClick,
+}: ServiceKpiCardProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`group relative flex flex-col justify-between rounded-xl p-5 text-left transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C84B00] cursor-pointer ${
+        isSelected
+          ? "bg-[#C84B00] text-white shadow-md shadow-[#C84B00]/20"
+          : "bg-white text-neutral-800 border border-[#EDECE8] shadow-[0_2px_8px_rgb(44_58_75/0.04)] hover:border-neutral-300 hover:shadow-md"
+      }`}
+    >
+      <div className="flex items-center justify-between w-full">
+        <div className="flex items-center gap-2">
+          <div
+            className={`flex size-8 items-center justify-center rounded-lg transition ${
+              isSelected
+                ? "bg-white/20 text-white"
+                : "bg-neutral-100 text-neutral-600 group-hover:bg-[#C84B00]/10 group-hover:text-[#C84B00]"
+            }`}
+          >
+            <Icon name={icon} className="size-4" />
+          </div>
+          <span
+            className={`text-xs font-semibold tracking-wide ${
+              isSelected ? "text-white" : "text-neutral-700"
+            }`}
+          >
+            {label}
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-3">
+        <div
+          className={`font-display text-3xl font-bold tracking-tight ${
+            isSelected ? "text-white" : "text-neutral-900"
+          }`}
+        >
+          {count}
+        </div>
+        <p
+          className={`text-xs mt-1 leading-snug ${
+            isSelected ? "text-white/80" : "text-neutral-500"
+          }`}
+        >
+          {subtitle}
+        </p>
+      </div>
+
+      {/* Bottom Progress Accent Bar (Figma Aligned) */}
+      <div
+        className={`mt-4 h-1 w-full rounded-full overflow-hidden ${
+          isSelected ? "bg-white/30" : "bg-neutral-100"
+        }`}
+      >
+        <div
+          className={`h-full rounded-full transition-all duration-300 ${
+            isSelected ? "bg-white" : "bg-[#C84B00]"
+          }`}
+          style={{ width: "100%" }}
+        />
+      </div>
+    </button>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Portal-Based Floating Row Action Menu (No Table Overflow / Clipping)
+// ─────────────────────────────────────────────────────────────────────────────
+export type ActionMenuItem = {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  variant?: "default" | "danger" | "warning" | "brand";
+  dividerBefore?: boolean;
+};
+
+interface ActionMenuPortalProps {
+  items: ActionMenuItem[];
+  anchorRect: DOMRect;
+  onClose: () => void;
+}
+
+function ActionMenuPortal({ items, anchorRect, onClose }: ActionMenuPortalProps) {
+  const menuRef = React.useRef<HTMLDivElement>(null);
+
+  // Position calculation with automatic vertical flipping and viewport bounds
+  const [style, setStyle] = React.useState<React.CSSProperties>(() => {
+    const menuWidth = 176; // w-44 = 176px
+    const estimatedHeight = 160;
+    const spaceBelow = typeof window !== "undefined" ? window.innerHeight - anchorRect.bottom : 200;
+    const spaceAbove = typeof window !== "undefined" ? anchorRect.top : 200;
+    const openUpward = spaceBelow < estimatedHeight + 8 && spaceAbove > spaceBelow;
+
+    const top = openUpward ? anchorRect.top - 6 : anchorRect.bottom + 6;
+    let left = typeof window !== "undefined" ? anchorRect.right - menuWidth : 0;
+    if (left < 8) left = 8;
+    if (typeof window !== "undefined" && left + menuWidth > window.innerWidth - 8) {
+      left = window.innerWidth - menuWidth - 8;
+    }
+
+    return {
+      position: "fixed",
+      top: `${top}px`,
+      left: `${left}px`,
+      transform: openUpward ? "translateY(-100%)" : undefined,
+      zIndex: 50,
+    };
+  });
+
+  // Accurately refine coordinates once the menu node is measured in the DOM
+  const useIsomorphicLayoutEffect =
+    typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
+
+  useIsomorphicLayoutEffect(() => {
+    if (!menuRef.current) return;
+    const menuEl = menuRef.current;
+    const menuWidth = menuEl.offsetWidth || 176;
+    const menuHeight = menuEl.offsetHeight || 160;
+
+    const spaceBelow = window.innerHeight - anchorRect.bottom;
+    const spaceAbove = anchorRect.top;
+    const openUpward = spaceBelow < menuHeight + 8 && spaceAbove > spaceBelow;
+
+    const top = openUpward ? anchorRect.top - 6 : anchorRect.bottom + 6;
+    let left = anchorRect.right - menuWidth;
+
+    if (left < 8) left = 8;
+    if (left + menuWidth > window.innerWidth - 8) {
+      left = window.innerWidth - menuWidth - 8;
+    }
+
+    setStyle({
+      position: "fixed",
+      top: `${top}px`,
+      left: `${left}px`,
+      transform: openUpward ? "translateY(-100%)" : undefined,
+      zIndex: 50,
+    });
+  }, [anchorRect]);
+
+  // Close menu on outside click, Escape key, window resize, or table/window scroll
+  React.useEffect(() => {
+    const handleClose = () => onClose();
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+
+    const handleMouseDown = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+
+    // Capture phase for scroll to catch scrolls in table wrapper or any ancestor element
+    window.addEventListener("scroll", handleClose, true);
+    window.addEventListener("resize", handleClose);
+    window.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("mousedown", handleMouseDown);
+
+    return () => {
+      window.removeEventListener("scroll", handleClose, true);
+      window.removeEventListener("resize", handleClose);
+      window.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("mousedown", handleMouseDown);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      ref={menuRef}
+      style={style}
+      className="w-44 rounded-xl border border-[#EDECE8] bg-white py-1.5 shadow-xl animate-in fade-in duration-100 select-none"
+      role="menu"
+    >
+      {items.map((item, idx) => {
+        const colorClass =
+          item.variant === "danger"
+            ? "text-red-600 hover:bg-red-50"
+            : item.variant === "warning"
+            ? "text-amber-700 hover:bg-amber-50"
+            : item.variant === "brand"
+            ? "text-[#C84B00] hover:bg-[#C84B00]/5"
+            : "text-neutral-700 hover:bg-neutral-50";
+
+        return (
+          <React.Fragment key={idx}>
+            {item.dividerBefore && (
+              <div className="my-1 border-t border-neutral-100" />
+            )}
+            <button
+              type="button"
+              disabled={item.disabled}
+              onClick={() => {
+                onClose();
+                item.onClick();
+              }}
+              className={`flex w-full items-center gap-2 px-3.5 py-2 text-xs font-medium transition ${colorClass} ${
+                item.disabled ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+              role="menuitem"
+            >
+              <span>{item.label}</span>
+            </button>
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
 }
 
 export function ServicesView({
@@ -104,10 +382,51 @@ export function ServicesView({
     setAddons(initialAddons);
   }, [initialAddons]);
 
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const [activeTab, setActiveTab] = React.useState<TabKey>("services");
   const [searchQuery, setSearchQuery] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("all");
   const [categoryFilter, setCategoryFilter] = React.useState<string>("all");
+  const [activeMenu, setActiveMenu] = React.useState<{
+    id: string;
+    items: ActionMenuItem[];
+    anchorRect: DOMRect;
+  } | null>(null);
+  const [filterOpen, setFilterOpen] = React.useState(false);
+  const filterDropdownRef = React.useRef<HTMLDivElement>(null);
+
+  const handleOpenMenu = (
+    e: React.MouseEvent<HTMLButtonElement>,
+    id: string,
+    items: ActionMenuItem[]
+  ) => {
+    e.stopPropagation();
+    if (activeMenu?.id === id) {
+      setActiveMenu(null);
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setActiveMenu({ id, items, anchorRect: rect });
+    }
+  };
+
+  // Close filter dropdown on outside click
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Element | null;
+      if (
+        filterDropdownRef.current &&
+        !filterDropdownRef.current.contains(target as Node)
+      ) {
+        setFilterOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Modals state
   const [serviceModalOpen, setServiceModalOpen] = React.useState(false);
@@ -123,6 +442,12 @@ export function ServicesView({
   const [archiveTarget, setArchiveTarget] = React.useState<{
     item: ServiceDTO | PackageDTO | AddonDTO;
     type: "service" | "package" | "add-on";
+    actionType?: "archive" | "hide";
+  } | null>(null);
+
+  const [successModal, setSuccessModal] = React.useState<{
+    title: string;
+    description: string;
   } | null>(null);
 
   const [deleteTarget, setDeleteTarget] = React.useState<{
@@ -174,44 +499,52 @@ export function ServicesView({
       durationFormatted: string;
       priceFormatted: string;
       rawItem: ServiceDTO | PackageDTO | AddonDTO;
+      isArchived: boolean;
+      active: boolean;
     }> = [];
 
     services
-      .filter((s) => s.isArchived)
+      .filter((s) => !s.active || s.isArchived)
       .forEach((s) =>
         list.push({
           id: s.id,
           name: s.name,
           type: "service",
-          durationFormatted: `${s.durationMinutes} min`,
-          priceFormatted: s.priceFormatted,
+          durationFormatted: formatDurationClean(s.durationMinutes),
+          priceFormatted: formatPeso(s.priceCents),
           rawItem: s,
+          isArchived: s.isArchived,
+          active: s.active,
         })
       );
 
     packages
-      .filter((p) => p.isArchived)
+      .filter((p) => !p.active || p.isArchived)
       .forEach((p) =>
         list.push({
           id: p.id,
           name: p.name,
           type: "package",
-          durationFormatted: `${p.durationMinutes} min`,
-          priceFormatted: p.priceFormatted,
+          durationFormatted: formatDurationClean(p.durationMinutes),
+          priceFormatted: formatPeso(p.priceCents),
           rawItem: p,
+          isArchived: p.isArchived,
+          active: p.active,
         })
       );
 
     addons
-      .filter((a) => a.isArchived)
+      .filter((a) => !a.active || a.isArchived)
       .forEach((a) =>
         list.push({
           id: a.id,
           name: a.name,
           type: "add-on",
-          durationFormatted: `+${a.durationMinutes} min`,
-          priceFormatted: a.priceFormatted,
+          durationFormatted: `+${formatDurationClean(a.durationMinutes)}`,
+          priceFormatted: formatPeso(a.priceCents),
           rawItem: a,
+          isArchived: a.isArchived,
+          active: a.active,
         })
       );
 
@@ -303,6 +636,12 @@ export function ServicesView({
     setTogglingIds((prev) => ({ ...prev, [service.id]: false }));
 
     if (res.success) {
+      if (nextStatus) {
+        setSuccessModal({
+          title: "Service Active",
+          description: `“${service.name}” is now visible and bookable.`,
+        });
+      }
       showToast(
         "success",
         nextStatus
@@ -370,6 +709,10 @@ export function ServicesView({
         );
         setServiceModalOpen(false);
         setEditingService(null);
+        setSuccessModal({
+          title: "Service Updated",
+          description: `Changes to “${data.name}” have been saved.`,
+        });
         showToast("success", "Service updated successfully.");
       } else {
         showToast("error", res.error);
@@ -418,6 +761,10 @@ export function ServicesView({
         };
         setServices((prev) => [newService, ...prev]);
         setServiceModalOpen(false);
+        setSuccessModal({
+          title: "Service Created",
+          description: `“${data.name}” has been added to your service catalog.`,
+        });
         showToast("success", "Service created successfully.");
       }
     }
@@ -437,6 +784,12 @@ export function ServicesView({
     setTogglingIds((prev) => ({ ...prev, [pkg.id]: false }));
 
     if (res.success) {
+      if (nextStatus) {
+        setSuccessModal({
+          title: "Package Active",
+          description: `“${pkg.name}” is now visible and bookable.`,
+        });
+      }
       showToast(
         "success",
         nextStatus ? `“${pkg.name}” is now active.` : `“${pkg.name}” deactivated.`
@@ -500,6 +853,10 @@ export function ServicesView({
         );
         setPackageModalOpen(false);
         setEditingPackage(null);
+        setSuccessModal({
+          title: "Package Updated",
+          description: `Changes to “${data.name}” have been saved.`,
+        });
         showToast("success", "Package updated successfully.");
       } else {
         showToast("error", res.error);
@@ -549,6 +906,10 @@ export function ServicesView({
         };
         setPackages((prev) => [newPkg, ...prev]);
         setPackageModalOpen(false);
+        setSuccessModal({
+          title: "Package Created",
+          description: `“${data.name}” has been created.`,
+        });
         showToast("success", "Package created successfully.");
       }
     }
@@ -568,6 +929,12 @@ export function ServicesView({
     setTogglingIds((prev) => ({ ...prev, [addon.id]: false }));
 
     if (res.success) {
+      if (nextStatus) {
+        setSuccessModal({
+          title: "Add-on Active",
+          description: `“${addon.name}” is now visible and bookable.`,
+        });
+      }
       showToast(
         "success",
         nextStatus ? `“${addon.name}” is now active.` : `“${addon.name}” deactivated.`
@@ -622,6 +989,10 @@ export function ServicesView({
         );
         setAddonModalOpen(false);
         setEditingAddon(null);
+        setSuccessModal({
+          title: "Add-on Updated",
+          description: `Changes to “${data.name}” have been saved.`,
+        });
         showToast("success", "Add-on updated successfully.");
       } else {
         showToast("error", res.error);
@@ -661,6 +1032,10 @@ export function ServicesView({
         };
         setAddons((prev) => [newAddon, ...prev]);
         setAddonModalOpen(false);
+        setSuccessModal({
+          title: "Add-on Created",
+          description: `“${data.name}” has been created.`,
+        });
         showToast("success", "Add-on created successfully.");
       }
     }
@@ -671,7 +1046,60 @@ export function ServicesView({
   const handleConfirmArchive = async () => {
     if (!archiveTarget) return;
     setIsSubmitting(true);
-    const { item, type } = archiveTarget;
+    const { item, type, actionType = "archive" } = archiveTarget;
+
+    if (actionType === "hide") {
+      if (type === "service") {
+        const res = await toggleServiceStatusAction(item.id, tenantId, false);
+        setIsSubmitting(false);
+        if (res.success) {
+          setServices((prev) =>
+            prev.map((s) => (s.id === item.id ? { ...s, active: false } : s))
+          );
+          setArchiveTarget(null);
+          setSuccessModal({
+            title: "Service Hidden",
+            description: `“${item.name}” is now hidden from your public booking menu.`,
+          });
+          showToast("success", `“${item.name}” hidden.`);
+        } else {
+          showToast("error", res.error);
+        }
+      } else if (type === "package") {
+        const res = await togglePackageStatusAction(item.id, tenantId, false);
+        setIsSubmitting(false);
+        if (res.success) {
+          setPackages((prev) =>
+            prev.map((p) => (p.id === item.id ? { ...p, active: false } : p))
+          );
+          setArchiveTarget(null);
+          setSuccessModal({
+            title: "Package Hidden",
+            description: `“${item.name}” is now hidden from your public booking menu.`,
+          });
+          showToast("success", `“${item.name}” hidden.`);
+        } else {
+          showToast("error", res.error);
+        }
+      } else if (type === "add-on") {
+        const res = await toggleAddonStatusAction(item.id, tenantId, false);
+        setIsSubmitting(false);
+        if (res.success) {
+          setAddons((prev) =>
+            prev.map((a) => (a.id === item.id ? { ...a, active: false } : a))
+          );
+          setArchiveTarget(null);
+          setSuccessModal({
+            title: "Add-on Hidden",
+            description: `“${item.name}” is now hidden from your public booking menu.`,
+          });
+          showToast("success", `“${item.name}” hidden.`);
+        } else {
+          showToast("error", res.error);
+        }
+      }
+      return;
+    }
 
     if (type === "service") {
       const res = await archiveServiceAction(item.id, tenantId);
@@ -685,6 +1113,10 @@ export function ServicesView({
         setArchiveTarget(null);
         setServiceModalOpen(false);
         setEditingService(null);
+        setSuccessModal({
+          title: "Service Archived",
+          description: `“${item.name}” has been hidden and archived.`,
+        });
         showToast("success", `“${item.name}” moved to Archived.`);
       } else {
         showToast("error", res.error);
@@ -701,6 +1133,10 @@ export function ServicesView({
         setArchiveTarget(null);
         setPackageModalOpen(false);
         setEditingPackage(null);
+        setSuccessModal({
+          title: "Package Archived",
+          description: `“${item.name}” has been hidden and archived.`,
+        });
         showToast("success", `“${item.name}” moved to Archived.`);
       } else {
         showToast("error", res.error);
@@ -717,6 +1153,10 @@ export function ServicesView({
         setArchiveTarget(null);
         setAddonModalOpen(false);
         setEditingAddon(null);
+        setSuccessModal({
+          title: "Add-on Archived",
+          description: `“${item.name}” has been hidden and archived.`,
+        });
         showToast("success", `“${item.name}” moved to Archived.`);
       } else {
         showToast("error", res.error);
@@ -737,6 +1177,10 @@ export function ServicesView({
         setDeleteTarget(null);
         setServiceModalOpen(false);
         setEditingService(null);
+        setSuccessModal({
+          title: "Service Deleted",
+          description: `“${item.name}” was permanently deleted.`,
+        });
         showToast("success", `“${item.name}” was permanently deleted.`);
       } else {
         setDeleteTarget(null);
@@ -757,6 +1201,10 @@ export function ServicesView({
         setDeleteTarget(null);
         setPackageModalOpen(false);
         setEditingPackage(null);
+        setSuccessModal({
+          title: "Package Deleted",
+          description: `“${item.name}” was permanently deleted.`,
+        });
         showToast("success", `“${item.name}” was permanently deleted.`);
       } else {
         showToast("error", res.error);
@@ -769,6 +1217,10 @@ export function ServicesView({
         setDeleteTarget(null);
         setAddonModalOpen(false);
         setEditingAddon(null);
+        setSuccessModal({
+          title: "Add-on Deleted",
+          description: `“${item.name}” was permanently deleted.`,
+        });
         showToast("success", `“${item.name}” was permanently deleted.`);
       } else {
         showToast("error", res.error);
@@ -783,6 +1235,10 @@ export function ServicesView({
         setServices((prev) =>
           prev.map((s) => (s.id === item.id ? { ...s, isArchived: false, active: true } : s))
         );
+        setSuccessModal({
+          title: "Service Restored",
+          description: `“${item.name}” has been restored to your service catalog.`,
+        });
         showToast("success", `“${item.name}” restored to Services catalog.`);
       } else {
         showToast("error", res.error);
@@ -793,6 +1249,10 @@ export function ServicesView({
         setPackages((prev) =>
           prev.map((p) => (p.id === item.id ? { ...p, isArchived: false, active: true } : p))
         );
+        setSuccessModal({
+          title: "Package Restored",
+          description: `“${item.name}” has been restored to Packages.`,
+        });
         showToast("success", `“${item.name}” restored to Packages.`);
       } else {
         showToast("error", res.error);
@@ -803,6 +1263,10 @@ export function ServicesView({
         setAddons((prev) =>
           prev.map((a) => (a.id === item.id ? { ...a, isArchived: false, active: true } : a))
         );
+        setSuccessModal({
+          title: "Add-on Restored",
+          description: `“${item.name}” has been restored to Add-ons.`,
+        });
         showToast("success", `“${item.name}” restored to Add-ons.`);
       } else {
         showToast("error", res.error);
@@ -811,7 +1275,7 @@ export function ServicesView({
   };
 
   return (
-    <div className="flex min-h-dvh bg-[#FAF9F5]">
+    <div className="flex min-h-dvh flex-col bg-[#FFFFEB] text-[#1E293B] lg:flex-row">
       {/* Merchant Sidebar with Services tab wired */}
       <MerchantSidebar
         businessName={businessName}
@@ -821,687 +1285,811 @@ export function ServicesView({
         basePath={basePath}
       />
 
-      <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 space-y-6">
-        {/* Top Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-1.5 text-xs font-semibold tracking-wider text-neutral-400 uppercase mb-1">
-              <Icon name="layers" className="size-4 text-[#C35000]" />
-              <span>SERVICES</span>
-            </div>
-            <h1 className="font-display text-2xl sm:text-3xl text-neutral-900 tracking-tight">
-              Services
-            </h1>
-            <p className="text-xs sm:text-sm text-neutral-500 mt-0.5">
-              Manage your service catalog, packages, add-ons, and pricing.
-            </p>
-          </div>
-
-          {/* Action buttons */}
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <button
-              type="button"
-              onClick={() => {
-                setEditingPackage(null);
-                setPackageModalOpen(true);
-              }}
-              className="inline-flex items-center gap-2 rounded-xl border border-neutral-300 bg-white px-3.5 py-2 text-xs font-semibold text-neutral-800 shadow-2xs hover:bg-neutral-50 transition"
-            >
-              <Icon name="layers" className="size-4 text-[#C35000]" />
-              <span>+ Add Package</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setEditingAddon(null);
-                setAddonModalOpen(true);
-              }}
-              className="inline-flex items-center gap-2 rounded-xl border border-neutral-300 bg-white px-3.5 py-2 text-xs font-semibold text-neutral-800 shadow-2xs hover:bg-neutral-50 transition"
-            >
-              <Icon name="check" className="size-4 text-emerald-600" />
-              <span>+ Add Add-on</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setEditingService(null);
-                setServiceModalOpen(true);
-              }}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#C35000] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#A94400] transition"
-            >
-              <span>+ Add Service</span>
-            </button>
-          </div>
-        </div>
-
-        {/* 4 KPI Summary Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <MetricCard
-            featured
-            label="Active Services"
-            value={activeServicesCount}
-            caption="Visible to clients on booking"
-            icon="layers"
-            progress={100}
-            onClick={() => setActiveTab("services")}
-          />
-          <MetricCard
-            label="Packages"
-            value={totalPackagesCount}
-            caption="Bundled service offers"
-            icon="layers"
-            progress={100}
-            onClick={() => setActiveTab("packages")}
-          />
-          <MetricCard
-            label="Add-ons"
-            value={totalAddonsCount}
-            caption="Optional upgrades & treatments"
-            icon="check"
-            progress={100}
-            onClick={() => setActiveTab("addons")}
-          />
-          <MetricCard
-            label="Inactive / Archived"
-            value={inactiveOrArchivedCount}
-            caption="Hidden from booking menu"
-            icon="alert"
-            progress={100}
-            onClick={() => setActiveTab("archived")}
-          />
-        </div>
-
-        {/* Workspace Surface (Tabs, Search, Filter & Tables) */}
-        <div className="rounded-2xl border border-neutral-200/80 bg-white shadow-xs overflow-hidden">
-          {/* Tabs and Search / Filter Header */}
-          <div className="border-b border-neutral-200 p-4 sm:p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            {/* Tabs */}
-            <div className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0">
-              <button
-                type="button"
-                onClick={() => setActiveTab("services")}
-                className={`whitespace-nowrap rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
-                  activeTab === "services"
-                    ? "bg-[#C35000] text-white shadow-xs"
-                    : "text-neutral-600 hover:bg-neutral-100"
-                }`}
-              >
-                Services ({nonArchivedServices.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("packages")}
-                className={`whitespace-nowrap rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
-                  activeTab === "packages"
-                    ? "bg-[#C35000] text-white shadow-xs"
-                    : "text-neutral-600 hover:bg-neutral-100"
-                }`}
-              >
-                Packages ({nonArchivedPackages.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("addons")}
-                className={`whitespace-nowrap rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
-                  activeTab === "addons"
-                    ? "bg-[#C35000] text-white shadow-xs"
-                    : "text-neutral-600 hover:bg-neutral-100"
-                }`}
-              >
-                Add-ons ({nonArchivedAddons.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("archived")}
-                className={`whitespace-nowrap rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
-                  activeTab === "archived"
-                    ? "bg-[#C35000] text-white shadow-xs"
-                    : "text-neutral-600 hover:bg-neutral-100"
-                }`}
-              >
-                Archived ({archivedItems.length})
-              </button>
+      {/* Main Content Area */}
+      <div className="min-w-0 flex-1 lg:h-dvh lg:overflow-y-auto">
+        <main className="p-4 sm:p-6 lg:p-8 space-y-6">
+          {/* Top Header */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900">
+                Services
+              </h1>
+              <p className="text-xs sm:text-sm text-neutral-500 mt-1">
+                Build your service menu, bundles, and optional add-ons.
+              </p>
             </div>
 
-            {/* Filter controls */}
-            <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
-              {/* Search input */}
-              <div className="relative flex-1 sm:w-64">
-                <Icon
-                  name="search"
-                  className="absolute left-3 top-2.5 size-4 text-neutral-400 pointer-events-none"
-                />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search catalog..."
-                  className="w-full rounded-xl border border-neutral-300 bg-white pl-9 pr-3 py-1.5 text-xs text-neutral-900 placeholder:text-neutral-400 focus:border-[#C35000] focus:ring-2 focus:ring-[#C35000]/20 focus:outline-none transition"
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery("")}
-                    className="absolute right-2.5 top-2 text-neutral-400 hover:text-neutral-600"
-                  >
-                    <Icon name="close" className="size-3.5" />
-                  </button>
-                )}
+            {/* 3 Rectangular Action Buttons (Figma Reference Variation Aligned) */}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingAddon(null);
+                  setAddonModalOpen(true);
+                }}
+                className="rounded-lg bg-[#C84B00] px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#A94400] transition"
+              >
+                + Add Add-on
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingService(null);
+                  setServiceModalOpen(true);
+                }}
+                className="rounded-lg bg-[#C84B00] px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#A94400] transition"
+              >
+                + Add Service
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingPackage(null);
+                  setPackageModalOpen(true);
+                }}
+                className="rounded-lg border border-[#C84B00] bg-white px-3.5 py-2 text-xs font-semibold text-[#C84B00] shadow-2xs hover:bg-[#C84B00]/5 transition"
+              >
+                + Create Package
+              </button>
+            </div>
+          </div>
+
+          {/* 4 Interactive KPI Cards (Figma Reference Variation Aligned) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            <ServiceKpiCard
+              label="Active services"
+              count={activeServicesCount}
+              subtitle="Visible and bookable"
+              icon="layers"
+              isSelected={activeTab === "services"}
+              onClick={() => setActiveTab("services")}
+            />
+            <ServiceKpiCard
+              label="Packages"
+              count={totalPackagesCount}
+              subtitle="View and manage bundles"
+              icon="layers"
+              isSelected={activeTab === "packages"}
+              onClick={() => setActiveTab("packages")}
+            />
+            <ServiceKpiCard
+              label="Add-ons"
+              count={totalAddonsCount}
+              subtitle="Extra time and service value"
+              icon="check"
+              isSelected={activeTab === "addons"}
+              onClick={() => setActiveTab("addons")}
+            />
+            <ServiceKpiCard
+              label="Hidden services"
+              count={inactiveOrArchivedCount}
+              subtitle="Not bookable · Records kept"
+              icon="alert"
+              isSelected={activeTab === "archived"}
+              onClick={() => setActiveTab("archived")}
+            />
+          </div>
+
+          {/* Main Table Card (Service Catalog) */}
+          <div className="rounded-2xl border border-[#EDECE8] bg-white shadow-xs overflow-hidden">
+            {/* Card Header: Dynamic Title on left, Search + Single Filter on right */}
+            <div className="border-b border-[#EDECE8] p-4 sm:p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              {/* Left: Small catalog icon + Dynamic Title */}
+              <div className="flex items-center gap-2">
+                <Icon name="layers" className="size-4 text-[#C84B00]" />
+                <h2 className="text-base font-semibold text-neutral-900">
+                  {activeTab === "services" && "Service Catalog"}
+                  {activeTab === "packages" && "Packages"}
+                  {activeTab === "addons" && "Add-ons"}
+                  {activeTab === "archived" && "Hidden services"}
+                </h2>
               </div>
 
-              {/* Status Filter (for non-archived tabs) */}
-              {activeTab !== "archived" && (
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-                  className="rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 focus:border-[#C35000] focus:ring-2 focus:ring-[#C35000]/20 focus:outline-none transition"
-                >
-                  <option value="all">All Status</option>
-                  <option value="active">Active Only</option>
-                  <option value="inactive">Inactive Only</option>
-                </select>
-              )}
-
-              {/* Category Filter (Services tab only) */}
-              {activeTab === "services" && categories.length > 0 && (
-                <select
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 focus:border-[#C35000] focus:ring-2 focus:ring-[#C35000]/20 focus:outline-none transition max-w-[140px] truncate"
-                >
-                  <option value="all">All Categories</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-          </div>
-
-          {/* Table Container */}
-          <div className="overflow-x-auto">
-            {/* 1. SERVICES TAB TABLE */}
-            {activeTab === "services" && (
-              <>
-                {filteredServices.length === 0 ? (
-                  <EmptyState
-                    title={searchQuery ? "No matching services" : "No services yet"}
-                    description={
-                      searchQuery
-                        ? "Try adjusting your search keywords or clear your active filters."
-                        : "Start adding services to your catalog so clients can book appointments online."
-                    }
-                    className="py-16"
+              {/* Right: Search service input + single Filter dropdown button */}
+              <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                <div className="relative flex-1 sm:w-64">
+                  <Icon
+                    name="search"
+                    className="absolute left-3 top-2.5 size-4 text-neutral-400 pointer-events-none"
                   />
-                ) : (
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-neutral-200 bg-neutral-50/70 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
-                        <th className="py-3.5 px-4 sm:px-6">Service Name</th>
-                        <th className="py-3.5 px-4">Category</th>
-                        <th className="py-3.5 px-4">Duration</th>
-                        <th className="py-3.5 px-4">Price</th>
-                        <th className="py-3.5 px-4">Staff Eligibility</th>
-                        <th className="py-3.5 px-4 text-center">Status</th>
-                        <th className="py-3.5 px-4 sm:px-6 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-100 text-xs text-neutral-800">
-                      {filteredServices.map((service) => {
-                        const isToggling = Boolean(togglingIds[service.id]);
-                        return (
-                          <tr
-                            key={service.id}
-                            className="hover:bg-neutral-50/70 transition-colors"
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={
+                      activeTab === "services"
+                        ? "Search service..."
+                        : activeTab === "packages"
+                        ? "Search package..."
+                        : activeTab === "addons"
+                        ? "Search add-on..."
+                        : "Search hidden..."
+                    }
+                    className="w-full rounded-lg border border-[#EDECE8] bg-white pl-9 pr-3 py-1.5 text-xs text-neutral-900 placeholder:text-neutral-400 focus:border-[#C84B00] focus:ring-2 focus:ring-[#C84B00]/20 focus:outline-none transition"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-2.5 top-2 text-neutral-400 hover:text-neutral-600"
+                    >
+                      <Icon name="close" className="size-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Single Filter Dropdown */}
+                <div className="relative shrink-0 filter-menu-container" ref={filterDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setFilterOpen(!filterOpen)}
+                    className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition shadow-2xs ${
+                      statusFilter !== "all" || categoryFilter !== "all"
+                        ? "border-[#C84B00] bg-[#C84B00]/5 text-[#C84B00]"
+                        : "border-[#EDECE8] bg-white text-neutral-700 hover:bg-neutral-50"
+                    }`}
+                  >
+                    <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                    </svg>
+                    <span>Filter</span>
+                    {(statusFilter !== "all" || categoryFilter !== "all") && (
+                      <span className="size-1.5 rounded-full bg-[#C84B00]" />
+                    )}
+                    <Icon name="chevron-down" className="size-3 text-neutral-400" />
+                  </button>
+
+                  {filterOpen && (
+                    <div className="absolute right-0 z-30 mt-2 w-64 rounded-xl border border-[#EDECE8] bg-white p-3.5 shadow-xl animate-in fade-in duration-100">
+                      <div className="flex items-center justify-between pb-2 mb-2 border-b border-neutral-100">
+                        <span className="text-xs font-semibold text-neutral-900">Filter</span>
+                        {(statusFilter !== "all" || categoryFilter !== "all") && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setStatusFilter("all");
+                              setCategoryFilter("all");
+                            }}
+                            className="text-[11px] font-semibold text-[#C84B00] hover:underline"
                           >
-                            <td className="py-4 px-4 sm:px-6 min-w-[180px]">
-                              <div className="font-semibold text-neutral-900">
+                            Reset
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="space-y-3">
+                        {activeTab !== "archived" && (
+                          <div>
+                            <label className="block text-[11px] font-medium text-neutral-500 mb-1">
+                              Visibility
+                            </label>
+                            <select
+                              value={statusFilter}
+                              onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+                              className="w-full rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs text-neutral-800 focus:border-[#C84B00] focus:outline-none"
+                            >
+                              <option value="all">All Visibility</option>
+                              <option value="active">Active only</option>
+                              <option value="inactive">Hidden only</option>
+                            </select>
+                          </div>
+                        )}
+
+                        {activeTab === "services" && categories.length > 0 && (
+                          <div>
+                            <label className="block text-[11px] font-medium text-neutral-500 mb-1">
+                              Category
+                            </label>
+                            <select
+                              value={categoryFilter}
+                              onChange={(e) => setCategoryFilter(e.target.value)}
+                              className="w-full rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs text-neutral-800 focus:border-[#C84B00] focus:outline-none"
+                            >
+                              <option value="all">All Categories</option>
+                              {categories.map((c) => (
+                                <option key={c.id} value={c.id}>
+                                  {c.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Responsive Table Wrapper */}
+            <div className="w-full overflow-x-auto">
+              {/* 1. SERVICES TAB TABLE (8 Columns strictly matching Figma) */}
+              {activeTab === "services" && (
+                <>
+                  {filteredServices.length === 0 ? (
+                    <div className="py-16 text-center">
+                      <EmptyState
+                        title={
+                          searchQuery || statusFilter !== "all" || categoryFilter !== "all"
+                            ? "No matching services"
+                            : "No services yet"
+                        }
+                        description={
+                          searchQuery || statusFilter !== "all" || categoryFilter !== "all"
+                            ? "No services match your active search or filter criteria. Clear filters to view all services."
+                            : "Start adding services to your catalog so clients can book appointments online."
+                        }
+                        className="py-6"
+                      />
+                      {searchQuery || statusFilter !== "all" || categoryFilter !== "all" ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSearchQuery("");
+                            setStatusFilter("all");
+                            setCategoryFilter("all");
+                          }}
+                          className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-[#C84B00] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#A94400] transition"
+                        >
+                          Reset filters
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingService(null);
+                            setServiceModalOpen(true);
+                          }}
+                          className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-[#C84B00] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#A94400] transition"
+                        >
+                          + Add Service
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <table className="w-full min-w-[760px] text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-[#EDECE8] bg-neutral-50/70 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
+                          <th className="py-3 px-4 sm:px-6">Service</th>
+                          <th className="py-3 px-4">Category</th>
+                          <th className="py-3 px-4">Duration</th>
+                          <th className="py-3 px-4">Buffer</th>
+                          <th className="py-3 px-4">Base price</th>
+                          <th className="py-3 px-4">Eligible staff</th>
+                          <th className="py-3 px-4 text-center">Visibility</th>
+                          <th className="py-3 px-4 sm:px-6 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-neutral-100 text-xs text-neutral-800">
+                        {filteredServices.map((service) => {
+                          const staffInfo = formatEligibleStaff(service.assignedStaff);
+                          return (
+                            <tr
+                              key={service.id}
+                              className="hover:bg-neutral-50/70 transition-colors"
+                            >
+                              <td className="py-3.5 px-4 sm:px-6 font-semibold text-neutral-900 whitespace-nowrap">
                                 {service.name}
-                              </div>
-                              {service.description && (
-                                <div className="text-[11px] text-neutral-500 line-clamp-1 mt-0.5">
-                                  {service.description}
-                                </div>
-                              )}
-                            </td>
-                            <td className="py-4 px-4 whitespace-nowrap">
-                              {service.categoryName ? (
-                                <span className="inline-block rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-700">
-                                  {service.categoryName}
-                                </span>
-                              ) : (
-                                <span className="text-neutral-400">—</span>
-                              )}
-                            </td>
-                            <td className="py-4 px-4 whitespace-nowrap font-medium text-neutral-700">
-                              {service.durationMinutes} min
-                              {service.bufferMinutes > 0 && (
-                                <span className="text-[10px] text-neutral-400 block">
-                                  +{service.bufferMinutes}m buffer
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-4 px-4 whitespace-nowrap font-semibold text-neutral-900">
-                              {service.priceFormatted}
-                            </td>
-                            <td className="py-4 px-4 min-w-[140px]">
-                              {service.assignedStaff.length === 0 ? (
-                                <span className="text-neutral-400">None assigned</span>
-                              ) : (
-                                <div className="flex items-center gap-1.5">
-                                  <div className="flex -space-x-1.5 overflow-hidden">
-                                    {service.assignedStaff.slice(0, 3).map((st) => (
-                                      <div
-                                        key={st.id}
-                                        title={st.fullName}
-                                        className="flex size-6 items-center justify-center rounded-full bg-[#C35000]/15 text-[9px] font-bold text-[#C35000] ring-2 ring-white"
-                                      >
-                                        {st.fullName
-                                          .split(" ")
-                                          .map((n) => n[0])
-                                          .join("")
-                                          .substring(0, 2)
-                                          .toUpperCase()}
-                                      </div>
-                                    ))}
-                                  </div>
-                                  <span className="text-[11px] font-medium text-neutral-600">
-                                    {service.assignedStaff.length}{" "}
-                                    {service.assignedStaff.length === 1 ? "staff" : "staff"}
+                              </td>
+                              <td className="py-3.5 px-4 text-neutral-600 whitespace-nowrap">
+                                {service.categoryName || "—"}
+                              </td>
+                              <td className="py-3.5 px-4 whitespace-nowrap font-medium text-neutral-700">
+                                {formatDurationClean(service.durationMinutes)}
+                              </td>
+                              <td className="py-3.5 px-4 whitespace-nowrap text-neutral-600">
+                                {formatBuffer(service.bufferMinutes)}
+                              </td>
+                              <td className="py-3.5 px-4 whitespace-nowrap font-semibold text-neutral-900">
+                                {formatPeso(service.priceCents)}
+                              </td>
+                              <td className="py-3.5 px-4 whitespace-nowrap text-neutral-700">
+                                {staffInfo.isAssigned ? (
+                                  <span title={staffInfo.tooltip}>{staffInfo.label}</span>
+                                ) : (
+                                  <span className="text-neutral-400 italic">No staff assigned</span>
+                                )}
+                              </td>
+                              <td className="py-3.5 px-4 whitespace-nowrap text-center">
+                                {service.active ? (
+                                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200/60">
+                                    <span className="size-1.5 rounded-full bg-emerald-500" />
+                                    Active
                                   </span>
-                                </div>
-                              )}
-                            </td>
-                            <td className="py-4 px-4 text-center whitespace-nowrap">
-                              <button
-                                type="button"
-                                role="switch"
-                                aria-checked={service.active}
-                                disabled={isToggling}
-                                onClick={() => handleToggleService(service)}
-                                title={service.active ? "Click to deactivate" : "Click to activate"}
-                                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 ${
-                                  service.active ? "bg-[#C35000]" : "bg-neutral-200"
-                                }`}
-                              >
-                                <span
-                                  className={`pointer-events-none inline-block size-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                                    service.active ? "translate-x-4" : "translate-x-0"
+                                ) : (
+                                  <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 border border-amber-200/60">
+                                    <span className="size-1.5 rounded-full bg-amber-500" />
+                                    Hidden
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
+                                <button
+                                  type="button"
+                                  onClick={(e) =>
+                                    handleOpenMenu(e, service.id, [
+                                      {
+                                        label: "Edit",
+                                        onClick: () => {
+                                          setEditingService(service);
+                                          setServiceModalOpen(true);
+                                        },
+                                      },
+                                      {
+                                        label: "Hide service",
+                                        onClick: () =>
+                                          setArchiveTarget({
+                                            item: service,
+                                            type: "service",
+                                            actionType: "hide",
+                                          }),
+                                      },
+                                      {
+                                        label: "Archive",
+                                        variant: "warning",
+                                        onClick: () =>
+                                          setArchiveTarget({
+                                            item: service,
+                                            type: "service",
+                                            actionType: "archive",
+                                          }),
+                                      },
+                                      {
+                                        label: "Delete",
+                                        variant: "danger",
+                                        dividerBefore: true,
+                                        onClick: () =>
+                                          setDeleteTarget({ item: service, type: "service" }),
+                                      },
+                                    ])
+                                  }
+                                  className={`rounded-lg p-1.5 transition ${
+                                    activeMenu?.id === service.id
+                                      ? "bg-neutral-100 text-neutral-800"
+                                      : "text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
                                   }`}
-                                />
-                              </button>
-                            </td>
-                            <td className="py-4 px-4 sm:px-6 text-right whitespace-nowrap">
-                              <div className="inline-flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditingService(service);
-                                    setServiceModalOpen(true);
-                                  }}
-                                  className="rounded-lg p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition"
-                                  title="Edit service"
+                                  aria-label="Actions"
+                                  aria-expanded={activeMenu?.id === service.id}
                                 >
-                                  <span className="text-xs font-semibold text-[#C35000]">
-                                    Edit
-                                  </span>
+                                  <Icon name="more" className="size-4" />
                                 </button>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setArchiveTarget({ item: service, type: "service" })
-                                  }
-                                  className="rounded-lg p-1.5 text-neutral-400 hover:bg-amber-50 hover:text-amber-700 transition"
-                                  title="Archive service"
-                                >
-                                  <span className="text-xs font-medium text-amber-700">
-                                    Archive
-                                  </span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setDeleteTarget({ item: service, type: "service" })
-                                  }
-                                  className="rounded-lg p-1.5 text-neutral-400 hover:bg-red-50 hover:text-red-600 transition"
-                                  title="Delete service"
-                                >
-                                  <Icon name="trash" className="size-4 text-neutral-400 hover:text-red-600" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                )}
-              </>
-            )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </>
+              )}
 
-            {/* 2. PACKAGES TAB TABLE */}
-            {activeTab === "packages" && (
-              <>
-                {filteredPackages.length === 0 ? (
-                  <EmptyState
-                    title={searchQuery ? "No matching packages" : "No packages created"}
-                    description={
-                      searchQuery
-                        ? "Try adjusting your search keywords."
-                        : "Bundle complementary services together at a bundle price to boost sales."
-                    }
-                    className="py-16"
-                  />
-                ) : (
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-neutral-200 bg-neutral-50/70 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
-                        <th className="py-3.5 px-4 sm:px-6">Package Name</th>
-                        <th className="py-3.5 px-4">Bundled Services</th>
-                        <th className="py-3.5 px-4">Duration</th>
-                        <th className="py-3.5 px-4">Price</th>
-                        <th className="py-3.5 px-4 text-center">Status</th>
-                        <th className="py-3.5 px-4 sm:px-6 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-100 text-xs text-neutral-800">
-                      {filteredPackages.map((pkg) => {
-                        const isToggling = Boolean(togglingIds[pkg.id]);
-                        return (
+              {/* 2. PACKAGES TAB TABLE */}
+              {activeTab === "packages" && (
+                <>
+                  {filteredPackages.length === 0 ? (
+                    <div className="py-16 text-center">
+                      <EmptyState
+                        title={
+                          searchQuery || statusFilter !== "all"
+                            ? "No matching packages"
+                            : "No packages created"
+                        }
+                        description={
+                          searchQuery || statusFilter !== "all"
+                            ? "No packages match your search keywords or active filters."
+                            : "Bundle complementary services together at a bundle price to boost sales."
+                        }
+                        className="py-6"
+                      />
+                      {searchQuery || statusFilter !== "all" ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSearchQuery("");
+                            setStatusFilter("all");
+                          }}
+                          className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-[#C84B00] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#A94400] transition"
+                        >
+                          Reset filters
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingPackage(null);
+                            setPackageModalOpen(true);
+                          }}
+                          className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-[#C84B00] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#A94400] transition"
+                        >
+                          + Create Package
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <table className="w-full min-w-[760px] text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-[#EDECE8] bg-neutral-50/70 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
+                          <th className="py-3 px-4 sm:px-6">Package</th>
+                          <th className="py-3 px-4">Bundled services</th>
+                          <th className="py-3 px-4">Duration</th>
+                          <th className="py-3 px-4">Base price</th>
+                          <th className="py-3 px-4 text-center">Visibility</th>
+                          <th className="py-3 px-4 sm:px-6 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-neutral-100 text-xs text-neutral-800">
+                        {filteredPackages.map((pkg) => (
                           <tr key={pkg.id} className="hover:bg-neutral-50/70 transition-colors">
-                            <td className="py-4 px-4 sm:px-6 min-w-[180px]">
-                              <div className="font-semibold text-neutral-900">{pkg.name}</div>
-                              {pkg.description && (
-                                <div className="text-[11px] text-neutral-500 line-clamp-1 mt-0.5">
-                                  {pkg.description}
-                                </div>
+                            <td className="py-3.5 px-4 sm:px-6 font-semibold text-neutral-900 whitespace-nowrap">
+                              {pkg.name}
+                            </td>
+                            <td className="py-3.5 px-4 text-neutral-600 whitespace-nowrap">
+                              {pkg.bundledServices.length > 0
+                                ? pkg.bundledServices.map((b) => b.name).join(" + ")
+                                : "No bundled items"}
+                            </td>
+                            <td className="py-3.5 px-4 whitespace-nowrap font-medium text-neutral-700">
+                              {formatDurationClean(pkg.durationMinutes)}
+                            </td>
+                            <td className="py-3.5 px-4 whitespace-nowrap font-semibold text-neutral-900">
+                              {formatPeso(pkg.priceCents)}
+                            </td>
+                            <td className="py-3.5 px-4 whitespace-nowrap text-center">
+                              {pkg.active ? (
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200/60">
+                                  <span className="size-1.5 rounded-full bg-emerald-500" />
+                                  Active
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 border border-amber-200/60">
+                                  <span className="size-1.5 rounded-full bg-amber-500" />
+                                  Hidden
+                                </span>
                               )}
                             </td>
-                            <td className="py-4 px-4 min-w-[200px]">
-                              <div className="flex flex-wrap gap-1">
-                                {pkg.bundledServices.map((bs) => (
-                                  <span
-                                    key={bs.id}
-                                    className="rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-700"
-                                  >
-                                    {bs.name}
-                                  </span>
-                                ))}
-                              </div>
-                            </td>
-                            <td className="py-4 px-4 whitespace-nowrap font-medium text-neutral-700">
-                              {pkg.durationMinutes} min
-                            </td>
-                            <td className="py-4 px-4 whitespace-nowrap font-semibold text-neutral-900">
-                              {pkg.priceFormatted}
-                            </td>
-                            <td className="py-4 px-4 text-center whitespace-nowrap">
-                              <button
-                                type="button"
-                                role="switch"
-                                aria-checked={pkg.active}
-                                disabled={isToggling}
-                                onClick={() => handleTogglePackage(pkg)}
-                                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 ${
-                                  pkg.active ? "bg-[#C35000]" : "bg-neutral-200"
-                                }`}
-                              >
-                                <span
-                                  className={`pointer-events-none inline-block size-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                                    pkg.active ? "translate-x-4" : "translate-x-0"
+                            <td className="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
+                                <button
+                                  type="button"
+                                  onClick={(e) =>
+                                    handleOpenMenu(e, pkg.id, [
+                                      {
+                                        label: "Edit",
+                                        onClick: () => {
+                                          setEditingPackage(pkg);
+                                          setPackageModalOpen(true);
+                                        },
+                                      },
+                                      {
+                                        label: pkg.active ? "Hide package" : "Show package",
+                                        onClick: () => {
+                                          if (pkg.active) {
+                                            setArchiveTarget({
+                                              item: pkg,
+                                              type: "package",
+                                              actionType: "hide",
+                                            });
+                                          } else {
+                                            void handleTogglePackage(pkg);
+                                          }
+                                        },
+                                      },
+                                      {
+                                        label: "Archive",
+                                        variant: "warning",
+                                        onClick: () =>
+                                          setArchiveTarget({
+                                            item: pkg,
+                                            type: "package",
+                                            actionType: "archive",
+                                          }),
+                                      },
+                                      {
+                                        label: "Delete",
+                                        variant: "danger",
+                                        dividerBefore: true,
+                                        onClick: () =>
+                                          setDeleteTarget({ item: pkg, type: "package" }),
+                                      },
+                                    ])
+                                  }
+                                  className={`rounded-lg p-1.5 transition ${
+                                    activeMenu?.id === pkg.id
+                                      ? "bg-neutral-100 text-neutral-800"
+                                      : "text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
                                   }`}
-                                />
-                              </button>
-                            </td>
-                            <td className="py-4 px-4 sm:px-6 text-right whitespace-nowrap">
-                              <div className="inline-flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditingPackage(pkg);
-                                    setPackageModalOpen(true);
-                                  }}
-                                  className="rounded-lg p-1.5 text-neutral-500 hover:bg-neutral-100 transition"
+                                  aria-label="Actions"
+                                  aria-expanded={activeMenu?.id === pkg.id}
                                 >
-                                  <span className="text-xs font-semibold text-[#C35000]">
-                                    Edit
-                                  </span>
+                                  <Icon name="more" className="size-4" />
                                 </button>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setArchiveTarget({ item: pkg, type: "package" })
-                                  }
-                                  className="rounded-lg p-1.5 text-neutral-400 hover:bg-amber-50 hover:text-amber-700 transition"
-                                >
-                                  <span className="text-xs font-medium text-amber-700">
-                                    Archive
-                                  </span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setDeleteTarget({ item: pkg, type: "package" })
-                                  }
-                                  className="rounded-lg p-1.5 text-neutral-400 hover:bg-red-50 hover:text-red-600 transition"
-                                >
-                                  <Icon name="trash" className="size-4 text-neutral-400 hover:text-red-600" />
-                                </button>
-                              </div>
-                            </td>
+                              </td>
                           </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                )}
-              </>
-            )}
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </>
+              )}
 
-            {/* 3. ADD-ONS TAB TABLE */}
-            {activeTab === "addons" && (
-              <>
-                {filteredAddons.length === 0 ? (
-                  <EmptyState
-                    title={searchQuery ? "No matching add-ons" : "No add-ons created"}
-                    description={
-                      searchQuery
-                        ? "Try adjusting your search query."
-                        : "Create optional add-ons (scalp massage, conditioning, nail art) that customers can attach to bookings."
-                    }
-                    className="py-16"
-                  />
-                ) : (
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-neutral-200 bg-neutral-50/70 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
-                        <th className="py-3.5 px-4 sm:px-6">Add-on Name</th>
-                        <th className="py-3.5 px-4">Applicability</th>
-                        <th className="py-3.5 px-4">Extra Duration</th>
-                        <th className="py-3.5 px-4">Extra Price</th>
-                        <th className="py-3.5 px-4 text-center">Status</th>
-                        <th className="py-3.5 px-4 sm:px-6 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-100 text-xs text-neutral-800">
-                      {filteredAddons.map((addon) => {
-                        const isToggling = Boolean(togglingIds[addon.id]);
-                        return (
+              {/* 3. ADD-ONS TAB TABLE */}
+              {activeTab === "addons" && (
+                <>
+                  {filteredAddons.length === 0 ? (
+                    <div className="py-16 text-center">
+                      <EmptyState
+                        title={
+                          searchQuery || statusFilter !== "all"
+                            ? "No matching add-ons"
+                            : "No add-ons created"
+                        }
+                        description={
+                          searchQuery || statusFilter !== "all"
+                            ? "No add-ons match your search keywords or active filters."
+                            : "Create optional add-ons (scalp massage, conditioning, nail art) that customers can attach to bookings."
+                        }
+                        className="py-6"
+                      />
+                      {searchQuery || statusFilter !== "all" ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSearchQuery("");
+                            setStatusFilter("all");
+                          }}
+                          className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-[#C84B00] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#A94400] transition"
+                        >
+                          Reset filters
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingAddon(null);
+                            setAddonModalOpen(true);
+                          }}
+                          className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-[#C84B00] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#A94400] transition"
+                        >
+                          + Add Add-on
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <table className="w-full min-w-[760px] text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-[#EDECE8] bg-neutral-50/70 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
+                          <th className="py-3 px-4 sm:px-6">Add-on</th>
+                          <th className="py-3 px-4">Applicability</th>
+                          <th className="py-3 px-4">Extra duration</th>
+                          <th className="py-3 px-4">Extra price</th>
+                          <th className="py-3 px-4 text-center">Visibility</th>
+                          <th className="py-3 px-4 sm:px-6 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-neutral-100 text-xs text-neutral-800">
+                        {filteredAddons.map((addon) => (
                           <tr
                             key={addon.id}
                             className="hover:bg-neutral-50/70 transition-colors"
                           >
-                            <td className="py-4 px-4 sm:px-6 min-w-[180px]">
-                              <div className="font-semibold text-neutral-900">{addon.name}</div>
-                              {addon.description && (
-                                <div className="text-[11px] text-neutral-500 line-clamp-1 mt-0.5">
-                                  {addon.description}
-                                </div>
-                              )}
+                            <td className="py-3.5 px-4 sm:px-6 font-semibold text-neutral-900 whitespace-nowrap">
+                              {addon.name}
                             </td>
-                            <td className="py-4 px-4 whitespace-nowrap">
-                              {addon.linkedServiceIds.length === 0 ? (
-                                <span className="inline-block rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
-                                  All services
+                            <td className="py-3.5 px-4 text-neutral-600 whitespace-nowrap">
+                              {addon.linkedServiceIds.length === 0
+                                ? "All services"
+                                : `${addon.linkedServiceIds.length} specific services`}
+                            </td>
+                            <td className="py-3.5 px-4 whitespace-nowrap font-medium text-neutral-700">
+                              +{formatDurationClean(addon.durationMinutes)}
+                            </td>
+                            <td className="py-3.5 px-4 whitespace-nowrap font-semibold text-neutral-900">
+                              +{formatPeso(addon.priceCents)}
+                            </td>
+                            <td className="py-3.5 px-4 whitespace-nowrap text-center">
+                              {addon.active ? (
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200/60">
+                                  <span className="size-1.5 rounded-full bg-emerald-500" />
+                                  Active
                                 </span>
                               ) : (
-                                <span className="inline-block rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-700">
-                                  {addon.linkedServiceIds.length} specific services
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 border border-amber-200/60">
+                                  <span className="size-1.5 rounded-full bg-amber-500" />
+                                  Hidden
                                 </span>
                               )}
                             </td>
-                            <td className="py-4 px-4 whitespace-nowrap font-medium text-neutral-700">
-                              +{addon.durationMinutes} min
-                            </td>
-                            <td className="py-4 px-4 whitespace-nowrap font-semibold text-neutral-900">
-                              +{addon.priceFormatted}
-                            </td>
-                            <td className="py-4 px-4 text-center whitespace-nowrap">
-                              <button
-                                type="button"
-                                role="switch"
-                                aria-checked={addon.active}
-                                disabled={isToggling}
-                                onClick={() => handleToggleAddon(addon)}
-                                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 ${
-                                  addon.active ? "bg-[#C35000]" : "bg-neutral-200"
-                                }`}
-                              >
-                                <span
-                                  className={`pointer-events-none inline-block size-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                                    addon.active ? "translate-x-4" : "translate-x-0"
+                            <td className="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
+                                <button
+                                  type="button"
+                                  onClick={(e) =>
+                                    handleOpenMenu(e, addon.id, [
+                                      {
+                                        label: "Edit",
+                                        onClick: () => {
+                                          setEditingAddon(addon);
+                                          setAddonModalOpen(true);
+                                        },
+                                      },
+                                      {
+                                        label: addon.active ? "Hide add-on" : "Show add-on",
+                                        onClick: () => {
+                                          if (addon.active) {
+                                            setArchiveTarget({
+                                              item: addon,
+                                              type: "add-on",
+                                              actionType: "hide",
+                                            });
+                                          } else {
+                                            void handleToggleAddon(addon);
+                                          }
+                                        },
+                                      },
+                                      {
+                                        label: "Archive",
+                                        variant: "warning",
+                                        onClick: () =>
+                                          setArchiveTarget({
+                                            item: addon,
+                                            type: "add-on",
+                                            actionType: "archive",
+                                          }),
+                                      },
+                                      {
+                                        label: "Delete",
+                                        variant: "danger",
+                                        dividerBefore: true,
+                                        onClick: () =>
+                                          setDeleteTarget({ item: addon, type: "add-on" }),
+                                      },
+                                    ])
+                                  }
+                                  className={`rounded-lg p-1.5 transition ${
+                                    activeMenu?.id === addon.id
+                                      ? "bg-neutral-100 text-neutral-800"
+                                      : "text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
                                   }`}
-                                />
-                              </button>
-                            </td>
-                            <td className="py-4 px-4 sm:px-6 text-right whitespace-nowrap">
-                              <div className="inline-flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditingAddon(addon);
-                                    setAddonModalOpen(true);
-                                  }}
-                                  className="rounded-lg p-1.5 text-neutral-500 hover:bg-neutral-100 transition"
+                                  aria-label="Actions"
+                                  aria-expanded={activeMenu?.id === addon.id}
                                 >
-                                  <span className="text-xs font-semibold text-[#C35000]">
-                                    Edit
-                                  </span>
+                                  <Icon name="more" className="size-4" />
                                 </button>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setArchiveTarget({ item: addon, type: "add-on" })
-                                  }
-                                  className="rounded-lg p-1.5 text-neutral-400 hover:bg-amber-50 hover:text-amber-700 transition"
-                                >
-                                  <span className="text-xs font-medium text-amber-700">
-                                    Archive
-                                  </span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setDeleteTarget({ item: addon, type: "add-on" })
-                                  }
-                                  className="rounded-lg p-1.5 text-neutral-400 hover:bg-red-50 hover:text-red-600 transition"
-                                >
-                                  <Icon name="trash" className="size-4 text-neutral-400 hover:text-red-600" />
-                                </button>
-                              </div>
-                            </td>
+                              </td>
                           </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                )}
-              </>
-            )}
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </>
+              )}
 
-            {/* 4. ARCHIVED TAB TABLE */}
-            {activeTab === "archived" && (
-              <>
-                {filteredArchived.length === 0 ? (
-                  <EmptyState
-                    title="No archived items"
-                    description="When you archive services, packages, or add-ons, they will appear here so you can restore them anytime."
-                    className="py-16"
-                  />
-                ) : (
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-neutral-200 bg-neutral-50/70 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
-                        <th className="py-3.5 px-4 sm:px-6">Item Name</th>
-                        <th className="py-3.5 px-4">Type</th>
-                        <th className="py-3.5 px-4">Duration</th>
-                        <th className="py-3.5 px-4">Price</th>
-                        <th className="py-3.5 px-4 sm:px-6 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-100 text-xs text-neutral-800">
-                      {filteredArchived.map((archived) => (
-                        <tr key={archived.id} className="hover:bg-neutral-50/70 transition-colors">
-                          <td className="py-4 px-4 sm:px-6 font-semibold text-neutral-900">
-                            {archived.name}
-                          </td>
-                          <td className="py-4 px-4 whitespace-nowrap">
-                            <span className="inline-block rounded-md bg-amber-50 border border-amber-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-800">
-                              {archived.type}
-                            </span>
-                          </td>
-                          <td className="py-4 px-4 whitespace-nowrap font-medium text-neutral-600">
-                            {archived.durationFormatted}
-                          </td>
-                          <td className="py-4 px-4 whitespace-nowrap font-semibold text-neutral-800">
-                            {archived.priceFormatted}
-                          </td>
-                          <td className="py-4 px-4 sm:px-6 text-right whitespace-nowrap">
-                            <div className="inline-flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleRestoreArchived(archived.rawItem, archived.type)
-                                }
-                                className="px-3 py-1.5 text-xs font-semibold text-[#C35000] hover:bg-[#C35000]/10 rounded-lg transition"
-                              >
-                                Restore
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setDeleteTarget({
-                                    item: archived.rawItem,
-                                    type: archived.type,
-                                  })
-                                }
-                                className="px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg transition"
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          </td>
+              {/* 4. HIDDEN SERVICES TAB TABLE */}
+              {activeTab === "archived" && (
+                <>
+                  {filteredArchived.length === 0 ? (
+                    <EmptyState
+                      title="No hidden services"
+                      description="When you deactivate or archive services, packages, or add-ons, they will appear here so you can reactivate or restore them anytime."
+                      className="py-16"
+                    />
+                  ) : (
+                    <table className="w-full min-w-[760px] text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-[#EDECE8] bg-neutral-50/70 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
+                          <th className="py-3 px-4 sm:px-6">Item</th>
+                          <th className="py-3 px-4">Type</th>
+                          <th className="py-3 px-4">Duration</th>
+                          <th className="py-3 px-4">Base price</th>
+                          <th className="py-3 px-4 text-center">Status</th>
+                          <th className="py-3 px-4 sm:px-6 text-right">Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </>
-            )}
-          </div>
+                      </thead>
+                      <tbody className="divide-y divide-neutral-100 text-xs text-neutral-800">
+                        {filteredArchived.map((item) => (
+                          <tr key={item.id} className="hover:bg-neutral-50/70 transition-colors">
+                            <td className="py-3.5 px-4 sm:px-6 font-semibold text-neutral-900 whitespace-nowrap">
+                              {item.name}
+                            </td>
+                            <td className="py-3.5 px-4 whitespace-nowrap">
+                              <span className="inline-block rounded-md bg-neutral-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-700">
+                                {item.type}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 whitespace-nowrap font-medium text-neutral-600">
+                              {item.durationFormatted}
+                            </td>
+                            <td className="py-3.5 px-4 whitespace-nowrap font-semibold text-neutral-900">
+                              {item.priceFormatted}
+                            </td>
+                            <td className="py-3.5 px-4 whitespace-nowrap text-center">
+                              {item.isArchived ? (
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-semibold text-neutral-700 border border-neutral-200">
+                                  Archived
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 border border-amber-200/60">
+                                  <span className="size-1.5 rounded-full bg-amber-500" />
+                                  Hidden
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
+                                <button
+                                  type="button"
+                                  onClick={(e) =>
+                                    handleOpenMenu(e, item.id, [
+                                      {
+                                        label: "Edit",
+                                        onClick: () => {
+                                          if (item.type === "service") {
+                                            setEditingService(item.rawItem as ServiceDTO);
+                                            setServiceModalOpen(true);
+                                          } else if (item.type === "package") {
+                                            setEditingPackage(item.rawItem as PackageDTO);
+                                            setPackageModalOpen(true);
+                                          } else {
+                                            setEditingAddon(item.rawItem as AddonDTO);
+                                            setAddonModalOpen(true);
+                                          }
+                                        },
+                                      },
+                                      {
+                                        label: "Restore / Set Active",
+                                        variant: "brand" as const,
+                                        onClick: () => {
+                                          if (item.isArchived) {
+                                            void handleRestoreArchived(item.rawItem, item.type);
+                                          } else {
+                                            if (item.type === "service") {
+                                              void handleToggleService(item.rawItem as ServiceDTO);
+                                            } else if (item.type === "package") {
+                                              void handleTogglePackage(item.rawItem as PackageDTO);
+                                            } else {
+                                              void handleToggleAddon(item.rawItem as AddonDTO);
+                                            }
+                                          }
+                                        },
+                                      },
+                                      {
+                                        label: "Delete",
+                                        variant: "danger" as const,
+                                        dividerBefore: true,
+                                        onClick: () => setDeleteTarget({ item: item.rawItem, type: item.type }),
+                                      },
+                                    ])
+                                  }
+                                  className={`rounded-lg p-1.5 transition ${
+                                    activeMenu?.id === item.id
+                                      ? "bg-neutral-100 text-neutral-800"
+                                      : "text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
+                                  }`}
+                                  aria-label="Actions"
+                                  aria-expanded={activeMenu?.id === item.id}
+                                >
+                                  <Icon name="more" className="size-4" />
+                                </button>
+                              </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </>
+              )}
+            </div>
 
-          {/* Footer Helper Note */}
-          <div className="border-t border-neutral-200/80 bg-neutral-50/50 px-5 py-3.5 flex items-center gap-2.5 text-xs text-neutral-500">
-            <Icon name="alert" className="size-4 text-[#C35000] shrink-0" />
-            <span>
-              <strong className="font-semibold text-neutral-700">Need help?</strong> Changes
-              made here reflect immediately on your public booking page.
-            </span>
+            {/* Footer Notes (inside bottom of the white card, strictly matching Figma) */}
+            <div className="border-t border-[#EDECE8] bg-[#FAF9F5]/60 px-5 py-3 space-y-1 text-[11px] text-neutral-500">
+              <p>
+                <strong className="font-semibold text-neutral-700">Active:</strong> visible and bookable.{" "}
+                <strong className="font-semibold text-neutral-700">Hidden:</strong> unavailable for new bookings; existing appointments and records are kept.
+              </p>
+              <p>
+                Base prices are shown in Philippine pesos with two decimals and include VAT in this billing configuration.
+              </p>
+            </div>
           </div>
-        </div>
-      </main>
+        </main>
+      </div>
 
       {/* ─── Modals ─────────────────────────────────────────────────────────── */}
 
@@ -1569,13 +2157,14 @@ export function ServicesView({
         isLoading={isSubmitting}
       />
 
-      {/* Archive Confirmation Modal */}
+      {/* Archive / Hide Confirmation Modal */}
       <ArchiveModal
         isOpen={Boolean(archiveTarget)}
         onClose={() => setArchiveTarget(null)}
         onConfirm={handleConfirmArchive}
         title={archiveTarget?.item.name || ""}
         itemType={archiveTarget?.type}
+        actionType={archiveTarget?.actionType || "archive"}
         isLoading={isSubmitting}
       />
 
@@ -1597,12 +2186,46 @@ export function ServicesView({
           if (!blockedDeleteError) return;
           const srv = blockedDeleteError.service;
           setBlockedDeleteError(null);
-          setArchiveTarget({ item: srv, type: "service" });
+          setIsSubmitting(true);
+          const res = await archiveServiceAction(srv.id, tenantId);
+          setIsSubmitting(false);
+          if (res.success) {
+            setServices((prev) =>
+              prev.map((s) =>
+                s.id === srv.id ? { ...s, isArchived: true, active: false } : s
+              )
+            );
+            setSuccessModal({
+              title: "Service Archived",
+              description: `“${srv.name}” has been archived instead to keep appointment records safe.`,
+            });
+            showToast("success", `“${srv.name}” moved to Archived.`);
+          } else {
+            showToast("error", res.error);
+          }
         }}
         title={blockedDeleteError?.service.name || ""}
         errorMessage={blockedDeleteError?.message}
         isLoading={isSubmitting}
       />
+
+      {/* Success Feedback Modal (Figma Aligned) */}
+      <SuccessFeedbackModal
+        isOpen={Boolean(successModal)}
+        onClose={() => setSuccessModal(null)}
+        title={successModal?.title || "Success"}
+        description={successModal?.description || ""}
+      />
+
+            {/* Floating Action Menu Portal (Rendered outside table wrapper to prevent clipping & scrollbars) */}
+      {mounted && activeMenu && createPortal(
+        <ActionMenuPortal
+          items={activeMenu.items}
+          anchorRect={activeMenu.anchorRect}
+          onClose={() => setActiveMenu(null)}
+        />,
+        document.body
+      )}
 
       {/* Toast notifications */}
       {toasts.length > 0 && (
