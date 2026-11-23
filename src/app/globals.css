@@ -57,6 +57,16 @@
   --color-info-bg: #eef2ff;
   --color-wash: #f0fdf4;
   --color-selected: #f0f7fa;
+  --color-danger-text: #991b1b;
+  --color-sky-deep: #82afc2;
+  --color-sand: #faecd3;
+  --color-sand-200: #f6dcb9;
+  --color-sand-300: #f1d3ab;
+  --color-sand-400: #f1b98a;
+  --color-sand-line: #e6d5bb;
+  --color-blush: #faece3;
+  --color-blush-deep: #f6dfd0;
+  --color-fox-ink: #394452;
 }
 
 .fox-point {
@@ -115,6 +125,12 @@
     --reveal: 360deg;
     transition: none;
   }
+}
+
+/* question marks on the 404 fox get a thin outline in the fox's own dark blue line colour so they stay readable over the fox and the page */
+.fox-qmark {
+  -webkit-text-stroke: 2px var(--color-fox-ink);
+  paint-order: stroke fill;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -359,6 +375,111 @@
     }
     94% {
       transform: scaleY(0.08);
+    }
+  }
+
+  /* 404 fox: puzzled head tilts, eyes glancing around, a small shrug and floating question marks */
+  [data-fox="confused"] .fox-dance {
+    animation: fox-sway 6s ease-in-out infinite;
+  }
+
+  [data-fox="confused"] .fox-head {
+    animation: fox-puzzled 5.5s ease-in-out infinite;
+  }
+
+  [data-fox="confused"] .fox-eyes {
+    animation: fox-look 5.5s ease-in-out infinite;
+  }
+
+  [data-fox="confused"] .fox-tail {
+    animation: fox-droop 3.2s ease-in-out infinite alternate;
+  }
+
+  [data-fox="confused"] .fox-point {
+    animation: fox-shrug 5.5s ease-in-out infinite;
+  }
+
+  [data-fox="confused"] .fox-qmark {
+    opacity: 0;
+    animation: fox-qmark 3.6s ease-in-out infinite;
+  }
+
+  @keyframes fox-sway {
+    0%,
+    100% {
+      transform: translateY(0) rotate(0deg);
+    }
+    50% {
+      transform: translateY(-5px) rotate(-1deg);
+    }
+  }
+
+  @keyframes fox-puzzled {
+    0%,
+    8%,
+    100% {
+      transform: rotate(0deg);
+    }
+    22%,
+    42% {
+      transform: rotate(-9deg);
+    }
+    58%,
+    78% {
+      transform: rotate(7deg);
+    }
+  }
+
+  @keyframes fox-look {
+    0%,
+    12%,
+    100% {
+      transform: translateX(0);
+    }
+    24%,
+    40% {
+      transform: translateX(-9px);
+    }
+    58%,
+    76% {
+      transform: translateX(9px);
+    }
+  }
+
+  @keyframes fox-droop {
+    from {
+      transform: rotate(-3deg);
+    }
+    to {
+      transform: rotate(5deg);
+    }
+  }
+
+  @keyframes fox-shrug {
+    0%,
+    20%,
+    100% {
+      transform: rotate(var(--point-angle, 0deg));
+    }
+    32%,
+    50% {
+      transform: rotate(calc(var(--point-angle, 0deg) - 9deg)) scaleX(1.03);
+    }
+  }
+
+  @keyframes fox-qmark {
+    0% {
+      opacity: 0;
+      transform: translateY(10px) scale(0.7) rotate(var(--tilt, 0deg));
+    }
+    25%,
+    70% {
+      opacity: 1;
+      transform: translateY(0) scale(1) rotate(var(--tilt, 0deg));
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-16px) scale(1.05) rotate(var(--tilt, 0deg));
     }
   }
 
