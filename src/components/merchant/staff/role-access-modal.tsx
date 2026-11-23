@@ -77,11 +77,6 @@ export function RoleAccessModal({ onClose }: { onClose: () => void }) {
             </tbody>
           </table>
         </div>
-
-        <footer className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-hairline bg-mist px-4 py-4 sm:px-6">
-          <p className="text-xs text-muted">Role mapping for tenant roles — Owner → owner, Receptionist → receptionist, Service Staff → staff.</p>
-          <AdminButton variant="primary" size="xs" className="ml-auto" onClick={onClose}>Done</AdminButton>
-        </footer>
       </div>
     </Modal>
   );
