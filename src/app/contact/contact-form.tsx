@@ -1,16 +1,17 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { submitContact, type ContactState } from "./actions";
 import { AuthBanner, AuthField, AuthSubmit } from "@/components/auth/auth-ui";
-import { inputClasses } from "@/components/ui";
+import { inputClasses, SelectField } from "@/components/ui";
 
 const initialState: ContactState = { status: "idle", values: { name: "", email: "", topic: "General", message: "" } };
-const topics = ["General", "Pricing", "Demo request", "Support"];
+const topics = ["General", "Pricing", "Demo request", "Support"].map((topic) => ({ value: topic, label: topic }));
 
 export function ContactForm() {
   const [state, action, pending] = useActionState(submitContact, initialState);
   const { values, fieldErrors } = state;
+  const [topic, setTopic] = useState(values.topic);
 
   if (state.status === "sent") {
     return (
@@ -30,12 +31,11 @@ export function ContactForm() {
         <AuthField id="email" name="email" type="email" label="Email" autoComplete="email" defaultValue={values.email} disabled={pending} error={fieldErrors?.email} placeholder="maria@bellavita.ph" />
       </div>
       <div className="flex flex-col gap-2">
-        <label htmlFor="topic" className="text-sm font-semibold text-ink opacity-80">Topic</label>
-        <select id="topic" name="topic" defaultValue={values.topic} disabled={pending} className={`${inputClasses()} cursor-pointer bg-white`}>
-          {topics.map((topic) => (
-            <option key={topic}>{topic}</option>
-          ))}
-        </select>
+        <label htmlFor="topic" className="text-sm font-semibold text-ink">
+          <span className="opacity-80">Topic</span>
+        </label>
+        <input type="hidden" name="topic" value={topic} />
+        <SelectField id="topic" value={topic} options={topics} onChange={setTopic} placeholder="Select a topic" />
       </div>
       <div className="flex flex-col gap-2">
         <label htmlFor="message" className="text-sm font-semibold text-ink">
