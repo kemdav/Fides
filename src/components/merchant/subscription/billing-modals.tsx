@@ -369,6 +369,8 @@ interface SubscriptionInvoiceModalProps {
   invoice: SubscriptionInvoice | null;
   timezone: string;
   canEdit: boolean;
+  downloading: boolean;
+  downloadError?: string;
   onDownloadPdf: (invoice: SubscriptionInvoice) => void;
   onOpenSubmitPayment: (invoice: SubscriptionInvoice) => void;
 }
@@ -379,14 +381,16 @@ export function SubscriptionInvoiceModal({
   invoice,
   timezone,
   canEdit,
+  downloading,
+  downloadError,
   onDownloadPdf,
   onOpenSubmitPayment,
 }: SubscriptionInvoiceModalProps) {
   if (!invoice) return null;
 
   const isPaid = invoice.status === "paid";
-  const isUnpaidOrOverdue =
-    invoice.status === "unpaid" || invoice.status === "overdue";
+  const isUnpaidOrOverdue = invoice.status === "unpaid" || invoice.status === "overdue";
+  const canSubmitPayment = canEdit && isUnpaidOrOverdue;
   const statusLabel =
     invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1);
 
@@ -406,36 +410,33 @@ export function SubscriptionInvoiceModal({
           >
             Close
           </button>
-          {isUnpaidOrOverdue && canEdit ? (
-            <>
-              <button
-                type="button"
-                onClick={() => onDownloadPdf(invoice)}
-                className="inline-flex h-11 items-center justify-center rounded-lg border border-[#E5E7EB] bg-white px-5 text-sm font-semibold text-[#243242] transition-colors hover:bg-[#F9FAFB]"
-              >
-                Download PDF
-              </button>
-              <button
-                type="button"
-                onClick={() => onOpenSubmitPayment(invoice)}
-                className="inline-flex h-11 items-center justify-center rounded-lg bg-[#C35000] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#A64400]"
-              >
-                Submit payment details
-              </button>
-            </>
-          ) : (
+          <button
+            type="button"
+            onClick={() => onDownloadPdf(invoice)}
+            disabled={downloading}
+            className={cn(
+              "inline-flex h-11 items-center justify-center rounded-lg text-sm font-semibold transition-colors disabled:opacity-50",
+              canSubmitPayment
+                ? "border border-[#E5E7EB] bg-white px-5 text-[#243242] hover:bg-[#F9FAFB]"
+                : "bg-[#C35000] px-6 text-white hover:bg-[#A64400]",
+            )}
+          >
+            {downloading ? "Preparing PDF…" : "Download PDF"}
+          </button>
+          {canSubmitPayment && (
             <button
               type="button"
-              onClick={() => onDownloadPdf(invoice)}
-              className="inline-flex h-11 items-center justify-center rounded-lg bg-[#C35000] px-6 text-sm font-semibold text-white transition-colors hover:bg-[#A64400]"
+              onClick={() => onOpenSubmitPayment(invoice)}
+              className="inline-flex h-11 items-center justify-center rounded-lg bg-[#C35000] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#A64400]"
             >
-              Download PDF
+              Submit payment details
             </button>
           )}
         </>
       }
     >
       <div className="space-y-5 text-sm">
+        {downloadError && <p role="alert" className="text-danger">{downloadError}</p>}
         <div>
           <span
             className={cn(

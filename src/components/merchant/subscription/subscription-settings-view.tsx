@@ -1,10 +1,12 @@
 "use client";
 
 import * as React from "react";
+import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 import { MerchantSidebar } from "@/components/merchant/merchant-sidebar";
 import { PageContent } from "@/components/admin/primitives";
 import { Icon } from "@/components/admin/icon";
+import { Button } from "@/components/ui/button";
 import {
   confirmTrialConversionAction,
   keepSubscriptionPlanAction,
@@ -60,6 +62,111 @@ const INVOICES_PER_PAGE = 5;
 const cardClass =
   "rounded-[14px] bg-white p-6 shadow-[0_2px_12px_rgba(36,50,66,0.04)] sm:p-7";
 
+function InvoiceRowActions({
+  invoiceNumber,
+  downloading,
+  onView,
+  onDownload,
+  onSubmitPayment,
+}: {
+  invoiceNumber: string;
+  downloading: boolean;
+  onView: () => void;
+  onDownload: () => void;
+  onSubmitPayment?: () => void;
+}) {
+  const menuId = React.useId();
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const menuRef = React.useRef<HTMLDivElement>(null);
+  const [open, setOpen] = React.useState(false);
+
+  React.useLayoutEffect(() => {
+    const trigger = triggerRef.current;
+    const menu = menuRef.current;
+    if (!open || !trigger || !menu) return;
+
+    const positionMenu = () => {
+      const { top, right, bottom } = trigger.getBoundingClientRect();
+      const { clientWidth, clientHeight } = document.documentElement;
+      const gap = 6;
+      const edge = 8;
+      const left = Math.max(edge, Math.min(right, clientWidth - edge) - menu.offsetWidth);
+      const opensAbove = bottom + gap + menu.offsetHeight > clientHeight - edge;
+      const menuTop = opensAbove ? top - gap - menu.offsetHeight : bottom + gap;
+
+      menu.style.left = `${left}px`;
+      menu.style.top = `${Math.max(edge, menuTop)}px`;
+      menu.style.visibility = "visible";
+    };
+
+    positionMenu();
+    window.addEventListener("scroll", positionMenu, true);
+    window.addEventListener("resize", positionMenu);
+    return () => {
+      window.removeEventListener("scroll", positionMenu, true);
+      window.removeEventListener("resize", positionMenu);
+      menu.style.visibility = "hidden";
+    };
+  }, [open]);
+
+  const actionClass =
+    "block w-full px-3.5 py-2 text-left text-xs font-medium text-[#243242] hover:bg-[#F9FAFB]";
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        aria-label={`Actions for ${invoiceNumber}`}
+        popoverTarget={menuId}
+        className="inline-flex size-8 items-center justify-center rounded-lg text-[#4B5563] hover:bg-[#F3F4F6]"
+      >
+        <Icon name="more" className="size-4" />
+      </button>
+      <div
+        ref={menuRef}
+        id={menuId}
+        popover="auto"
+        onToggle={(event) => setOpen(event.newState === "open")}
+        style={{ visibility: "hidden" }}
+        className="fixed inset-auto m-0 w-48 max-w-[calc(100vw-1rem)] rounded-[10px] border border-[#E5E7EB] bg-white px-0 py-1.5 shadow-lg"
+      >
+        <button
+          type="button"
+          popoverTarget={menuId}
+          popoverTargetAction="hide"
+          onClick={onView}
+          className={actionClass}
+        >
+          View invoice
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            menuRef.current?.hidePopover();
+            onDownload();
+          }}
+          disabled={downloading}
+          className={cn(actionClass, "disabled:opacity-50")}
+        >
+          Download PDF
+        </button>
+        {onSubmitPayment && (
+          <button
+            type="button"
+            popoverTarget={menuId}
+            popoverTargetAction="hide"
+            onClick={onSubmitPayment}
+            className="block w-full px-3.5 py-2 text-left text-xs font-semibold text-[#C35000] hover:bg-[#FFF7ED]"
+          >
+            Submit payment details
+          </button>
+        )}
+      </div>
+    </>
+  );
+}
+
 export function SubscriptionSettingsView({
   initialData,
   basePath,
@@ -104,6 +211,15 @@ export function SubscriptionSettingsView({
 
   const [viewingInvoice, setViewingInvoice] =
     React.useState<SubscriptionInvoice | null>(null);
+  const [invoiceDownload, setInvoiceDownload] = React.useState<{
+    invoiceId: string;
+    invoiceNumber: string;
+    status: "pending" | "error";
+  } | null>(null);
+  const downloadingInvoice = invoiceDownload?.status === "pending";
+  const invoiceDownloadError = invoiceDownload?.status === "error"
+    ? `Couldn’t download ${invoiceDownload.invoiceNumber}. Please try again.`
+    : undefined;
   const [submitPaymentInvoice, setSubmitPaymentInvoice] =
     React.useState<SubscriptionInvoice | null>(null);
   const [submitPaymentKey, setSubmitPaymentKey] = React.useState(0);
@@ -117,7 +233,6 @@ export function SubscriptionSettingsView({
 
   const [submitting, setSubmitting] = React.useState(false);
   const [modalError, setModalError] = React.useState<string | null>(null);
-  const [openRowMenuId, setOpenRowMenuId] = React.useState<string | null>(null);
   const [invoicePage, setInvoicePage] = React.useState(1);
 
   // Derived dates & labels
@@ -392,26 +507,56 @@ export function SubscriptionSettingsView({
     router.refresh();
   };
 
-  const handleDownloadInvoicePdf = (invoice: SubscriptionInvoice) => {
-    const link = document.createElement("a");
-    link.href = `/api/merchant/subscription/invoices/${invoice.id}/pdf`;
-    link.download = `${invoice.invoiceNumber}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownloadInvoicePdf = async (invoice: SubscriptionInvoice) => {
+    if (downloadingInvoice) return;
 
-    setViewingInvoice(null);
-    setOpenRowMenuId(null);
-    setOutcomeModal({
-      title: "Invoice download",
-      description:
-        "Your invoice PDF download starts automatically. If it does not start, try again.",
-    });
+    const download = { invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber };
+    const filename = `${invoice.invoiceNumber}.pdf`;
+    setInvoiceDownload({ ...download, status: "pending" });
+
+    try {
+      const response = await fetch(`/api/merchant/subscription/invoices/${invoice.id}/pdf`);
+      if (!response.ok || response.headers.get("content-type") !== "application/pdf") {
+        throw new Error("Invoice PDF unavailable");
+      }
+
+      const pdf = await response.blob();
+      if (pdf.size === 0) throw new Error("Invoice PDF is empty");
+
+      const pdfUrl = URL.createObjectURL(pdf);
+      const link = document.createElement("a");
+      link.href = pdfUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      try {
+        flushSync(() => {
+          setViewingInvoice((current) => current?.id === invoice.id ? null : current);
+          setOutcomeModal({
+            title: "Invoice download",
+            description: "Your invoice PDF download will start automatically. If it doesn’t start, try again.",
+          });
+        });
+
+        // Give the browser a chance to paint the modal before starting the download.
+        await new Promise<void>((resolve) => {
+          window.requestAnimationFrame(() => window.setTimeout(resolve, 0));
+        });
+        link.click();
+      } finally {
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(pdfUrl), 30_000);
+      }
+    } catch {
+      setOutcomeModal((current) => current?.title === "Invoice download" ? null : current);
+      setInvoiceDownload({ ...download, status: "error" });
+      return;
+    }
+
+    setInvoiceDownload(null);
   };
 
   const handleOpenSubmitPayment = (invoice: SubscriptionInvoice) => {
     setViewingInvoice(null);
-    setOpenRowMenuId(null);
     setModalError(null);
     setSubmitPaymentKey((k) => k + 1);
     setSubmitPaymentInvoice(invoice);
@@ -502,13 +647,9 @@ export function SubscriptionSettingsView({
                 Manage your plan, usage, invoices, and billing preferences.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setCompareOpen(true)}
-              className="inline-flex h-[34px] items-center justify-center rounded-[6px] border-[1.5px] border-[#C35000] bg-transparent px-3.5 text-[12.5px] font-semibold text-[#C35000] transition-colors hover:bg-[#C35000]/5"
-            >
+            <Button size="md" variant="brand-outline" onClick={() => setCompareOpen(true)}>
               Compare plans
-            </button>
+            </Button>
           </div>
 
           {/* Status Banners */}
@@ -894,6 +1035,19 @@ export function SubscriptionSettingsView({
               Billing history
             </h2>
 
+            {!viewingInvoice && (
+              <>
+                <div role="status">
+                  {downloadingInvoice && (
+                    <p className="mt-2 text-sm text-muted">Preparing PDF for {invoiceDownload.invoiceNumber}…</p>
+                  )}
+                </div>
+                {invoiceDownloadError && (
+                  <p role="alert" className="mt-2 text-sm text-danger">{invoiceDownloadError}</p>
+                )}
+              </>
+            )}
+
             {invoices.length === 0 ? (
               <div className="mt-4 rounded-[10px] border border-dashed border-[#E5E7EB] bg-[#FAFAFB] px-6 py-10 text-center">
                 <p className="text-sm font-semibold text-[#243242]">
@@ -906,7 +1060,7 @@ export function SubscriptionSettingsView({
               </div>
             ) : (
               <>
-                <div className="mt-4 overflow-x-auto">
+                <div className="mt-4 overflow-x-auto overflow-y-hidden">
                   <table className="w-full min-w-[680px] border-collapse text-left text-[13px]">
                     <thead>
                       <tr className="text-[12.5px] text-[#6B7280]">
@@ -975,56 +1129,18 @@ export function SubscriptionSettingsView({
                                 {statusLabel}
                               </span>
                             </td>
-                            <td className="relative py-4 pl-3 text-right">
-                              <button
-                                type="button"
-                                aria-label={`Actions for ${inv.invoiceNumber}`}
-                                onClick={() =>
-                                  setOpenRowMenuId((cur) =>
-                                    cur === inv.id ? null : inv.id,
-                                  )
+                            <td className="py-4 pl-3 text-right">
+                              <InvoiceRowActions
+                                invoiceNumber={inv.invoiceNumber}
+                                downloading={downloadingInvoice}
+                                onView={() => setViewingInvoice(inv)}
+                                onDownload={() => handleDownloadInvoicePdf(inv)}
+                                onSubmitPayment={
+                                  canEdit && (inv.status === "unpaid" || isOverdue)
+                                    ? () => handleOpenSubmitPayment(inv)
+                                    : undefined
                                 }
-                                className="inline-flex size-8 items-center justify-center rounded-lg text-[#4B5563] hover:bg-[#F3F4F6]"
-                              >
-                                <Icon name="more" className="size-4" />
-                              </button>
-
-                              {openRowMenuId === inv.id && (
-                                <div className="absolute right-3 top-12 z-20 w-48 rounded-[10px] border border-[#E5E7EB] bg-white py-1.5 text-left shadow-lg">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenRowMenuId(null);
-                                      setViewingInvoice(inv);
-                                    }}
-                                    className="block w-full px-3.5 py-2 text-xs font-medium text-[#243242] hover:bg-[#F9FAFB]"
-                                  >
-                                    View invoice
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      handleDownloadInvoicePdf(inv)
-                                    }
-                                    className="block w-full px-3.5 py-2 text-xs font-medium text-[#243242] hover:bg-[#F9FAFB]"
-                                  >
-                                    Download PDF
-                                  </button>
-                                  {canEdit &&
-                                    (inv.status === "unpaid" ||
-                                      inv.status === "overdue") && (
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          handleOpenSubmitPayment(inv)
-                                        }
-                                        className="block w-full px-3.5 py-2 text-xs font-semibold text-[#C35000] hover:bg-[#FFF7ED]"
-                                      >
-                                        Submit payment details
-                                      </button>
-                                    )}
-                                </div>
-                              )}
+                              />
                             </td>
                           </tr>
                         );
@@ -1199,6 +1315,8 @@ export function SubscriptionSettingsView({
         invoice={viewingInvoice}
         timezone={timezone}
         canEdit={canEdit}
+        downloading={downloadingInvoice}
+        downloadError={invoiceDownload?.invoiceId === viewingInvoice?.id ? invoiceDownloadError : undefined}
         onDownloadPdf={handleDownloadInvoicePdf}
         onOpenSubmitPayment={handleOpenSubmitPayment}
       />

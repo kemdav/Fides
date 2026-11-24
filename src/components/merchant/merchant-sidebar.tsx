@@ -115,7 +115,7 @@ export function MerchantSidebar({
         <nav aria-label="Merchant configuration" className="flex w-full flex-col gap-[clamp(1px,0.4vh,5px)]">
           {renderItem({ label: "Website settings", icon: "settings", suffix: "/settings/website" })}
           {renderItem({ label: "Booking settings", icon: "book-settings", suffix: "/settings/booking" })}
-          {renderItem({ label: "Subscription", icon: "card" })}
+          {renderItem({ label: "Subscription", icon: "card", suffix: "/settings/subscription" })}
         </nav>
         </>}
         <div className="flex-1" />
