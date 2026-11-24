@@ -9,7 +9,7 @@ export type Plan = {
   billed: string;
   description: string;
   includes?: string;
-  features: string[];
+  features: readonly string[];
   cta: string;
   href: string;
   background: string;
@@ -19,56 +19,82 @@ export type Plan = {
   featured?: boolean;
 };
 
-export function PlanCard({ plan }: { plan: Plan }) {
+export function PlanCard({
+  plan,
+  selection,
+}: {
+  plan: Plan;
+  selection?: { selected: boolean; onSelect: () => void };
+}) {
   const { featured } = plan;
+  const selected = selection?.selected;
+  const selectionClasses = selection && cn(
+    "relative isolate min-w-0 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-10 has-[:focus-visible]:outline-burnt",
+    selected && "before:pointer-events-none before:absolute before:-inset-2 before:-z-10 before:rounded-[34px] before:shadow-lg before:shadow-ink/25",
+    selected && (featured ? "before:bg-ink" : "before:bg-sky"),
+  );
 
   const card = (
     <article
       className={cn(
-        "group relative flex w-full max-w-[391px] flex-col px-[35px] pb-[51px] pt-10 xl:min-h-[927px]",
+        "group relative flex w-full max-w-[391px] flex-col",
+        selection ? "h-full rounded-[24px] px-4 pb-6 pt-5 sm:px-5" : "px-[35px] pb-[51px] pt-10 xl:min-h-[927px]",
+        !featured && selectionClasses,
         featured
           ? "text-white"
-          : "text-ink transition-[translate] duration-500 ease-out hover:-translate-y-2 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+          : !selection && "text-ink transition-[translate] duration-500 ease-out hover:-translate-y-2 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
       )}
     >
+      {selection && (
+        <input
+          type="radio"
+          name="registration-plan"
+          value={plan.name}
+          aria-label={plan.name}
+          checked={selection.selected}
+          onChange={selection.onSelect}
+          className="absolute inset-0 z-10 m-0 size-full cursor-pointer opacity-0"
+        />
+      )}
       <Image
         src={plan.background}
         alt=""
         fill
         aria-hidden
-        className={cn(
-          !featured &&
-            "drop-shadow-[0_3px_2px_rgb(9_16_29/0.24)]"
-        )}
+        className={cn(!featured && "drop-shadow-[0_3px_2px_rgb(9_16_29/0.24)]")}
       />
 
-      <header className="relative flex items-center gap-2.5">
+      <header className={cn("relative flex items-center", selection ? "gap-2" : "gap-2.5")}>
         <span
           className={cn(
-            "flex size-10 shrink-0 items-center justify-center rounded-[10px] border",
+            "flex shrink-0 items-center justify-center rounded-[10px] border",
+            selection ? "size-8" : "size-10",
             featured ? "border-mist" : "border-burnt/60"
           )}
         >
           <Image src={plan.icon} alt="" width={20} height={20} aria-hidden />
         </span>
-        <h3 className="text-2xl/7 font-semibold">{plan.name}</h3>
+        <h3 className={cn("font-semibold", selection ? "text-lg/6" : "text-2xl/7")}>{plan.name}</h3>
       </header>
 
       {featured && (
-        <span className="absolute right-[9px] top-[53px] -translate-y-1/2 text-base/6 font-semibold text-info">
+        <span className={cn(
+          "absolute font-semibold text-info",
+          selection ? "right-1 top-5 w-[26%] text-center text-xs/4" : "right-[9px] top-[53px] -translate-y-1/2 text-base/6",
+        )}>
           Most Popular
         </span>
       )}
 
-      <div className="relative mt-[38px] flex items-center gap-5 font-semibold">
-        <p className="text-[44px]/12">{plan.price}</p>
-        <div className="text-base/6">
+      <div className={cn("relative flex items-center font-semibold", selection ? "mt-6 flex-wrap gap-x-3 gap-y-1" : "mt-[38px] gap-5")}>
+        <p className={selection ? "text-3xl/9" : "text-[44px]/12"}>{plan.price}</p>
+        <div className={selection ? "text-sm/5" : "text-base/6"}>
           <p>/month (Php)</p>
           <p>{plan.billed}</p>
         </div>
       </div>
 
-      <p className="relative mt-[13px] min-h-[63px] pr-4 text-sm/normal">{plan.description}</p>
+      <p className={cn("relative mt-[13px] text-sm/normal", !selection && "min-h-[63px] pr-4")}>{plan.description}</p>
 
       <Image
         src={plan.divider}
@@ -76,7 +102,7 @@ export function PlanCard({ plan }: { plan: Plan }) {
         width={391}
         height={1}
         aria-hidden
-        className="relative -mx-[35px] mt-9 h-px w-[calc(100%+70px)] max-w-none"
+        className={cn("relative h-px max-w-none", selection ? "-mx-4 mt-5 w-[calc(100%+32px)] sm:-mx-5 sm:w-[calc(100%+40px)]" : "-mx-[35px] mt-9 w-[calc(100%+70px)]")}
       />
 
       {plan.includes && (
@@ -85,8 +111,8 @@ export function PlanCard({ plan }: { plan: Plan }) {
 
       <ul
         className={cn(
-          "relative -mr-6 flex flex-col gap-4",
-          plan.includes ? "mt-[22px]" : "mt-[34px]"
+          "relative flex flex-col",
+          selection ? "mt-4 gap-3" : cn("-mr-6 gap-4", plan.includes ? "mt-[22px]" : "mt-[34px]")
         )}
       >
         {plan.features.map((feature) => (
@@ -98,9 +124,15 @@ export function PlanCard({ plan }: { plan: Plan }) {
       </ul>
 
       <div className="relative mt-auto flex justify-center pt-8">
-        <Link href={plan.href} className={buttonClasses({ variant: "accent", size: "pill" })}>
-          {plan.cta}
-        </Link>
+        {selection ? (
+          <span className={buttonClasses({ variant: selected ? "solid" : "accent", size: "pill", className: "w-full" })}>
+            {selected ? "Selected" : "Choose plan"}
+          </span>
+        ) : (
+          <Link href={plan.href} className={buttonClasses({ variant: "accent", size: "pill" })}>
+            {plan.cta}
+          </Link>
+        )}
       </div>
     </article>
   );
@@ -108,7 +140,14 @@ export function PlanCard({ plan }: { plan: Plan }) {
   if (!featured) return card;
 
   return (
-    <div className="w-full max-w-[422px] rounded-[30px] bg-sky py-[15px] pl-[14px] drop-shadow-[0_3px_2px_rgb(9_16_29/0.24)]">
+    <div className={cn(
+      "w-full max-w-[422px] rounded-[30px] drop-shadow-[0_3px_2px_rgb(9_16_29/0.24)]",
+      selected
+        ? "after:pointer-events-none after:absolute after:inset-0 after:-z-[1] after:rounded-[30px] after:bg-sky"
+        : "bg-sky",
+      selection ? "flex p-2.5" : "py-[15px] pl-[14px]",
+      selectionClasses,
+    )}>
       {card}
     </div>
   );

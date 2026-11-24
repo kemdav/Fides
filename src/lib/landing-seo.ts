@@ -1,5 +1,5 @@
 import { features } from "@/components/landing/features";
-import { plans } from "@/components/landing/pricing";
+import { plans } from "@/components/landing/pricing-plans";
 import { siteConfig } from "@/lib/site";
 
 export const landingTitle = "Fides | Booking and Business Management for Service Businesses";

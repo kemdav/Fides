@@ -22,7 +22,6 @@ import {
   IDENTITY_DOCUMENT_SLOTS,
   documentByteLimit,
   ID_TYPES,
-  PLAN_OPTIONS,
   TRIAL_DAYS,
   type BusinessDocumentKey,
   type IdentityDocumentKey,
@@ -52,7 +51,6 @@ import {
 } from "@/lib/registration/address";
 import {
   PlanCardGrid,
-  PlanComparisonRow,
   SelectedPlanSummary,
 } from "./plan-selection";
 import { EmailVerificationStep } from "./email-verification-step";
@@ -1437,7 +1435,6 @@ function DocumentsStep({
     const upload = uploads[key];
     return [{ key, title, upload: upload?.file === file ? upload : undefined }];
   });
-  const uploaded = files.filter(({ upload }) => upload?.receipt).length;
   return (
     <form
       noValidate
@@ -1458,11 +1455,8 @@ function DocumentsStep({
           {summaryError}
         </p>
       ) : null}
-      <p className="mb-3 text-sm font-semibold text-muted" aria-live="polite">
-        {uploaded} of {ALL_DOCUMENTS.length} required documents uploaded
-      </p>
       <ul
-        className="mb-4 grid gap-2 text-base"
+        className="mb-4 grid gap-2 text-base empty:hidden"
         aria-label="Verification upload progress"
       >
         {files.map(({ key, title, upload }) => (
@@ -1554,36 +1548,6 @@ function PlanStep({
         selectedCode={values.planCode}
         onSelect={(code) => set("planCode", code)}
       />
-      <div className="mx-auto mt-6 w-full max-w-3xl overflow-x-auto rounded-xl border border-line bg-white">
-        <table className="w-full text-base">
-          <caption className="p-3 text-left font-semibold">
-            Compare plans
-          </caption>
-          <thead>
-            <tr>
-              <th scope="col" className="px-2 py-2 text-left">
-                Feature
-              </th>
-              {PLAN_OPTIONS.map((plan) => (
-                <th key={plan.code} scope="col" className="px-2 py-2">
-                  {plan.name}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {PLAN_OPTIONS.map((tier, tierIndex) => (
-              <PlanComparisonRow
-                key={tier.code}
-                feature={tier.features[0]}
-                availability={PLAN_OPTIONS.map(
-                  (_, index) => index >= tierIndex,
-                )}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
       {errors.planCode ? (
         <p role="alert" className="mt-3 text-center text-sm text-danger">
           {errors.planCode}
@@ -1594,7 +1558,7 @@ function PlanStep({
         {TRIAL_DAYS}-day free trial on all plans · No credit card required ·
         Cancel anytime
       </p>
-      <div className="mt-8 flex items-center justify-between gap-3">
+      <div className="mt-8 flex flex-wrap items-center justify-end gap-3">
         <button
           type="button"
           onClick={onBack}
@@ -1603,7 +1567,7 @@ function PlanStep({
             "border-burnt text-burnt hover:bg-burnt/5",
           )}
         >
-          <Icon name="arrow-left" className="size-4" /> Back
+          Back
         </button>
         <button type="submit" className={primaryButton}>
           Continue <Icon name="arrow-right" className="size-4" />
