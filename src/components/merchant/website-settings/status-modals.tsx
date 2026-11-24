@@ -152,7 +152,7 @@ export function PublishReviewModal({
             type="button"
             disabled={isPublishing}
             onClick={() => onPublish()}
-            className="inline-flex items-center justify-center h-10 px-5 text-sm font-semibold text-white bg-[#C35000] hover:bg-[#A94400] disabled:opacity-60 rounded-lg transition cursor-pointer"
+            className="inline-flex items-center justify-center h-10 px-5 text-sm font-semibold text-white bg-burnt hover:opacity-90 disabled:opacity-60 rounded-lg transition cursor-pointer"
           >
             {isPublishing ? "Publishing..." : "Publish website"}
           </button>
@@ -214,7 +214,7 @@ export function PublishedModal({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex items-center justify-center h-10 min-w-[132px] px-6 text-sm font-semibold text-white bg-[#C35000] hover:bg-[#A94400] rounded-lg transition cursor-pointer"
+            className="inline-flex items-center justify-center h-10 min-w-[132px] px-6 text-sm font-semibold text-white bg-burnt hover:opacity-90 rounded-lg transition cursor-pointer"
           >
             Close
           </button>
@@ -269,7 +269,7 @@ export function DraftSavedModal({ isOpen, onClose }: DraftSavedModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex items-center justify-center h-10 min-w-[132px] px-6 text-sm font-semibold text-white bg-[#C35000] hover:bg-[#A94400] rounded-lg transition cursor-pointer"
+            className="inline-flex items-center justify-center h-10 min-w-[132px] px-6 text-sm font-semibold text-white bg-burnt hover:opacity-90 rounded-lg transition cursor-pointer"
           >
             Close
           </button>

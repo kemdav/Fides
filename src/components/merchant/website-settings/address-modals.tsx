@@ -104,7 +104,7 @@ function ChangeAddressDialogContent({
             <label className="block text-xs font-semibold text-neutral-800 mb-1.5">
               New Fides address
             </label>
-            <div className="flex items-center rounded-lg border border-neutral-200 overflow-hidden focus-within:ring-2 focus-within:ring-[#C35000]/25 focus-within:border-[#C35000] bg-neutral-100/70">
+            <div className="flex items-center rounded-lg border border-neutral-200 overflow-hidden focus-within:ring-2 focus-within:ring-burnt/25 focus-within:border-burnt bg-neutral-100/70">
               <input
                 type="text"
                 value={subdomain}
@@ -147,7 +147,7 @@ function ChangeAddressDialogContent({
             type="button"
             disabled={isSubmitting}
             onClick={handleConfirm}
-            className="inline-flex items-center justify-center h-10 px-5 text-sm font-semibold text-white bg-[#C35000] hover:bg-[#A94400] disabled:opacity-60 rounded-lg transition cursor-pointer"
+            className="inline-flex items-center justify-center h-10 px-5 text-sm font-semibold text-white bg-burnt hover:opacity-90 disabled:opacity-60 rounded-lg transition cursor-pointer"
           >
             {isSubmitting ? "Updating..." : "Confirm address"}
           </button>

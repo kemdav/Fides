@@ -129,7 +129,7 @@ function ColorPickerContent({
               onChange={(e) => setSelectedHex(e.target.value)}
               maxLength={7}
               placeholder="#000000"
-              className="w-full px-3 py-2.5 rounded-lg border border-neutral-300 font-mono text-xs uppercase text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#C35000]/25 focus:border-[#C35000] transition"
+              className="w-full px-3 py-2.5 rounded-lg border border-neutral-300 font-mono text-xs uppercase text-neutral-900 focus:outline-none focus:ring-2 focus:ring-burnt/25 focus:border-burnt transition"
             />
             <p className="mt-1 text-[11px] text-neutral-400">
               Choose a color or enter a 6-digit HEX value.
@@ -171,7 +171,7 @@ function ColorPickerContent({
           <button
             type="button"
             onClick={handleApply}
-            className="inline-flex items-center justify-center h-10 px-5 text-sm font-semibold text-white bg-[#C35000] hover:bg-[#A94400] rounded-lg transition cursor-pointer"
+            className="inline-flex items-center justify-center h-10 px-5 text-sm font-semibold text-white bg-burnt hover:opacity-90 rounded-lg transition cursor-pointer"
           >
             Apply color
           </button>

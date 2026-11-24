@@ -371,7 +371,7 @@ export function ConnectDomainModal({
               type="button"
               disabled={isChecking}
               onClick={handleCheckDnsStatus}
-              className="inline-flex items-center justify-center gap-1.5 h-10 px-5 text-sm font-semibold text-white bg-[#C35000] hover:bg-[#A94400] disabled:opacity-60 rounded-lg transition cursor-pointer"
+              className="inline-flex items-center justify-center gap-1.5 h-10 px-5 text-sm font-semibold text-white bg-burnt hover:opacity-90 disabled:opacity-60 rounded-lg transition cursor-pointer"
             >
               {isChecking ? (
                 <>
