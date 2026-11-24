@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MerchantSidebar } from "@/components/merchant/merchant-sidebar";
+import { AdminButton } from "@/components/admin/admin-button";
 import { Surface } from "@/components/admin/primitives";
 import {
   cancelCustomerInviteAction,
@@ -318,14 +319,15 @@ export function CustomersRegistryView({
               One customer registry for online bookings and in-person visits.
             </p>
           </div>
-          <button
-            type="button"
+          <AdminButton
+            variant="primary"
+            size="sm"
             onClick={() => setShowAddModal(true)}
-            className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#C35000] px-4 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-[#A64400]"
+            className="gap-2 shadow-xs"
           >
             <span className="text-base leading-none">+</span>
             <span>Add Customer</span>
-          </button>
+          </AdminButton>
         </header>
 
         {errorBanner && (

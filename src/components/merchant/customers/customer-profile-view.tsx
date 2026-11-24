@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { MerchantSidebar } from "@/components/merchant/merchant-sidebar";
+import { AdminLinkButton } from "@/components/admin/admin-button";
 import { Surface } from "@/components/admin/primitives";
 import {
   addCustomerNoteAction,
@@ -260,19 +261,21 @@ export function CustomerProfileView({
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="font-display text-[28px] leading-[36px] text-[#1E293B] sm:text-[32px] sm:leading-[40px]">
-              Customer profile
+              Customer Profile
             </h1>
             <p className="mt-1 text-sm text-[#64748B]">
               View customer information, account access, notes, and visit
               history.
             </p>
           </div>
-          <Link
+          <AdminLinkButton
             href={appointmentsHref}
-            className="inline-flex h-10 items-center justify-center rounded-lg border-2 border-[#C35000] bg-white px-4 text-xs font-semibold text-[#C35000] transition-colors hover:bg-[#FFF7ED]"
+            variant="outline-accent"
+            size="sm"
+            className="bg-white"
           >
             Book Appointment
-          </Link>
+          </AdminLinkButton>
         </header>
 
         {errorBanner && (
@@ -608,7 +611,7 @@ export function CustomerProfileView({
         <Surface className="rounded-xl border border-[#ECEAE0] bg-white p-0">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#F1EFE7] px-6 py-4">
             <h3 className="text-base font-semibold text-[#1E293B]">
-              Visit history
+              Visit History
             </h3>
             {customer.visits.length > 5 && (
               <button

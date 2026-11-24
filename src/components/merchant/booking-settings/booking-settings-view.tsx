@@ -393,7 +393,7 @@ export function BookingSettingsView({
           {/* Page Header */}
           <header className="flex flex-col gap-1">
             <h1 className="font-display text-[28px] leading-[36px] text-[#1E293B] sm:text-[32px] sm:leading-[40px]">
-              Booking settings
+              Booking Settings
             </h1>
             <p className="text-sm leading-relaxed text-[#64748B]">
               Set the rules that shape your customer booking experience.
@@ -445,7 +445,7 @@ export function BookingSettingsView({
               {/* Card 1: Workflow & Approvals */}
               <Surface className="rounded-xl border border-[#ECEAE0] bg-white p-5 sm:p-6">
                 <h2 className="text-base font-semibold text-[#1E293B]">
-                  Workflow &amp; approvals
+                  Workflow &amp; Approvals
                 </h2>
                 <p className="mt-1 text-xs leading-relaxed text-[#64748B]">
                   Choose how new booking requests are confirmed.
@@ -505,7 +505,7 @@ export function BookingSettingsView({
               {/* Card 2: Staff & Capacity */}
               <Surface className="rounded-xl border border-[#ECEAE0] bg-white p-5 sm:p-6">
                 <h2 className="text-base font-semibold text-[#1E293B]">
-                  Staff &amp; capacity
+                  Staff &amp; Capacity
                 </h2>
                 <p className="mt-1 text-xs leading-relaxed text-[#64748B]">
                   Choose how staff are assigned and reserve preparation time.
