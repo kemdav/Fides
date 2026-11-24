@@ -146,6 +146,8 @@ type DatabaseCore = {
           ends_at: string;
           id: string;
           notes: string | null;
+          paid_cents: number;
+          payment_status: "unpaid" | "partial" | "paid";
           source: Database["public"]["Enums"]["booking_source"];
           staff_id: string;
           starts_at: string;
@@ -166,6 +168,8 @@ type DatabaseCore = {
           ends_at: string;
           id?: string;
           notes?: string | null;
+          paid_cents?: number;
+          payment_status?: "unpaid" | "partial" | "paid";
           source?: Database["public"]["Enums"]["booking_source"];
           staff_id: string;
           starts_at: string;
@@ -185,6 +189,8 @@ type DatabaseCore = {
           ends_at?: string;
           id?: string;
           notes?: string | null;
+          paid_cents?: number;
+          payment_status?: "unpaid" | "partial" | "paid";
           source?: Database["public"]["Enums"]["booking_source"];
           staff_id?: string;
           starts_at?: string;
@@ -648,11 +654,22 @@ type DatabaseCore = {
           customer_id: string | null;
           id: string;
           method: Database["public"]["Enums"]["payment_method"];
+          net_cents: number;
+          notes: string | null;
           paid_at: string | null;
+          recorded_by: string | null;
           reference: string | null;
+          reference_number: string | null;
+          refund_reason: string | null;
+          refunded_at: string | null;
+          refunded_by: string | null;
           status: Database["public"]["Enums"]["payment_status"];
           tenant_id: string;
           updated_at: string;
+          vat_cents: number;
+          void_reason: string | null;
+          voided_at: string | null;
+          voided_by: string | null;
         };
         ComputedFields: never;
         Insert: {
@@ -664,11 +681,22 @@ type DatabaseCore = {
           customer_id?: string | null;
           id?: string;
           method?: Database["public"]["Enums"]["payment_method"];
+          net_cents?: number;
+          notes?: string | null;
           paid_at?: string | null;
+          recorded_by?: string | null;
           reference?: string | null;
+          reference_number?: string | null;
+          refund_reason?: string | null;
+          refunded_at?: string | null;
+          refunded_by?: string | null;
           status?: Database["public"]["Enums"]["payment_status"];
           tenant_id: string;
           updated_at?: string;
+          vat_cents?: number;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
         };
         Update: {
           amount_cents?: number;
@@ -679,11 +707,22 @@ type DatabaseCore = {
           customer_id?: string | null;
           id?: string;
           method?: Database["public"]["Enums"]["payment_method"];
+          net_cents?: number;
+          notes?: string | null;
           paid_at?: string | null;
+          recorded_by?: string | null;
           reference?: string | null;
+          reference_number?: string | null;
+          refund_reason?: string | null;
+          refunded_at?: string | null;
+          refunded_by?: string | null;
           status?: Database["public"]["Enums"]["payment_status"];
           tenant_id?: string;
           updated_at?: string;
+          vat_cents?: number;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
         };
         Relationships: [
           {
@@ -1595,6 +1634,7 @@ type DatabaseCore = {
           time_zone: string;
           typography: string;
           updated_at: string;
+          vat_rate_percent: number;
         };
         ComputedFields: never;
         Insert: {
@@ -1646,6 +1686,7 @@ type DatabaseCore = {
           time_zone?: string;
           typography?: string;
           updated_at?: string;
+          vat_rate_percent?: number;
         };
         Update: {
           about?: string | null;
@@ -1696,6 +1737,7 @@ type DatabaseCore = {
           time_zone?: string;
           typography?: string;
           updated_at?: string;
+          vat_rate_percent?: number;
         };
         Relationships: [
           {
@@ -2032,8 +2074,8 @@ type DatabaseCore = {
       booking_source: "online" | "walk_in" | "phone";
       commission_type: "fixed" | "percentage";
       notification_channel: "in_app" | "email" | "sms";
-      payment_method: "cash" | "gcash" | "maya" | "card" | "bank_transfer" | "other";
-      payment_status: "pending" | "paid" | "refunded" | "voided" | "failed";
+      payment_method: "cash" | "gcash" | "maya" | "card" | "bank_transfer" | "other" | "ewallet";
+      payment_status: "pending" | "paid" | "refunded" | "voided" | "failed" | "partial" | "unpaid";
       resource_type: "room" | "chair" | "equipment" | "vehicle" | "other";
       review_status: "pending" | "published" | "hidden";
       subscription_status: "trialing" | "active" | "past_due" | "cancelled" | "expired";
@@ -2344,8 +2386,8 @@ export const Constants = {
       booking_source: ["online", "walk_in", "phone"],
       commission_type: ["fixed", "percentage"],
       notification_channel: ["in_app", "email", "sms"],
-      payment_method: ["cash", "gcash", "maya", "card", "bank_transfer", "other"],
-      payment_status: ["pending", "paid", "refunded", "voided", "failed"],
+      payment_method: ["cash", "gcash", "maya", "card", "bank_transfer", "other", "ewallet"],
+      payment_status: ["pending", "paid", "refunded", "voided", "failed", "partial", "unpaid"],
       resource_type: ["room", "chair", "equipment", "vehicle", "other"],
       review_status: ["pending", "published", "hidden"],
       subscription_status: ["trialing", "active", "past_due", "cancelled", "expired"],

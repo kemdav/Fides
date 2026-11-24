@@ -27,7 +27,7 @@ const manageItems: NavigationItem[] = [
   { label: "Services", icon: "layers", access: "operations" },
   { label: "Staff & permissions", icon: "shield", suffix: "/staff", access: "management" },
   { label: "Availability", icon: "clock", access: "operations" },
-  { label: "Payments", icon: "card", access: "operations" },
+  { label: "Payments", icon: "card", suffix: "/payments", access: "operations" },
   { label: "Reports", icon: "document", access: "management" },
 ];
 
