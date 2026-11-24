@@ -98,7 +98,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ s
           </Surface>
 
           <Surface className="space-y-5 border border-hairline">
-            <h2 className="text-lg font-semibold">Staff details</h2>
+            <h2 className="text-lg font-semibold">Staff Details</h2>
             <div className="grid gap-5 lg:grid-cols-2">
               <dl className="space-y-4 rounded-lg border border-hairline p-4">
                 <div>
@@ -111,7 +111,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ s
                 </div>
               </dl>
               <div className="space-y-3 rounded-lg border border-hairline p-4">
-                <h3 className="text-sm font-semibold">Assigned services</h3>
+                <h3 className="text-sm font-semibold">Assigned Services</h3>
                 {services.length ? (
                   <ul className="flex flex-wrap gap-2">
                     {services.map((service) => (
@@ -126,7 +126,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ s
           <Surface className="space-y-4 border border-hairline">
             <div id="staff-working-hours" className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold">Working hours &amp; breaks</h2>
+                <h2 className="text-lg font-semibold">Working Hours &amp; Breaks</h2>
                 <p className="mt-1 text-xs text-muted">{dateLabel.formatRange(firstDay, lastDay)} · {timezone}</p>
               </div>
               <StaffSchedulePreview tenantId={tenant.id} staffId={staffId} name={managedStaff.fullName}

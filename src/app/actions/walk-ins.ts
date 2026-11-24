@@ -256,7 +256,21 @@ export async function createSafeWalkInAppointmentAction(input: {
       .gt("ends_at", startsAt);
 
     const busyIds = new Set((overlapping ?? []).map((o) => o.staff_id));
-    const freeStaff = (allStaff ?? []).find((s) => !busyIds.has(s.id));
+
+    // Filter by staff_service_skills if restrictions are configured (QA #1)
+    const { data: skills } = await supabase
+      .from("staff_service_skills")
+      .select("staff_id")
+      .eq("tenant_id", tenantId)
+      .eq("service_id", service.id);
+
+    const eligibleStaffSet =
+      skills && skills.length > 0 ? new Set(skills.map((s) => s.staff_id)) : null;
+    const candidates = eligibleStaffSet
+      ? (allStaff ?? []).filter((s) => eligibleStaffSet.has(s.id))
+      : (allStaff ?? []);
+
+    const freeStaff = candidates.find((s) => !busyIds.has(s.id));
 
     if (!freeStaff) {
       return {
@@ -280,6 +294,25 @@ export async function createSafeWalkInAppointmentAction(input: {
     if (!member) {
       return { success: false, error: "Selected staff member not found.", code: "VALIDATION" };
     }
+
+    // Verify against staff_service_skills for this service (QA #1)
+    const { data: skills } = await supabase
+      .from("staff_service_skills")
+      .select("staff_id")
+      .eq("tenant_id", tenantId)
+      .eq("service_id", service.id);
+
+    if (skills && skills.length > 0) {
+      const isEligible = skills.some((s) => s.staff_id === input.staffId);
+      if (!isEligible) {
+        return {
+          success: false,
+          error: "Selected staff member is not eligible for this service.",
+          code: "VALIDATION",
+        };
+      }
+    }
+
     targetStaffName = member.full_name;
   }
 
