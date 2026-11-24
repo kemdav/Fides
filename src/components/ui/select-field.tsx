@@ -28,13 +28,13 @@ export function SelectField<T extends string = string>({
   labelledBy,
   compact = false,
   disabled = false,
-  placement = "below",
+  placement = "auto",
   ...valueProps
 }: SelectValueProps<T> & {
   id?: string;
   options: readonly SelectOption<T>[];
-  /** open the list above the trigger (use near the bottom of a dialog) */
-  placement?: "above" | "below";
+  /** where the list opens; "auto" flips above when there is no room below */
+  placement?: "auto" | "above" | "below";
   invalid?: boolean;
   placeholder?: string;
   className?: string;
@@ -45,6 +45,7 @@ export function SelectField<T extends string = string>({
   disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [flipUp, setFlipUp] = useState(false);
   const multiple = valueProps.multiple === true;
   const isSelected = (optionValue: T) => (valueProps.multiple ? valueProps.value.includes(optionValue) : valueProps.value === optionValue);
   const selectedIndex = valueProps.multiple ? options.findIndex((option) => isSelected(option.value)) : options.findIndex((option) => option.value === valueProps.value);
@@ -57,6 +58,12 @@ export function SelectField<T extends string = string>({
   useOutsideClose(open, () => setOpen(false), wrapRef);
 
   function openList() {
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (rect) {
+      const need = Math.min(240, options.length * 38 + 8) + 90;
+      const below = window.innerHeight - rect.bottom;
+      setFlipUp(below < need && rect.top > below);
+    }
     setActive(Math.max(0, selectedIndex));
     setOpen(true);
   }
@@ -164,7 +171,7 @@ export function SelectField<T extends string = string>({
           aria-label={ariaLabel}
           aria-labelledby={labelledBy ?? id}
           aria-multiselectable={multiple || undefined}
-          className={cn("absolute left-0 right-0 z-30 flex max-h-60 flex-col gap-0.5 overflow-auto rounded-lg border border-hairline bg-white p-1 shadow-popover", placement === "above" ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]")}
+          className={cn("absolute left-0 z-30 w-max min-w-full max-w-[min(20rem,calc(100vw-3rem))] flex max-h-60 flex-col gap-0.5 overflow-auto rounded-lg border border-hairline bg-white p-1 shadow-popover", placement === "above" || (placement === "auto" && flipUp) ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]")}
         >
           {options.map((option, index) => {
             const selected = isSelected(option.value);

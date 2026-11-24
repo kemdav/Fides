@@ -111,6 +111,11 @@ export function Listbox(props: ListboxProps) {
   );
 }
 
+function todayIso(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
 interface CalendarPickerProps {
   id: string;
   label: string;
@@ -123,7 +128,7 @@ export function CalendarPicker({ id, label, required, value, onChange }: Calenda
   return (
     <div>
       <PickerLabel id={id} label={label} required={required} />
-      <DatePicker id={id} value={value} onChange={onChange} placeholder="Select a date" ariaLabel="Choose appointment date" />
+      <DatePicker id={id} value={value} onChange={onChange} min={todayIso()} placeholder="Select a date" ariaLabel="Choose appointment date" />
     </div>
   );
 }
@@ -495,7 +500,7 @@ export function NewAppointmentModal({
                       className={fieldCls}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-1.5">
                       <label htmlFor="new-customer-phone" className="block text-sm font-semibold text-ink">
                         Contact number <span className="text-burnt">*</span>
@@ -581,7 +586,7 @@ export function NewAppointmentModal({
                 </div>
 
                 {/* Service + Staff row */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Listbox
                     id="service-select"
                     label="Service or package"
@@ -611,7 +616,7 @@ export function NewAppointmentModal({
                 )}
 
                 {/* Resource + Add-ons row */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Listbox
                     id="resource-select"
                     label="Required resource"
@@ -641,7 +646,7 @@ export function NewAppointmentModal({
                   <h3 className="text-base font-bold text-ink">Date &amp; time</h3>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <CalendarPicker
                     id="appt-date"
                     label="Date"

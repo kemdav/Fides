@@ -75,6 +75,7 @@ export function DatePicker({
     return { y: base.y, m: base.m };
   };
   const [open, setOpen] = useState(false);
+  const [flipUp, setFlipUp] = useState(false);
   const [view, setView] = useState<"days" | "years">("days");
   const [cursor, setCursor] = useState<{ y: number; m: number }>(startParts);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -94,6 +95,11 @@ export function DatePicker({
 
   function toggle() {
     if (open) return close();
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (rect) {
+      const below = window.innerHeight - rect.bottom;
+      setFlipUp(below < 430 && rect.top > below);
+    }
     setCursor(startParts());
     setView("days");
     setOpen(true);
@@ -162,7 +168,7 @@ export function DatePicker({
           id={panelId}
           role="dialog"
           aria-label={ariaLabel}
-          className="absolute left-0 top-[calc(100%+6px)] z-30 w-[288px] rounded-lg border border-hairline bg-white p-3 shadow-popover max-sm:right-0 max-sm:w-auto"
+          className={cn("absolute left-0 z-30 w-[288px] rounded-lg border border-hairline bg-white p-3 shadow-popover max-sm:right-0 max-sm:w-auto", flipUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]")}
         >
           <div className="mb-2 flex items-center justify-between gap-2">
             <button

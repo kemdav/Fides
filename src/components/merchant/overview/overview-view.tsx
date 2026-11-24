@@ -756,13 +756,13 @@ export function OverviewView({
                 </span>
               </div>
 
-              <div className="flex w-full items-center gap-2.5 sm:w-auto">
+              <div className="flex w-full flex-wrap items-center gap-2.5 sm:w-auto">
                 <SearchField
                   aria-label="Search customer or service"
                   placeholder="Search customer or service"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="min-w-0 flex-1 sm:w-80 sm:flex-none"
+                  className="w-full sm:w-80"
                 />
 
                 <div className="relative shrink-0" onKeyDown={(event) => {
