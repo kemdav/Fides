@@ -415,7 +415,6 @@ export function AppointmentsView({
         <PageContent>
           {/* Page Heading */}
           <PageHeading
-            eyebrow={businessName}
             title="Appointments"
             description="Manage bookings, approvals, and appointment outcomes in one place."
             actions={canManage && (

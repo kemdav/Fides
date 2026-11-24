@@ -4,6 +4,7 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 import { MerchantSidebar } from "@/components/merchant/merchant-sidebar";
 import { Icon } from "@/components/admin/icon";
+import { AdminButton } from "@/components/admin/admin-button";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   archiveAddonAction,
@@ -1301,36 +1302,39 @@ export function ServicesView({
 
             {/* 3 Rectangular Action Buttons (Figma Reference Variation Aligned) */}
             <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
+              <AdminButton
+                variant="primary"
+                size="sm"
                 onClick={() => {
                   setEditingAddon(null);
                   setAddonModalOpen(true);
                 }}
-                className="rounded-lg bg-[#C84B00] px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#A94400] transition"
+                className="shadow-xs"
               >
                 + Add Add-on
-              </button>
-              <button
-                type="button"
+              </AdminButton>
+              <AdminButton
+                variant="primary"
+                size="sm"
                 onClick={() => {
                   setEditingService(null);
                   setServiceModalOpen(true);
                 }}
-                className="rounded-lg bg-[#C84B00] px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#A94400] transition"
+                className="shadow-xs"
               >
                 + Add Service
-              </button>
-              <button
-                type="button"
+              </AdminButton>
+              <AdminButton
+                variant="outline-accent"
+                size="sm"
                 onClick={() => {
                   setEditingPackage(null);
                   setPackageModalOpen(true);
                 }}
-                className="rounded-lg border border-[#C84B00] bg-white px-3.5 py-2 text-xs font-semibold text-[#C84B00] shadow-2xs hover:bg-[#C84B00]/5 transition"
+                className="bg-white shadow-2xs"
               >
                 + Create Package
-              </button>
+              </AdminButton>
             </div>
           </div>
 
@@ -1380,8 +1384,8 @@ export function ServicesView({
                 <h2 className="text-base font-semibold text-neutral-900">
                   {activeTab === "services" && "Service Catalog"}
                   {activeTab === "packages" && "Packages"}
-                  {activeTab === "addons" && "Add-ons"}
-                  {activeTab === "archived" && "Hidden services"}
+                  {activeTab === "addons" && "Add-Ons"}
+                  {activeTab === "archived" && "Hidden Services"}
                 </h2>
               </div>
 

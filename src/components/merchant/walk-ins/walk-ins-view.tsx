@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { AdminButton } from "@/components/admin/admin-button";
 import { createClient } from "@/lib/supabase/client";
 import {
   getWalkInWorkspaceAction,
@@ -193,7 +194,7 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="font-display text-[32px] leading-tight text-body">
-            Walk-ins &amp; waiting list
+            Walk-Ins &amp; Waiting List
           </h1>
           <p className="mt-1 text-sm text-muted">
             Welcome every walk-in. Fill available slots without displacing
@@ -201,16 +202,17 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
           </p>
         </div>
 
-        <button
-          type="button"
+        <AdminButton
+          variant="primary"
+          size="sm"
           onClick={() => {
             setDefaultModalStaffId("any");
             setWalkInOpen(true);
           }}
-          className="inline-flex h-10 shrink-0 items-center justify-center rounded-md bg-burnt px-4 text-sm font-semibold text-white shadow-xs transition hover:bg-burnt/90"
+          className="shrink-0 shadow-xs"
         >
           + Add walk-in
-        </button>
+        </AdminButton>
       </div>
 
       {/* 4 KPI Cards */}
@@ -449,7 +451,7 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
 
       {/* Available Now Table */}
       <section className="rounded-xl border border-hairline bg-white p-5 shadow-xs">
-        <h2 className="text-base font-semibold text-ink">Available now</h2>
+        <h2 className="text-base font-semibold text-ink">Available Now</h2>
 
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[640px] border-collapse text-left text-sm">

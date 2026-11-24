@@ -312,18 +312,17 @@ export function WebsiteSettingsView({
         <PageContent>
           {/* Page Heading */}
           <PageHeading
-            eyebrow="CONFIGURATION"
-            title="Website settings"
+            title="Website Settings"
             description="Set your logo, colors and homepage content. Preview your changes before publishing."
             actions={
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <span className="inline-flex items-center gap-1.5 rounded-md bg-wash px-2.5 py-1 text-xs font-semibold leading-[18px] text-success">
                   <span className="w-1.5 h-1.5 rounded-full bg-success" />
                   Website is live
                 </span>
                 <AdminButton
                   variant="outline"
-                  size="xs"
+                  size="sm"
                   onClick={() => setIsLivePreviewOpen(true)}
                 >
                   <EyeIcon className="w-3.5 h-3.5" />
@@ -365,7 +364,7 @@ export function WebsiteSettingsView({
                   <div className="flex items-center justify-between border-b border-hairline pb-4">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-subtle">01</span>
-                      <h2 className="text-sm font-semibold text-ink">Brand identity</h2>
+                      <h2 className="text-sm font-semibold text-ink">Brand Identity</h2>
                     </div>
                     <span className="text-xs text-muted">Visible across your website</span>
                   </div>
@@ -491,7 +490,7 @@ export function WebsiteSettingsView({
                   <div className="flex items-center justify-between border-b border-hairline pb-4">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-subtle">02</span>
-                      <h2 className="text-sm font-semibold text-ink">Homepage content</h2>
+                      <h2 className="text-sm font-semibold text-ink">Homepage Content</h2>
                     </div>
                     <span className="text-xs text-muted">Make it feel like you</span>
                   </div>
@@ -707,7 +706,7 @@ export function WebsiteSettingsView({
                 <Surface className="space-y-4">
                   <div className="border-b border-hairline pb-4">
                     <span className="text-xs font-bold text-subtle block">01 · PUBLIC PROFILE</span>
-                    <h2 className="text-sm font-semibold text-ink mt-1">Help customers get to know you</h2>
+                    <h2 className="text-sm font-semibold text-ink mt-1">Help Customers Get to Know You</h2>
                     <p className="text-xs text-muted">These details appear on your About &amp; contact page.</p>
                   </div>
                   <div className="space-y-4">
@@ -737,7 +736,7 @@ export function WebsiteSettingsView({
                 <Surface className="space-y-4">
                   <div className="border-b border-hairline pb-4">
                     <span className="text-xs font-bold text-subtle block">02 · CUSTOMER CONTACT</span>
-                    <h2 className="text-sm font-semibold text-ink mt-1">Make it easy to reach you</h2>
+                    <h2 className="text-sm font-semibold text-ink mt-1">Make It Easy to Reach You</h2>
                     <p className="text-xs text-muted">Use contact details your customers can access.</p>
                   </div>
                   <div className="space-y-4">
@@ -762,7 +761,7 @@ export function WebsiteSettingsView({
                 <Surface className="space-y-4">
                   <div className="border-b border-hairline pb-4">
                     <span className="text-xs font-bold text-subtle block">03 · LOCATION</span>
-                    <h2 className="text-sm font-semibold text-ink mt-1">Where customers can find you</h2>
+                    <h2 className="text-sm font-semibold text-ink mt-1">Where Customers Can Find You</h2>
                     <p className="text-xs text-muted">Shown with your contact details on the website.</p>
                   </div>
                   <div className="space-y-4">
@@ -786,7 +785,7 @@ export function WebsiteSettingsView({
                 <Surface className="space-y-4">
                   <div className="border-b border-hairline pb-4">
                     <span className="text-xs font-bold text-subtle block">04 · OPENING HOURS</span>
-                    <h2 className="text-sm font-semibold text-ink mt-1">Set clear expectations</h2>
+                    <h2 className="text-sm font-semibold text-ink mt-1">Set Clear Expectations</h2>
                     <p className="text-xs text-muted">These are display hours. Appointment availability follows Booking settings.</p>
                   </div>
                   <div className="space-y-2 text-sm">
@@ -832,7 +831,7 @@ export function WebsiteSettingsView({
                   <div className="flex items-start justify-between border-b border-hairline pb-4">
                     <div>
                       <span className="text-xs font-bold text-subtle block">01 · WEBSITE ADDRESS</span>
-                      <h2 className="text-sm font-semibold text-ink mt-1">Your home on the web</h2>
+                      <h2 className="text-sm font-semibold text-ink mt-1">Your Home on the Web</h2>
                       <p className="text-xs text-muted">Share this address with customers so they can book directly.</p>
                     </div>
                     <span className="inline-flex items-center rounded-md bg-wash px-2 py-1 text-xs font-semibold leading-[18px] text-success">
@@ -875,7 +874,7 @@ export function WebsiteSettingsView({
                 <Surface className="space-y-5">
                   <div className="border-b border-hairline pb-4">
                     <span className="text-xs font-bold text-subtle block">02 · CUSTOM DOMAIN</span>
-                    <h2 className="text-sm font-semibold text-ink mt-1">Bring your own domain</h2>
+                    <h2 className="text-sm font-semibold text-ink mt-1">Bring Your Own Domain</h2>
                     <p className="text-xs text-muted">Connect a domain you already own. Keep the Fides address as a fallback.</p>
                   </div>
                   <div>
@@ -897,7 +896,7 @@ export function WebsiteSettingsView({
               <div className="lg:col-span-5 space-y-4">
                 <Surface className="space-y-4">
                   <span className="text-xs font-bold text-subtle block">CUSTOMER LINK</span>
-                  <h3 className="text-sm font-semibold text-ink">One link. A simple way to book.</h3>
+                  <h3 className="text-sm font-semibold text-ink">One Link. A Simple Way to Book.</h3>
                   <div className="rounded-lg border border-hairline bg-mist p-4 space-y-1">
                     <span className="text-sm font-bold text-ink block">{form.businessName}</span>
                     <span className="font-mono text-xs text-muted block">{form.subdomain}.fides.app</span>
@@ -923,7 +922,7 @@ export function WebsiteSettingsView({
                 <Surface className="space-y-5">
                   <div className="border-b border-hairline pb-4">
                     <span className="text-xs font-bold text-subtle block">01 · SEARCH LISTING</span>
-                    <h2 className="text-sm font-semibold text-ink mt-1">Help the right customers find you</h2>
+                    <h2 className="text-sm font-semibold text-ink mt-1">Help the Right Customers Find You</h2>
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
@@ -944,7 +943,7 @@ export function WebsiteSettingsView({
                 <Surface className="space-y-5">
                   <div className="border-b border-hairline pb-4">
                     <span className="text-xs font-bold text-subtle block">02 · SOCIAL SHARING</span>
-                    <h2 className="text-sm font-semibold text-ink mt-1">Look good when your link is shared</h2>
+                    <h2 className="text-sm font-semibold text-ink mt-1">Look Good When Your Link Is Shared</h2>
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-ink mb-1.5">Social preview title</label>

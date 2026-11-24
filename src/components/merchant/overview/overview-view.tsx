@@ -3,15 +3,29 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { canManageBookings, type WorkspaceRole } from "@/lib/merchant/workspace-roles";
+import {
+  canManageBookings,
+  type WorkspaceRole,
+} from "@/lib/merchant/workspace-roles";
 import { MerchantSidebar } from "../merchant-sidebar";
 import { Icon } from "@/components/admin/icon";
 import { AdminButton } from "@/components/admin/admin-button";
 import { MetricCard } from "@/components/admin/metric-card";
-import { PageContent, PageHeading, StatusPill, Surface } from "@/components/admin/primitives";
+import {
+  PageContent,
+  PageHeading,
+  StatusPill,
+  Surface,
+} from "@/components/admin/primitives";
 import { AppointmentDetailsModal } from "./appointment-details-modal";
-import { NewAppointmentModal, type NewAppointmentResult } from "@/components/merchant/new-appointment-modal";
-import { WalkInModal, type WalkInResult } from "@/components/merchant/walk-in-modal";
+import {
+  NewAppointmentModal,
+  type NewAppointmentResult,
+} from "@/components/merchant/new-appointment-modal";
+import {
+  WalkInModal,
+  type WalkInResult,
+} from "@/components/merchant/walk-in-modal";
 import { EmptyState } from "@/components/ui/empty-state";
 
 export interface AppointmentRow {
@@ -21,7 +35,13 @@ export interface AppointmentRow {
   service: string;
   staff: string;
   source: "Online" | "Walk-In" | "Phone";
-  status: "Confirmed" | "Pending approval" | "Check In" | "In service" | "Completed" | "Cancelled";
+  status:
+    | "Confirmed"
+    | "Pending approval"
+    | "Check In"
+    | "In service"
+    | "Completed"
+    | "Cancelled";
   startsAt?: string;
   calendarDate?: string;
   rawStatus?: string;
@@ -64,14 +84,21 @@ export interface OverviewViewProps {
 
 const EMPTY_APPOINTMENTS: AppointmentRow[] = [];
 
-function AppointmentStatusPill({ status }: { status: AppointmentRow["status"] }) {
-  const toneMap: Record<AppointmentRow["status"], { tone: React.ComponentProps<typeof StatusPill>["tone"]; label: string }> = {
-    "Confirmed":        { tone: "success",  label: "Confirmed" },
-    "Pending approval": { tone: "warning",  label: "Pending approval" },
-    "Check In":         { tone: "info",     label: "Check In" },
-    "In service":       { tone: "info",     label: "In service" },
-    "Completed":        { tone: "neutral",  label: "Completed" },
-    "Cancelled":        { tone: "danger",   label: "Cancelled" },
+function AppointmentStatusPill({
+  status,
+}: {
+  status: AppointmentRow["status"];
+}) {
+  const toneMap: Record<
+    AppointmentRow["status"],
+    { tone: React.ComponentProps<typeof StatusPill>["tone"]; label: string }
+  > = {
+    Confirmed: { tone: "success", label: "Confirmed" },
+    "Pending approval": { tone: "warning", label: "Pending approval" },
+    "Check In": { tone: "info", label: "Check In" },
+    "In service": { tone: "info", label: "In service" },
+    Completed: { tone: "neutral", label: "Completed" },
+    Cancelled: { tone: "danger", label: "Cancelled" },
   };
   const { tone, label } = toneMap[status] ?? { tone: "neutral", label: status };
   return <StatusPill tone={tone}>{label}</StatusPill>;
@@ -105,7 +132,8 @@ export function OverviewView({
 }: OverviewViewProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = React.useState("");
-  const [appointments, setAppointments] = React.useState<AppointmentRow[]>(initialRows);
+  const [appointments, setAppointments] =
+    React.useState<AppointmentRow[]>(initialRows);
   const [previousRows, setPreviousRows] = React.useState(initialRows);
   if (previousRows !== initialRows) {
     setPreviousRows(initialRows);
@@ -122,19 +150,34 @@ export function OverviewView({
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [period, setPeriod] = React.useState(initialPeriod);
   const [isPeriodOpen, setIsPeriodOpen] = React.useState(false);
-  const [selectedAppointmentId, setSelectedAppointmentId] = React.useState<string | null>(null);
+  const [selectedAppointmentId, setSelectedAppointmentId] = React.useState<
+    string | null
+  >(null);
   const [isNewBookingOpen, setIsNewBookingOpen] = React.useState(false);
   const [isWalkInOpen, setIsWalkInOpen] = React.useState(false);
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
-  const [expandedAppointmentId, setExpandedAppointmentId] = React.useState<string | null>(null);
-  const [selectedCalendarDay, setSelectedCalendarDay] = React.useState<number | null>(null);
-  const calendarMonth = calendarMonthKey ? new Date(`${calendarMonthKey}-01T12:00:00`) : new Date();
+  const [expandedAppointmentId, setExpandedAppointmentId] = React.useState<
+    string | null
+  >(null);
+  const [selectedCalendarDay, setSelectedCalendarDay] = React.useState<
+    number | null
+  >(null);
+  const calendarMonth = calendarMonthKey
+    ? new Date(`${calendarMonthKey}-01T12:00:00`)
+    : new Date();
   const changeCalendarMonth = (offset: number) => {
-    const month = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + offset, 1);
+    const month = new Date(
+      calendarMonth.getFullYear(),
+      calendarMonth.getMonth() + offset,
+      1,
+    );
     const key = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
     if (key < "1900-01" || key > "9998-12") return;
     setSelectedCalendarDay(null);
-    router.push(`${basePath}/dashboard?${new URLSearchParams({ period, month: key })}`, { scroll: false });
+    router.push(
+      `${basePath}/dashboard?${new URLSearchParams({ period, month: key })}`,
+      { scroll: false },
+    );
   };
   const displayName = userName || userEmail;
 
@@ -143,13 +186,42 @@ export function OverviewView({
     setTimeout(() => setToastMessage(null), 2500);
   };
 
-  const activeFilterCount = [filterStatus, filterStaff, filterSource].filter(Boolean).length;
+  const activeFilterCount = [filterStatus, filterStaff, filterSource].filter(
+    Boolean,
+  ).length;
   const hasFilters = Boolean(searchQuery || activeFilterCount);
-  const staffOptions = [...new Set(appointments.map(({ staff }) => staff))].sort((a, b) => a.localeCompare(b));
+  const staffOptions = [
+    ...new Set(appointments.map(({ staff }) => staff)),
+  ].sort((a, b) => a.localeCompare(b));
   const filterFields = [
-    { label: "Status", value: filterStatus, onChange: setFilterStatus, options: ["Confirmed", "Pending approval", "Check In", "In service", "Completed", "Cancelled"], placeholder: "All statuses" },
-    { label: "Staff", value: filterStaff, onChange: setFilterStaff, options: staffOptions, placeholder: "All staff" },
-    { label: "Source", value: filterSource, onChange: setFilterSource, options: ["Online", "Walk-In", "Phone"], placeholder: "All sources" },
+    {
+      label: "Status",
+      value: filterStatus,
+      onChange: setFilterStatus,
+      options: [
+        "Confirmed",
+        "Pending approval",
+        "Check In",
+        "In service",
+        "Completed",
+        "Cancelled",
+      ],
+      placeholder: "All statuses",
+    },
+    {
+      label: "Staff",
+      value: filterStaff,
+      onChange: setFilterStaff,
+      options: staffOptions,
+      placeholder: "All staff",
+    },
+    {
+      label: "Source",
+      value: filterSource,
+      onChange: setFilterSource,
+      options: ["Online", "Walk-In", "Phone"],
+      placeholder: "All sources",
+    },
   ];
   const filtered = appointments.filter((app) => {
     const matchesSearch =
@@ -158,10 +230,13 @@ export function OverviewView({
       app.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
       app.staff.toLowerCase().includes(searchQuery.toLowerCase());
 
-    return matchesSearch && (!filterStatus || app.status === filterStatus)
-      && (!filterStaff || app.staff === filterStaff) && (!filterSource || app.source === filterSource);
+    return (
+      matchesSearch &&
+      (!filterStatus || app.status === filterStatus) &&
+      (!filterStaff || app.staff === filterStaff) &&
+      (!filterSource || app.source === filterSource)
+    );
   });
-
 
   // Chart statistics data (QA #1: dynamic chart bars from loaded records)
   const stats =
@@ -176,8 +251,14 @@ export function OverviewView({
           { day: "Sat", booked: 0, completed: 0 },
           { day: "Sun", booked: 0, completed: 0 },
         ];
-  const maxVal = Math.max(1, ...stats.map((s) => Math.max(s.booked, s.completed)));
-  const lineMaxVal = Math.max(1, ...stats.map((s) => Math.max(s.booked, s.completed)));
+  const maxVal = Math.max(
+    1,
+    ...stats.map((s) => Math.max(s.booked, s.completed)),
+  );
+  const lineMaxVal = Math.max(
+    1,
+    ...stats.map((s) => Math.max(s.booked, s.completed)),
+  );
   const lineWidth = 720;
   const lineHeight = 280;
   const lineLeft = 44; // space for y-axis labels
@@ -200,10 +281,7 @@ export function OverviewView({
         stats.length === 1
           ? lineLeft + chartWidth / 2
           : lineLeft + (index / (stats.length - 1)) * chartWidth;
-      const y =
-        lineTop +
-        chartHeight -
-        (item[key] / niceMax) * chartHeight;
+      const y = lineTop + chartHeight - (item[key] / niceMax) * chartHeight;
       return { x, y };
     });
 
@@ -242,17 +320,17 @@ export function OverviewView({
   } | null>(null);
 
   const linePoints = (key: "booked" | "completed") =>
-    stats.map((item, index) => {
-      const x =
-        stats.length === 1
-          ? lineWidth / 2
-          : 12 + (index / (stats.length - 1)) * (lineWidth - 24);
-      const y =
-        lineHeight -
-        12 -
-        (item[key] / lineMaxVal) * (lineHeight - 24);
-      return `${x},${y}`;
-    }).join(" ");
+    stats
+      .map((item, index) => {
+        const x =
+          stats.length === 1
+            ? lineWidth / 2
+            : 12 + (index / (stats.length - 1)) * (lineWidth - 24);
+        const y =
+          lineHeight - 12 - (item[key] / lineMaxVal) * (lineHeight - 24);
+        return `${x},${y}`;
+      })
+      .join(" ");
   const today = todayKey ? new Date(`${todayKey}T12:00:00`) : new Date();
   const currentMonthLabel = calendarMonth.toLocaleDateString("en-US", {
     month: "long",
@@ -261,12 +339,12 @@ export function OverviewView({
   const calendarDaysInMonth = new Date(
     calendarMonth.getFullYear(),
     calendarMonth.getMonth() + 1,
-    0
+    0,
   ).getDate();
   const calendarStartDay = new Date(
     calendarMonth.getFullYear(),
     calendarMonth.getMonth(),
-    1
+    1,
   ).getDay();
   const calendarCells: Array<number | null> = [
     ...Array.from({ length: calendarStartDay }, () => null),
@@ -275,18 +353,19 @@ export function OverviewView({
   const isCurrentMonth =
     calendarMonth.getFullYear() === today.getFullYear() &&
     calendarMonth.getMonth() === today.getMonth();
-  const activeCalendarDay = selectedCalendarDay ?? (isCurrentMonth ? today.getDate() : 1);
+  const activeCalendarDay =
+    selectedCalendarDay ?? (isCurrentMonth ? today.getDate() : 1);
   const activeCalendarDateKey = `${calendarMonth.getFullYear()}-${String(
-    calendarMonth.getMonth() + 1
+    calendarMonth.getMonth() + 1,
   ).padStart(2, "0")}-${String(activeCalendarDay).padStart(2, "0")}`;
   const activeCalendarAppointments = calendarAppointments.filter(
-    (appointment) => appointment.calendarDate === activeCalendarDateKey
+    (appointment) => appointment.calendarDate === activeCalendarDateKey,
   );
   const activeCompletedAppointments = activeCalendarAppointments.filter(
-    (appointment) => appointment.status === "Completed"
+    (appointment) => appointment.status === "Completed",
   );
   const activeCalendarLabel = new Date(
-    `${activeCalendarDateKey}T12:00:00`
+    `${activeCalendarDateKey}T12:00:00`,
   ).toLocaleDateString("en-US", { month: "short", day: "numeric" });
   return (
     <div className="flex min-h-dvh flex-col bg-powder text-ink lg:h-dvh lg:flex-row lg:overflow-hidden">
@@ -302,8 +381,7 @@ export function OverviewView({
         <PageContent>
           {/* Page Heading */}
           <PageHeading
-            eyebrow="MERCHANT WORKSPACE"
-            title={`Welcome back, ${displayName.split(" ")[0] || "Maria"}`}
+            title={`Welcome Back, ${displayName.split(" ")[0] || "Maria"}`}
             description="Here's the latest update on your business. Let's make today a great one."
             actions={
               <div className="flex flex-wrap items-center gap-2">
@@ -326,7 +404,10 @@ export function OverviewView({
                             setPeriod(p as typeof initialPeriod);
                             setIsPeriodOpen(false);
                             setHoveredPoint(null);
-                            router.push(`${basePath}/dashboard?${new URLSearchParams({ period: p, ...(calendarMonthKey && { month: calendarMonthKey }) })}`, { scroll: false });
+                            router.push(
+                              `${basePath}/dashboard?${new URLSearchParams({ period: p, ...(calendarMonthKey && { month: calendarMonthKey }) })}`,
+                              { scroll: false },
+                            );
                           }}
                           className={`w-full text-left px-4 py-2.5 hover:bg-mist ${period === p ? "text-burnt font-semibold" : "text-body"}`}
                         >
@@ -336,22 +417,24 @@ export function OverviewView({
                     </div>
                   )}
                 </div>
-                {canManage && <>
-                <AdminButton
-                  variant="primary"
-                  size="sm"
-                  onClick={() => setIsNewBookingOpen(true)}
-                >
-                  + New Booking
-                </AdminButton>
-                <AdminButton
-                  variant="outline-accent"
-                  size="sm"
-                  onClick={() => setIsWalkInOpen(true)}
-                >
-                  + Add Walk-in
-                </AdminButton>
-                </>}
+                {canManage && (
+                  <>
+                    <AdminButton
+                      variant="primary"
+                      size="sm"
+                      onClick={() => setIsNewBookingOpen(true)}
+                    >
+                      + New Booking
+                    </AdminButton>
+                    <AdminButton
+                      variant="outline-accent"
+                      size="sm"
+                      onClick={() => setIsWalkInOpen(true)}
+                    >
+                      + Add Walk-in
+                    </AdminButton>
+                  </>
+                )}
               </div>
             }
           />
@@ -360,34 +443,115 @@ export function OverviewView({
           <div className="grid grid-cols-2 gap-5 xl:grid-cols-4">
             <MetricCard
               featured
-              label={isServiceStaff ? "Commission this month" : canViewBusinessMetrics ? "Total revenue" : "Today’s appointments"}
-              value={isServiceStaff ? commissionThisMonth : canViewBusinessMetrics ? revenueTotal : todayCount}
+              label={
+                isServiceStaff
+                  ? "Commission this month"
+                  : canViewBusinessMetrics
+                    ? "Total revenue"
+                    : "Today’s appointments"
+              }
+              value={
+                isServiceStaff
+                  ? commissionThisMonth
+                  : canViewBusinessMetrics
+                    ? revenueTotal
+                    : todayCount
+              }
               valuePrefix={isServiceStaff ? "₱" : undefined}
-              caption={isServiceStaff ? "Earned from completed services" : canViewBusinessMetrics ? `${revenueChangePercent >= 0 ? "+" : ""}${revenueChangePercent.toFixed(1)}% vs previous week` : `${confirmedCount} confirmed today`}
+              caption={
+                isServiceStaff
+                  ? "Earned from completed services"
+                  : canViewBusinessMetrics
+                    ? `${revenueChangePercent >= 0 ? "+" : ""}${revenueChangePercent.toFixed(1)}% vs previous week`
+                    : `${confirmedCount} confirmed today`
+              }
               icon="calendar"
-              progress={isServiceStaff ? (commissionThisMonth > 0 ? 100 : 0) : canViewBusinessMetrics ? Math.min(100, Math.max(0, 50 + revenueChangePercent / 2)) : todayCount ? confirmedCount / todayCount * 100 : 0}
+              progress={
+                isServiceStaff
+                  ? commissionThisMonth > 0
+                    ? 100
+                    : 0
+                  : canViewBusinessMetrics
+                    ? Math.min(100, Math.max(0, 50 + revenueChangePercent / 2))
+                    : todayCount
+                      ? (confirmedCount / todayCount) * 100
+                      : 0
+              }
             />
             <MetricCard
               label="Total bookings"
               value={bookingCount}
               caption={`${todayCount} today · ${confirmedCount} confirmed · ${pendingCount} pending`}
               icon="clock"
-              progress={bookingCount > 0 ? Math.min(100, Math.round((completedVisitsCount / bookingCount) * 100)) : 0}
+              progress={
+                bookingCount > 0
+                  ? Math.min(
+                      100,
+                      Math.round((completedVisitsCount / bookingCount) * 100),
+                    )
+                  : 0
+              }
               miniChart
             />
             <MetricCard
-              label={isServiceStaff ? "Total customers" : canViewBusinessMetrics ? "Active customers" : "Checked-in customers"}
-              value={isServiceStaff || canViewBusinessMetrics ? activeCustomerCount : checkedInCount}
-              caption={isServiceStaff ? "Unique customers in the selected period" : canViewBusinessMetrics ? `${customerGrowthPercent >= 0 ? "+" : ""}${customerGrowthPercent.toFixed(1)}% vs previous week · ${checkedInCount} checked in` : "Checked in or in service today"}
+              label={
+                isServiceStaff
+                  ? "Total customers"
+                  : canViewBusinessMetrics
+                    ? "Active customers"
+                    : "Checked-in customers"
+              }
+              value={
+                isServiceStaff || canViewBusinessMetrics
+                  ? activeCustomerCount
+                  : checkedInCount
+              }
+              caption={
+                isServiceStaff
+                  ? "Unique customers in the selected period"
+                  : canViewBusinessMetrics
+                    ? `${customerGrowthPercent >= 0 ? "+" : ""}${customerGrowthPercent.toFixed(1)}% vs previous week · ${checkedInCount} checked in`
+                    : "Checked in or in service today"
+              }
               icon="users"
-              progress={isServiceStaff ? (bookingCount ? activeCustomerCount / bookingCount * 100 : 0) : canViewBusinessMetrics ? Math.min(100, Math.max(0, 50 + customerGrowthPercent / 2)) : todayCount ? checkedInCount / todayCount * 100 : 0}
+              progress={
+                isServiceStaff
+                  ? bookingCount
+                    ? (activeCustomerCount / bookingCount) * 100
+                    : 0
+                  : canViewBusinessMetrics
+                    ? Math.min(100, Math.max(0, 50 + customerGrowthPercent / 2))
+                    : todayCount
+                      ? (checkedInCount / todayCount) * 100
+                      : 0
+              }
             />
             <MetricCard
-              label={canViewBusinessMetrics ? "Average order value" : "Completed today"}
-              value={canViewBusinessMetrics ? averageOrderValue : completedVisitsCount}
-              caption={canViewBusinessMetrics ? `${completedVisitsCount} completed today` : "Appointments completed today"}
+              label={
+                canViewBusinessMetrics
+                  ? "Average order value"
+                  : "Completed today"
+              }
+              value={
+                canViewBusinessMetrics
+                  ? averageOrderValue
+                  : completedVisitsCount
+              }
+              caption={
+                canViewBusinessMetrics
+                  ? `${completedVisitsCount} completed today`
+                  : "Appointments completed today"
+              }
               icon={canViewBusinessMetrics ? "card" : "clock"}
-              progress={canViewBusinessMetrics ? (averageOrderValue > 0 ? 100 : 0) : todayCount ? completedVisitsCount / todayCount * 100 : 0}
+              progress={
+                canViewBusinessMetrics
+                  ? averageOrderValue > 0
+                    ? 100
+                    : 0
+                  : todayCount
+                    ? (completedVisitsCount / todayCount) * 100
+                    : 0
+              }
             />
           </div>
 
@@ -398,8 +562,8 @@ export function OverviewView({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Icon name="chart" className="size-5 text-glyph" />
-                  <h3 className="text-sm font-semibold text-ink tracking-wide uppercase">
-                    Appointment statistics
+                  <h3 className="text-sm font-semibold text-ink tracking-wide">
+                    Appointment Statistics
                   </h3>
                 </div>
                 <div className="flex items-center gap-5 text-sm">
@@ -417,7 +581,10 @@ export function OverviewView({
               {/* Appointment analytics */}
               <div className="pt-4 transition-all duration-300">
                 {period === "This Month" ? (
-                  <div className="relative w-full h-[280px]" onMouseLeave={() => setHoveredPoint(null)}>
+                  <div
+                    className="relative w-full h-[280px]"
+                    onMouseLeave={() => setHoveredPoint(null)}
+                  >
                     <svg
                       viewBox={`0 0 ${lineWidth} ${lineHeight}`}
                       className="h-[280px] w-full overflow-visible"
@@ -426,19 +593,50 @@ export function OverviewView({
                       preserveAspectRatio="none"
                     >
                       <defs>
-                        <linearGradient id="bookedGrad" x1="0" x2="0" y1="0" y2="1">
-                          <stop offset="0%" stopColor="#C35000" stopOpacity="0.18" />
-                          <stop offset="100%" stopColor="#C35000" stopOpacity="0" />
+                        <linearGradient
+                          id="bookedGrad"
+                          x1="0"
+                          x2="0"
+                          y1="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="0%"
+                            stopColor="#C35000"
+                            stopOpacity="0.18"
+                          />
+                          <stop
+                            offset="100%"
+                            stopColor="#C35000"
+                            stopOpacity="0"
+                          />
                         </linearGradient>
-                        <linearGradient id="completedGrad" x1="0" x2="0" y1="0" y2="1">
-                          <stop offset="0%" stopColor="#82AFC2" stopOpacity="0.15" />
-                          <stop offset="100%" stopColor="#82AFC2" stopOpacity="0" />
+                        <linearGradient
+                          id="completedGrad"
+                          x1="0"
+                          x2="0"
+                          y1="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="0%"
+                            stopColor="#82AFC2"
+                            stopOpacity="0.15"
+                          />
+                          <stop
+                            offset="100%"
+                            stopColor="#82AFC2"
+                            stopOpacity="0"
+                          />
                         </linearGradient>
                       </defs>
 
                       {/* Y-axis gridlines and labels */}
                       {yTicks.map((tick) => {
-                        const y = lineTop + chartHeight - (tick / niceMax) * chartHeight;
+                        const y =
+                          lineTop +
+                          chartHeight -
+                          (tick / niceMax) * chartHeight;
                         return (
                           <g key={tick}>
                             <line
@@ -463,12 +661,15 @@ export function OverviewView({
 
                       {/* Today vertical indicator */}
                       {(() => {
-                        const todayIndex = stats.findIndex((s) => Number(s.day) === today.getDate());
+                        const todayIndex = stats.findIndex(
+                          (s) => Number(s.day) === today.getDate(),
+                        );
                         if (todayIndex < 0) return null;
                         const todayX =
                           stats.length === 1
                             ? lineLeft + chartWidth / 2
-                            : lineLeft + (todayIndex / (stats.length - 1)) * chartWidth;
+                            : lineLeft +
+                              (todayIndex / (stats.length - 1)) * chartWidth;
                         return (
                           <line
                             x1={todayX}
@@ -484,8 +685,14 @@ export function OverviewView({
                       })()}
 
                       {/* Gradient area fills */}
-                      <path d={areaPath(linePointCoords("booked"))} fill="url(#bookedGrad)" />
-                      <path d={areaPath(linePointCoords("completed"))} fill="url(#completedGrad)" />
+                      <path
+                        d={areaPath(linePointCoords("booked"))}
+                        fill="url(#bookedGrad)"
+                      />
+                      <path
+                        d={areaPath(linePointCoords("completed"))}
+                        fill="url(#completedGrad)"
+                      />
 
                       {/* Smooth curve lines */}
                       <path
@@ -536,14 +743,15 @@ export function OverviewView({
                         const x =
                           stats.length === 1
                             ? lineLeft + chartWidth / 2
-                            : lineLeft + (index / (stats.length - 1)) * chartWidth;
+                            : lineLeft +
+                              (index / (stats.length - 1)) * chartWidth;
                         const isToday = Number(item.day) === today.getDate();
                         // Show every other day, plus first, last, and today
                         const showLabel =
                           index === 0 ||
                           index === stats.length - 1 ||
                           isToday ||
-                          (index % 2 === 0);
+                          index % 2 === 0;
                         return showLabel ? (
                           <g key={item.day}>
                             <text
@@ -572,7 +780,10 @@ export function OverviewView({
                       {stats.map((item, index) => {
                         const coords = linePointCoords("booked");
                         const pt = coords[index];
-                        const sliceWidth = stats.length === 1 ? chartWidth : chartWidth / (stats.length - 1);
+                        const sliceWidth =
+                          stats.length === 1
+                            ? chartWidth
+                            : chartWidth / (stats.length - 1);
                         return (
                           <rect
                             key={`hover-${index}`}
@@ -590,7 +801,7 @@ export function OverviewView({
                                 x: bookedPt.x,
                                 y: Math.min(
                                   linePointCoords("booked")[index].y,
-                                  linePointCoords("completed")[index].y
+                                  linePointCoords("completed")[index].y,
                                 ),
                               });
                             }}
@@ -615,16 +826,19 @@ export function OverviewView({
                         <p className="flex items-center gap-1.5">
                           <span className="inline-block size-2 rounded-full bg-burnt" />
                           <span className="text-muted">Booked:</span>{" "}
-                          <span className="font-semibold text-ink">{hoveredPoint.booked}</span>
+                          <span className="font-semibold text-ink">
+                            {hoveredPoint.booked}
+                          </span>
                         </p>
                         <p className="flex items-center gap-1.5">
                           <span className="inline-block size-2 rounded-full bg-sky" />
                           <span className="text-muted">Completed:</span>{" "}
-                          <span className="font-semibold text-ink">{hoveredPoint.completed}</span>
+                          <span className="font-semibold text-ink">
+                            {hoveredPoint.completed}
+                          </span>
                         </p>
                       </div>
                     )}
-
                   </div>
                 ) : (
                   <div className="h-[280px] w-full flex items-end justify-between gap-0 px-0 border-b border-hairline sm:gap-4 sm:px-3">
@@ -636,7 +850,9 @@ export function OverviewView({
                         <div className="w-full flex items-end justify-center gap-0 h-60 sm:gap-1.5">
                           <div
                             className="w-4 bg-burnt rounded-t-sm transition-all duration-300 relative min-h-[4px] sm:w-7"
-                            style={{ height: `${item.booked > 0 ? (item.booked / maxVal) * 100 : 4}%` }}
+                            style={{
+                              height: `${item.booked > 0 ? (item.booked / maxVal) * 100 : 4}%`,
+                            }}
                           >
                             <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-semibold text-subtle">
                               {item.booked}
@@ -644,14 +860,18 @@ export function OverviewView({
                           </div>
                           <div
                             className="w-4 bg-sky rounded-t-sm transition-all duration-300 relative min-h-[4px] sm:w-7"
-                            style={{ height: `${item.completed > 0 ? (item.completed / maxVal) * 100 : 4}%` }}
+                            style={{
+                              height: `${item.completed > 0 ? (item.completed / maxVal) * 100 : 4}%`,
+                            }}
                           >
                             <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-semibold text-subtle">
                               {item.completed}
                             </span>
                           </div>
                         </div>
-                        <span className={`text-[11px] font-medium sm:text-sm ${item.isToday ? "rounded-full bg-burnt px-2 text-white" : "text-muted"}`}>
+                        <span
+                          className={`text-[11px] font-medium sm:text-sm ${item.isToday ? "rounded-full bg-burnt px-2 text-white" : "text-muted"}`}
+                        >
                           {item.day}
                         </span>
                       </div>
@@ -666,7 +886,9 @@ export function OverviewView({
               <div className="flex items-center justify-between pb-1">
                 <div className="flex items-center gap-2">
                   <Icon name="calendar" className="size-5 text-glyph" />
-                  <h3 className="text-sm font-semibold text-ink tracking-wide uppercase">Calendar</h3>
+                  <h3 className="text-sm font-semibold text-ink tracking-wide">
+                    Calendar
+                  </h3>
                 </div>
                 <div className="flex items-center gap-4 text-sm text-muted">
                   <span className="flex items-center gap-1.5">
@@ -703,7 +925,13 @@ export function OverviewView({
                     </button>
                   </div>
                   <div className="grid grid-cols-7 gap-1.5 text-center text-xs text-subtle mb-2">
-                    <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+                    <span>S</span>
+                    <span>M</span>
+                    <span>T</span>
+                    <span>W</span>
+                    <span>T</span>
+                    <span>F</span>
+                    <span>S</span>
                   </div>
                   <div className="grid grid-cols-7 gap-1.5 text-center text-sm font-medium text-body">
                     {calendarCells.map((day, index) => (
@@ -711,7 +939,9 @@ export function OverviewView({
                         type="button"
                         key={`${day ?? "empty"}-${index}`}
                         disabled={day === null}
-                        onClick={() => day !== null && setSelectedCalendarDay(day)}
+                        onClick={() =>
+                          day !== null && setSelectedCalendarDay(day)
+                        }
                         className={`flex items-center justify-center aspect-square min-h-9 ${
                           day === null
                             ? "cursor-default"
@@ -734,10 +964,15 @@ export function OverviewView({
                   <div className="space-y-3 text-sm max-h-48 overflow-y-auto">
                     {activeCalendarAppointments.length > 0 ? (
                       activeCalendarAppointments.map((appointment) => (
-                        <div key={appointment.id} className="flex items-start gap-1.5">
+                        <div
+                          key={appointment.id}
+                          className="flex items-start gap-1.5"
+                        >
                           <span
                             className={`w-1.5 h-1.5 rounded-full mt-1 shrink-0 ${
-                              appointment.status === "Completed" ? "bg-sky" : "bg-burnt"
+                              appointment.status === "Completed"
+                                ? "bg-sky"
+                                : "bg-burnt"
                             }`}
                           />
                           <div>
@@ -760,7 +995,8 @@ export function OverviewView({
                     <span className="font-semibold text-body">
                       {activeCompletedAppointments.length}
                     </span>{" "}
-                    completed appointment{activeCompletedAppointments.length === 1 ? "" : "s"}
+                    completed appointment
+                    {activeCompletedAppointments.length === 1 ? "" : "s"}
                   </div>
                 </div>
               </div>
@@ -775,7 +1011,7 @@ export function OverviewView({
                 <div className="flex items-center gap-2">
                   <Icon name="users" className="size-5 text-glyph" />
                   <h3 className="text-base font-semibold leading-6 text-ink">
-                    Today&apos;s appointments
+                    Today&apos;s Appointments
                   </h3>
                 </div>
                 <span className="inline-flex items-center rounded-md bg-mist px-2 py-1 text-xs font-semibold leading-[18px] text-ink">
@@ -793,60 +1029,129 @@ export function OverviewView({
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="h-11 w-full rounded-lg border border-hairline bg-white pl-10 pr-3 text-sm text-ink transition-shadow focus:outline-none focus:ring-2 focus:ring-burnt/40 sm:w-64"
                   />
-                  <Icon name="search" className="size-4 text-glyph absolute left-3 top-3 pointer-events-none" />
+                  <Icon
+                    name="search"
+                    className="size-4 text-glyph absolute left-3 top-3 pointer-events-none"
+                  />
                 </div>
 
-                <div className="relative shrink-0" onKeyDown={(event) => {
-                  if (event.key === "Escape" && isFilterOpen) {
-                    setIsFilterOpen(false);
-                    filterTrigger.current?.focus();
-                  }
-                }}>
+                <div
+                  className="relative shrink-0"
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape" && isFilterOpen) {
+                      setIsFilterOpen(false);
+                      filterTrigger.current?.focus();
+                    }
+                  }}
+                >
                   <button
                     ref={filterTrigger}
                     type="button"
                     aria-expanded={isFilterOpen}
                     aria-controls="overview-appointment-filters"
-                    aria-label={activeFilterCount ? `Filter, ${activeFilterCount} active` : "Filter"}
+                    aria-label={
+                      activeFilterCount
+                        ? `Filter, ${activeFilterCount} active`
+                        : "Filter"
+                    }
                     onClick={() => setIsFilterOpen(!isFilterOpen)}
                     className="h-11 rounded-lg border border-hairline bg-white px-3 text-sm font-semibold text-ink hover:bg-mist flex items-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
                   >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="size-3.5 text-glyph" aria-hidden>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      className="size-3.5 text-glyph"
+                      aria-hidden
+                    >
                       <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
                     </svg>
                     <span className="relative">
                       Filter
                       {activeFilterCount > 0 && (
-                        <span aria-hidden="true" className="absolute -right-1.5 top-0 size-1.5 rounded-full bg-burnt" />
+                        <span
+                          aria-hidden="true"
+                          className="absolute -right-1.5 top-0 size-1.5 rounded-full bg-burnt"
+                        />
                       )}
                     </span>
-                    <Icon name="chevron-down" className={`size-3.5 text-glyph transition-transform ${isFilterOpen ? "rotate-180" : ""}`} />
+                    <Icon
+                      name="chevron-down"
+                      className={`size-3.5 text-glyph transition-transform ${isFilterOpen ? "rotate-180" : ""}`}
+                    />
                   </button>
                   {isFilterOpen && (
-                    <div id="overview-appointment-filters" className="absolute right-0 z-20 mt-1 w-56 divide-y divide-hairline overflow-hidden rounded-[10px] border border-hairline bg-white text-sm shadow-lg">
-                      {filterFields.map(({ label, value, onChange, options, placeholder }) => (
-                        <details key={label} name="overview-filter-section" className="group">
-                          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-subtle hover:bg-mist [&::-webkit-details-marker]:hidden">
-                            <span className="flex items-center gap-2">
-                              {label}
-                              {value && <span aria-label="Filter active" className="size-1.5 rounded-full bg-burnt" />}
-                            </span>
-                            <span aria-hidden="true" className="group-open:hidden">+</span>
-                            <span aria-hidden="true" className="hidden group-open:inline">−</span>
-                          </summary>
-                          <div className="max-h-48 overflow-y-auto pb-2">
-                            {["", ...(value && !options.includes(value) ? [value] : []), ...options].map((option) => (
-                              <button key={option} type="button" aria-pressed={value === option}
-                                onClick={() => onChange(option)}
-                                className={`w-full break-words px-4 py-2 text-left hover:bg-mist ${value === option ? "font-semibold text-burnt" : "text-body"}`}>
-                                {option || placeholder}
-                              </button>
-                            ))}
-                          </div>
-                        </details>
-                      ))}
-                      {activeFilterCount > 0 && <button type="button" className="w-full px-4 py-2.5 text-left text-xs font-semibold text-burnt hover:bg-mist"
-                        onClick={() => { setFilterStatus(""); setFilterStaff(""); setFilterSource(""); filterTrigger.current?.focus(); }}>Clear filters</button>}
+                    <div
+                      id="overview-appointment-filters"
+                      className="absolute right-0 z-20 mt-1 w-56 divide-y divide-hairline overflow-hidden rounded-[10px] border border-hairline bg-white text-sm shadow-lg"
+                    >
+                      {filterFields.map(
+                        ({ label, value, onChange, options, placeholder }) => (
+                          <details
+                            key={label}
+                            name="overview-filter-section"
+                            className="group"
+                          >
+                            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-subtle hover:bg-mist [&::-webkit-details-marker]:hidden">
+                              <span className="flex items-center gap-2">
+                                {label}
+                                {value && (
+                                  <span
+                                    aria-label="Filter active"
+                                    className="size-1.5 rounded-full bg-burnt"
+                                  />
+                                )}
+                              </span>
+                              <span
+                                aria-hidden="true"
+                                className="group-open:hidden"
+                              >
+                                +
+                              </span>
+                              <span
+                                aria-hidden="true"
+                                className="hidden group-open:inline"
+                              >
+                                −
+                              </span>
+                            </summary>
+                            <div className="max-h-48 overflow-y-auto pb-2">
+                              {[
+                                "",
+                                ...(value && !options.includes(value)
+                                  ? [value]
+                                  : []),
+                                ...options,
+                              ].map((option) => (
+                                <button
+                                  key={option}
+                                  type="button"
+                                  aria-pressed={value === option}
+                                  onClick={() => onChange(option)}
+                                  className={`w-full break-words px-4 py-2 text-left hover:bg-mist ${value === option ? "font-semibold text-burnt" : "text-body"}`}
+                                >
+                                  {option || placeholder}
+                                </button>
+                              ))}
+                            </div>
+                          </details>
+                        ),
+                      )}
+                      {activeFilterCount > 0 && (
+                        <button
+                          type="button"
+                          className="w-full px-4 py-2.5 text-left text-xs font-semibold text-burnt hover:bg-mist"
+                          onClick={() => {
+                            setFilterStatus("");
+                            setFilterStaff("");
+                            setFilterSource("");
+                            filterTrigger.current?.focus();
+                          }}
+                        >
+                          Clear filters
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -858,12 +1163,16 @@ export function OverviewView({
               {filtered.length === 0 ? (
                 <EmptyState
                   compact
-                  title={hasFilters
-                    ? "No appointments match your search."
-                    : "No appointments scheduled."}
-                  description={hasFilters
-                    ? "Try a different name, service, staff member, or status."
-                    : "New bookings will appear here automatically."}
+                  title={
+                    hasFilters
+                      ? "No appointments match your search."
+                      : "No appointments scheduled."
+                  }
+                  description={
+                    hasFilters
+                      ? "Try a different name, service, staff member, or status."
+                      : "New bookings will appear here automatically."
+                  }
                 />
               ) : (
                 filtered.map((row) => {
@@ -872,13 +1181,17 @@ export function OverviewView({
                     <div key={row.id} className="px-4 py-3">
                       <button
                         type="button"
-                        onClick={() => setExpandedAppointmentId(isExpanded ? null : row.id)}
+                        onClick={() =>
+                          setExpandedAppointmentId(isExpanded ? null : row.id)
+                        }
                         className="w-full text-left"
                         aria-expanded={isExpanded}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <p className="text-sm font-semibold text-ink truncate">{row.customer}</p>
+                            <p className="text-sm font-semibold text-ink truncate">
+                              {row.customer}
+                            </p>
                             <p className="mt-1 text-xs text-muted">
                               {row.time} · {row.service}
                             </p>
@@ -889,11 +1202,29 @@ export function OverviewView({
                       {isExpanded && (
                         <div className="mt-3 rounded-lg bg-powder p-3 text-xs text-muted space-y-2">
                           <div className="grid grid-cols-2 gap-2">
-                            <span>Staff <strong className="block text-ink">{row.staff}</strong></span>
-                            <span>Source <strong className="block text-ink">{row.source}</strong></span>
+                            <span>
+                              Staff{" "}
+                              <strong className="block text-ink">
+                                {row.staff}
+                              </strong>
+                            </span>
+                            <span>
+                              Source{" "}
+                              <strong className="block text-ink">
+                                {row.source}
+                              </strong>
+                            </span>
                           </div>
-                          {canManage && <AdminButton size="xs" variant="outline" aria-haspopup="dialog"
-                            onClick={() => setSelectedAppointmentId(row.id)}>Appointment details</AdminButton>}
+                          {canManage && (
+                            <AdminButton
+                              size="xs"
+                              variant="outline"
+                              aria-haspopup="dialog"
+                              onClick={() => setSelectedAppointmentId(row.id)}
+                            >
+                              Appointment details
+                            </AdminButton>
+                          )}
                         </div>
                       )}
                     </div>
@@ -916,13 +1247,29 @@ export function OverviewView({
                 </colgroup>
                 <thead className="bg-mist border-b border-hairline text-subtle font-semibold">
                   <tr>
-                    <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Time</th>
-                    <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Customer</th>
-                    <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Service</th>
-                    <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Staff</th>
-                    <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Source</th>
-                    <th className="py-4 pl-6 pr-2 text-[11px] leading-4 uppercase tracking-wide">Status</th>
-                    {canManage && <th className="px-2 py-4 text-center text-[11px] leading-4 uppercase tracking-wide">Action</th>}
+                    <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">
+                      Time
+                    </th>
+                    <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">
+                      Customer
+                    </th>
+                    <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">
+                      Service
+                    </th>
+                    <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">
+                      Staff
+                    </th>
+                    <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">
+                      Source
+                    </th>
+                    <th className="py-4 pl-6 pr-2 text-[11px] leading-4 uppercase tracking-wide">
+                      Status
+                    </th>
+                    {canManage && (
+                      <th className="px-2 py-4 text-center text-[11px] leading-4 uppercase tracking-wide">
+                        Action
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-hairline">
@@ -931,42 +1278,64 @@ export function OverviewView({
                       <td colSpan={canManage ? 7 : 6} className="px-5 py-2">
                         <EmptyState
                           compact
-                          title={hasFilters
-                            ? "No appointments match your search."
-                            : "No appointments scheduled."}
-                          description={hasFilters
-                            ? "Try a different name, service, staff member, or status."
-                            : "New bookings will appear here automatically."}
+                          title={
+                            hasFilters
+                              ? "No appointments match your search."
+                              : "No appointments scheduled."
+                          }
+                          description={
+                            hasFilters
+                              ? "Try a different name, service, staff member, or status."
+                              : "New bookings will appear here automatically."
+                          }
                         />
                       </td>
                     </tr>
                   ) : (
                     filtered.map((row) => (
-                      <tr key={row.id} className="hover:bg-mist transition-colors">
-                        <td className="px-6 py-4 font-medium text-body">{row.time}</td>
-                        <td className="px-6 py-4 font-semibold text-ink">{row.customer}</td>
+                      <tr
+                        key={row.id}
+                        className="hover:bg-mist transition-colors"
+                      >
+                        <td className="px-6 py-4 font-medium text-body">
+                          {row.time}
+                        </td>
+                        <td className="px-6 py-4 font-semibold text-ink">
+                          {row.customer}
+                        </td>
                         <td className="px-6 py-4 text-muted">{row.service}</td>
                         <td className="px-6 py-4 text-muted">{row.staff}</td>
                         <td className="px-6 py-4">
-                          <span className={row.source === "Walk-In" ? "text-burnt font-medium" : "text-muted"}>
+                          <span
+                            className={
+                              row.source === "Walk-In"
+                                ? "text-burnt font-medium"
+                                : "text-muted"
+                            }
+                          >
                             {row.source}
                           </span>
                         </td>
                         <td className="whitespace-nowrap py-4 pl-6 pr-2">
                           <AppointmentStatusPill status={row.status} />
                         </td>
-                        {canManage && <td className="px-2 py-4 align-middle">
-                          <button
-                            type="button"
-                            aria-label={`Appointment details for ${row.customer}`}
-                            aria-haspopup="dialog"
-                            onClick={() => setSelectedAppointmentId(row.id)}
-                            className="mx-auto flex h-9 w-10 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 text-glyph"
-                          >
-                            <Icon name="more" weight="fill" className="size-5" />
-                          </button>
-
-                        </td>}
+                        {canManage && (
+                          <td className="px-2 py-4 align-middle">
+                            <button
+                              type="button"
+                              aria-label={`Appointment details for ${row.customer}`}
+                              aria-haspopup="dialog"
+                              onClick={() => setSelectedAppointmentId(row.id)}
+                              className="mx-auto flex h-9 w-10 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 text-glyph"
+                            >
+                              <Icon
+                                name="more"
+                                weight="fill"
+                                className="size-5"
+                              />
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     ))
                   )}
@@ -976,7 +1345,10 @@ export function OverviewView({
 
             {/* Table Footer */}
             <div className="p-4 sm:p-6 border-t border-hairline flex flex-wrap items-center justify-between gap-3 text-xs text-muted">
-              <span>Showing {filtered.length} of {appointments.length} appointments · All times in Asia/Manila (UTC+8)</span>
+              <span>
+                Showing {filtered.length} of {appointments.length} appointments
+                · All times in Asia/Manila (UTC+8)
+              </span>
               <Link
                 href={`${basePath}/dashboard/appointments`}
                 className="text-burnt font-semibold hover:underline inline-flex items-center gap-1"
@@ -998,9 +1370,13 @@ export function OverviewView({
 
       {/* Cancel Confirmation Modal (QA #3) */}
       {canManage && tenantId && selectedAppointmentId && (
-        <AppointmentDetailsModal key={selectedAppointmentId} tenantId={tenantId} appointmentId={selectedAppointmentId}
+        <AppointmentDetailsModal
+          key={selectedAppointmentId}
+          tenantId={tenantId}
+          appointmentId={selectedAppointmentId}
           onClose={() => setSelectedAppointmentId(null)}
-          onUpdated={() => router.refresh()} />
+          onUpdated={() => router.refresh()}
+        />
       )}
 
       {/* New Appointment Modal (QA #4) */}
