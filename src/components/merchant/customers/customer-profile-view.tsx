@@ -245,7 +245,7 @@ export function CustomerProfileView({
         basePath={basePath}
       />
 
-      <main className="mx-auto flex w-full max-w-[1320px] min-w-0 flex-1 flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8">
+      <main className="flex w-full min-w-0 flex-1 flex-col gap-5 p-4 sm:p-6 lg:p-8">
         <div>
           <Link
             href={customersHref}

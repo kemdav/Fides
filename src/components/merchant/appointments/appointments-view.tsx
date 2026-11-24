@@ -2,7 +2,9 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { canManageBookings, workspaceRoleFromLabel } from "@/lib/merchant/workspace-roles";
 import { MerchantSidebar } from "../merchant-sidebar";
+import { AppointmentDetailsModal } from "@/components/merchant/overview/appointment-details-modal";
 import { Icon } from "@/components/admin/icon";
 import { AdminButton } from "@/components/admin/admin-button";
 import { MetricCard } from "@/components/admin/metric-card";
@@ -38,6 +40,7 @@ export interface AppointmentItem {
     | "Completed"
     | "Cancelled";
   startsAt?: string;
+  staffScheduleMatch?: boolean;
 }
 
 interface AppointmentsViewProps {
@@ -51,6 +54,7 @@ interface AppointmentsViewProps {
   checkedInCount?: number;
   completedTodayCount?: number;
   initialItems?: AppointmentItem[];
+  focusedStaffName?: string;
   basePath?: string;
 }
 
@@ -202,9 +206,11 @@ export function AppointmentsView({
   checkedInCount = 0,
   completedTodayCount = 0,
   initialItems = EMPTY_ITEMS,
+  focusedStaffName,
   basePath = "",
 }: AppointmentsViewProps) {
   const router = useRouter();
+  const canManage = canManageBookings(workspaceRoleFromLabel(userRole));
   const [items, setItems] = React.useState<AppointmentItem[]>(initialItems);
   const [prevInitialItems, setPrevInitialItems] =
     React.useState<AppointmentItem[]>(initialItems);
@@ -223,7 +229,7 @@ export function AppointmentsView({
     () => new Date(),
   );
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
-  const [activeMenuId, setActiveMenuId] = React.useState<string | null>(null);
+  const [selectedAppointmentId, setSelectedAppointmentId] = React.useState<string | null>(null);
   const [cancelTarget, setCancelTarget] =
     React.useState<AppointmentItem | null>(null);
   const [isNewBookingOpen, setIsNewBookingOpen] = React.useState(false);
@@ -292,7 +298,6 @@ export function AppointmentsView({
     id: string,
     newStatus: AppointmentItem["status"],
   ) => {
-    setActiveMenuId(null);
     setPopoverItem(null);
     const prevItems = items;
     setItems((prev) =>
@@ -402,10 +407,10 @@ export function AppointmentsView({
         <PageContent>
           {/* Page Heading */}
           <PageHeading
-            eyebrow="MERCHANT WORKSPACE"
+            eyebrow={businessName}
             title="Appointments"
             description="Manage bookings, approvals, and appointment outcomes in one place."
-            actions={
+            actions={canManage && (
               <div className="flex flex-wrap items-center gap-2">
                 <AdminButton
                   variant="primary"
@@ -422,7 +427,7 @@ export function AppointmentsView({
                   + Add Walk-in
                 </AdminButton>
               </div>
-            }
+            )}
           />
 
           {/* KPI Metric Cards */}
@@ -459,6 +464,7 @@ export function AppointmentsView({
             />
           </div>
 
+          {focusedStaffName && <p className="rounded-lg bg-burnt/5 px-4 py-2 text-sm font-semibold text-burnt-dark">Schedule for {focusedStaffName}</p>}
           {/* Main Appointments Surface */}
           <Surface className="overflow-hidden !p-0">
             {/* ── Controls Bar ─────────────────────────────────────────────── */}
@@ -840,7 +846,7 @@ export function AppointmentsView({
                                           : item,
                                       )
                                     }
-                                    className={`absolute left-1 right-1 rounded-md border-l-[3px] px-2 py-1 text-left overflow-hidden shadow-sm hover:brightness-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${colors.bg} ${colors.border}`}
+                                    className={`absolute left-1 right-1 rounded-md border-l-[3px] px-2 py-1 text-left overflow-hidden shadow-sm hover:brightness-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${colors.bg} ${colors.border} ${item.staffScheduleMatch ? "ring-1 ring-burnt" : ""}`}
                                     style={{
                                       top: `${top}px`,
                                       height: `${height - 4}px`,
@@ -1030,7 +1036,7 @@ export function AppointmentsView({
                                       popoverItem?.id === item.id ? null : item,
                                     )
                                   }
-                                  className={`absolute rounded-lg border-l-[3px] px-3 py-1.5 text-left overflow-hidden shadow-sm hover:brightness-95 active:scale-[0.99] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${colors.bg} ${colors.border}`}
+                                  className={`absolute rounded-lg border-l-[3px] px-3 py-1.5 text-left overflow-hidden shadow-sm hover:brightness-95 active:scale-[0.99] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${colors.bg} ${colors.border} ${item.staffScheduleMatch ? "ring-1 ring-burnt" : ""}`}
                                   style={{
                                     top: `${top + 2}px`,
                                     height: `${height - 6}px`,
@@ -1180,7 +1186,7 @@ export function AppointmentsView({
                                           : item,
                                       )
                                     }
-                                    className={`absolute left-1 right-1 rounded-md border-l-[3px] px-2 py-1 text-left overflow-hidden shadow-sm hover:brightness-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${colors.bg} ${colors.border}`}
+                                    className={`absolute left-1 right-1 rounded-md border-l-[3px] px-2 py-1 text-left overflow-hidden shadow-sm hover:brightness-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${colors.bg} ${colors.border} ${item.staffScheduleMatch ? "ring-1 ring-burnt" : ""}`}
                                     style={{
                                       top: `${top}px`,
                                       height: `${height - 4}px`,
@@ -1294,37 +1300,10 @@ export function AppointmentsView({
                                   </strong>
                                 </span>
                               </div>
-                              <div className="flex flex-wrap gap-2 border-t border-hairline pt-3">
-                                {row.status !== "Confirmed" && (
-                                  <AdminButton
-                                    size="xs"
-                                    variant="primary"
-                                    onClick={() =>
-                                      handleStatusChange(row.id, "Confirmed")
-                                    }
-                                  >
-                                    Confirm
-                                  </AdminButton>
-                                )}
-                                {row.status !== "Check In" && (
-                                  <AdminButton
-                                    size="xs"
-                                    variant="outline"
-                                    onClick={() =>
-                                      handleStatusChange(row.id, "Check In")
-                                    }
-                                  >
-                                    Check In
-                                  </AdminButton>
-                                )}
-                                <AdminButton
-                                  size="xs"
-                                  variant="danger"
-                                  onClick={() => setCancelTarget(row)}
-                                >
-                                  Cancel
-                                </AdminButton>
-                              </div>
+                              {canManage && (
+                                <AdminButton size="xs" variant="outline" aria-haspopup="dialog"
+                                  onClick={() => setSelectedAppointmentId(row.id)}>Appointment details</AdminButton>
+                              )}
                             </div>
                           )}
                         </div>
@@ -1345,21 +1324,25 @@ export function AppointmentsView({
                           "Staff",
                           "Source",
                           "Status",
-                          "Action",
-                        ].map((h, i) => (
+                        ].map((h) => (
                           <th
                             key={h}
-                            className={`px-5 py-3 text-[11px] leading-4 uppercase tracking-wide ${i === 6 ? "text-right" : ""}`}
+                            className={`py-3 pl-5 text-[11px] leading-4 uppercase tracking-wide ${h === "Status" && canManage ? "w-32 pr-2" : "pr-5"}`}
                           >
                             {h}
                           </th>
                         ))}
+                        {canManage && (
+                          <th className="w-[12%] px-2 py-3 text-center text-[11px] leading-4 uppercase tracking-wide">
+                            Action
+                          </th>
+                        )}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-hairline">
                       {filtered.length === 0 ? (
                         <tr>
-                          <td colSpan={7} className="px-5 py-2">
+                          <td colSpan={canManage ? 7 : 6} className="px-5 py-2">
                             <EmptyState
                               compact
                               title={
@@ -1375,7 +1358,7 @@ export function AppointmentsView({
                         filtered.map((row) => (
                           <tr
                             key={row.id}
-                            className="hover:bg-mist transition-colors"
+                            className={row.staffScheduleMatch ? "bg-burnt/5 hover:bg-burnt/10 transition-colors" : "hover:bg-mist transition-colors"}
                           >
                             <td className="px-5 py-3.5 font-medium text-body">
                               {row.time}
@@ -1400,75 +1383,19 @@ export function AppointmentsView({
                                 {row.source}
                               </span>
                             </td>
-                            <td className="px-5 py-3.5">
-                              {row.status === "Check In" ||
-                              row.status === "Pending approval" ? (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleStatusChange(row.id, "Confirmed")
-                                  }
-                                  className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 rounded-md"
-                                >
-                                  <AppointmentStatusPill status={row.status} />
+                            <td className="whitespace-nowrap py-3.5 pl-5 pr-2">
+                              <AppointmentStatusPill status={row.status} />
+                            </td>
+                            {canManage && (
+                              <td className="px-2 py-3.5 align-middle">
+                                <button type="button" aria-haspopup="dialog"
+                                  aria-label={`Appointment details for ${row.customer}`}
+                                  onClick={() => setSelectedAppointmentId(row.id)}
+                                  className="mx-auto flex h-9 w-10 items-center justify-center rounded-lg text-glyph transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40">
+                                  <Icon name="more" weight="fill" className="size-5" />
                                 </button>
-                              ) : (
-                                <AppointmentStatusPill status={row.status} />
-                              )}
-                            </td>
-                            <td className="px-5 py-3.5 text-right relative">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setActiveMenuId(
-                                    activeMenuId === row.id ? null : row.id,
-                                  )
-                                }
-                                className="flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 text-glyph ml-auto"
-                              >
-                                <Icon
-                                  name="more"
-                                  weight="fill"
-                                  className="size-5"
-                                />
-                              </button>
-                              {activeMenuId === row.id && (
-                                <div className="absolute right-4 mt-1 w-44 rounded-[10px] bg-white border border-hairline shadow-lg py-1 z-30 text-left text-sm">
-                                  {row.status !== "Confirmed" && (
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        handleStatusChange(row.id, "Confirmed")
-                                      }
-                                      className="w-full text-left px-4 py-2 hover:bg-mist text-body"
-                                    >
-                                      Confirm
-                                    </button>
-                                  )}
-                                  {row.status !== "Check In" && (
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        handleStatusChange(row.id, "Check In")
-                                      }
-                                      className="w-full text-left px-4 py-2 hover:bg-mist text-body"
-                                    >
-                                      Check In
-                                    </button>
-                                  )}
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setCancelTarget(row);
-                                      setActiveMenuId(null);
-                                    }}
-                                    className="w-full text-left px-4 py-2 hover:bg-danger-bg text-danger font-medium"
-                                  >
-                                    Cancel booking
-                                  </button>
-                                </div>
-                              )}
-                            </td>
+                              </td>
+                            )}
                           </tr>
                         ))
                       )}
@@ -1489,6 +1416,12 @@ export function AppointmentsView({
       </div>
 
       {/* ── Appointment detail popover (from calendar click) ───────────────── */}
+      {canManage && tenantId && selectedAppointmentId && (
+        <AppointmentDetailsModal key={selectedAppointmentId} tenantId={tenantId} appointmentId={selectedAppointmentId}
+          onClose={() => setSelectedAppointmentId(null)}
+          onUpdated={() => router.refresh()} />
+      )}
+
       {popoverItem && (
         <div
           className="fixed inset-0 z-40 flex items-end justify-center sm:items-center p-4 bg-black/30 backdrop-blur-xs"
@@ -1531,7 +1464,7 @@ export function AppointmentsView({
             </div>
             {/* actions */}
             <div className="flex flex-wrap gap-2 pt-1 border-t border-hairline">
-              {popoverItem.status !== "Confirmed" && (
+              {canManage && <>{popoverItem.status !== "Confirmed" && (
                 <AdminButton
                   size="xs"
                   variant="primary"
@@ -1560,7 +1493,7 @@ export function AppointmentsView({
                 }}
               >
                 Cancel
-              </AdminButton>
+              </AdminButton></>}
               <AdminButton
                 size="xs"
                 variant="outline"
