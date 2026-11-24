@@ -123,9 +123,7 @@ async function authenticateTenantMember(
     };
   }
 
-  const isOwner =
-    membership?.role === "owner" ||
-    (profile?.tenant_id === targetTenantId && profile?.role === "owner");
+  const isOwner = membership?.role === "owner";
 
   const { data: tenant } = await supabase
     .from("tenants")
