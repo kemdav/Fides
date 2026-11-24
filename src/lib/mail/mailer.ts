@@ -27,7 +27,7 @@ export function resolveTransport(): MailTransport | null {
   const available: Record<MailTransport, boolean> = {
     resend: Boolean(env.RESEND_API_KEY),
     edge: Boolean(env.FIDES_EMAIL_FUNCTION_SECRET && edgeFunctionUrl()),
-    smtp: Boolean(env.SMTP_HOST && env.MAIL_FROM_EMAIL),
+    smtp: Boolean(env.SMTP_HOST && (env.MAIL_FROM_EMAIL || env.SMTP_USER)),
   };
   if (env.MAIL_TRANSPORT && available[env.MAIL_TRANSPORT]) return env.MAIL_TRANSPORT;
   if (available.resend) return "resend";
@@ -40,9 +40,16 @@ export function isMailConfigured(): boolean {
   return resolveTransport() !== null;
 }
 
+export function canDeliverVerificationLinks(): boolean {
+  const transport = resolveTransport();
+  return transport !== null && (
+    transport !== "resend" || (getServerEnv().MAIL_FROM_EMAIL ?? RESEND_TEST_SENDER) !== RESEND_TEST_SENDER
+  );
+}
+
 function fromAddress(transport: MailTransport): string {
   const env = getServerEnv();
-  const email = env.MAIL_FROM_EMAIL ?? (transport === "smtp" ? undefined : RESEND_TEST_SENDER);
+  const email = env.MAIL_FROM_EMAIL ?? (transport === "smtp" ? env.SMTP_USER : RESEND_TEST_SENDER);
   if (!email) throw new MailNotConfiguredError();
   return `${env.MAIL_FROM_NAME} <${email}>`;
 }
@@ -180,7 +187,7 @@ function getSmtpTransporter(): Transporter {
 
 async function sendWithSmtp(message: MailMessage): Promise<MailResult> {
   const env = getServerEnv();
-  if (!env.SMTP_HOST || !env.MAIL_FROM_EMAIL) throw new MailNotConfiguredError();
+  if (!env.SMTP_HOST || !(env.MAIL_FROM_EMAIL || env.SMTP_USER)) throw new MailNotConfiguredError();
 
   let info;
   try {
@@ -201,6 +208,15 @@ async function sendWithSmtp(message: MailMessage): Promise<MailResult> {
   const rejected = (info.rejected ?? []).map((entry) => String(entry));
   if (accepted.length === 0) throw new Error("The mail server did not accept the recipient address.");
   return { id: info.messageId ?? null, accepted, rejected };
+}
+
+export function sendSmtpMail(message: MailMessage): Promise<MailResult> {
+  return sendWithSmtp(message);
+}
+
+export function isSmtpMailConfigured(): boolean {
+  const env = getServerEnv();
+  return Boolean(env.SMTP_HOST && (env.MAIL_FROM_EMAIL || env.SMTP_USER));
 }
 
 function describeSmtpError(error: unknown): string {

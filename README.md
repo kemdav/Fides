@@ -33,7 +33,7 @@ cp .env.example .env.local        # then fill in real values (see docs/ENVIRONME
 
 docker compose up -d redis        # local Redis for rate limiting (host port 6380)
 supabase start                    # local Supabase stack
-supabase db reset                 # apply all migrations (00001 to 00024) + seed data
+supabase db reset                 # apply all migrations (00001 to 00028) + seed data
 
 npm run dev
 ```
@@ -95,7 +95,7 @@ src/
     database.types.ts      Supabase schema types
   proxy.ts                 Next.js 16 proxy (session refresh + tenant routing)
 supabase/
-  migrations/              SQL migrations (00001 baseline to 00024 RPC tenant guard)
+  migrations/              SQL migrations (00001 baseline to 00028 RPC tenant guard)
   seed.sql                 Local seed data (Bella Vita demo tenant, owner@bellavita.com / Password123!)
 public/                    PWA manifest, service worker, offline shell, icons
 ```

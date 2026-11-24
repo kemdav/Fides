@@ -1,7 +1,24 @@
 import "server-only";
+import { normalizeBrandColor as emailColor, colorLuminance as emailLuminance, readableForeground as emailForeground } from "@/lib/brand-colors";
 import { publicEnv } from "@/lib/env";
 import { formatPeso } from "@/lib/registration/options";
 import { sendMail } from "./mailer";
+
+const systemEmailFonts = {
+  body: "Mulish, 'Segoe UI', Arial, sans-serif",
+  heading: "Ovo, Georgia, 'Times New Roman', serif",
+};
+const merchantEmailFonts = {
+  body: "Inter, 'Segoe UI', Arial, sans-serif",
+  heading: "'Playfair Display', Georgia, 'Times New Roman', serif",
+};
+
+function emailFontStylesheet(useMerchantFonts = false) {
+  const families = (useMerchantFonts ? "family=Inter:wght@400;600;700&amp;" : "")
+    + "family=Mulish:wght@400;600;700&amp;family=Ovo"
+    + (useMerchantFonts ? "&amp;family=Playfair+Display" : "");
+  return `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?${families}&amp;display=swap">`;
+}
 
 /**
  * The mascot is loaded from the public site (never attached): inline attachments make emails
@@ -10,7 +27,9 @@ import { sendMail } from "./mailer";
  */
 function mascotUrl(): string | null {
   const base = publicEnv.siteUrl.replace(/\/$/, "");
-  return /^https:\/\//i.test(base) && !/localhost|127\.0\.0\.1/.test(base) ? `${base}/images/mascot/fox-mascot.png` : null;
+  return /^https:\/\//i.test(base) && !/localhost|127\.0\.0\.1/.test(base)
+    ? `${base}/images/mascot/fox-mascot.png`
+    : null;
 }
 
 function escapeHtml(value: string): string {
@@ -19,6 +38,252 @@ function escapeHtml(value: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function emailContrast(a: string, b: string): number {
+  const la = emailLuminance(a);
+  const lb = emailLuminance(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+/** Mixes `color` toward `target` (e.g. "#ffffff" for a tint, "#000000" for a shade). amount: 0 to 1. */
+function emailMix(color: string, target: string, amount: number): string {
+  const channel = (hex: string, start: number) =>
+    Number.parseInt(hex.slice(start, start + 2), 16);
+  return (
+    "#" +
+    [1, 3, 5]
+      .map((start) =>
+        Math.round(
+          channel(color, start) * (1 - amount) +
+            channel(target, start) * amount,
+        )
+          .toString(16)
+          .padStart(2, "0"),
+      )
+      .join("")
+  );
+}
+
+/** Darkens the accent just enough that white text and links on white pass 4.5:1 contrast. */
+function emailStrongAccent(accent: string): string {
+  let color = accent;
+  for (let i = 0; i < 12 && emailContrast(color, "#ffffff") < 4.5; i++) {
+    color = emailMix(color, "#000000", 0.08);
+  }
+  return color;
+}
+
+type StaffMessageRecipient = {
+  name: string;
+  merchant: string;
+  typography?: string | null;
+  colors: {
+    brand: string | null;
+    secondary: string | null;
+    accent: string | null;
+  };
+};
+
+export function staffInvitationMessage(input: StaffMessageRecipient & { invitationUrl: URL; signInUrl: URL }) {
+  return renderStaffMessage({ ...input, url: input.invitationUrl, kind: "invitation" });
+}
+
+export function staffEmailVerificationMessage(input: StaffMessageRecipient & { verificationUrl: URL; minutesValid: number }) {
+  return renderStaffMessage({ ...input, url: input.verificationUrl, kind: "verification" });
+}
+
+function renderStaffMessage(input: StaffMessageRecipient & { url: URL } & (
+  | { kind: "invitation"; signInUrl: URL }
+  | { kind: "verification"; minutesValid: number }
+)) {
+  const isInvitation = input.kind === "invitation";
+  const label = isInvitation ? "Staff invitation" : "Email verification";
+  const heading = isInvitation ? `Join ${input.merchant} on Fides` : "Verify your new email address";
+  const preheader = isInvitation
+    ? `${input.merchant} invited you to join their team on Fides. Accept within 7 days.`
+    : `Confirm your new sign-in email for ${input.merchant}.`;
+  const body = isInvitation
+    ? `${input.merchant} has invited you to join their team. Accept the invitation to set up your staff account and get started.`
+    : `A request was made to use this email address to sign in to ${input.merchant} on Fides. Verify the new address to finish the change.`;
+  const button = isInvitation ? "Accept invitation" : "Verify Email";
+  const expiry = isInvitation ? "This invitation expires in 7 days." : `This verification link expires in ${input.minutesValid} minutes.`;
+  const closing = isInvitation
+    ? "If you weren't expecting this invitation, you can safely ignore this email."
+    : "If you weren't expecting this change, you can safely ignore this email. Your current sign-in email will stay active.";
+  const brand = emailColor(input.colors.brand, "#ffffeb");
+  const secondary = emailColor(input.colors.secondary, "#09101d");
+  const accent = emailColor(input.colors.accent, "#c35000");
+
+  // One accent family drives the whole email so every colored element feels related.
+  const strong = emailStrongAccent(accent); // button, links, labels (always readable with white)
+  const soft = emailMix(accent, "#ffffff", 0.9); // header band
+  const panel = emailMix(accent, "#ffffff", 0.95); // steps panel + footer
+  const line = emailMix(accent, "#ffffff", 0.82); // dividers, step badges
+  const outline = emailMix(accent, "#ffffff", 0.55); // card + panel outline (clearly visible)
+
+  const pageBackground = emailLuminance(brand) > 0.85 ? brand : "#f6f7f9";
+  const headingColor = emailForeground("#ffffff", secondary);
+
+  const initial = escapeHtml(
+    (Array.from(input.merchant.trim())[0] ?? "F").toUpperCase(),
+  );
+  const name = escapeHtml(input.name);
+  const merchant = escapeHtml(input.merchant);
+  const actionUrl = escapeHtml(input.url.toString());
+
+  const useMerchantFonts = input.typography === "Playfair + Inter";
+  const { body: font, heading: serif } = useMerchantFonts ? merchantEmailFonts : systemEmailFonts;
+
+  const step = (n: number, content: string, last = false) =>
+    `<tr>
+      <td valign="top" style="width:36px;padding:0 0 ${last ? 0 : 14}px;">
+        <div style="width:24px;height:24px;line-height:24px;border-radius:12px;background-color:${line};color:${strong};font-family:${font};font-size:12px;font-weight:700;text-align:center;">${n}</div>
+      </td>
+      <td valign="top" style="padding:2px 0 ${last ? 0 : 14}px;font-family:${font};font-size:14px;line-height:21px;color:#374151;">${content}</td>
+    </tr>`;
+
+  const steps = isInvitation
+    ? ["Accept your invitation using the button above.", "Set up or sign in to your staff account.", "Come back any time through the staff portal."]
+    : ["Open the verification page using the button above.", "Enter your current Fides password.", "Once verified, you'll be signed in and taken to your workspace dashboard."];
+
+  return {
+    subject: isInvitation ? `${input.merchant} invited you to join their team on Fides` : "Verify your new Fides email address",
+
+    text: [
+      `Hi ${input.name},`,
+      "",
+      body,
+      "",
+      button,
+      input.url.toString(),
+      "",
+      expiry,
+      "",
+      "What happens next:",
+      ...steps.map((content, index) => `${index + 1}. ${content}`),
+      ...(isInvitation ? [input.signInUrl.toString()] : []),
+      "",
+      closing,
+      "",
+      "Powered by Fides",
+    ].join("\n"),
+
+    html: `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <title>${label}</title>
+  ${emailFontStylesheet(useMerchantFonts)}
+  <style>
+    body { margin:0; padding:0; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; }
+    table { border-collapse:separate; }
+    img { border:0; }
+    @media only screen and (max-width:600px) {
+      .outer { padding:16px 12px !important; }
+      .px { padding-left:20px !important; padding-right:20px !important; }
+      .h1 { font-size:23px !important; line-height:30px !important; }
+      .btn-table { width:100% !important; }
+      .btn { display:block !important; padding:16px 20px !important; text-align:center !important; }
+      .panel-pad { padding:18px 16px !important; }
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background-color:${pageBackground};">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;">
+    ${escapeHtml(preheader)}&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;
+  </div>
+
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:${pageBackground};">
+    <tr>
+      <td class="outer" align="center" style="padding:32px 16px;">
+
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:560px;background-color:#ffffff;border:1px solid ${outline};border-radius:14px;box-shadow:0 6px 20px rgba(17,24,39,0.10),0 1px 3px rgba(17,24,39,0.08);">
+
+          <!-- Header: merchant identity -->
+          <tr>
+            <td class="px" style="background-color:${soft};border-bottom:1px solid ${outline};border-radius:13px 13px 0 0;padding:20px 32px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td valign="middle" style="padding-right:14px;">
+                    <div style="width:44px;height:44px;line-height:44px;border-radius:10px;background-color:${strong};color:#ffffff;font-family:${serif};font-size:22px;font-weight:bold;text-align:center;">${initial}</div>
+                  </td>
+                  <td valign="middle" style="font-family:${font};">
+                    <div style="font-family:${serif};font-size:20px;line-height:24px;color:#111827;">${merchant}</div>
+                    <div style="font-size:12px;line-height:18px;letter-spacing:0.6px;text-transform:uppercase;color:${strong};">${label}</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Message + button -->
+          <tr>
+            <td class="px" style="padding:32px 32px 8px;font-family:${font};">
+              <h1 class="h1" style="margin:0 0 14px;font-family:${serif};font-size:26px;line-height:34px;font-weight:normal;color:${headingColor};">${escapeHtml(heading)}</h1>
+              <p style="margin:0 0 6px;font-size:15px;line-height:24px;color:#374151;">Hi ${name},</p>
+              <p style="margin:0 0 26px;font-size:15px;line-height:24px;color:#374151;">${escapeHtml(body)}</p>
+
+              <table class="btn-table" role="presentation" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td bgcolor="${strong}" style="border-radius:8px;background-color:${strong};">
+                    <a class="btn" href="${actionUrl}" target="_blank" style="display:inline-block;padding:14px 28px;font-family:${font};font-size:15px;line-height:20px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:8px;">${button}</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:14px 0 0;font-size:13px;line-height:20px;color:#6b7280;">${expiry}</p>
+            </td>
+          </tr>
+
+          <!-- What happens next -->
+          <tr>
+            <td class="px" style="padding:24px 32px 0;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:${panel};border:1px solid ${outline};border-radius:10px;">
+                <tr>
+                  <td class="panel-pad" style="padding:20px 22px;">
+                    <p style="margin:0 0 14px;font-family:${font};font-size:12px;line-height:18px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#6b7280;">What happens next</p>
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                      ${steps.map((content, index) => {
+                        const last = index === steps.length - 1;
+                        const html = last && isInvitation
+                          ? escapeHtml(content).replace("staff portal", `<a href="${escapeHtml(input.signInUrl.toString())}" style="color:${strong};font-weight:600;text-decoration:underline;">staff portal</a>`)
+                          : escapeHtml(content);
+                        return step(index + 1, html, last);
+                      }).join("")}
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Fallback link + safety note -->
+          <tr>
+            <td class="px" style="padding:24px 32px 32px;font-family:${font};">
+              <p style="margin:0 0 4px;font-size:12px;line-height:18px;color:#6b7280;">Button not working? Paste this link into your browser:</p>
+              <p style="margin:0 0 18px;font-size:12px;line-height:18px;word-break:break-all;overflow-wrap:anywhere;"><a href="${actionUrl}" style="color:${strong};text-decoration:underline;">${actionUrl}</a></p>
+              <p style="margin:0;font-size:12px;line-height:18px;color:#6b7280;">${escapeHtml(closing)}</p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="background-color:${panel};border-top:1px solid ${outline};border-radius:0 0 13px 13px;padding:18px 24px;font-family:${systemEmailFonts.body};font-size:13px;line-height:normal;color:#c35000;">
+              Powered by <span style="font-family:${systemEmailFonts.heading};font-weight:400;">Fides</span>
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`,
+  };
 }
 
 export function loginUrl(): string {
@@ -42,14 +307,17 @@ type Layout = {
 
 function renderLayout(layout: Layout): string {
   const paragraphs = layout.paragraphs
-    .map((line) => `<p style="margin:0 0 16px;font-size:16px;line-height:26px;color:#2c3a4b;">${escapeHtml(line)}</p>`)
+    .map(
+      (line) =>
+        `<p style="margin:0 0 16px;font-size:16px;line-height:26px;color:#2c3a4b;">${escapeHtml(line)}</p>`,
+    )
     .join("");
 
   const details = layout.details?.length
     ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:8px 0 24px;border:1px solid #ebeef2;border-radius:10px;background:#fffff7;">${layout.details
         .map(
           (item) =>
-            `<tr><td style="padding:12px 18px;font-size:13px;color:#6d7580;width:42%;">${escapeHtml(item.label)}</td><td style="padding:12px 18px;font-size:14px;font-weight:600;color:#09101d;">${escapeHtml(item.value)}</td></tr>`
+            `<tr><td style="padding:12px 18px;font-size:13px;color:#6d7580;width:42%;">${escapeHtml(item.label)}</td><td style="padding:12px 18px;font-size:14px;font-weight:600;color:#09101d;">${escapeHtml(item.value)}</td></tr>`,
         )
         .join("")}</table>`
     : "";
@@ -67,23 +335,34 @@ function renderLayout(layout: Layout): string {
     ? `<tr><td align="center" style="padding:28px 32px 0;"><img src="${mascotSrc}" alt="Fides fox mascot" width="200" style="display:block;width:200px;max-width:100%;height:auto;border:0;" /></td></tr>`
     : "";
 
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><title>${escapeHtml(layout.heading)}</title></head><body style="margin:0;padding:0;background:#ffffeb;font-family:Arial,Helvetica,sans-serif;"><span style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(layout.preheader)}</span><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#ffffeb;padding:32px 12px;"><tr><td align="center"><table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 3px 14px rgba(44,58,75,0.08);"><tr><td style="background:#c35000;padding:22px 32px;"><span style="font-family:Georgia,'Times New Roman',serif;font-size:32px;color:#ffffff;">Fides</span><span style="float:right;font-size:12px;letter-spacing:1.2px;color:#ffe9d6;padding-top:14px;">MANAGE AND GROW YOUR SERVICE BUSINESS</span></td></tr>${mascot}<tr><td style="padding:16px 32px 8px;"><h1 style="margin:0 0 20px;font-family:Georgia,'Times New Roman',serif;font-size:28px;line-height:36px;font-weight:400;color:#09101d;text-align:center;">${escapeHtml(layout.heading)}</h1>${paragraphs}${code}${details}${button}<p style="margin:0 0 8px;font-size:16px;line-height:26px;color:#2c3a4b;">${escapeHtml(layout.closing)}</p><p style="margin:0 0 28px;font-size:16px;line-height:26px;font-weight:700;color:#09101d;">The Fides Team</p></td></tr><tr><td style="background:#fffff7;border-top:1px solid #ebeef2;padding:20px 32px;font-size:12px;line-height:19px;color:#6d7580;text-align:center;">${escapeHtml(layout.footer ?? "You received this email because an account application was submitted with this address on Fides.")}<br />&copy; ${new Date().getFullYear()} Fides. All rights reserved.</td></tr></table></td></tr></table></body></html>`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><title>${escapeHtml(layout.heading)}</title>${emailFontStylesheet()}</head><body style="margin:0;padding:0;background:#ffffeb;font-family:${systemEmailFonts.body};"><span style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(layout.preheader)}</span><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#ffffeb;padding:32px 12px;"><tr><td align="center"><table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 3px 14px rgba(44,58,75,0.08);"><tr><td style="background:#c35000;padding:22px 32px;"><span style="font-family:${systemEmailFonts.heading};font-size:32px;color:#ffffff;">Fides</span><span style="float:right;font-size:12px;letter-spacing:1.2px;color:#ffe9d6;padding-top:14px;">MANAGE AND GROW YOUR SERVICE BUSINESS</span></td></tr>${mascot}<tr><td style="padding:16px 32px 8px;"><h1 style="margin:0 0 20px;font-family:${systemEmailFonts.heading};font-size:28px;line-height:36px;font-weight:400;color:#09101d;text-align:center;">${escapeHtml(layout.heading)}</h1>${paragraphs}${code}${details}${button}<p style="margin:0 0 8px;font-size:16px;line-height:26px;color:#2c3a4b;">${escapeHtml(layout.closing)}</p><p style="margin:0 0 28px;font-size:16px;line-height:26px;font-weight:700;color:#09101d;">The Fides Team</p></td></tr><tr><td style="background:#fffff7;border-top:1px solid #ebeef2;padding:20px 32px;font-size:12px;line-height:19px;color:#6d7580;text-align:center;">${escapeHtml(layout.footer ?? "You received this email because an account application was submitted with this address on Fides.")}<br />&copy; ${new Date().getFullYear()} Fides. All rights reserved.</td></tr></table></td></tr></table></body></html>`;
 }
 
 function renderText(layout: Layout): string {
-  const lines = [layout.heading, "", ...layout.paragraphs.flatMap((line) => [line, ""])];
+  const lines = [
+    layout.heading,
+    "",
+    ...layout.paragraphs.flatMap((line) => [line, ""]),
+  ];
   if (layout.details?.length) {
-    for (const item of layout.details) lines.push(`${item.label}: ${item.value}`);
+    for (const item of layout.details)
+      lines.push(`${item.label}: ${item.value}`);
     lines.push("");
   }
   if (layout.code) lines.push(`Code: ${layout.code}`, "");
-  if (layout.button) lines.push(`${layout.button.label}: ${layout.button.url}`, "");
+  if (layout.button)
+    lines.push(`${layout.button.label}: ${layout.button.url}`, "");
   lines.push(layout.closing, "The Fides Team");
   return lines.join("\n");
 }
 
 /** Sent when the account request has been submitted with all required documents and information. */
-export async function sendSubmissionEmail(input: { to: string; ownerName: string; businessName: string; referenceCode: string }) {
+export async function sendSubmissionEmail(input: {
+  to: string;
+  ownerName: string;
+  businessName: string;
+  referenceCode: string;
+}) {
   const layout: Layout = {
     preheader: "Your account request has been successfully submitted.",
     heading: "Account request submitted",
@@ -118,7 +397,11 @@ export async function sendApprovalEmail(input: {
   const layout: Layout = {
     preheader: "Your account has been approved. You may now log in.",
     heading: "Account approved",
-    paragraphs: [`Dear ${input.ownerName},`, "Your account has been approved.", "You may now log in using the link below:"],
+    paragraphs: [
+      `Dear ${input.ownerName},`,
+      "Your account has been approved.",
+      "You may now log in using the link below:",
+    ],
     button: { label: "Log in to Fides", url: loginUrl() },
     closing: "Thank you for choosing Fides.",
   };
@@ -136,7 +419,12 @@ export function registerUrl(): string {
 }
 
 /** Sent when the administrator rejects an application. All submitted data has been erased. */
-export async function sendRejectionEmail(input: { to: string; ownerName: string; businessName: string; reason: string }) {
+export async function sendRejectionEmail(input: {
+  to: string;
+  ownerName: string;
+  businessName: string;
+  reason: string;
+}) {
   const layout: Layout = {
     preheader: "Your Fides account request could not be approved.",
     heading: "Account request not approved",
@@ -158,7 +446,11 @@ export async function sendRejectionEmail(input: { to: string; ownerName: string;
 }
 
 /** Sent by the Forgot Password flow with a 4-character code. */
-export async function sendPasswordResetCodeEmail(input: { to: string; code: string; minutesValid: number }) {
+export async function sendPasswordResetCodeEmail(input: {
+  to: string;
+  code: string;
+  minutesValid: number;
+}) {
   const layout: Layout = {
     preheader: `Your Fides password reset code is ${input.code}.`,
     heading: "Password reset code",
@@ -167,9 +459,11 @@ export async function sendPasswordResetCodeEmail(input: { to: string; code: stri
       `Enter this code to continue. It expires in ${input.minutesValid} minutes.`,
     ],
     code: input.code,
-    closing: "If you did not request this, you can safely ignore this email. Your password will not change.",
+    closing:
+      "If you did not request this, you can safely ignore this email. Your password will not change.",
     showMascot: false,
-    footer: "You received this email because a password reset was requested for this address on Fides.",
+    footer:
+      "You received this email because a password reset was requested for this address on Fides.",
   };
   return sendMail({
     to: input.to,
@@ -200,7 +494,8 @@ export async function sendBillingReminderEmail(input: {
       { label: "Renewal date", value: input.billingDate },
     ],
     button: { label: "Log in to Fides", url: loginUrl() },
-    closing: "If you have any questions about your subscription, simply reply to this email.",
+    closing:
+      "If you have any questions about your subscription, simply reply to this email.",
   };
 
   return sendMail({

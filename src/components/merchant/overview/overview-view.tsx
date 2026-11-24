@@ -1,22 +1,20 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { canManageBookings, type WorkspaceRole } from "@/lib/merchant/workspace-roles";
 import { MerchantSidebar } from "../merchant-sidebar";
 import { Icon } from "@/components/admin/icon";
 import { MetricCard } from "@/components/admin/metric-card";
-import { PageContent, PageHeading, Surface } from "@/components/admin/primitives";
-import { updateAppointmentStatusAction } from "@/app/actions/appointments";
+import { PageContent, PageHeading, StatusPill, Surface } from "@/components/admin/primitives";
+import { AppointmentDetailsModal } from "./appointment-details-modal";
 import { NewAppointmentModal, type NewAppointmentResult } from "@/components/merchant/new-appointment-modal";
 import { WalkInModal, type WalkInResult } from "@/components/merchant/walk-in-modal";
 import { EmptyState } from "@/components/ui/empty-state";
-import { AppointmentStatusPill } from "@/components/merchant/appointment-status-pill";
-import { Modal } from "@/components/ui/modal";
-import { Button } from "@/components/ui/button";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField, type SelectOption } from "@/components/ui/select-field";
-import { statusFilterOptions } from "@/components/merchant/appointment-filter-options";
 
 export interface AppointmentRow {
   id: string;
@@ -24,7 +22,7 @@ export interface AppointmentRow {
   customer: string;
   service: string;
   staff: string;
-  source: "Online" | "Walk-In";
+  source: "Online" | "Walk-In" | "Phone";
   status: "Confirmed" | "Pending approval" | "Check In" | "In service" | "Completed" | "Cancelled";
   startsAt?: string;
   calendarDate?: string;
@@ -42,7 +40,7 @@ export interface OverviewViewProps {
   businessName?: string;
   userName?: string;
   userEmail?: string;
-  userRole?: string;
+  userRole?: WorkspaceRole;
   tenantId?: string;
   todayCount?: number;
   confirmedCount?: number;
@@ -53,6 +51,9 @@ export interface OverviewViewProps {
   revenueChangePercent?: number;
   bookingCount?: number;
   activeCustomerCount?: number;
+  commissionThisMonth?: number;
+  calendarMonthKey?: string;
+  todayKey?: string;
   customerGrowthPercent?: number;
   averageOrderValue?: number;
   initialPeriod?: "Today" | "This Week" | "This Month";
@@ -65,6 +66,19 @@ export interface OverviewViewProps {
 
 const EMPTY_APPOINTMENTS: AppointmentRow[] = [];
 
+function AppointmentStatusPill({ status }: { status: AppointmentRow["status"] }) {
+  const toneMap: Record<AppointmentRow["status"], { tone: React.ComponentProps<typeof StatusPill>["tone"]; label: string }> = {
+    "Confirmed":        { tone: "success",  label: "Confirmed" },
+    "Pending approval": { tone: "warning",  label: "Pending approval" },
+    "Check In":         { tone: "info",     label: "Check In" },
+    "In service":       { tone: "info",     label: "In service" },
+    "Completed":        { tone: "neutral",  label: "Completed" },
+    "Cancelled":        { tone: "danger",   label: "Cancelled" },
+  };
+  const { tone, label } = toneMap[status] ?? { tone: "neutral", label: status };
+  return <StatusPill tone={tone}>{label}</StatusPill>;
+}
+
 const periodOptions: SelectOption<"Today" | "This Week" | "This Month">[] = [
   { value: "Today", label: "Today" },
   { value: "This Week", label: "This Week" },
@@ -75,7 +89,7 @@ export function OverviewView({
   businessName = "Bella Vita",
   userName = "Maria Santos",
   userEmail = "Maria Santos",
-  userRole = "Business owner",
+  userRole,
   tenantId,
   todayCount = 0,
   confirmedCount = 0,
@@ -86,6 +100,9 @@ export function OverviewView({
   revenueChangePercent = 0,
   bookingCount = 0,
   activeCustomerCount = 0,
+  commissionThisMonth = 0,
+  calendarMonthKey,
+  todayKey,
   customerGrowthPercent = 0,
   averageOrderValue = 0,
   initialPeriod = "This Week",
@@ -97,20 +114,35 @@ export function OverviewView({
   const router = useRouter();
   const [searchQuery, setSearchQuery] = React.useState("");
   const [appointments, setAppointments] = React.useState<AppointmentRow[]>(initialRows);
+  const [previousRows, setPreviousRows] = React.useState(initialRows);
+  if (previousRows !== initialRows) {
+    setPreviousRows(initialRows);
+    setAppointments(initialRows);
+  }
 
-  const [filterStatus, setFilterStatus] = React.useState<string>("All");
+  const [filterStatus, setFilterStatus] = React.useState("");
+  const [filterStaff, setFilterStaff] = React.useState("");
+  const [filterSource, setFilterSource] = React.useState("");
+  const filterTrigger = React.useRef<HTMLButtonElement>(null);
+  const canManage = canManageBookings(userRole);
+  const isServiceStaff = userRole === "staff";
+  const canViewBusinessMetrics = userRole === "owner" || userRole === "admin";
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [period, setPeriod] = React.useState(initialPeriod);
-  const [activeMenuId, setActiveMenuId] = React.useState<string | null>(null);
-  const [cancelTarget, setCancelTarget] = React.useState<AppointmentRow | null>(null);
+  const [selectedAppointmentId, setSelectedAppointmentId] = React.useState<string | null>(null);
   const [isNewBookingOpen, setIsNewBookingOpen] = React.useState(false);
   const [isWalkInOpen, setIsWalkInOpen] = React.useState(false);
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
   const [expandedAppointmentId, setExpandedAppointmentId] = React.useState<string | null>(null);
   const [selectedCalendarDay, setSelectedCalendarDay] = React.useState<number | null>(null);
-  const [calendarMonth, setCalendarMonth] = React.useState(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1);
-  });
+  const calendarMonth = calendarMonthKey ? new Date(`${calendarMonthKey}-01T12:00:00`) : new Date();
+  const changeCalendarMonth = (offset: number) => {
+    const month = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + offset, 1);
+    const key = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
+    if (key < "1900-01" || key > "9998-12") return;
+    setSelectedCalendarDay(null);
+    router.push(`${basePath}/dashboard?${new URLSearchParams({ period, month: key })}`, { scroll: false });
+  };
   const displayName = userName || userEmail;
 
   const showToast = (msg: string) => {
@@ -118,6 +150,14 @@ export function OverviewView({
     setTimeout(() => setToastMessage(null), 2500);
   };
 
+  const activeFilterCount = [filterStatus, filterStaff, filterSource].filter(Boolean).length;
+  const hasFilters = Boolean(searchQuery || activeFilterCount);
+  const staffOptions = [...new Set(appointments.map(({ staff }) => staff))].sort((a, b) => a.localeCompare(b));
+  const filterFields = [
+    { label: "Status", value: filterStatus, onChange: setFilterStatus, options: ["Confirmed", "Pending approval", "Check In", "In service", "Completed", "Cancelled"], placeholder: "All statuses" },
+    { label: "Staff", value: filterStaff, onChange: setFilterStaff, options: staffOptions, placeholder: "All staff" },
+    { label: "Source", value: filterSource, onChange: setFilterSource, options: ["Online", "Walk-In", "Phone"], placeholder: "All sources" },
+  ];
   const filtered = appointments.filter((app) => {
     const matchesSearch =
       !searchQuery ||
@@ -125,67 +165,10 @@ export function OverviewView({
       app.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
       app.staff.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesStatus =
-      filterStatus === "All" || app.status === filterStatus;
-
-    return matchesSearch && matchesStatus;
+    return matchesSearch && (!filterStatus || app.status === filterStatus)
+      && (!filterStaff || app.staff === filterStaff) && (!filterSource || app.source === filterSource);
   });
 
-  // QA #3: Row action persists status changes to Supabase
-  const handleStatusChange = async (id: string, newStatus: AppointmentRow["status"]) => {
-    setActiveMenuId(null);
-    const prevRows = appointments;
-    setAppointments((prev) =>
-      prev.map((row) => (row.id === id ? { ...row, status: newStatus } : row))
-    );
-
-    try {
-      const res = await updateAppointmentStatusAction({
-        appointmentId: id,
-        newStatus,
-        tenantIdParam: tenantId,
-      });
-
-      if (!res.success) {
-        setAppointments(prevRows);
-        showToast(res.error || "Failed to update appointment status.");
-        return;
-      }
-      showToast(`Appointment status updated to ${newStatus}`);
-      router.refresh();
-    } catch (err: unknown) {
-      setAppointments(prevRows);
-      showToast(err instanceof Error ? err.message : "Failed to update appointment status.");
-    }
-  };
-
-  // QA #3: Cancel row action persists cancellation to Supabase
-  const handleConfirmCancel = async () => {
-    if (!cancelTarget) return;
-    const target = cancelTarget;
-    setCancelTarget(null);
-    const prevRows = appointments;
-    setAppointments((prev) => prev.filter((row) => row.id !== target.id));
-
-    try {
-      const res = await updateAppointmentStatusAction({
-        appointmentId: target.id,
-        newStatus: "Cancelled",
-        tenantIdParam: tenantId,
-      });
-
-      if (!res.success) {
-        setAppointments(prevRows);
-        showToast(res.error || "Failed to cancel appointment.");
-        return;
-      }
-      showToast(`Appointment for ${target.customer} cancelled.`);
-      router.refresh();
-    } catch (err: unknown) {
-      setAppointments(prevRows);
-      showToast(err instanceof Error ? err.message : "Failed to cancel appointment.");
-    }
-  };
 
   // Chart statistics data (QA #1: dynamic chart bars from loaded records)
   const stats =
@@ -265,7 +248,7 @@ export function OverviewView({
     y: number;
   } | null>(null);
 
-  const today = new Date();
+  const today = todayKey ? new Date(`${todayKey}T12:00:00`) : new Date();
   const currentMonthLabel = calendarMonth.toLocaleDateString("en-US", {
     month: "long",
     year: "numeric",
@@ -310,7 +293,7 @@ export function OverviewView({
         basePath={basePath}
       />
 
-      <div className="min-w-0 flex-1 lg:h-dvh lg:overflow-y-auto">
+      <div className="min-w-0 flex-1 lg:h-dvh lg:overflow-y-auto lg:[scrollbar-gutter:stable]">
         <PageContent>
           {/* Page Heading */}
           <PageHeading
@@ -327,24 +310,21 @@ export function OverviewView({
                   onChange={(p) => {
                     setPeriod(p);
                     setHoveredPoint(null);
-                    router.push(`${basePath}/dashboard?period=${encodeURIComponent(p)}`);
-                    router.refresh();
+                    router.push(`${basePath}/dashboard?${new URLSearchParams({ period: p, ...(calendarMonthKey && { month: calendarMonthKey }) })}`, { scroll: false });
                   }}
                 />
-                <Button
-                  variant="brand"
-                  size="form"
+                {canManage && <>
+                <Button variant="brand" size="form"
                   onClick={() => setIsNewBookingOpen(true)}
                 >
                   + New Booking
                 </Button>
-                <Button
-                  variant="secondary"
-                  size="form"
+                <Button variant="brand-outline" size="form"
                   onClick={() => setIsWalkInOpen(true)}
                 >
                   + Add Walk-in
                 </Button>
+                </>}
               </div>
             }
           />
@@ -353,11 +333,12 @@ export function OverviewView({
           <div className="grid grid-cols-2 gap-5 xl:grid-cols-4">
             <MetricCard
               featured
-              label="Total revenue"
-              value={revenueTotal}
-              caption={`${revenueChangePercent >= 0 ? "+" : ""}${revenueChangePercent.toFixed(1)}% vs previous week`}
+              label={isServiceStaff ? "Commission this month" : canViewBusinessMetrics ? "Total revenue" : "Today’s appointments"}
+              value={isServiceStaff ? commissionThisMonth : canViewBusinessMetrics ? revenueTotal : todayCount}
+              valuePrefix={isServiceStaff ? "₱" : undefined}
+              caption={isServiceStaff ? "Earned from completed services" : canViewBusinessMetrics ? `${revenueChangePercent >= 0 ? "+" : ""}${revenueChangePercent.toFixed(1)}% vs previous week` : `${confirmedCount} confirmed today`}
               icon="calendar"
-              progress={Math.min(100, Math.max(0, 50 + revenueChangePercent / 2))}
+              progress={isServiceStaff ? (commissionThisMonth > 0 ? 100 : 0) : canViewBusinessMetrics ? Math.min(100, Math.max(0, 50 + revenueChangePercent / 2)) : todayCount ? confirmedCount / todayCount * 100 : 0}
             />
             <MetricCard
               label="Total bookings"
@@ -368,18 +349,18 @@ export function OverviewView({
               miniChart
             />
             <MetricCard
-              label="Active customers"
-              value={activeCustomerCount}
-              caption={`${customerGrowthPercent >= 0 ? "+" : ""}${customerGrowthPercent.toFixed(1)}% vs previous week · ${checkedInCount} checked in`}
+              label={isServiceStaff ? "Total customers" : canViewBusinessMetrics ? "Active customers" : "Checked-in customers"}
+              value={isServiceStaff || canViewBusinessMetrics ? activeCustomerCount : checkedInCount}
+              caption={isServiceStaff ? "Unique customers in the selected period" : canViewBusinessMetrics ? `${customerGrowthPercent >= 0 ? "+" : ""}${customerGrowthPercent.toFixed(1)}% vs previous week · ${checkedInCount} checked in` : "Checked in or in service today"}
               icon="users"
-              progress={Math.min(100, Math.max(0, 50 + customerGrowthPercent / 2))}
+              progress={isServiceStaff ? (bookingCount ? activeCustomerCount / bookingCount * 100 : 0) : canViewBusinessMetrics ? Math.min(100, Math.max(0, 50 + customerGrowthPercent / 2)) : todayCount ? checkedInCount / todayCount * 100 : 0}
             />
             <MetricCard
-              label="Average order value"
-              value={averageOrderValue}
-              caption={`${completedVisitsCount} completed today`}
-              icon="card"
-              progress={averageOrderValue > 0 ? 100 : 0}
+              label={canViewBusinessMetrics ? "Average order value" : "Completed today"}
+              value={canViewBusinessMetrics ? averageOrderValue : completedVisitsCount}
+              caption={canViewBusinessMetrics ? `${completedVisitsCount} completed today` : "Appointments completed today"}
+              icon={canViewBusinessMetrics ? "card" : "clock"}
+              progress={canViewBusinessMetrics ? (averageOrderValue > 0 ? 100 : 0) : todayCount ? completedVisitsCount / todayCount * 100 : 0}
             />
           </div>
 
@@ -419,12 +400,12 @@ export function OverviewView({
                     >
                       <defs>
                         <linearGradient id="bookedGrad" x1="0" x2="0" y1="0" y2="1">
-                          <stop offset="0%" style={{ stopColor: "var(--color-burnt)" }} stopOpacity="0.18" />
-                          <stop offset="100%" style={{ stopColor: "var(--color-burnt)" }} stopOpacity="0" />
+                          <stop offset="0%" stopColor="#C35000" stopOpacity="0.18" />
+                          <stop offset="100%" stopColor="#C35000" stopOpacity="0" />
                         </linearGradient>
                         <linearGradient id="completedGrad" x1="0" x2="0" y1="0" y2="1">
-                          <stop offset="0%" style={{ stopColor: "var(--color-sky-deep)" }} stopOpacity="0.15" />
-                          <stop offset="100%" style={{ stopColor: "var(--color-sky-deep)" }} stopOpacity="0" />
+                          <stop offset="0%" stopColor="#82AFC2" stopOpacity="0.15" />
+                          <stop offset="100%" stopColor="#82AFC2" stopOpacity="0" />
                         </linearGradient>
                       </defs>
 
@@ -438,14 +419,14 @@ export function OverviewView({
                               x2={lineWidth - lineRight}
                               y1={y}
                               y2={y}
-                              stroke="var(--color-hairline)"
+                              stroke="#EDECE8"
                               strokeWidth="1"
                             />
                             <text
                               x={lineLeft - 8}
                               y={y + 4}
                               textAnchor="end"
-                              className="fill-subtle text-xs font-medium"
+                              className="fill-subtle text-[11px] font-medium"
                             >
                               {tick}
                             </text>
@@ -467,7 +448,7 @@ export function OverviewView({
                             x2={todayX}
                             y1={lineTop}
                             y2={lineTop + chartHeight}
-                            stroke="var(--color-burnt)"
+                            stroke="#C35000"
                             strokeWidth="1"
                             strokeDasharray="4 3"
                             opacity="0.35"
@@ -483,7 +464,7 @@ export function OverviewView({
                       <path
                         d={smoothPath(linePointCoords("booked"))}
                         fill="none"
-                        stroke="var(--color-burnt)"
+                        stroke="#C35000"
                         strokeWidth="2.5"
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -491,7 +472,7 @@ export function OverviewView({
                       <path
                         d={smoothPath(linePointCoords("completed"))}
                         fill="none"
-                        stroke="var(--color-sky-deep)"
+                        stroke="#82AFC2"
                         strokeWidth="2.5"
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -504,7 +485,7 @@ export function OverviewView({
                           cx={pt.x}
                           cy={pt.y}
                           r={hoveredPoint?.day === stats[idx].day ? 5 : 3}
-                          fill="var(--color-burnt)"
+                          fill="#C35000"
                           stroke="white"
                           strokeWidth="2"
                           className="transition-all duration-150"
@@ -516,7 +497,7 @@ export function OverviewView({
                           cx={pt.x}
                           cy={pt.y}
                           r={hoveredPoint?.day === stats[idx].day ? 5 : 3}
-                          fill="var(--color-sky-deep)"
+                          fill="#82AFC2"
                           stroke="white"
                           strokeWidth="2"
                           className="transition-all duration-150"
@@ -542,7 +523,7 @@ export function OverviewView({
                               x={x}
                               y={lineHeight - 14}
                               textAnchor="middle"
-                              className={`text-xs font-medium ${isToday ? "fill-burnt" : "fill-subtle"}`}
+                              className={`text-[11px] font-medium ${isToday ? "fill-burnt" : "fill-subtle"}`}
                             >
                               {item.day}
                             </text>
@@ -551,7 +532,7 @@ export function OverviewView({
                                 x={x}
                                 y={lineHeight - 2}
                                 textAnchor="middle"
-                                className="fill-burnt text-xs font-semibold"
+                                className="fill-burnt text-[10px] font-semibold"
                               >
                                 Today
                               </text>
@@ -630,7 +611,7 @@ export function OverviewView({
                             className="w-4 bg-burnt rounded-t-sm transition-all duration-300 relative min-h-[4px] sm:w-7"
                             style={{ height: `${item.booked > 0 ? (item.booked / maxVal) * 100 : 4}%` }}
                           >
-                            <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-xs font-semibold text-subtle">
+                            <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-semibold text-subtle">
                               {item.booked}
                             </span>
                           </div>
@@ -638,12 +619,12 @@ export function OverviewView({
                             className="w-4 bg-sky rounded-t-sm transition-all duration-300 relative min-h-[4px] sm:w-7"
                             style={{ height: `${item.completed > 0 ? (item.completed / maxVal) * 100 : 4}%` }}
                           >
-                            <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-xs font-semibold text-subtle">
+                            <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-semibold text-subtle">
                               {item.completed}
                             </span>
                           </div>
                         </div>
-                        <span className={`text-xs font-medium sm:text-sm ${item.isToday ? "rounded-full bg-burnt px-2 text-white" : "text-muted"}`}>
+                        <span className={`text-[11px] font-medium sm:text-sm ${item.isToday ? "rounded-full bg-burnt px-2 text-white" : "text-muted"}`}>
                           {item.day}
                         </span>
                       </div>
@@ -679,10 +660,7 @@ export function OverviewView({
                     <button
                       type="button"
                       aria-label="Previous month"
-                      onClick={() => {
-                        setCalendarMonth((month) => new Date(month.getFullYear(), month.getMonth() - 1, 1));
-                        setSelectedCalendarDay(null);
-                      }}
+                      onClick={() => changeCalendarMonth(-1)}
                       className="flex size-8 items-center justify-center rounded-md text-glyph hover:bg-mist hover:text-ink"
                     >
                       <Icon name="chevron-left" weight="medium" className="size-4" />
@@ -691,10 +669,7 @@ export function OverviewView({
                     <button
                       type="button"
                       aria-label="Next month"
-                      onClick={() => {
-                        setCalendarMonth((month) => new Date(month.getFullYear(), month.getMonth() + 1, 1));
-                        setSelectedCalendarDay(null);
-                      }}
+                      onClick={() => changeCalendarMonth(1)}
                       className="flex size-8 items-center justify-center rounded-md text-glyph hover:bg-mist hover:text-ink"
                     >
                       <Icon name="chevron-right" weight="medium" className="size-4" />
@@ -766,7 +741,7 @@ export function OverviewView({
           </div>
 
           {/* Bottom Section: Today's Appointments Table */}
-          <Surface className="overflow-hidden !p-0">
+          <Surface className="!p-0">
             {/* Card Controls */}
             <div className="p-4 sm:p-6 border-b border-hairline flex flex-wrap items-center justify-between gap-5">
               <div className="flex items-center gap-3">
@@ -781,35 +756,67 @@ export function OverviewView({
                 </span>
               </div>
 
-              <div className="flex w-full flex-wrap items-center gap-2.5 sm:w-auto">
+              <div className="flex w-full items-center gap-2.5 sm:w-auto">
                 <SearchField
+                  aria-label="Search customer or service"
                   placeholder="Search customer or service"
-                  aria-label="Search appointments"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  className="min-w-0 flex-1 sm:w-80 sm:flex-none"
                 />
 
-                <SelectField
-                  ariaLabel="Filter appointments by status"
-                  compact
-                  className="w-full sm:w-52"
-                  value={filterStatus}
-                  options={statusFilterOptions}
-                  onChange={setFilterStatus}
-                />
-                {filterStatus !== "All" && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-burnt/10 px-2.5 py-1 text-xs font-semibold text-burnt">
-                    {filterStatus}
-                    <button
-                      type="button"
-                      onClick={() => setFilterStatus("All")}
-                      className="flex size-4 items-center justify-center rounded-full hover:bg-burnt/20 transition-colors"
-                      aria-label="Clear filter"
-                    >
-                      <Icon name="close" className="size-2.5" />
-                    </button>
-                  </span>
-                )}
+                <div className="relative shrink-0" onKeyDown={(event) => {
+                  if (event.key === "Escape" && isFilterOpen) {
+                    setIsFilterOpen(false);
+                    filterTrigger.current?.focus();
+                  }
+                }}>
+                  <button
+                    ref={filterTrigger}
+                    type="button"
+                    aria-expanded={isFilterOpen}
+                    aria-controls="overview-appointment-filters"
+                    aria-label={activeFilterCount ? `Filter, ${activeFilterCount} active` : "Filter"}
+                    onClick={() => setIsFilterOpen(!isFilterOpen)}
+                    className="h-11 rounded-lg border border-hairline bg-white px-3 text-sm font-semibold text-ink hover:bg-mist flex items-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
+                  >
+                    <Icon name="filter" className="size-3.5 text-glyph" />
+                    <span className="relative">
+                      Filter
+                      {activeFilterCount > 0 && (
+                        <span aria-hidden="true" className="absolute -right-1.5 top-0 size-1.5 rounded-full bg-burnt" />
+                      )}
+                    </span>
+                    <Icon name="chevron-down" className={`size-3.5 text-glyph transition-transform ${isFilterOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  {isFilterOpen && (
+                    <div id="overview-appointment-filters" className="absolute right-0 z-20 mt-1 w-56 divide-y divide-hairline overflow-hidden rounded-[10px] border border-hairline bg-white text-sm shadow-lg">
+                      {filterFields.map(({ label, value, onChange, options, placeholder }) => (
+                        <details key={label} name="overview-filter-section" className="group">
+                          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-subtle hover:bg-mist [&::-webkit-details-marker]:hidden">
+                            <span className="flex items-center gap-2">
+                              {label}
+                              {value && <span aria-label="Filter active" className="size-1.5 rounded-full bg-burnt" />}
+                            </span>
+                            <span aria-hidden="true" className="group-open:hidden">+</span>
+                            <span aria-hidden="true" className="hidden group-open:inline">−</span>
+                          </summary>
+                          <div className="max-h-48 overflow-y-auto pb-2">
+                            {["", ...(value && !options.includes(value) ? [value] : []), ...options].map((option) => (
+                              <button key={option} type="button" aria-pressed={value === option}
+                                onClick={() => onChange(option)}
+                                className={`w-full break-words px-4 py-2 text-left hover:bg-mist ${value === option ? "font-semibold text-burnt" : "text-body"}`}>
+                                {option || placeholder}
+                              </button>
+                            ))}
+                          </div>
+                        </details>
+                      ))}
+                      {activeFilterCount > 0 && <button type="button" className="w-full px-4 py-2.5 text-left text-xs font-semibold text-burnt hover:bg-mist"
+                        onClick={() => { setFilterStatus(""); setFilterStaff(""); setFilterSource(""); filterTrigger.current?.focus(); }}>Clear filters</button>}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -818,10 +825,10 @@ export function OverviewView({
               {filtered.length === 0 ? (
                 <EmptyState
                   compact
-                  title={searchQuery || filterStatus !== "All"
+                  title={hasFilters
                     ? "No appointments match your search."
                     : "No appointments scheduled."}
-                  description={searchQuery || filterStatus !== "All"
+                  description={hasFilters
                     ? "Try a different name, service, staff member, or status."
                     : "New bookings will appear here automatically."}
                 />
@@ -852,21 +859,8 @@ export function OverviewView({
                             <span>Staff <strong className="block text-ink">{row.staff}</strong></span>
                             <span>Source <strong className="block text-ink">{row.source}</strong></span>
                           </div>
-                          <div className="flex flex-wrap gap-2 pt-1">
-                            {row.status !== "Confirmed" && (
-                              <Button size="xs" variant="brand" onClick={() => handleStatusChange(row.id, "Confirmed")}>
-                                Confirm
-                              </Button>
-                            )}
-                            {row.status !== "Check In" && (
-                              <Button size="xs" variant="secondary" onClick={() => handleStatusChange(row.id, "Check In")}>
-                                Check In
-                              </Button>
-                            )}
-                            <Button size="xs" variant="danger" onClick={() => setCancelTarget(row)}>
-                              Cancel
-                            </Button>
-                          </div>
+                          {canManage && <Button variant="secondary" size="xs" aria-haspopup="dialog"
+                            onClick={() => setSelectedAppointmentId(row.id)}>Appointment details</Button>}
                         </div>
                       )}
                     </div>
@@ -877,28 +871,37 @@ export function OverviewView({
 
             {/* Desktop table (QA #1: Empty state row when 0 appointments) */}
             <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-left text-sm">
+              <table className="w-full min-w-[760px] table-fixed text-left text-sm">
+                <colgroup>
+                  <col className="w-[12%]" />
+                  <col className="w-[18%]" />
+                  <col className="w-[18%]" />
+                  <col className="w-[16%]" />
+                  <col className="w-[12%]" />
+                  <col className={canManage ? "w-32" : "w-[15%]"} />
+                  {canManage && <col />}
+                </colgroup>
                 <thead className="bg-mist border-b border-hairline text-subtle font-semibold">
                   <tr>
-                    <th className="px-6 py-4 text-xs leading-4 uppercase tracking-wide">Time</th>
-                    <th className="px-6 py-4 text-xs leading-4 uppercase tracking-wide">Customer</th>
-                    <th className="px-6 py-4 text-xs leading-4 uppercase tracking-wide">Service</th>
-                    <th className="px-6 py-4 text-xs leading-4 uppercase tracking-wide">Staff</th>
-                    <th className="px-6 py-4 text-xs leading-4 uppercase tracking-wide">Source</th>
-                    <th className="px-6 py-4 text-xs leading-4 uppercase tracking-wide">Status</th>
-                    <th className="w-24 px-6 py-4 text-xs leading-4 uppercase tracking-wide text-right">Action</th>
+                    <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Time</th>
+                    <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Customer</th>
+                    <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Service</th>
+                    <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Staff</th>
+                    <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Source</th>
+                    <th className="py-4 pl-6 pr-2 text-[11px] leading-4 uppercase tracking-wide">Status</th>
+                    {canManage && <th className="px-2 py-4 text-center text-[11px] leading-4 uppercase tracking-wide">Action</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-hairline">
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-5 py-2">
+                      <td colSpan={canManage ? 7 : 6} className="px-5 py-2">
                         <EmptyState
                           compact
-                          title={searchQuery || filterStatus !== "All"
+                          title={hasFilters
                             ? "No appointments match your search."
                             : "No appointments scheduled."}
-                          description={searchQuery || filterStatus !== "All"
+                          description={hasFilters
                             ? "Try a different name, service, staff member, or status."
                             : "New bookings will appear here automatically."}
                         />
@@ -916,48 +919,21 @@ export function OverviewView({
                             {row.source}
                           </span>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="whitespace-nowrap py-4 pl-6 pr-2">
                           <AppointmentStatusPill status={row.status} />
                         </td>
-                        <td className="w-24 px-6 py-4 text-right align-middle">
+                        {canManage && <td className="px-2 py-4 align-middle">
                           <button
                             type="button"
-                            onClick={() => setActiveMenuId(activeMenuId === row.id ? null : row.id)}
-                            className="ml-auto flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 text-glyph"
+                            aria-label={`Appointment details for ${row.customer}`}
+                            aria-haspopup="dialog"
+                            onClick={() => setSelectedAppointmentId(row.id)}
+                            className="mx-auto flex h-9 w-10 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 text-glyph"
                           >
                             <Icon name="more" weight="fill" className="size-5" />
                           </button>
 
-                          {activeMenuId === row.id && (
-                            <div className="absolute right-4 mt-1 w-40 rounded-[10px] bg-white border border-hairline shadow-lg py-1 z-30 text-left text-sm">
-                              {row.status !== "Confirmed" && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleStatusChange(row.id, "Confirmed")}
-                                  className="w-full text-left px-4 py-2 hover:bg-mist text-body"
-                                >
-                                  Confirm
-                                </button>
-                              )}
-                              {row.status !== "Check In" && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleStatusChange(row.id, "Check In")}
-                                  className="w-full text-left px-4 py-2 hover:bg-mist text-body"
-                                >
-                                  Check In
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => { setCancelTarget(row); setActiveMenuId(null); }}
-                                className="w-full text-left px-4 py-2 hover:bg-danger-bg text-danger font-medium"
-                              >
-                                Cancel booking
-                              </button>
-                            </div>
-                          )}
-                        </td>
+                        </td>}
                       </tr>
                     ))
                   )}
@@ -973,7 +949,7 @@ export function OverviewView({
                 className="text-burnt font-semibold hover:underline inline-flex items-center gap-1"
               >
                 <span>View All Appointments</span>
-                <Icon name="arrow-right" weight="medium" className="size-4" />
+                <Icon name="arrow-right" weight="medium" className="size-3.5" />
               </Link>
             </div>
           </Surface>
@@ -988,24 +964,10 @@ export function OverviewView({
       )}
 
       {/* Cancel Confirmation Modal (QA #3) */}
-      {cancelTarget && (
-        <Modal open onClose={() => setCancelTarget(null)} unstyled className="w-[calc(100%-1rem)] max-w-sm rounded-[10px] bg-white p-6 shadow-2xl border border-line overflow-visible text-ink">
-            <h3 className="font-display text-[22px] leading-tight text-ink">
-              Cancel Appointment?
-            </h3>
-            <p className="mt-2 text-sm text-muted leading-relaxed">
-              Are you sure you want to cancel the appointment for{" "}
-              <span className="font-semibold text-ink">{cancelTarget.customer}</span> ({cancelTarget.service}) at {cancelTarget.time}?
-            </p>
-            <div className="mt-5 flex items-center justify-end gap-2.5">
-              <Button variant="secondary" size="xs" onClick={() => setCancelTarget(null)}>
-                Keep
-              </Button>
-              <Button variant="danger" size="xs" onClick={handleConfirmCancel}>
-                Confirm Cancel
-              </Button>
-            </div>
-          </Modal>
+      {canManage && tenantId && selectedAppointmentId && (
+        <AppointmentDetailsModal key={selectedAppointmentId} tenantId={tenantId} appointmentId={selectedAppointmentId}
+          onClose={() => setSelectedAppointmentId(null)}
+          onUpdated={() => router.refresh()} />
       )}
 
       {/* New Appointment Modal (QA #4) */}

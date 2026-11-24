@@ -1,9 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { canManageBookings } from "@/lib/merchant/workspace-roles";
 import { createClient } from "@/lib/supabase/server";
 import { resolveTenantAccess } from "@/lib/merchant/access";
-import { combineDateAndTimeManila } from "@/lib/date-utils";
+import { combineDateAndTimeManila, resolveCustomerName } from "@/lib/date-utils";
+import { z } from "zod";
 import type { Database } from "@/types/database.types";
 
 export type AppointmentStatusEnum = Database["public"]["Enums"]["appointment_status"];
@@ -37,6 +39,53 @@ async function revalidateTenantDashboard(tenantSlug?: string) {
   revalidatePath("/appointments", "layout");
 }
 
+export async function loadAppointmentDetailsAction(tenantId: string, appointmentId: string) {
+  if (!z.uuid().safeParse(tenantId).success || !z.uuid().safeParse(appointmentId).success) return null;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data: membership } = await supabase.from("tenant_memberships").select("role, tenants(timezone)")
+    .eq("tenant_id", tenantId).eq("profile_id", user.id).maybeSingle();
+  if (!canManageBookings(membership?.role)) return null;
+
+  const { data, error } = await supabase.from("appointments").select(`
+    id, starts_at, ends_at, status, source, notes, total_cents,
+    customers(full_name, phone, email), staff_members(full_name),
+    appointment_services(services(name)),
+    resource_allocations!resource_allocations_tenant_appointment_fkey(resources(name)),
+    payments(amount_cents, status)
+  `).eq("tenant_id", tenantId).eq("id", appointmentId).maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  const paid = data.payments.reduce((sum, payment) => sum + (payment.status === "paid" ? payment.amount_cents : 0), 0);
+  return {
+    ...data,
+    customerName: resolveCustomerName(data.customers, data.notes),
+    amountDue: Math.max(0, data.total_cents - paid),
+    timezone: membership?.tenants?.timezone || "Asia/Manila",
+  };
+}
+
+export async function rescheduleAppointmentAction(input: {
+  tenantId: string; appointmentId: string; date: string; time: string; expectedStart: string;
+}): Promise<ActionResult> {
+  const parsed = z.object({
+    tenantId: z.uuid(), appointmentId: z.uuid(), date: z.iso.date(),
+    time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/), expectedStart: z.iso.datetime({ offset: true }),
+  }).safeParse(input);
+  if (!parsed.success) return { success: false, error: "Choose a valid date and time." };
+  const { tenantId, appointmentId, date, time, expectedStart } = parsed.data;
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("reschedule_appointment", {
+    p_tenant_id: tenantId, p_appointment_id: appointmentId, p_date: date,
+    p_time: time, p_expected_start: expectedStart,
+  });
+  if (error) return { success: false, error: error.code === "P0001" ? error.message : "The appointment could not be rescheduled." };
+  const { data: tenant } = await supabase.from("tenants").select("slug").eq("id", tenantId).maybeSingle();
+  await revalidateTenantDashboard(tenant?.slug);
+  return { success: true, message: "Appointment rescheduled." };
+}
+
 /**
  * Action: Updates an appointment's status in Supabase (QA #3).
  */
@@ -45,11 +94,13 @@ export async function updateAppointmentStatusAction({
   newStatus,
   reason,
   tenantIdParam,
+  expectedStatus,
 }: {
   appointmentId: string;
   newStatus: string;
   reason?: string;
   tenantIdParam?: string;
+  expectedStatus?: AppointmentStatusEnum;
 }): Promise<ActionResult> {
   const supabase = await createClient();
   const {
@@ -65,8 +116,10 @@ export async function updateAppointmentStatusAction({
     return { success: false, error: "Access Denied: You do not have permissions for this business." };
   }
   const targetTenantId = access.tenantId;
-  const { data: tenant } = await supabase.from("tenants").select("slug").eq("id", targetTenantId).single();
-  const tenantSlug: string | undefined = tenant?.slug;
+  const { data: membership } = await supabase.from("tenant_memberships").select("role")
+    .eq("tenant_id", targetTenantId).eq("profile_id", user.id).maybeSingle();
+  if (!canManageBookings(membership?.role)) return { success: false, error: "You do not have permission to manage bookings in this workspace." };
+  const { data: tenant } = await supabase.from("tenants").select("slug").eq("id", targetTenantId).maybeSingle();
 
   const dbStatus = mapUiStatusToDb(newStatus);
   const updatePayload: Database["public"]["Tables"]["appointments"]["Update"] = {
@@ -81,14 +134,16 @@ export async function updateAppointmentStatusAction({
 
   let query = supabase.from("appointments").update(updatePayload).eq("id", appointmentId);
   query = query.eq("tenant_id", targetTenantId);
+  if (expectedStatus) query = query.eq("status", expectedStatus);
 
-  const { error } = await query;
+  const { data: updated, error } = await query.select("id").maybeSingle();
 
   if (error) {
     return { success: false, error: `Failed to update appointment: ${error.message}` };
   }
+  if (!updated) return { success: false, error: expectedStatus ? "This appointment changed. Reopen its details and try again." : "Appointment not found." };
 
-  await revalidateTenantDashboard(tenantSlug);
+  await revalidateTenantDashboard(tenant?.slug);
 
   return { success: true, message: `Appointment status updated to ${newStatus}.` };
 }
@@ -162,10 +217,7 @@ export async function createAppointmentBookingAction({
     .eq("profile_id", user.id)
     .maybeSingle();
 
-  const isAllowed =
-    Boolean(membership) ||
-    (profile?.tenant_id === tenantId &&
-      ["owner", "admin", "receptionist", "staff"].includes(profile?.role || ""));
+  const isAllowed = canManageBookings(membership?.role);
 
   if (!isAllowed) {
     return { success: false, error: "Access Denied: You do not have permissions for this business." };
@@ -386,10 +438,7 @@ export async function addToWaitlistAction({
     .eq("profile_id", user.id)
     .maybeSingle();
 
-  const isAllowed =
-    Boolean(membership) ||
-    (profile?.tenant_id === tenantId &&
-      ["owner", "admin", "receptionist", "staff"].includes(profile?.role || ""));
+  const isAllowed = canManageBookings(membership?.role);
 
   if (!isAllowed) {
     return { success: false, error: "Access Denied: Insufficient permissions for this business." };

@@ -16,11 +16,13 @@ export function LoginForm({
   queryError,
   queryMessage,
   redirectTo,
+  staffSignInHref,
 }: {
   submitted: boolean;
   queryError: string | null;
   queryMessage: string | null;
   redirectTo: string;
+  staffSignInHref: string;
 }) {
   const [state, action, pending] = useActionState(login, initialState);
   const emailRef = useRef<HTMLInputElement>(null);
@@ -156,6 +158,12 @@ export function LoginForm({
               </button>
             </form>
 
+            <p className="text-center text-sm text-muted">
+              Invited staff?{" "}
+              <Link href={staffSignInHref} className="font-semibold text-burnt underline underline-offset-2 hover:text-burnt-dark">
+                Staff sign-in
+              </Link>
+            </p>
             <p className="text-center text-sm text-muted">
               New to Fides?{" "}
               <Link href="/register" className="font-semibold text-burnt underline underline-offset-2 hover:text-burnt-dark">

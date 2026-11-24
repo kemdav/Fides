@@ -1,12 +1,12 @@
 "use client";
 
 import * as React from "react";
+import { fieldOutlineClasses } from "@/components/admin/fields";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/admin/icon";
-import { createAppointmentBookingAction } from "@/app/actions/appointments";
-import { DatePicker, inputClasses, SelectField } from "@/components/ui";
-import { Modal } from "@/components/ui/modal";
+import { DatePicker, SelectField } from "@/components/ui";
 import { Button } from "@/components/ui/button";
+import { createAppointmentBookingAction } from "@/app/actions/appointments";
 
 // ─── static option lists ─────────────────────────────────────────────────────
 
@@ -66,34 +66,47 @@ function addMinutes(timeStr: string, mins: number): string {
 
 // ─── Shared input class ───────────────────────────────────────────────────────
 
-const fieldCls = inputClasses();
+const fieldCls =
+  `${fieldOutlineClasses} h-11 w-full px-3 text-sm text-ink placeholder:text-glyph`;
 
 // ─── labelled pickers (thin wrappers over the shared dropdown and date picker) ──
 
 function PickerLabel({ id, label, required }: { id: string; label: string; required?: boolean }) {
   return (
-    <label htmlFor={id} className="mb-1.5 block text-sm font-semibold text-ink">
+    <label htmlFor={id} className="mb-2 block text-sm font-semibold leading-5 text-ink">
       {label}
       {required && <span className="text-burnt"> *</span>}
     </label>
   );
 }
 
-interface ListboxProps {
+interface BaseListboxProps {
   id: string;
   label: string;
   required?: boolean;
-  value: string;
-  onChange: (v: string) => void;
-  options: { value: string; label: string }[];
+  describedBy?: string;
+  disabled?: boolean;
+  placement?: "above" | "below";
+  options: { value: string; label: string; disabled?: boolean }[];
   placeholder?: string;
 }
 
-export function Listbox({ id, label, required, value, onChange, options, placeholder }: ListboxProps) {
+type ListboxProps = BaseListboxProps & (
+  | { multiple?: false; value: string; onChange: (value: string) => void }
+  | { multiple: true; value: string[]; onChange: (value: string[]) => void }
+);
+
+export function Listbox(props: ListboxProps) {
+  const { id, label, required, options, placeholder, describedBy, disabled, placement } = props;
+  const shared = { id, options, placeholder, describedBy, disabled, placement };
   return (
     <div>
       <PickerLabel id={id} label={label} required={required} />
-      <SelectField id={id} value={value} options={options} onChange={onChange} placeholder={placeholder} />
+      {props.multiple ? (
+        <SelectField {...shared} multiple value={props.value} onChange={props.onChange} />
+      ) : (
+        <SelectField {...shared} value={props.value} onChange={props.onChange} />
+      )}
     </div>
   );
 }
@@ -142,7 +155,7 @@ function StepperIndicator({ step }: { step: 1 | 2 }) {
             <Icon name="check" weight="bold" className="size-3.5" />
           ) : "1"}
         </span>
-        <span className={`text-center text-xs font-semibold transition-colors ${step === 1 ? "text-ink" : "text-muted"}`}>
+        <span className={`text-center text-[11px] font-semibold transition-colors ${step === 1 ? "text-ink" : "text-muted"}`}>
           Customer details
         </span>
       </div>
@@ -159,7 +172,7 @@ function StepperIndicator({ step }: { step: 1 | 2 }) {
         }`}>
           2
         </span>
-        <span className={`text-center text-xs font-semibold transition-colors ${step === 2 ? "text-ink" : "text-muted"}`}>
+        <span className={`text-center text-[11px] font-semibold transition-colors ${step === 2 ? "text-ink" : "text-muted"}`}>
           Service &amp; schedule
         </span>
       </div>
@@ -172,7 +185,7 @@ function StepperIndicator({ step }: { step: 1 | 2 }) {
 function ErrorBanner({ message }: { message: string }) {
   return (
     <div className="flex items-start gap-2 rounded-lg border border-danger/30 bg-danger-bg px-4 py-3 text-sm text-danger">
-      <Icon name="alert" className="size-4 shrink-0 mt-0.5" />
+      <Icon name="alert" className="mt-0.5 size-4 shrink-0" />
       <span>{message}</span>
     </div>
   );
@@ -181,7 +194,7 @@ function ErrorBanner({ message }: { message: string }) {
 function WarningBanner({ message }: { message: string }) {
   return (
     <div className="flex items-start gap-2 rounded-lg border border-warn-fg/30 bg-warn-bg px-4 py-3 text-sm text-warn-fg">
-      <Icon name="warning" className="size-4 shrink-0 mt-0.5" />
+      <Icon name="warning" className="mt-0.5 size-4 shrink-0" />
       <span>{message} Choose an available slot to continue.</span>
     </div>
   );
@@ -362,7 +375,13 @@ export function NewAppointmentModal({
   };
 
   return (
-    <Modal open onClose={onClose} labelledBy="appt-modal-title" closeOnBackdrop unstyled className="w-[calc(100%-1rem)] max-w-lg rounded-[14px] bg-white shadow-2xl border border-line flex flex-col animate-in fade-in zoom-in-95 slide-in-from-bottom-3 duration-200 overflow-visible p-0 text-ink" style={{ maxHeight: "92dvh" }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-200" onClick={onClose}>
+      <div
+        role="dialog" aria-modal="true" aria-labelledby="appt-modal-title"
+        className="relative w-full max-w-lg rounded-[14px] bg-white shadow-2xl border border-line flex flex-col animate-in fade-in zoom-in-95 slide-in-from-bottom-3 duration-200"
+        style={{ maxHeight: "92dvh" }}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* ── Header ───────────────────────────────────────────────────── */}
         <div className="px-6 pt-6 pb-5 border-b border-hairline shrink-0 space-y-4">
           <div className="flex items-start justify-between">
@@ -428,7 +447,7 @@ export function NewAppointmentModal({
                   </div>
                   {customerSearch.trim() && (
                     <div className={`flex items-center justify-between gap-4 rounded-lg px-3 py-3 ${
-                      selectedCustomer ? "border border-success/30 bg-wash" : "bg-mist"
+                      selectedCustomer ? "border border-success/30 bg-success/10" : "bg-mist"
                     }`}>
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-ink">
@@ -437,7 +456,7 @@ export function NewAppointmentModal({
                         <p className="mt-1 truncate text-xs text-muted">
                           ana.reyes@email.com · +63 995 122 3548
                         </p>
-                        <p className="mt-2 text-xs text-muted">No match? Create a new customer instead.</p>
+                        <p className="mt-2 text-[11px] text-muted">No match? Create a new customer instead.</p>
                       </div>
                       <button
                         type="button"
@@ -523,7 +542,7 @@ export function NewAppointmentModal({
                 <textarea id="appt-notes" rows={3} value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Add notes (optional)..."
-                  className={inputClasses(false, true)}
+                  className={`${fieldOutlineClasses} w-full resize-none px-3 py-2.5 text-sm text-ink placeholder:text-glyph`}
                 />
               </div>
 
@@ -673,7 +692,7 @@ export function NewAppointmentModal({
               {/* Slot verification note */}
               {!conflictWarning && serviceName && staffName && date && time && (
                 <p className="text-xs text-muted flex items-center gap-1.5">
-                  <Icon name="check" weight="bold" className="size-3.5 text-success shrink-0" />
+                  <Icon name="check" weight="bold" className="size-3.5 shrink-0 text-success" />
                   Slot checked against staff shifts, breaks, leave, closures, resource allocation, and cleanup buffer.
                 </p>
               )}
@@ -684,7 +703,7 @@ export function NewAppointmentModal({
         {/* ── Footer ───────────────────────────────────────────────────── */}
         <div className="shrink-0 px-6 py-4 border-t border-hairline flex items-center justify-between gap-3">
           {step === 2 ? (
-            <Button variant="secondary" size="form" type="button"
+            <Button variant="outline" size="sm" type="button"
               onClick={() => { setStep(1); setStep2Error(null); setConflictWarning(null); }}
             >
               Back
@@ -694,7 +713,7 @@ export function NewAppointmentModal({
           )}
 
           <div className="flex items-center gap-2">
-            <Button variant="secondary" size="form" type="button" onClick={onClose} disabled={isSubmitting}>
+            <Button variant="outline" size="sm" type="button" onClick={onClose} disabled={isSubmitting}>
               Cancel
             </Button>
 
@@ -714,6 +733,7 @@ export function NewAppointmentModal({
             )}
           </div>
         </div>
-      </Modal>
+      </div>
+    </div>
   );
 }

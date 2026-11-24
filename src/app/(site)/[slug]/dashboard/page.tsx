@@ -1,13 +1,18 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
-import { OverviewView } from "@/components/merchant/overview/overview-view";
+import {
+  OverviewView,
+} from "@/components/merchant/overview/overview-view";
 import { getMerchantOverview } from "@/lib/merchant/overview";
 import type { OverviewPeriod } from "@/lib/merchant/overview";
+import { getActiveStaffForProfile, getMonthlyStaffCommission } from "@/lib/merchant/staff-profile";
+import { workspaceRoleFromLabel } from "@/lib/merchant/workspace-roles";
+import { getAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 interface MerchantDashboardPageProps {
   params: Promise<{ slug: string }>;
-  searchParams?: Promise<{ period?: string }>;
+  searchParams?: Promise<{ period?: string; month?: string }>;
 }
 
 export async function generateMetadata({
@@ -25,8 +30,7 @@ export async function generateMetadata({
     : "Merchant Dashboard";
   return {
     title,
-    description:
-      "Manage appointments, walk-ins, customers, and daily operations.",
+    description: "Manage appointments, walk-ins, customers, and daily operations.",
   };
 }
 
@@ -35,7 +39,7 @@ export default async function MerchantDashboardPage({
   searchParams,
 }: MerchantDashboardPageProps) {
   const { slug } = await params;
-  const { period: periodParam } = (await searchParams) ?? {};
+  const { period: periodParam, month } = (await searchParams) ?? {};
   const period: OverviewPeriod =
     periodParam === "Today" || periodParam === "This Month"
       ? periodParam
@@ -54,64 +58,37 @@ export default async function MerchantDashboardPage({
     .single();
   if (tenantError || !tenant) notFound();
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, role, tenant_id")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  const { data: membership } = await supabase
-    .from("tenant_memberships")
-    .select("role")
-    .eq("tenant_id", tenant.id)
-    .eq("profile_id", user.id)
-    .maybeSingle();
-
-  const isTenantMember =
-    Boolean(membership) ||
-    (profile?.tenant_id === tenant.id &&
-      ["owner", "admin", "receptionist", "staff"].includes(
-        profile?.role || "",
-      ));
-
-  if (!isTenantMember) {
-    notFound();
-  }
-
-  const userRole = membership?.role || profile?.role || "staff";
-  const formattedRole =
-    userRole === "owner"
-      ? "Business owner"
-      : userRole.charAt(0).toUpperCase() + userRole.slice(1);
-
-  const overview = await getMerchantOverview(
-    supabase,
-    tenant.id,
-    new Date(),
-    period,
-  );
+  const { data: membership } = await supabase.from("tenant_memberships").select("role, profiles(full_name)")
+    .eq("tenant_id", tenant.id).eq("profile_id", user.id).maybeSingle();
+  const { data: profile } = await supabase.from("profiles").select("full_name, role, tenant_id")
+    .eq("id", user.id).maybeSingle();
+  const userRole = membership?.role ?? (profile?.tenant_id === tenant.id ? workspaceRoleFromLabel(profile.role) : undefined);
+  if (!userRole) notFound();
+  const userName = membership?.profiles?.full_name?.trim() || profile?.full_name?.trim() || user.email?.split("@")[0] || "My account";
+  const canViewBusinessMetrics = userRole === "owner" || userRole === "admin";
+  const staff = userRole === "staff" ? await getActiveStaffForProfile(tenant.id, user.id) : undefined;
+  const now = new Date();
+  const overview = await getMerchantOverview(supabase, tenant.id, now, period, { staff, calendarMonth: month });
+  const db = staff ? getAdminClient() : null;
+  const commission = staff && db
+    ? await getMonthlyStaffCommission(db, tenant.id, overview.timezone, now, staff.id)
+    : [];
   const rows = overview.todayAppointments;
-  const completedToday = rows.filter(
-    (row) => row.rawStatus === "completed",
+  const completedToday = rows.filter((row) => row.rawStatus === "completed").length;
+  const checkedInToday = rows.filter((row) =>
+    row.rawStatus === "checked_in" || row.rawStatus === "in_service"
   ).length;
-  const checkedInToday = rows.filter(
-    (row) => row.rawStatus === "checked_in" || row.rawStatus === "in_service",
+  const pendingCount = rows.filter(
+    (row) => row.rawStatus === "pending_approval"
   ).length;
-  const pendingCount = overview.calendarAppointments.filter(
-    (row) => row.rawStatus === "pending_approval",
-  ).length;
-  const confirmedToday = rows.filter(
-    (row) => row.rawStatus === "confirmed",
-  ).length;
+  const confirmedToday = rows.filter((row) => row.rawStatus === "confirmed").length;
 
   return (
     <OverviewView
       businessName={tenant.name}
-      userName={
-        profile?.full_name?.trim() || user.email?.split("@")[0] || "Merchant"
-      }
+      userName={userName}
       userEmail={user.email ?? "Merchant staff"}
-      userRole={formattedRole}
+      userRole={userRole}
       tenantId={tenant.id}
       basePath={`/${slug}`}
       todayCount={rows.length}
@@ -119,14 +96,18 @@ export default async function MerchantDashboardPage({
       pendingCount={pendingCount}
       checkedInCount={checkedInToday}
       completedVisitsCount={completedToday}
-      revenueTotal={Math.round(overview.metrics.revenueCents / 100)}
-      revenueChangePercent={overview.metrics.revenueChangePercent}
       bookingCount={overview.metrics.bookingCount}
-      activeCustomerCount={overview.metrics.activeCustomerCount}
-      customerGrowthPercent={overview.metrics.customerGrowthPercent}
-      averageOrderValue={Math.round(
-        overview.metrics.averageOrderValueCents / 100,
-      )}
+      {...(userRole === "staff" && {
+        activeCustomerCount: overview.metrics.activeCustomerCount,
+        commissionThisMonth: commission.reduce((sum, total) => sum + Number(total.commission_cents), 0) / 100,
+      })}
+      {...(canViewBusinessMetrics && {
+        revenueTotal: Math.round(overview.metrics.revenueCents / 100),
+        revenueChangePercent: overview.metrics.revenueChangePercent,
+        activeCustomerCount: overview.metrics.activeCustomerCount,
+        customerGrowthPercent: overview.metrics.customerGrowthPercent,
+        averageOrderValue: Math.round(overview.metrics.averageOrderValueCents / 100),
+      })}
       initialPeriod={period}
       chartStats={overview.chartStats}
       todayActivity={rows.slice(0, 4).map((row) => ({
@@ -136,6 +117,8 @@ export default async function MerchantDashboardPage({
       }))}
       initialRows={rows}
       calendarAppointments={overview.calendarAppointments}
+      calendarMonthKey={overview.calendarMonth}
+      todayKey={overview.todayKey}
     />
   );
 }
