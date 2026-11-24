@@ -113,6 +113,7 @@ const base = z.object({
     .regex(/^\d{4}$/, "Enter a 4-digit year.")
     .refine((value) => Number(value) >= 1900 && Number(value) <= currentYear, `Enter a year between 1900 and ${currentYear}.`),
   streetAddress: text("Street address", 200),
+  barangay: text("Barangay", 100),
   city: text("City", 80),
   province: text("Province / region", 80),
   zipCode: text("ZIP code", 12).regex(/^[0-9]+$/, "Enter a ZIP code using numbers only."),
@@ -145,6 +146,7 @@ export const businessStepSchema = base.pick({
   requestedSlug: true,
   establishedYear: true,
   streetAddress: true,
+  barangay: true,
   city: true,
   province: true,
   zipCode: true,

@@ -154,12 +154,4 @@ const cities = [
   ["0931700000", "Zamboanga City", "Zamboanga Del Sur"],
 ] as const;
 
-const nameCounts = new Map<string, number>();
-for (const [, city] of cities) nameCounts.set(city, (nameCounts.get(city) ?? 0) + 1);
-
-export const philippineCities = cities.map(([value, city, province]) => ({
-  value,
-  city,
-  province,
-  label: nameCounts.get(city) === 1 ? city : `${city}, ${province}`,
-}));
+export const philippineCities = cities.map(([code, city, province]) => ({ code, city, province }));

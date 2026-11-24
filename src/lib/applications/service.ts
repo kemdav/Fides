@@ -4,6 +4,7 @@ import { validateSlugAvailability } from "@/lib/account-request/store";
 import { nextBillingDate } from "@/lib/billing";
 import { isMailConfigured } from "@/lib/mail/mailer";
 import { sendApprovalEmail, sendBillingReminderEmail, sendRejectionEmail, sendSubmissionEmail } from "@/lib/mail/emails";
+import { formatRegistrationStreetAddress } from "@/lib/registration/address";
 import { createAdminClient, type AdminClient } from "@/lib/supabase/admin";
 import {
   ALL_DOCUMENTS,
@@ -265,7 +266,7 @@ export async function submitApplication(
       business_name: data.businessName,
       business_type: data.businessType,
       established_year: Number(data.establishedYear),
-      street_address: data.streetAddress,
+      street_address: formatRegistrationStreetAddress(data.streetAddress, data.barangay),
       city: data.city,
       province: data.province,
       zip_code: data.zipCode,

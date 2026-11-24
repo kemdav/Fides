@@ -2,11 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { sendRegistrationCodeAction } from "@/app/actions/registration-email";
 import { adminButtonClasses } from "@/components/admin/admin-button";
 import { Icon, type IconName } from "@/components/admin/icon";
-import { CalendarPicker, calendarDateKey } from "@/components/ui/calendar-picker";
+import {
+  CalendarPicker,
+  calendarDateKey,
+} from "@/components/ui/calendar-picker";
 import { Listbox } from "@/components/ui/listbox";
 import { StaffSuccessDialog } from "@/components/merchant/staff/staff-confirmation-dialog";
 import { Card as BaseCard } from "@/components/ui";
@@ -35,8 +38,23 @@ import {
   validateStep,
 } from "@/lib/registration/schema";
 import { cn } from "@/lib/utils";
-import { philippineCities } from "@/lib/registration/philippine-cities";
-import { PlanCardGrid, PlanComparisonRow, SelectedPlanSummary } from "./plan-selection";
+import {
+  barangayOptionsForLocation,
+  cityOptionsForProvince,
+  locationHasBarangay,
+  postalCodeForBarangay,
+  provinceHasCity,
+  provinceOptions,
+} from "@/lib/registration/philippine-address-options";
+import {
+  barangayFromStreetAddress,
+  formatRegistrationStreetAddress,
+} from "@/lib/registration/address";
+import {
+  PlanCardGrid,
+  PlanComparisonRow,
+  SelectedPlanSummary,
+} from "./plan-selection";
 import { EmailVerificationStep } from "./email-verification-step";
 import { SlugBadge } from "./slug-badge";
 import { uploadDocument } from "./upload-document";
@@ -64,7 +82,12 @@ import {
 
 type DocMap = Partial<Record<DocumentKey, File>>;
 type UploadReceipt = Awaited<ReturnType<typeof uploadDocument>>;
-type UploadState = { file: File; percent: number; receipt?: UploadReceipt; error?: string };
+type UploadState = {
+  file: File;
+  percent: number;
+  receipt?: UploadReceipt;
+  error?: string;
+};
 type Uploads = Partial<Record<DocumentKey, UploadState>>;
 
 type Values = {
@@ -82,6 +105,7 @@ type Values = {
   businessType: string;
   establishedYear: string;
   streetAddress: string;
+  barangay: string | null;
   city: string;
   province: string;
   zipCode: string;
@@ -104,6 +128,7 @@ const initialValues: Values = {
   businessType: BUSINESS_TYPES[0],
   establishedYear: "",
   streetAddress: "",
+  barangay: null,
   city: "",
   province: "",
   zipCode: "",
@@ -114,14 +139,34 @@ const initialValues: Values = {
 type Errors = Partial<Record<string, string>>;
 
 const documentSizeMb = FILE_LIMITS.documentBytes / (1024 * 1024);
-const stepSchemas = [accountStepSchema, identityStepSchema, businessStepSchema, null, planStepSchema, null] as const;
+const stepSchemas = [
+  accountStepSchema,
+  identityStepSchema,
+  businessStepSchema,
+  null,
+  planStepSchema,
+  null,
+] as const;
 const allowStepPreview = process.env.NODE_ENV === "development";
 
-const primaryButton = adminButtonClasses({ size: "md", className: "gap-2 disabled:cursor-not-allowed" });
-const secondaryButton = adminButtonClasses({ variant: "outline-accent", size: "md", className: "gap-2 disabled:cursor-not-allowed disabled:hover:bg-transparent" });
+const primaryButton = adminButtonClasses({
+  size: "md",
+  className: "gap-2 disabled:cursor-not-allowed",
+});
+const secondaryButton = adminButtonClasses({
+  variant: "outline-accent",
+  size: "md",
+  className: "gap-2 disabled:cursor-not-allowed disabled:hover:bg-transparent",
+});
 
-export function RegisterFlow({ requestAccount = false }: { requestAccount?: boolean }) {
-  const draftKey = requestAccount ? "fides-account-request-draft" : "fides-registration-draft";
+export function RegisterFlow({
+  requestAccount = false,
+}: {
+  requestAccount?: boolean;
+}) {
+  const draftKey = requestAccount
+    ? "fides-account-request-draft"
+    : "fides-registration-draft";
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [furthest, setFurthest] = useState(0);
@@ -132,7 +177,9 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
   const [logoError, setLogoError] = useState<string | null>(null);
   const [docs, setDocs] = useState<DocMap>({});
   const [docErrors, setDocErrors] = useState<Errors>({});
-  const [preview, setPreview] = useState<{ file: File; title: string } | null>(null);
+  const [preview, setPreview] = useState<{ file: File; title: string } | null>(
+    null,
+  );
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [draftNote, setDraftNote] = useState<string | null>(null);
@@ -140,35 +187,67 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
   const [uploading, setUploading] = useState(false);
   const [sendingCode, setSendingCode] = useState(false);
   const [sentEmail, setSentEmail] = useState<string | null>(null);
-  const [emailChallenge, setEmailChallenge] = useState<{ email: string; retryAt: number } | null>(null);
+  const [emailChallenge, setEmailChallenge] = useState<{
+    email: string;
+    retryAt: number;
+  } | null>(null);
   const [showEmailVerification, setShowEmailVerification] = useState(false);
-  const [verifiedEmail, setVerifiedEmail] = useState<{ email: string; proof: string } | null>(null);
+  const [verifiedEmail, setVerifiedEmail] = useState<{
+    email: string;
+    proof: string;
+  } | null>(null);
   const mainRef = useRef<HTMLElement>(null);
   const previousStep = useRef(step);
   const busy = uploading || submitting || sendingCode;
   const email = values.email.trim().toLowerCase();
-  const emailProof = verifiedEmail?.email === email ? verifiedEmail.proof : null;
+  const emailProof =
+    verifiedEmail?.email === email ? verifiedEmail.proof : null;
   const navigationLocked = busy || showEmailVerification;
-  const accessibleStep = navigationLocked ? -1 : allowStepPreview ? STEPS.length - 1 : emailProof ? furthest : 0;
-  const completed = emailProof ? completedSteps : completedSteps.filter((index) => index !== 0);
-  const payload = { ...values, requestedSlug: requestAccount ? values.requestedSlug : undefined };
+  const accessibleStep = navigationLocked
+    ? -1
+    : allowStepPreview
+      ? STEPS.length - 1
+      : emailProof
+        ? furthest
+        : 0;
+  const completed = emailProof
+    ? completedSteps
+    : completedSteps.filter((index) => index !== 0);
+  const payload = {
+    ...values,
+    barangay:
+      values.barangay ?? barangayFromStreetAddress(values.streetAddress),
+    zipCode: registrationZipCode(values),
+    requestedSlug: requestAccount ? values.requestedSlug : undefined,
+  };
 
   function missingIdentityDocuments(): Errors {
-    return Object.fromEntries(IDENTITY_DOCUMENT_SLOTS
-      .filter(({ key }) => !docs[key])
-      .map(({ key, side }) => [key, `Upload the ${side.toLowerCase()} of your government-issued ID to continue.`]));
+    return Object.fromEntries(
+      IDENTITY_DOCUMENT_SLOTS.filter(({ key }) => !docs[key]).map(
+        ({ key, side }) => [
+          key,
+          `Upload the ${side.toLowerCase()} of your government-issued ID to continue.`,
+        ],
+      ),
+    );
   }
 
   const hasDraft = useSyncExternalStore(
     () => () => {},
     () => window.sessionStorage.getItem(draftKey) !== null,
-    () => false
+    () => false,
   );
 
   function restoreDraft() {
     try {
       const saved = window.sessionStorage.getItem(draftKey);
-      if (saved) setValues((current) => ({ ...current, ...(JSON.parse(saved) as Partial<Values>), password: "", confirmPassword: "" }));
+      if (saved)
+        setValues((current) => ({
+          ...current,
+          ...(JSON.parse(saved) as Partial<Values>),
+          password: "",
+          confirmPassword: "",
+        }));
     } catch {
       window.sessionStorage.removeItem(draftKey);
     }
@@ -183,17 +262,33 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
 
   function set<K extends keyof Values>(key: K, value: Values[K]) {
     setValues((current) => {
-      const requestedSlug = requestAccount && key === "businessName" && current.requestedSlug === normalizeSlugInput(current.businessName).replace(/-$/, "")
-        ? normalizeSlugInput(String(value)).replace(/-$/, "")
-        : current.requestedSlug;
-      return { ...current, requestedSlug, [key]: value };
+      const requestedSlug =
+        requestAccount &&
+        key === "businessName" &&
+        current.requestedSlug ===
+          normalizeSlugInput(current.businessName).replace(/-$/, "")
+          ? normalizeSlugInput(String(value)).replace(/-$/, "")
+          : current.requestedSlug;
+      const updated = { ...current, requestedSlug, [key]: value };
+      if (key === "province" && updated.province && updated.city && !provinceHasCity(updated.province, updated.city)) {
+        updated.city = "";
+      }
+      if ((key === "province" || key === "city") && updated.barangay
+        && !locationHasBarangay(updated.province, updated.city, updated.barangay)) {
+        updated.barangay = "";
+      }
+      return updated;
     });
-    setErrors((current) => (current[key] ? { ...current, [key]: undefined } : current));
+    setErrors((current) =>
+      current[key] ? { ...current, [key]: undefined } : current,
+    );
   }
 
   function focusFirstError() {
     requestAnimationFrame(() => {
-      const target = document.querySelector<HTMLElement>('[aria-invalid="true"], [data-invalid="true"]');
+      const target = document.querySelector<HTMLElement>(
+        '[aria-invalid="true"], [data-invalid="true"]',
+      );
       if (!target) return;
       target.scrollIntoView({ block: "center", behavior: "smooth" });
       target.focus({ preventScroll: true });
@@ -203,7 +298,11 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
   function validateCurrent(): boolean {
     const schema = stepSchemas[step];
     let found: Errors = schema ? validateStep(schema, payload) : {};
-    if (step === 0 && !found.confirmPassword && values.password !== values.confirmPassword) {
+    if (
+      step === 0 &&
+      !found.confirmPassword &&
+      values.password !== values.confirmPassword
+    ) {
       found = { ...found, confirmPassword: "Passwords do not match." };
     }
     if (step === 1) found = { ...found, ...missingIdentityDocuments() };
@@ -217,11 +316,17 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
         return false;
       }
       for (const slot of DOCUMENT_SLOTS) {
-        if (!docs[slot.key]) missing[slot.key] = `${slot.title} is required. Please upload a PDF, JPG or PNG file (max ${documentSizeMb} MB).`;
+        if (!docs[slot.key])
+          missing[slot.key] =
+            `${slot.title} is required. Please upload a PDF, JPG or PNG file (max ${documentSizeMb} MB).`;
       }
       setDocErrors(missing);
       const count = Object.keys(missing).length;
-      found = count ? { documents: `${count} required ${count === 1 ? "document is" : "documents are"} still missing. Please upload every document marked REQUIRED.` } : {};
+      found = count
+        ? {
+            documents: `${count} required ${count === 1 ? "document is" : "documents are"} still missing. Please upload every document marked REQUIRED.`,
+          }
+        : {};
     }
     setErrors(found);
     const ok = Object.keys(found).length === 0;
@@ -229,13 +334,21 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
     return ok;
   }
 
-  function setDocument(key: DocumentKey, title: string, file: File): string | null {
+  function setDocument(
+    key: DocumentKey,
+    title: string,
+    file: File,
+  ): string | null {
     const problem = documentFileProblem(file, title, documentByteLimit(key));
     if (problem) return problem;
     releaseObjectUrl(docs[key]);
     setDocs((current) => ({ ...current, [key]: file }));
     setDocErrors((current) => ({ ...current, [key]: undefined }));
-    setErrors((current) => ({ ...current, documents: undefined, [key]: undefined }));
+    setErrors((current) => ({
+      ...current,
+      documents: undefined,
+      [key]: undefined,
+    }));
     return null;
   }
 
@@ -254,18 +367,25 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
   }
 
   function finishStep() {
-    setCompletedSteps((current) => current.includes(step) ? current : [...current, step]);
+    setCompletedSteps((current) =>
+      current.includes(step) ? current : [...current, step],
+    );
     goTo(Math.min(step + 1, STEPS.length - 1));
   }
 
-  async function sendEmailCode(address: string): ReturnType<typeof sendRegistrationCodeAction> {
+  async function sendEmailCode(
+    address: string,
+  ): ReturnType<typeof sendRegistrationCodeAction> {
     setSendingCode(true);
     try {
       const result = await sendRegistrationCodeAction(address);
       if (result.ok) setSentEmail(address);
       return result;
     } catch {
-      return { ok: false, error: "We couldn’t send the verification code. Please try again." };
+      return {
+        ok: false,
+        error: "We couldn’t send the verification code. Please try again.",
+      };
     } finally {
       setSendingCode(false);
     }
@@ -288,31 +408,44 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
       }
       return;
     }
-    if (step === 3 && !await uploadVerificationDocuments()) return;
+    if (step === 3 && !(await uploadVerificationDocuments())) return;
     finishStep();
   }
 
   async function uploadVerificationDocuments() {
     setUploading(true);
     try {
-      const results = await Promise.all(ALL_DOCUMENTS.map(async ({ key }) => {
-        const file = docs[key];
-        if (!file) return false;
-        if (uploads[key]?.file === file && uploads[key]?.receipt) return true;
+      const results = await Promise.all(
+        ALL_DOCUMENTS.map(async ({ key }) => {
+          const file = docs[key];
+          if (!file) return false;
+          if (uploads[key]?.file === file && uploads[key]?.receipt) return true;
 
-        const update = (state: Omit<UploadState, "file">) => {
-          setUploads((current) => ({ ...current, [key]: { ...state, file } }));
-        };
-        update({ percent: 0 });
-        try {
-          const receipt = await uploadDocument(key, file, (percent) => update({ percent }));
-          update({ percent: 100, receipt });
-          return true;
-        } catch (error) {
-          update({ percent: 0, error: error instanceof Error ? error.message : "Upload failed. Please retry." });
-          return false;
-        }
-      }));
+          const update = (state: Omit<UploadState, "file">) => {
+            setUploads((current) => ({
+              ...current,
+              [key]: { ...state, file },
+            }));
+          };
+          update({ percent: 0 });
+          try {
+            const receipt = await uploadDocument(key, file, (percent) =>
+              update({ percent }),
+            );
+            update({ percent: 100, receipt });
+            return true;
+          } catch (error) {
+            update({
+              percent: 0,
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "Upload failed. Please retry.",
+            });
+            return false;
+          }
+        }),
+      );
       return results.every(Boolean);
     } finally {
       setUploading(false);
@@ -329,13 +462,17 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
     void _password;
     void _confirm;
     window.sessionStorage.setItem(draftKey, JSON.stringify(safe));
-    setDraftNote("Draft saved on this device. Passwords and files are not included.");
+    setDraftNote(
+      "Draft saved on this device. Passwords and files are not included.",
+    );
   }
 
   async function submit() {
     setSubmitError(null);
     if (!values.confirmAccuracy) {
-      setErrors({ confirmAccuracy: "Please confirm that your information is accurate." });
+      setErrors({
+        confirmAccuracy: "Please confirm that your information is accurate.",
+      });
       return;
     }
     if (busy) return;
@@ -343,13 +480,20 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
     if (!parsed.success) {
       const issue = parsed.error.issues[0];
       const field = String(issue.path[0] ?? "");
-      const target = ["email", "password", "confirmPassword", "acceptTerms"].includes(field)
+      const target = [
+        "email",
+        "password",
+        "confirmPassword",
+        "acceptTerms",
+      ].includes(field)
         ? 0
         : ["ownerLegalName", "dateOfBirth", "idType"].includes(field)
           ? 1
           : ["planCode"].includes(field)
             ? 4
-            : ["fullName", "phone"].includes(field) ? 5 : 2;
+            : ["fullName", "phone"].includes(field)
+              ? 5
+              : 2;
       setErrors({ [field]: issue.message });
       setSubmitError(issue.message);
       setStep(target);
@@ -357,7 +501,9 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
       return;
     }
     if (!emailProof) {
-      setErrors({ email: "Verify your business email before submitting your application." });
+      setErrors({
+        email: "Verify your business email before submitting your application.",
+      });
       setStep(0);
       return;
     }
@@ -371,7 +517,11 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
         setErrors(missingIdentityDocuments());
         setStep(1);
       } else {
-        setDocErrors(Object.fromEntries(missingDocs.map((doc) => [doc.key, `${doc.title} is required.`])));
+        setDocErrors(
+          Object.fromEntries(
+            missingDocs.map((doc) => [doc.key, `${doc.title} is required.`]),
+          ),
+        );
         setStep(3);
       }
       focusFirstError();
@@ -396,10 +546,21 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
       body.set("emailProof", emailProof);
       if (logo) body.set("logo", logo);
       body.set("uploadedDocuments", JSON.stringify(receipts));
-      const response = await fetch("/api/applications", { method: "POST", body });
-      const result = (await response.json().catch(() => ({}))) as { error?: string; documentKey?: DocumentKey; referenceCode?: string; emailVerificationRequired?: boolean };
+      const response = await fetch("/api/applications", {
+        method: "POST",
+        body,
+      });
+      const result = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        documentKey?: DocumentKey;
+        referenceCode?: string;
+        emailVerificationRequired?: boolean;
+      };
       if (!response.ok) {
-        setSubmitError(result.error ?? "We could not submit your application. Please try again.");
+        setSubmitError(
+          result.error ??
+            "We could not submit your application. Please try again.",
+        );
         if (result.emailVerificationRequired) {
           setVerifiedEmail(null);
           setErrors({ email: result.error });
@@ -419,11 +580,15 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
         return;
       }
       window.sessionStorage.removeItem(draftKey);
-      router.push(requestAccount && result.referenceCode
-        ? `/request-account/status/${encodeURIComponent(result.referenceCode)}`
-        : "/login?registered=1");
+      router.push(
+        requestAccount && result.referenceCode
+          ? `/request-account/status/${encodeURIComponent(result.referenceCode)}`
+          : "/login?registered=1",
+      );
     } catch {
-      setSubmitError("We could not reach the server. Check your connection and try again.");
+      setSubmitError(
+        "We could not reach the server. Check your connection and try again.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -431,11 +596,27 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
 
   return (
     <div className="flex min-h-dvh flex-col bg-powder text-ink lg:flex-row">
-      <Sidebar current={step} furthest={accessibleStep} completed={completed} onJump={setStep} />
-      <MobileProgress current={step} completed={completed} onJump={allowStepPreview ? setStep : undefined} navigationLocked={navigationLocked} />
-      <main ref={mainRef} className="flex min-w-0 flex-1 flex-col items-center px-4 py-6 sm:px-8 lg:px-6 lg:py-8 xl:px-8">
+      <Sidebar
+        current={step}
+        furthest={accessibleStep}
+        completed={completed}
+        onJump={setStep}
+      />
+      <MobileProgress
+        current={step}
+        completed={completed}
+        onJump={allowStepPreview ? setStep : undefined}
+        navigationLocked={navigationLocked}
+      />
+      <main
+        ref={mainRef}
+        className="flex min-w-0 flex-1 flex-col items-center px-4 py-6 sm:px-8 lg:px-6 lg:py-8 xl:px-8"
+      >
         {step === 0 && (
-          <nav aria-label="Registration links" className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2 self-start">
+          <nav
+            aria-label="Registration links"
+            className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2 self-start"
+          >
             <Link
               href="/"
               className="inline-flex min-h-11 items-center gap-2 rounded-md pr-2 text-base font-semibold text-burnt hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
@@ -443,13 +624,31 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
               <Icon name="arrow-left" className="size-5" /> Back to Home
             </Link>
             {requestAccount && (
-              <Link href="/reset-request?mode=application" className="inline-flex min-h-11 items-center text-base font-semibold text-burnt hover:underline">
+              <Link
+                href="/reset-request?mode=application"
+                className="inline-flex min-h-11 items-center text-base font-semibold text-burnt hover:underline"
+              >
                 Track an existing application
               </Link>
             )}
           </nav>
         )}
-        <div className={cn("flex w-full flex-1 flex-col", step === 4 ? "max-w-[1100px]" : step === 5 ? "max-w-[820px]" : step === 3 ? "max-w-[900px]" : step === 0 ? "max-w-lg" : step === 1 ? "max-w-[760px]" : "max-w-[680px]")}>
+        <div
+          className={cn(
+            "flex w-full flex-1 flex-col",
+            step === 4
+              ? "max-w-[1100px]"
+              : step === 5
+                ? "max-w-[820px]"
+                : step === 3
+                  ? "max-w-[900px]"
+                  : step === 0
+                    ? "max-w-lg"
+                    : step === 1
+                      ? "max-w-[760px]"
+                      : "max-w-[744px]",
+          )}
+        >
           {step === 0 && (
             <div className="my-auto py-4 sm:py-6">
               {showEmailVerification && emailChallenge ? (
@@ -457,10 +656,16 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
                   email={emailChallenge.email}
                   retryAt={emailChallenge.retryAt}
                   onResend={() => sendEmailCode(emailChallenge.email)}
-                  onResent={(retryAt) => setEmailChallenge({ email: emailChallenge.email, retryAt })}
+                  onResent={(retryAt) =>
+                    setEmailChallenge({ email: emailChallenge.email, retryAt })
+                  }
                   onEdit={() => {
                     setShowEmailVerification(false);
-                    requestAnimationFrame(() => mainRef.current?.querySelector<HTMLInputElement>("#email")?.focus());
+                    requestAnimationFrame(() =>
+                      mainRef.current
+                        ?.querySelector<HTMLInputElement>("#email")
+                        ?.focus(),
+                    );
                   }}
                   onVerified={(proof) => {
                     setVerifiedEmail({ email: emailChallenge.email, proof });
@@ -472,11 +677,22 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
               ) : (
                 <>
                   {hasDraft && (
-                    <button type="button" onClick={restoreDraft} disabled={sendingCode} className="mb-4 w-full rounded-lg bg-[#faece3] px-4 py-2.5 text-base font-semibold text-burnt hover:bg-[#f6dfd0] disabled:opacity-50">
+                    <button
+                      type="button"
+                      onClick={restoreDraft}
+                      disabled={sendingCode}
+                      className="mb-4 w-full rounded-lg bg-[#faece3] px-4 py-2.5 text-base font-semibold text-burnt hover:bg-[#f6dfd0] disabled:opacity-50"
+                    >
                       Restore your saved draft
                     </button>
                   )}
-                  <AccountStep values={values} errors={errors} set={set} onNext={next} sendingCode={sendingCode} />
+                  <AccountStep
+                    values={values}
+                    errors={errors}
+                    set={set}
+                    onNext={next}
+                    sendingCode={sendingCode}
+                  />
                 </>
               )}
             </div>
@@ -509,7 +725,12 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
                   setLogoError(null);
                   return;
                 }
-                const problem = validateFile(file, FILE_LIMITS.logoTypes, FILE_LIMITS.logoBytes, "The logo");
+                const problem = validateFile(
+                  file,
+                  FILE_LIMITS.logoTypes,
+                  FILE_LIMITS.logoBytes,
+                  "The logo",
+                );
                 setLogoError(problem);
                 if (!problem) {
                   releaseObjectUrl(logo);
@@ -534,7 +755,15 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
               onNext={next}
             />
           )}
-          {step === 4 && <PlanStep values={values} errors={errors} set={set} onBack={back} onNext={next} />}
+          {step === 4 && (
+            <PlanStep
+              values={values}
+              errors={errors}
+              set={set}
+              onBack={back}
+              onNext={next}
+            />
+          )}
           {step === 5 && (
             <SummaryStep
               values={values}
@@ -545,7 +774,9 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
               submitting={submitting}
               submitError={submitError}
               draftNote={draftNote}
-              onEdit={(index) => { if (!busy) goTo(index); }}
+              onEdit={(index) => {
+                if (!busy) goTo(index);
+              }}
               onBack={back}
               onSaveDraft={saveDraft}
               onSubmit={submit}
@@ -553,18 +784,28 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
           )}
         </div>
       </main>
-      <FilePreviewDialog file={preview?.file ?? null} title={preview?.title ?? ""} onClose={() => setPreview(null)} />
+      <FilePreviewDialog
+        file={preview?.file ?? null}
+        title={preview?.title ?? ""}
+        onClose={() => setPreview(null)}
+      />
       {sendingCode ? (
         <MascotLoadingDialog />
-      ) : sentEmail && (
-        <StaffSuccessDialog
-          title="Verification email sent"
-          description={`Check ${sentEmail} for the six-digit code, then enter it to continue.`}
-          onClose={() => {
-            setSentEmail(null);
-            requestAnimationFrame(() => mainRef.current?.querySelector<HTMLInputElement>("#registration-code")?.focus());
-          }}
-        />
+      ) : (
+        sentEmail && (
+          <StaffSuccessDialog
+            title="Verification email sent"
+            description={`Check ${sentEmail} for the six-digit code, then enter it to continue.`}
+            onClose={() => {
+              setSentEmail(null);
+              requestAnimationFrame(() =>
+                mainRef.current
+                  ?.querySelector<HTMLInputElement>("#registration-code")
+                  ?.focus(),
+              );
+            }}
+          />
+        )
       )}
     </div>
   );
@@ -576,10 +817,31 @@ type StepProps = {
   set: <K extends keyof Values>(key: K, value: Values[K]) => void;
 };
 
-function Heading({ title, subtitle, center = true, className = "mb-6" }: { title: string; subtitle: string; center?: boolean; className?: string }) {
+function Heading({
+  title,
+  subtitle,
+  center = true,
+  className = "mb-6",
+}: {
+  title: string;
+  subtitle: string;
+  center?: boolean;
+  className?: string;
+}) {
   return (
-    <div className={cn("flex flex-col gap-2", center ? "text-center" : "text-left", className)}>
-      <h1 tabIndex={-1} className="font-display text-[28px] leading-[38px] text-ink focus:outline-none sm:text-[32px] sm:leading-[42px]">{title}</h1>
+    <div
+      className={cn(
+        "flex flex-col gap-2",
+        center ? "text-center" : "text-left",
+        className,
+      )}
+    >
+      <h1
+        tabIndex={-1}
+        className="font-display text-[28px] leading-[38px] text-ink focus:outline-none sm:text-[32px] sm:leading-[42px]"
+      >
+        {title}
+      </h1>
       <p className="text-base leading-6 text-muted">{subtitle}</p>
     </div>
   );
@@ -587,17 +849,28 @@ function Heading({ title, subtitle, center = true, className = "mb-6" }: { title
 
 function Card({ children }: { children: React.ReactNode }) {
   return (
-    <BaseCard className="rounded-xl border-line p-5 text-ink sm:p-6">{children}</BaseCard>
+    <BaseCard className="rounded-xl border-line p-5 text-ink sm:p-6">
+      {children}
+    </BaseCard>
   );
 }
 
-function AccountStep({ values, errors, set, onNext, sendingCode }: StepProps & { onNext: () => void; sendingCode: boolean }) {
+function AccountStep({
+  values,
+  errors,
+  set,
+  onNext,
+  sendingCode,
+}: StepProps & { onNext: () => void; sendingCode: boolean }) {
   const [passwordFocused, setPasswordFocused] = useState(false);
   const showPasswordRules = passwordFocused && values.password.length > 0;
-  const passwordDescription = [
-    errors.password ? "password-error" : null,
-    showPasswordRules ? "password-requirements" : null,
-  ].filter(Boolean).join(" ") || undefined;
+  const passwordDescription =
+    [
+      errors.password ? "password-error" : null,
+      showPasswordRules ? "password-requirements" : null,
+    ]
+      .filter(Boolean)
+      .join(" ") || undefined;
 
   return (
     <form
@@ -609,31 +882,74 @@ function AccountStep({ values, errors, set, onNext, sendingCode }: StepProps & {
         onNext();
       }}
     >
-      <Heading title="Create Your Account" subtitle="Start your journey with Fides — it only takes a few minutes." className="mb-10" />
+      <Heading
+        title="Create Your Account"
+        subtitle="Start your journey with Fides — it only takes a few minutes."
+        className="mb-10"
+      />
       <fieldset disabled={sendingCode} className="min-w-0">
         <div className="grid gap-7 sm:gap-8">
           <Field label="Business Email" htmlFor="email" error={errors.email}>
-            <TextInput id="email" type="email" invalid={!!errors.email} autoComplete="email" placeholder="maria@bellavita.ph" value={values.email} onChange={(e) => set("email", e.target.value)} />
+            <TextInput
+              id="email"
+              type="email"
+              invalid={!!errors.email}
+              autoComplete="email"
+              placeholder="maria@bellavita.ph"
+              value={values.email}
+              onChange={(e) => set("email", e.target.value)}
+            />
           </Field>
           <div
             onFocus={() => setPasswordFocused(true)}
             onBlur={(event) => {
-              if (!event.currentTarget.contains(event.relatedTarget)) setPasswordFocused(false);
+              if (!event.currentTarget.contains(event.relatedTarget))
+                setPasswordFocused(false);
             }}
           >
             <Field label="Password" htmlFor="password" error={errors.password}>
-              <PasswordInput id="password" fieldLabel="password" aria-describedby={passwordDescription} invalid={!!errors.password} autoComplete="new-password" placeholder="••••••••" value={values.password} onChange={(e) => set("password", e.target.value)} />
+              <PasswordInput
+                id="password"
+                fieldLabel="password"
+                aria-describedby={passwordDescription}
+                invalid={!!errors.password}
+                autoComplete="new-password"
+                placeholder="••••••••"
+                value={values.password}
+                onChange={(e) => set("password", e.target.value)}
+              />
             </Field>
             {showPasswordRules && (
-              <ul id="password-requirements" className="mt-3 flex flex-col gap-1 text-sm leading-5" aria-label="Password requirements">
+              <ul
+                id="password-requirements"
+                className="mt-3 flex flex-col gap-1 text-sm leading-5"
+                aria-label="Password requirements"
+              >
                 {registrationPasswordRules.map((rule) => {
                   const met = rule.passes(values.password);
                   return (
-                    <li key={rule.text} className={cn("flex items-center gap-2", met ? "text-success" : "text-muted")}>
-                      <span className={cn("flex size-4 items-center justify-center rounded-full", met ? "bg-success text-white" : "border border-outline/60")}>
-                        {met ? <Icon name="check" className="size-2.5" /> : null}
+                    <li
+                      key={rule.text}
+                      className={cn(
+                        "flex items-center gap-2",
+                        met ? "text-success" : "text-muted",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "flex size-4 items-center justify-center rounded-full",
+                          met
+                            ? "bg-success text-white"
+                            : "border border-outline/60",
+                        )}
+                      >
+                        {met ? (
+                          <Icon name="check" className="size-2.5" />
+                        ) : null}
                       </span>
-                      <span className="sr-only">{met ? "Met: " : "Required: "}</span>
+                      <span className="sr-only">
+                        {met ? "Met: " : "Required: "}
+                      </span>
                       {rule.text}
                     </li>
                   );
@@ -641,8 +957,20 @@ function AccountStep({ values, errors, set, onNext, sendingCode }: StepProps & {
               </ul>
             )}
           </div>
-          <Field label="Confirm Password" htmlFor="confirmPassword" error={errors.confirmPassword}>
-            <PasswordInput id="confirmPassword" fieldLabel="confirm password" invalid={!!errors.confirmPassword} autoComplete="new-password" placeholder="Re-enter your password" value={values.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)} />
+          <Field
+            label="Confirm Password"
+            htmlFor="confirmPassword"
+            error={errors.confirmPassword}
+          >
+            <PasswordInput
+              id="confirmPassword"
+              fieldLabel="confirm password"
+              invalid={!!errors.confirmPassword}
+              autoComplete="new-password"
+              placeholder="Re-enter your password"
+              value={values.confirmPassword}
+              onChange={(e) => set("confirmPassword", e.target.value)}
+            />
           </Field>
         </div>
 
@@ -651,25 +979,37 @@ function AccountStep({ values, errors, set, onNext, sendingCode }: StepProps & {
             <input
               type="checkbox"
               aria-invalid={Boolean(errors.acceptTerms)}
-              aria-describedby={errors.acceptTerms ? "acceptTerms-error" : undefined}
+              aria-describedby={
+                errors.acceptTerms ? "acceptTerms-error" : undefined
+              }
               checked={values.acceptTerms}
               onChange={(e) => set("acceptTerms", e.target.checked)}
               className="mt-0.5 size-4 shrink-0 accent-burnt"
             />
             <span>
               I agree to the{" "}
-              <Link href="/#contact" className="font-semibold text-burnt hover:underline">
+              <Link
+                href="/#contact"
+                className="font-semibold text-burnt hover:underline"
+              >
                 Terms of Service
               </Link>{" "}
               and{" "}
-              <Link href="/#contact" className="font-semibold text-burnt hover:underline">
+              <Link
+                href="/#contact"
+                className="font-semibold text-burnt hover:underline"
+              >
                 Privacy Policy
               </Link>{" "}
               of Fides.
             </span>
           </label>
           {errors.acceptTerms ? (
-            <p id="acceptTerms-error" role="alert" className="text-sm text-danger">
+            <p
+              id="acceptTerms-error"
+              role="alert"
+              className="text-sm text-danger"
+            >
               {errors.acceptTerms}
             </p>
           ) : null}
@@ -680,7 +1020,10 @@ function AccountStep({ values, errors, set, onNext, sendingCode }: StepProps & {
             Continue <Icon name="arrow-right" className="size-4" />
           </button>
           <div className="lg:w-max lg:whitespace-nowrap">
-            <SecureFooter>Your data is encrypted and secure. We never share your information.</SecureFooter>
+            <SecureFooter>
+              Your data is encrypted and secure. We never share your
+              information.
+            </SecureFooter>
           </div>
         </div>
       </fieldset>
@@ -688,11 +1031,7 @@ function AccountStep({ values, errors, set, onNext, sendingCode }: StepProps & {
   );
 }
 
-function StepActions({
-  onBack,
-}: {
-  onBack?: () => void;
-}) {
+function StepActions({ onBack }: { onBack?: () => void }) {
   return (
     <div className="mt-6 flex flex-col-reverse items-stretch gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-end">
       {onBack ? (
@@ -708,10 +1047,22 @@ function StepActions({
 }
 
 function IdentityStep({
-  values, errors, set, docs, onFile, onRemove, onPreview, onBack, onNext,
+  values,
+  errors,
+  set,
+  docs,
+  onFile,
+  onRemove,
+  onPreview,
+  onBack,
+  onNext,
 }: StepProps & {
   docs: DocMap;
-  onFile: (key: IdentityDocumentKey, title: string, file: File) => string | null;
+  onFile: (
+    key: IdentityDocumentKey,
+    title: string,
+    file: File,
+  ) => string | null;
   onRemove: (key: IdentityDocumentKey) => void;
   onPreview: (file: File, title: string) => void;
   onBack: () => void;
@@ -720,7 +1071,13 @@ function IdentityStep({
   const latest = new Date();
   latest.setFullYear(latest.getFullYear() - 18);
   return (
-    <form noValidate onSubmit={(event) => { event.preventDefault(); onNext(); }}>
+    <form
+      noValidate
+      onSubmit={(event) => {
+        event.preventDefault();
+        onNext();
+      }}
+    >
       <Heading
         center={false}
         title="Verify Your Identity"
@@ -728,18 +1085,47 @@ function IdentityStep({
       />
       <Card>
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Owner's Legal Full Name" htmlFor="ownerLegalName" error={errors.ownerLegalName}>
-            <TextInput id="ownerLegalName" invalid={!!errors.ownerLegalName} autoComplete="name" placeholder="Maria Santos" value={values.ownerLegalName} onChange={(event) => set("ownerLegalName", event.target.value)} />
+          <Field
+            label="Owner's Legal Full Name"
+            htmlFor="ownerLegalName"
+            error={errors.ownerLegalName}
+          >
+            <TextInput
+              id="ownerLegalName"
+              invalid={!!errors.ownerLegalName}
+              autoComplete="name"
+              placeholder="Maria Santos"
+              value={values.ownerLegalName}
+              onChange={(event) => set("ownerLegalName", event.target.value)}
+            />
           </Field>
-          <Field label="Date of Birth" htmlFor="dateOfBirth" error={errors.dateOfBirth}>
-            <CalendarPicker id="dateOfBirth" panelLabel="Date of birth" value={values.dateOfBirth}
-              onChange={(value) => set("dateOfBirth", value)} min="1900-01-01" max={calendarDateKey(latest)}
-              locale="en-GB" showWeekdays={false} invalid={!!errors.dateOfBirth}
+          <Field
+            label="Date of Birth"
+            htmlFor="dateOfBirth"
+            error={errors.dateOfBirth}
+          >
+            <CalendarPicker
+              id="dateOfBirth"
+              panelLabel="Date of birth"
+              value={values.dateOfBirth}
+              onChange={(value) => set("dateOfBirth", value)}
+              min="1900-01-01"
+              max={calendarDateKey(latest)}
+              locale="en-GB"
+              showWeekdays={false}
+              invalid={!!errors.dateOfBirth}
               describedBy={errors.dateOfBirth ? "dateOfBirth-error" : undefined}
             />
           </Field>
-          <Listbox id="idType" label="ID Type" required value={values.idType} options={ID_TYPES}
-            onChange={(value) => set("idType", value)} error={errors.idType} placeholder="Select an ID type"
+          <Listbox
+            id="idType"
+            label="ID Type"
+            required
+            value={values.idType}
+            options={ID_TYPES}
+            onChange={(value) => set("idType", value)}
+            error={errors.idType}
+            placeholder="Select an ID type"
             className="sm:col-span-2"
           />
         </div>
@@ -757,13 +1143,25 @@ function IdentityStep({
             />
           ))}
           <InfoNote icon="shield">
-            Your identity documents are encrypted and stored securely. They are used solely to verify your identity. Verification typically takes 1–2 business days.
+            Your identity documents are encrypted and stored securely. They are
+            used solely to verify your identity. Verification typically takes
+            1–2 business days.
           </InfoNote>
         </div>
         <StepActions onBack={onBack} />
       </Card>
     </form>
   );
+}
+
+function registrationZipCode(values: Values) {
+  return values.zipCode || postalCodeForBarangay(values.province, values.city, values.barangay ?? "");
+}
+
+function includeSavedOption(options: { value: string; label: string }[], value: string) {
+  return value && !options.some((option) => option.value === value)
+    ? [{ value, label: value }, ...options]
+    : options;
 }
 
 function BusinessStep({
@@ -785,8 +1183,14 @@ function BusinessStep({
   onNext: () => void;
 }) {
   const logoUrl = useObjectUrl(logo);
-  const matchingCity = philippineCities.find(({ city, province }) => city === values.city && province === values.province);
-  const legacyCity = values.city && !matchingCity ? { value: "saved-city", label: values.city } : null;
+  const cityOptions = useMemo(() => cityOptionsForProvince(values.province), [values.province]);
+  const barangayOptions = useMemo(
+    () => barangayOptionsForLocation(values.province, values.city),
+    [values.province, values.city],
+  );
+  const barangay = values.barangay ?? barangayFromStreetAddress(values.streetAddress);
+  const zipCode = registrationZipCode(values);
+  const zipHint = barangay && !zipCode ? "Enter the ZIP code for your specific address." : undefined;
   return (
     <form
       className="my-auto py-4 sm:py-8"
@@ -796,10 +1200,18 @@ function BusinessStep({
         onNext();
       }}
     >
-      <Heading title="Tell us about your business" subtitle="This information powers your public booking portal on Fides." />
+      <Heading
+        title="Tell us about your business"
+        subtitle="This information powers your public booking portal on Fides."
+        className="mb-8 sm:mb-10"
+      />
       {requestAccount && (
         <div className="mb-5">
-          <SlugBadge slug={values.requestedSlug} onChange={(slug) => set("requestedSlug", slug)} error={errors.requestedSlug} />
+          <SlugBadge
+            slug={values.requestedSlug}
+            onChange={(slug) => set("requestedSlug", slug)}
+            error={errors.requestedSlug}
+          />
         </div>
       )}
       <Card>
@@ -807,14 +1219,20 @@ function BusinessStep({
           <div className="relative grid size-[100px] shrink-0 place-items-center overflow-hidden rounded-xl border border-line bg-mist text-center">
             {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={logoUrl} alt="Business logo preview" className="absolute inset-0 size-full object-cover object-center" />
+              <img
+                src={logoUrl}
+                alt="Business logo preview"
+                className="absolute inset-0 size-full object-cover object-center"
+              />
             ) : (
               <Icon name="gallery" className="size-9 text-glyph" />
             )}
           </div>
           <div className="flex min-w-0 flex-col items-start gap-2">
             <p className="text-base font-semibold text-ink">Business Logo</p>
-            <p className="text-sm text-subtle">Recommended: square JPG or PNG, at least 400×400 px. Max 2 MB.</p>
+            <p className="text-sm text-subtle">
+              Recommended: square JPG or PNG, at least 400×400 px. Max 2 MB.
+            </p>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
               <label className="inline-flex h-12 w-40 cursor-pointer items-center justify-center rounded-md border border-outline/70 px-3 text-base font-semibold text-muted transition-colors hover:border-burnt hover:text-burnt focus-within:ring-2 focus-within:ring-burnt/40">
                 {logo ? "Replace Logo" : "Upload Logo"}
@@ -829,8 +1247,12 @@ function BusinessStep({
                   }}
                 />
               </label>
-              <button type="button" onClick={() => onLogo(null)} disabled={!logo}
-                className={cn("min-h-11 text-sm font-semibold text-burnt hover:underline focus-visible:outline-2 focus-visible:outline-burnt", !logo && "invisible")}>
+              <button
+                type="button"
+                onClick={() => onLogo(null)}
+                disabled={!logo}
+                className={cn(secondaryButton, !logo && "invisible")}
+              >
                 Remove logo
               </button>
             </div>
@@ -843,36 +1265,134 @@ function BusinessStep({
         </div>
 
         <div className="mt-6 grid gap-x-5 gap-y-5 sm:grid-cols-6">
-          <Field label="Business Name" htmlFor="businessName" error={errors.businessName} className="sm:col-span-6">
-            <TextInput id="businessName" invalid={!!errors.businessName} placeholder="Bella Vita Salon & Spa" value={values.businessName} onChange={(e) => set("businessName", e.target.value)} />
+          <Field
+            label="Business Name"
+            htmlFor="businessName"
+            error={errors.businessName}
+            className="sm:col-span-4"
+          >
+            <TextInput
+              id="businessName"
+              invalid={!!errors.businessName}
+              placeholder="Bella Vita Salon & Spa"
+              value={values.businessName}
+              onChange={(e) => set("businessName", e.target.value)}
+            />
           </Field>
-          <Listbox id="businessType" label="Business Type" required size="large" value={values.businessType}
-            options={BUSINESS_TYPES.map((type) => ({ value: type, label: type }))}
-            onChange={(value) => set("businessType", value)} error={errors.businessType}
-            placeholder="Select a business type" className="sm:col-span-4"
-          />
-          <Field label="Established Year" htmlFor="establishedYear" error={errors.establishedYear} className="sm:col-span-2">
-            <TextInput id="establishedYear" inputMode="numeric" maxLength={4} invalid={!!errors.establishedYear} placeholder="2020" value={values.establishedYear} onChange={(e) => set("establishedYear", e.target.value.replace(/\D/g, ""))} />
-          </Field>
-          <Listbox id="city" label="City" required size="large" value={matchingCity?.value ?? legacyCity?.value ?? ""}
-            options={legacyCity ? [legacyCity, ...philippineCities] : philippineCities}
-            onChange={(value) => {
-              const selectedCity = philippineCities.find((city) => city.value === value);
-              if (selectedCity) {
-                set("city", selectedCity.city);
-                set("province", selectedCity.province);
+          <Field
+            label="Established Year"
+            htmlFor="establishedYear"
+            error={errors.establishedYear}
+            className="sm:col-span-2"
+          >
+            <TextInput
+              id="establishedYear"
+              inputMode="numeric"
+              maxLength={4}
+              invalid={!!errors.establishedYear}
+              placeholder="2020"
+              value={values.establishedYear}
+              onChange={(e) =>
+                set("establishedYear", e.target.value.replace(/\D/g, ""))
               }
-            }}
-            error={errors.city} placeholder="Select a city" searchPlaceholder="Search cities" className="sm:col-span-2"
+            />
+          </Field>
+          <Listbox
+            id="businessType"
+            label="Business Type"
+            required
+            size="large"
+            value={values.businessType}
+            options={BUSINESS_TYPES.map((type) => ({
+              value: type,
+              label: type,
+            }))}
+            onChange={(value) => set("businessType", value)}
+            error={errors.businessType}
+            placeholder="Select a business type"
+            className="sm:col-span-4"
           />
-          <Field label="Province" htmlFor="province" error={errors.province} className="sm:col-span-2">
-            <TextInput id="province" readOnly={!legacyCity} invalid={!!errors.province} placeholder="Auto-filled" value={values.province} onChange={(e) => set("province", e.target.value)} />
+          <Listbox
+            id="province"
+            label="Province"
+            required
+            size="large"
+            searchable
+            value={values.province}
+            options={includeSavedOption(provinceOptions, values.province)}
+            onChange={(province) => set("province", province)}
+            error={errors.province}
+            placeholder="Search provinces"
+            className="sm:col-span-2"
+          />
+          <Listbox
+            id="city"
+            label="City"
+            required
+            size="large"
+            searchable
+            value={values.city}
+            options={includeSavedOption(cityOptions, values.city)}
+            onChange={(city) => set("city", city)}
+            error={errors.city}
+            placeholder="Search cities"
+            className="sm:col-span-2"
+          />
+          <Listbox
+            id="barangay"
+            label="Barangay"
+            required
+            size="large"
+            searchable
+            resultLimit={100}
+            value={barangay}
+            options={includeSavedOption(barangayOptions, barangay)}
+            onChange={(name) => set("barangay", name)}
+            error={errors.barangay}
+            placeholder="Search barangays"
+            className="sm:col-span-2"
+          />
+          <Field
+            label="ZIP Code"
+            htmlFor="zipCode"
+            error={errors.zipCode}
+            hint={zipHint}
+            className="sm:col-span-2"
+          >
+            <TextInput
+              id="zipCode"
+              autoComplete="postal-code"
+              inputMode="numeric"
+              maxLength={12}
+              invalid={!!errors.zipCode}
+              placeholder="Enter ZIP code"
+              value={zipCode}
+              aria-describedby={errors.zipCode ? "zipCode-error" : zipHint ? "zipCode-hint" : undefined}
+              onChange={(e) =>
+                set("zipCode", e.target.value.replace(/\D/g, ""))
+              }
+            />
           </Field>
-          <Field label="ZIP Code" htmlFor="zipCode" error={errors.zipCode} className="sm:col-span-2">
-            <TextInput id="zipCode" autoComplete="postal-code" inputMode="numeric" maxLength={12} invalid={!!errors.zipCode} placeholder="1200" value={values.zipCode} onChange={(e) => set("zipCode", e.target.value.replace(/\D/g, ""))} />
-          </Field>
-          <Field label="Street Address" htmlFor="streetAddress" error={errors.streetAddress} className="sm:col-span-6">
-            <TextInput id="streetAddress" autoComplete="address-line1" invalid={!!errors.streetAddress} placeholder="123 Main Street, Suite 4B" value={values.streetAddress} onChange={(e) => set("streetAddress", e.target.value)} />
+          <Field
+            label="Street Address"
+            htmlFor="streetAddress"
+            error={errors.streetAddress}
+            className="sm:col-span-6"
+            hint="Unit/Floor/Building No., Street Name, Subdivision/Village"
+          >
+            <TextInput
+              id="streetAddress"
+              autoComplete="address-line1"
+              invalid={!!errors.streetAddress}
+              placeholder="Unit 4B, Acacia Street, Greenfield Village"
+              value={values.streetAddress}
+              onChange={(e) => set("streetAddress", e.target.value)}
+              aria-describedby={
+                errors.streetAddress
+                  ? "streetAddress-error"
+                  : "streetAddress-hint"
+              }
+            />
           </Field>
         </div>
         <StepActions onBack={onBack} />
@@ -901,7 +1421,11 @@ function DocumentsStep({
   docs: DocMap;
   docErrors: Errors;
   summaryError?: string;
-  onFile: (key: BusinessDocumentKey, title: string, file: File) => string | null;
+  onFile: (
+    key: BusinessDocumentKey,
+    title: string,
+    file: File,
+  ) => string | null;
   onRemove: (key: BusinessDocumentKey) => void;
   onPreview: (file: File, title: string) => void;
   onBack: () => void;
@@ -927,22 +1451,41 @@ function DocumentsStep({
         subtitle="These documents help us verify your business before your application is reviewed. Review begins after your final submission on the last step."
       />
       {summaryError ? (
-        <p role="alert" className="mb-4 rounded-lg bg-danger-bg px-4 py-3 text-base text-danger-dark">
+        <p
+          role="alert"
+          className="mb-4 rounded-lg bg-danger-bg px-4 py-3 text-base text-danger-dark"
+        >
           {summaryError}
         </p>
       ) : null}
       <p className="mb-3 text-sm font-semibold text-muted" aria-live="polite">
         {uploaded} of {ALL_DOCUMENTS.length} required documents uploaded
       </p>
-      <ul className="mb-4 grid gap-2 text-base" aria-label="Verification upload progress">
+      <ul
+        className="mb-4 grid gap-2 text-base"
+        aria-label="Verification upload progress"
+      >
         {files.map(({ key, title, upload }) => (
-          <li key={key} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white p-3">
+          <li
+            key={key}
+            className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white p-3"
+          >
             <span>{title}</span>
-            {upload?.error ? <span role="alert" className="text-danger">{upload.error}</span> : upload?.receipt ? (
+            {upload?.error ? (
+              <span role="alert" className="text-danger">
+                {upload.error}
+              </span>
+            ) : upload?.receipt ? (
               <span className="text-success">Uploaded</span>
             ) : uploading ? (
-              <progress aria-label={`${title} upload progress`} value={upload?.percent ?? 0} max={100} />
-            ) : <span className="text-muted">Ready to upload</span>}
+              <progress
+                aria-label={`${title} upload progress`}
+                value={upload?.percent ?? 0}
+                max={100}
+              />
+            ) : (
+              <span className="text-muted">Ready to upload</span>
+            )}
           </li>
         ))}
       </ul>
@@ -963,11 +1506,20 @@ function DocumentsStep({
       </fieldset>
       <div className="mt-6 flex flex-col gap-4">
         <InfoNote>
-          These documents will be included in your application summary on the final step. Review by our team begins only after you submit your complete application. This typically takes 1–2 business days.
+          These documents will be included in your application summary on the
+          final step. Review by our team begins only after you submit your
+          complete application. This typically takes 1–2 business days.
         </InfoNote>
-        <p className="text-sm text-subtle">PDF, JPG or PNG · Max {documentSizeMb} MB per file</p>
+        <p className="text-sm text-subtle">
+          PDF, JPG or PNG · Max {documentSizeMb} MB per file
+        </p>
         <div className="flex flex-col-reverse items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
-          <button type="button" onClick={onBack} disabled={uploading} className={secondaryButton}>
+          <button
+            type="button"
+            onClick={onBack}
+            disabled={uploading}
+            className={secondaryButton}
+          >
             Back
           </button>
           <button type="submit" disabled={uploading} className={primaryButton}>
@@ -979,7 +1531,13 @@ function DocumentsStep({
   );
 }
 
-function PlanStep({ values, errors, set, onBack, onNext }: StepProps & { onBack: () => void; onNext: () => void }) {
+function PlanStep({
+  values,
+  errors,
+  set,
+  onBack,
+  onNext,
+}: StepProps & { onBack: () => void; onNext: () => void }) {
   return (
     <form
       noValidate
@@ -992,19 +1550,36 @@ function PlanStep({ values, errors, set, onBack, onNext }: StepProps & { onBack:
         title="Select your subscription package"
         subtitle="The Professional plan is pre-selected. You can change your plan anytime after launch."
       />
-      <PlanCardGrid selectedCode={values.planCode} onSelect={(code) => set("planCode", code)} />
+      <PlanCardGrid
+        selectedCode={values.planCode}
+        onSelect={(code) => set("planCode", code)}
+      />
       <div className="mx-auto mt-6 w-full max-w-3xl overflow-x-auto rounded-xl border border-line bg-white">
         <table className="w-full text-base">
-          <caption className="p-3 text-left font-semibold">Compare plans</caption>
+          <caption className="p-3 text-left font-semibold">
+            Compare plans
+          </caption>
           <thead>
             <tr>
-              <th scope="col" className="px-2 py-2 text-left">Feature</th>
-              {PLAN_OPTIONS.map((plan) => <th key={plan.code} scope="col" className="px-2 py-2">{plan.name}</th>)}
+              <th scope="col" className="px-2 py-2 text-left">
+                Feature
+              </th>
+              {PLAN_OPTIONS.map((plan) => (
+                <th key={plan.code} scope="col" className="px-2 py-2">
+                  {plan.name}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {PLAN_OPTIONS.map((tier, tierIndex) => (
-              <PlanComparisonRow key={tier.code} feature={tier.features[0]} availability={PLAN_OPTIONS.map((_, index) => index >= tierIndex)} />
+              <PlanComparisonRow
+                key={tier.code}
+                feature={tier.features[0]}
+                availability={PLAN_OPTIONS.map(
+                  (_, index) => index >= tierIndex,
+                )}
+              />
             ))}
           </tbody>
         </table>
@@ -1016,10 +1591,18 @@ function PlanStep({ values, errors, set, onBack, onNext }: StepProps & { onBack:
       ) : null}
       <p className="mt-6 flex items-center justify-center gap-2 text-center text-sm text-muted">
         <Icon name="check" weight="bold" className="size-4 text-success" />
-        {TRIAL_DAYS}-day free trial on all plans · No credit card required · Cancel anytime
+        {TRIAL_DAYS}-day free trial on all plans · No credit card required ·
+        Cancel anytime
       </p>
       <div className="mt-8 flex items-center justify-between gap-3">
-        <button type="button" onClick={onBack} className={cn(secondaryButton, "border-burnt text-burnt hover:bg-burnt/5")}>
+        <button
+          type="button"
+          onClick={onBack}
+          className={cn(
+            secondaryButton,
+            "border-burnt text-burnt hover:bg-burnt/5",
+          )}
+        >
           <Icon name="arrow-left" className="size-4" /> Back
         </button>
         <button type="submit" className={primaryButton}>
@@ -1048,7 +1631,14 @@ function SummaryCard({
           <Icon name={icon} className="size-5 text-glyph" />
           {title}
         </h2>
-        <button type="button" onClick={onEdit} className={adminButtonClasses({ variant: "outline-accent", size: "xs" })}>
+        <button
+          type="button"
+          onClick={onEdit}
+          className={adminButtonClasses({
+            variant: "outline-accent",
+            size: "xs",
+          })}
+        >
           Edit
         </button>
       </header>
@@ -1061,7 +1651,9 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-6 text-base">
       <span className="text-subtle">{label}</span>
-      <span className="min-w-0 break-words text-right font-medium text-ink">{value}</span>
+      <span className="min-w-0 break-words text-right font-medium text-ink">
+        {value}
+      </span>
     </div>
   );
 }
@@ -1102,40 +1694,86 @@ function SummaryStep({
   onSaveDraft: () => void;
   onSubmit: () => void;
 }) {
-  const idLabel = ID_TYPES.find((item) => item.value === values.idType)?.label ?? values.idType;
+  const idLabel =
+    ID_TYPES.find((item) => item.value === values.idType)?.label ??
+    values.idType;
   const dob = values.dateOfBirth
-    ? new Date(`${values.dateOfBirth}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
+    ? new Date(`${values.dateOfBirth}T00:00:00`).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
     : "—";
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
-        <h1 tabIndex={-1} className="font-display text-[28px] leading-[38px] text-ink focus:outline-none sm:text-[32px] sm:leading-[42px]">
+        <h1
+          tabIndex={-1}
+          className="font-display text-[28px] leading-[38px] text-ink focus:outline-none sm:text-[32px] sm:leading-[42px]"
+        >
           Application Summary
         </h1>
         <p className="text-base text-muted">
-          Review all details carefully before submitting. Once confirmed, your application will be sent for review (1–2 business days).
+          Review all details carefully before submitting. Once confirmed, your
+          application will be sent for review (1–2 business days).
         </p>
       </div>
 
-      <SummaryCard title="Account Details" icon="users" onEdit={() => onEdit(0)}>
+      <SummaryCard
+        title="Account Details"
+        icon="users"
+        onEdit={() => onEdit(0)}
+      >
         <Row label="Email Address" value={values.email} />
         <Row label="Password" value="Set securely" />
-        <fieldset disabled={submitting} className="mt-2 grid gap-4 border-t border-line pt-4 sm:grid-cols-2">
-          <Field label="Contact name" htmlFor="fullName" error={errors.fullName}>
-            <TextInput id="fullName" invalid={!!errors.fullName} autoComplete="name" placeholder="Maria Santos" value={values.fullName} onChange={(event) => set("fullName", event.target.value)} />
+        <fieldset
+          disabled={submitting}
+          className="mt-2 grid gap-4 border-t border-line pt-4 sm:grid-cols-2"
+        >
+          <Field
+            label="Contact name"
+            htmlFor="fullName"
+            error={errors.fullName}
+          >
+            <TextInput
+              id="fullName"
+              invalid={!!errors.fullName}
+              autoComplete="name"
+              placeholder="Maria Santos"
+              value={values.fullName}
+              onChange={(event) => set("fullName", event.target.value)}
+            />
           </Field>
-          <Field label="Contact phone" htmlFor="phone" error={errors.phone} hint="Use 09XXXXXXXXX (11 digits) or +63 9XX XXX XXXX.">
-            <TextInput id="phone" type="tel" inputMode="tel" maxLength={17} invalid={!!errors.phone}
+          <Field
+            label="Contact phone"
+            htmlFor="phone"
+            error={errors.phone}
+            hint="Use 09XXXXXXXXX (11 digits) or +63 9XX XXX XXXX."
+          >
+            <TextInput
+              id="phone"
+              type="tel"
+              inputMode="tel"
+              maxLength={17}
+              invalid={!!errors.phone}
               aria-describedby={errors.phone ? "phone-error" : "phone-hint"}
-              autoComplete="tel" placeholder="+63 917 000 0000" value={values.phone}
-              onChange={(event) => set("phone", event.target.value.replace(/[^\d+\s()-]/g, ""))}
+              autoComplete="tel"
+              placeholder="+63 917 000 0000"
+              value={values.phone}
+              onChange={(event) =>
+                set("phone", event.target.value.replace(/[^\d+\s()-]/g, ""))
+              }
             />
           </Field>
         </fieldset>
       </SummaryCard>
 
-      <SummaryCard title="Identity Verification" icon="shield" onEdit={() => onEdit(1)}>
+      <SummaryCard
+        title="Identity Verification"
+        icon="shield"
+        onEdit={() => onEdit(1)}
+      >
         <Row label="Owner Name" value={values.ownerLegalName} />
         <Row label="Date of Birth" value={dob} />
         <Row label="ID Type" value={idLabel} />
@@ -1144,33 +1782,58 @@ function SummaryStep({
           return (
             <div key={key} className="space-y-1">
               <p className="text-sm text-muted">{title}</p>
-              {file ? <FileRow name={file.name} size={file.size} /> : (
-                <p role="alert" className="rounded-lg bg-danger-bg px-3 py-2 text-sm text-danger-dark">Upload this file in Identity Verification.</p>
+              {file ? (
+                <FileRow name={file.name} size={file.size} />
+              ) : (
+                <p
+                  role="alert"
+                  className="rounded-lg bg-danger-bg px-3 py-2 text-sm text-danger-dark"
+                >
+                  Upload this file in Identity Verification.
+                </p>
               )}
             </div>
           );
         })}
       </SummaryCard>
 
-      <SummaryCard title="Business Information" icon="grid" onEdit={() => onEdit(2)}>
+      <SummaryCard
+        title="Business Information"
+        icon="grid"
+        onEdit={() => onEdit(2)}
+      >
         <Row label="Business Name" value={values.businessName} />
-        {values.requestedSlug && <Row label="Requested subdomain" value={values.requestedSlug} />}
+        {values.requestedSlug && (
+          <Row label="Requested subdomain" value={values.requestedSlug} />
+        )}
         <Row label="Category" value={values.businessType} />
         <Row label="Established" value={values.establishedYear} />
         <Row
           label="Address"
           value={
             <>
-              {values.streetAddress}
+              {formatRegistrationStreetAddress(
+                values.streetAddress,
+                values.barangay ??
+                  barangayFromStreetAddress(values.streetAddress),
+              )}
               <br />
-              {values.city}, {values.province} {values.zipCode}
+              {values.city}, {values.province} {registrationZipCode(values)}
             </>
           }
         />
-        {logo ? <FileRow name={logo.name} size={logo.size} /> : <p className="text-sm text-subtle">No business logo selected.</p>}
+        {logo ? (
+          <FileRow name={logo.name} size={logo.size} />
+        ) : (
+          <p className="text-sm text-subtle">No business logo selected.</p>
+        )}
       </SummaryCard>
 
-      <SummaryCard title="Document Requirements" icon="document" onEdit={() => onEdit(3)}>
+      <SummaryCard
+        title="Document Requirements"
+        icon="document"
+        onEdit={() => onEdit(3)}
+      >
         {DOCUMENT_SLOTS.map((slot) => {
           const file = docs[slot.key];
           return file ? (
@@ -1179,19 +1842,29 @@ function SummaryStep({
               <FileRow name={file.name} size={file.size} />
             </div>
           ) : (
-            <p key={slot.key} role="alert" className="rounded-lg bg-danger-bg px-3 py-2 text-sm text-danger-dark">
+            <p
+              key={slot.key}
+              role="alert"
+              className="rounded-lg bg-danger-bg px-3 py-2 text-sm text-danger-dark"
+            >
               {slot.title} is missing. Go back to upload it before submitting.
             </p>
           );
         })}
       </SummaryCard>
 
-      <SummaryCard title="Subscription Package" icon="card" onEdit={() => onEdit(4)}>
+      <SummaryCard
+        title="Subscription Package"
+        icon="card"
+        onEdit={() => onEdit(4)}
+      >
         <SelectedPlanSummary code={values.planCode} />
       </SummaryCard>
 
       <section className="rounded-xl border border-line bg-white p-5 shadow-[0_3px_14px_rgb(44_58_75/0.05)]">
-        <p className="text-sm font-semibold tracking-wide text-muted">ACCURACY &amp; CONSENT</p>
+        <p className="text-sm font-semibold tracking-wide text-muted">
+          ACCURACY &amp; CONSENT
+        </p>
         <label className="mt-3 flex cursor-pointer items-start gap-3 text-base text-body">
           <input
             type="checkbox"
@@ -1199,7 +1872,9 @@ function SummaryStep({
             onChange={(event) => set("confirmAccuracy", event.target.checked)}
             className="mt-0.5 size-4 shrink-0 accent-burnt"
           />
-          I confirm that all information and documents provided are accurate and complete. I understand that submitting false information may result in rejection of my application.
+          I confirm that all information and documents provided are accurate and
+          complete. I understand that submitting false information may result in
+          rejection of my application.
         </label>
         {errors.confirmAccuracy ? (
           <p role="alert" className="mt-2 text-sm text-danger">
@@ -1207,23 +1882,42 @@ function SummaryStep({
           </p>
         ) : null}
         <p className="mt-4 border-t border-line pt-4 text-sm text-subtle">
-          After confirming, your application will be reviewed within 1–2 business days. You will be notified by email at {values.email}.
+          After confirming, your application will be reviewed within 1–2
+          business days. You will be notified by email at {values.email}.
         </p>
 
         {submitError ? (
-          <p role="alert" className="mt-4 rounded-lg bg-danger-bg px-4 py-3 text-base text-danger-dark">
+          <p
+            role="alert"
+            className="mt-4 rounded-lg bg-danger-bg px-4 py-3 text-base text-danger-dark"
+          >
             {submitError}
           </p>
         ) : null}
 
-        <button type="button" onClick={onSubmit} disabled={submitting} className={cn(primaryButton, "mt-5 w-full")}>
+        <button
+          type="button"
+          onClick={onSubmit}
+          disabled={submitting}
+          className={cn(primaryButton, "mt-5 w-full")}
+        >
           {submitting ? "Submitting…" : "Confirm Application"}
         </button>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <button type="button" onClick={onBack} disabled={submitting} className={cn(secondaryButton, "w-full")}>
+          <button
+            type="button"
+            onClick={onBack}
+            disabled={submitting}
+            className={cn(secondaryButton, "w-full")}
+          >
             <Icon name="arrow-left" className="size-4" /> Back
           </button>
-          <button type="button" onClick={onSaveDraft} disabled={submitting} className={cn(secondaryButton, "w-full")}>
+          <button
+            type="button"
+            onClick={onSaveDraft}
+            disabled={submitting}
+            className={cn(secondaryButton, "w-full")}
+          >
             Save Draft
           </button>
         </div>
