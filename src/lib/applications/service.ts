@@ -430,7 +430,7 @@ export async function loadAdminSnapshot(): Promise<AdminSnapshot> {
     plan: planMap.get(app.plan_code)?.name ?? app.plan_code,
     submittedAt: app.submitted_at,
     reviewedAt: app.reviewed_at,
-    status: app.status as SubmissionStatus,
+    status: app.status,
     idType: ID_TYPES.find((item) => item.value === identity?.id_type)?.label ?? identity?.id_type ?? "—",
     documents: buildDocumentList(documentsByApplication.get(app.id) ?? []),
     note: app.review_notes ? [app.review_notes] : undefined,
@@ -797,7 +797,7 @@ export async function listAccountDirectory(): Promise<AccountDirectoryEntry[]> {
       email: app.email,
       business: business?.business_name ?? "Unnamed business",
       owner: identity?.owner_legal_name ?? app.full_name,
-      status: app.status as SubmissionStatus,
+      status: app.status,
     }))
     .sort((a, b) => a.email.localeCompare(b.email));
 }

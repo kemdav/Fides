@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ColorType, ColorOption } from "./types";
+import type { ColorType, ColorOption } from "./types";
 import { Modal } from "@/components/ui/modal";
 
 const COLOR_CONFIG: Record<

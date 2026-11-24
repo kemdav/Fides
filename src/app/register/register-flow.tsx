@@ -258,7 +258,7 @@ export function RegisterFlow() {
       return;
     }
 
-    const missingDocs = ALL_DOCUMENTS.filter((doc) => (doc.key === GOVERNMENT_ID_SLOT.key ? !idFile : !docs[doc.key as BusinessDocumentKey]));
+    const missingDocs = ALL_DOCUMENTS.filter((doc) => (doc.key === GOVERNMENT_ID_SLOT.key ? !idFile : !docs[doc.key]));
     if (missingDocs.length > 0) {
       const onIdentity = missingDocs.some((doc) => doc.key === GOVERNMENT_ID_SLOT.key);
       const message = `Please upload all required documents before submitting (missing: ${missingDocs.map((doc) => doc.title).join(", ")}).`;

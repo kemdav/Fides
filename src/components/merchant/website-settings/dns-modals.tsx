@@ -35,7 +35,7 @@ export function ConnectDomainModal({
   if (!isOpen) return null;
 
   const copyToClipboard = (text: string, key: string) => {
-    navigator.clipboard?.writeText(text);
+    void navigator.clipboard?.writeText(text).catch(() => undefined);
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 2000);
   };

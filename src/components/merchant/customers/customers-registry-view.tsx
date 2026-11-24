@@ -724,6 +724,7 @@ export function CustomersRegistryView({
         onCancel={() => setResendingCustomer(null)}
         onConfirm={() => {
           if (resendingCustomer) return handleSendInvite(resendingCustomer);
+          return undefined;
         }}
       />
 
@@ -755,6 +756,7 @@ export function CustomersRegistryView({
           if (archivingCustomer) {
             return handleArchiveToggle(archivingCustomer, true);
           }
+          return undefined;
         }}
       />
 

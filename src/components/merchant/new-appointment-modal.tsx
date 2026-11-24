@@ -542,7 +542,7 @@ export function NewAppointmentModal({
       if (!res.data) { setStep2Error("Booking was processed but no confirmation was returned. Please refresh."); return; }
 
       const created = res.data;
-      onCreated({ id: created.id, time, customer: created.customerName, service: created.serviceName, staff: created.staffName, source: sourceLabel as "Online" | "Walk-In", status: "Confirmed", startsAt: created.starts_at });
+      onCreated({ id: created.id, time, customer: created.customerName, service: created.serviceName, staff: created.staffName, source: sourceLabel, status: "Confirmed", startsAt: created.starts_at });
       showToast(`Appointment booked for ${created.customerName}`);
       router.refresh();
       onClose();

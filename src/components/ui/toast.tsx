@@ -74,6 +74,7 @@ export function ToastListener() {
 
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [searchParams]);
 
   const removeToast = (id: string) => {

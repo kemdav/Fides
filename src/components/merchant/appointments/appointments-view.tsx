@@ -350,7 +350,7 @@ export function AppointmentsView({
           d.getMonth() === weekDates[i].getMonth() &&
           d.getDate() === weekDates[i].getDate()
         ) {
-          map.get(i)!.push(item);
+          map.get(i)?.push(item);
           break;
         }
       }

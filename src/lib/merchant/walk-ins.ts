@@ -3,7 +3,6 @@ import { resolveTenantAccess } from "./access";
 import type {
   AssignableSlotOption,
   WaitlistQueueItem,
-  WaitlistStatus,
   WalkInServiceOption,
   WalkInStaffOption,
   WalkInWorkspaceData,
@@ -277,7 +276,7 @@ export async function getWalkInWorkspaceData(
       servicePriceCents: svc?.priceCents ?? 0,
       requestedStaffId: row.staff_id,
       requestedStaffName: requestedStaff?.fullName ?? null,
-      status: row.status as WaitlistStatus,
+      status: row.status,
       notifiedAt: row.notified_at,
       notes: row.notes,
       estimatedWaitMinutes: (index + 1) * baseWaitStep,

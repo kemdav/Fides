@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Image from "next/image";
-import { WebsiteSettingsData, ActiveTab, ColorType } from "./types";
+import type { WebsiteSettingsData, ActiveTab, ColorType } from "./types";
 import { MerchantSidebar } from "../merchant-sidebar";
 import { Icon } from "@/components/admin/icon";
 import { PageContent, PageHeading, Surface } from "@/components/admin/primitives";
@@ -212,7 +212,7 @@ export function WebsiteSettingsView({
 
   const handleCopyLink = () => {
     const url = `https://${form.subdomain}.fides.app`;
-    navigator.clipboard?.writeText(url);
+    void navigator.clipboard?.writeText(url).catch(() => undefined);
     setLinkCopiedToast(true);
     setTimeout(() => setLinkCopiedToast(false), 2200);
   };

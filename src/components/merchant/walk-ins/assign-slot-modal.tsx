@@ -93,7 +93,7 @@ export function AssignSlotModal({
     setLoadingSlots(true);
     setError(null);
 
-    getAssignableSlotsAction({
+    void getAssignableSlotsAction({
       tenantId,
       staffId: selectedStaffId,
       date,

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Image from "next/image";
-import { WebsiteSettingsData } from "./types";
+import type { WebsiteSettingsData } from "./types";
 import { Modal } from "@/components/ui/modal";
 import { Icon } from "@/components/admin/icon";
 

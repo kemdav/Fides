@@ -117,7 +117,7 @@ export function WalkInModal({
       !propStaff ||
       propStaff.length === 0
     ) {
-      getWalkInWorkspaceAction(tenantId).then((res) => {
+      void getWalkInWorkspaceAction(tenantId).then((res) => {
         if (res.success && res.data) {
           setServices(res.data.services);
           setStaffList(res.data.staff);
