@@ -2,7 +2,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ALL_DOCUMENTS, DOCUMENT_BUCKET, FILE_LIMITS } from "@/lib/registration/options";
+import { ALL_DOCUMENTS, DOCUMENT_BUCKET, FILE_LIMITS, documentByteLimit } from "@/lib/registration/options";
 import { DocumentUploadError, ServiceError, type DocumentUploads } from "./service";
 
 const fileNameSchema = z.string().min(1).max(255);
@@ -17,6 +17,8 @@ export async function signDocumentUpload(raw: unknown) {
   }).safeParse(raw);
   if (!parsed.success) throw new ServiceError(`Choose a PDF, JPG or PNG file up to ${FILE_LIMITS.documentBytes / (1024 * 1024)} MB.`);
 
+  const limit = documentByteLimit(parsed.data.key);
+  if (parsed.data.size > limit) throw new ServiceError(`Choose a file up to ${limit / (1024 * 1024)} MB.`);
   const path = `staged/${randomUUID()}/${parsed.data.key}`;
   const { data, error } = await createAdminClient().storage.from(DOCUMENT_BUCKET).createSignedUploadUrl(path);
   if (error || !data) throw new ServiceError("Could not start the upload. Please retry.", 503);

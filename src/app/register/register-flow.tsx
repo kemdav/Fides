@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { sendRegistrationCodeAction } from "@/app/actions/registration-email";
 import { adminButtonClasses } from "@/components/admin/admin-button";
 import { Icon, type IconName } from "@/components/admin/icon";
+import { CalendarPicker, calendarDateKey } from "@/components/ui/calendar-picker";
 import { StaffSuccessDialog } from "@/components/merchant/staff/staff-confirmation-dialog";
 import { Card as BaseCard } from "@/components/ui";
 import { MascotLoadingDialog } from "@/components/ui/mascot-loading-dialog";
@@ -14,11 +15,13 @@ import {
   BUSINESS_TYPES,
   DOCUMENT_SLOTS,
   FILE_LIMITS,
-  GOVERNMENT_ID_SLOT,
+  IDENTITY_DOCUMENT_SLOTS,
+  documentByteLimit,
   ID_TYPES,
   PLAN_OPTIONS,
   TRIAL_DAYS,
   type BusinessDocumentKey,
+  type IdentityDocumentKey,
   type DocumentKey,
 } from "@/lib/registration/options";
 import {
@@ -37,7 +40,6 @@ import { SlugBadge } from "./slug-badge";
 import { uploadDocument } from "./upload-document";
 import { normalizeSlugInput } from "@/lib/account-request/schema";
 import {
-  DatePicker,
   DocumentCard,
   documentFileProblem,
   FilePreviewDialog,
@@ -45,7 +47,6 @@ import {
   IdUpload,
   releaseObjectUrl,
   SelectField,
-  toIsoDate,
 } from "./controls";
 import {
   Field,
@@ -60,7 +61,7 @@ import {
   validateFile,
 } from "./parts";
 
-type DocMap = Partial<Record<BusinessDocumentKey, File>>;
+type DocMap = Partial<Record<DocumentKey, File>>;
 type UploadReceipt = Awaited<ReturnType<typeof uploadDocument>>;
 type UploadState = { file: File; percent: number; receipt?: UploadReceipt; error?: string };
 type Uploads = Partial<Record<DocumentKey, UploadState>>;
@@ -113,6 +114,7 @@ type Errors = Partial<Record<string, string>>;
 
 const documentSizeMb = FILE_LIMITS.documentBytes / (1024 * 1024);
 const stepSchemas = [accountStepSchema, identityStepSchema, businessStepSchema, null, planStepSchema, null] as const;
+const allowStepPreview = process.env.NODE_ENV === "development";
 
 const primaryButton = adminButtonClasses({ size: "md", className: "gap-2 disabled:cursor-not-allowed" });
 const secondaryButton = adminButtonClasses({ variant: "outline-accent", size: "md", className: "gap-2 disabled:cursor-not-allowed disabled:hover:bg-transparent" });
@@ -122,9 +124,9 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [furthest, setFurthest] = useState(0);
+  const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [values, setValues] = useState<Values>(initialValues);
   const [errors, setErrors] = useState<Errors>({});
-  const [idFile, setIdFile] = useState<File | null>(null);
   const [logo, setLogo] = useState<File | null>(null);
   const [logoError, setLogoError] = useState<string | null>(null);
   const [docs, setDocs] = useState<DocMap>({});
@@ -145,10 +147,15 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
   const busy = uploading || submitting || sendingCode;
   const email = values.email.trim().toLowerCase();
   const emailProof = verifiedEmail?.email === email ? verifiedEmail.proof : null;
+  const navigationLocked = busy || showEmailVerification;
+  const accessibleStep = navigationLocked ? -1 : allowStepPreview ? STEPS.length - 1 : emailProof ? furthest : 0;
+  const completed = emailProof ? completedSteps : completedSteps.filter((index) => index !== 0);
   const payload = { ...values, requestedSlug: requestAccount ? values.requestedSlug : undefined };
 
-  function fileFor(key: DocumentKey) {
-    return key === GOVERNMENT_ID_SLOT.key ? idFile : docs[key];
+  function missingIdentityDocuments(): Errors {
+    return Object.fromEntries(IDENTITY_DOCUMENT_SLOTS
+      .filter(({ key }) => !docs[key])
+      .map(({ key, side }) => [key, `Upload the ${side.toLowerCase()} of your government-issued ID to continue.`]));
   }
 
   const hasDraft = useSyncExternalStore(
@@ -198,13 +205,12 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
     if (step === 0 && !found.confirmPassword && values.password !== values.confirmPassword) {
       found = { ...found, confirmPassword: "Passwords do not match." };
     }
-    if (step === 1 && !idFile) {
-      found = { ...found, idFile: "Upload a government-issued ID (front) to continue." };
-    }
+    if (step === 1) found = { ...found, ...missingIdentityDocuments() };
     if (step === 3) {
       const missing: Errors = {};
-      if (!idFile) {
-        setErrors({ idFile: "Upload a government-issued ID (front) to continue." });
+      const identityMissing = missingIdentityDocuments();
+      if (Object.keys(identityMissing).length) {
+        setErrors(identityMissing);
         setStep(1);
         focusFirstError();
         return false;
@@ -222,17 +228,17 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
     return ok;
   }
 
-  function setBusinessDoc(key: BusinessDocumentKey, title: string, file: File): string | null {
-    const problem = documentFileProblem(file, title);
+  function setDocument(key: DocumentKey, title: string, file: File): string | null {
+    const problem = documentFileProblem(file, title, documentByteLimit(key));
     if (problem) return problem;
     releaseObjectUrl(docs[key]);
     setDocs((current) => ({ ...current, [key]: file }));
     setDocErrors((current) => ({ ...current, [key]: undefined }));
-    setErrors((current) => ({ ...current, documents: undefined }));
+    setErrors((current) => ({ ...current, documents: undefined, [key]: undefined }));
     return null;
   }
 
-  function removeBusinessDoc(key: BusinessDocumentKey) {
+  function removeDocument(key: DocumentKey) {
     releaseObjectUrl(docs[key]);
     setDocs((current) => {
       const next = { ...current };
@@ -241,23 +247,14 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
     });
   }
 
-  function setIdDocument(file: File): string | null {
-    const problem = documentFileProblem(file, GOVERNMENT_ID_SLOT.title);
-    if (problem) return problem;
-    releaseObjectUrl(idFile);
-    setIdFile(file);
-    setErrors((current) => ({ ...current, idFile: undefined }));
-    return null;
-  }
-
-  function removeIdDocument() {
-    releaseObjectUrl(idFile);
-    setIdFile(null);
-  }
-
   function goTo(next: number) {
     setStep(next);
     setFurthest((current) => Math.max(current, next));
+  }
+
+  function finishStep() {
+    setCompletedSteps((current) => current.includes(step) ? current : [...current, step]);
+    goTo(Math.min(step + 1, STEPS.length - 1));
   }
 
   async function sendEmailCode(address: string): ReturnType<typeof sendRegistrationCodeAction> {
@@ -291,14 +288,14 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
       return;
     }
     if (step === 3 && !await uploadVerificationDocuments()) return;
-    goTo(Math.min(step + 1, STEPS.length - 1));
+    finishStep();
   }
 
   async function uploadVerificationDocuments() {
     setUploading(true);
     try {
       const results = await Promise.all(ALL_DOCUMENTS.map(async ({ key }) => {
-        const file = fileFor(key);
+        const file = docs[key];
         if (!file) return false;
         if (uploads[key]?.file === file && uploads[key]?.receipt) return true;
 
@@ -363,13 +360,13 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
       return;
     }
 
-    const missingDocs = ALL_DOCUMENTS.filter((doc) => (doc.key === GOVERNMENT_ID_SLOT.key ? !idFile : !docs[doc.key as BusinessDocumentKey]));
+    const missingDocs = ALL_DOCUMENTS.filter((doc) => !docs[doc.key]);
     if (missingDocs.length > 0) {
-      const onIdentity = missingDocs.some((doc) => doc.key === GOVERNMENT_ID_SLOT.key);
+      const onIdentity = IDENTITY_DOCUMENT_SLOTS.some(({ key }) => !docs[key]);
       const message = `Please upload all required documents before submitting (missing: ${missingDocs.map((doc) => doc.title).join(", ")}).`;
       setSubmitError(message);
       if (onIdentity) {
-        setErrors({ idFile: "Upload a government-issued ID (front) to continue." });
+        setErrors(missingIdentityDocuments());
         setStep(1);
       } else {
         setDocErrors(Object.fromEntries(missingDocs.map((doc) => [doc.key, `${doc.title} is required.`])));
@@ -382,7 +379,7 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
     const receipts: Partial<Record<DocumentKey, UploadReceipt>> = {};
     for (const { key, title } of ALL_DOCUMENTS) {
       const upload = uploads[key];
-      if (!upload?.receipt || upload.file !== fileFor(key)) {
+      if (!upload?.receipt || upload.file !== docs[key]) {
         setErrors({ documents: `Upload ${title} before submitting.` });
         setStep(3);
         return;
@@ -432,8 +429,8 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
 
   return (
     <div className="flex min-h-dvh flex-col bg-powder text-ink lg:flex-row">
-      <Sidebar current={step} furthest={busy || showEmailVerification ? -1 : emailProof ? furthest : 0} onJump={(index) => setStep(index)} />
-      <MobileProgress current={step} />
+      <Sidebar current={step} furthest={accessibleStep} completed={completed} onJump={setStep} />
+      <MobileProgress current={step} completed={completed} onJump={allowStepPreview ? setStep : undefined} navigationLocked={navigationLocked} />
       <main ref={mainRef} className="flex min-w-0 flex-1 flex-col items-center px-4 py-6 sm:px-8 lg:px-6 lg:py-8 xl:px-8">
         {step === 0 && (
           <nav aria-label="Registration links" className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2 self-start">
@@ -450,7 +447,7 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
             )}
           </nav>
         )}
-        <div className={cn("flex w-full flex-1 flex-col", step === 4 ? "max-w-[1100px]" : step === 5 ? "max-w-[820px]" : step === 3 ? "max-w-[900px]" : step === 0 ? "max-w-lg" : "max-w-[680px]")}>
+        <div className={cn("flex w-full flex-1 flex-col", step === 4 ? "max-w-[1100px]" : step === 5 ? "max-w-[820px]" : step === 3 ? "max-w-[900px]" : step === 0 ? "max-w-lg" : step === 1 ? "max-w-[760px]" : "max-w-[680px]")}>
           {step === 0 && (
             <div className="my-auto py-4 sm:py-6">
               {showEmailVerification && emailChallenge ? (
@@ -467,7 +464,7 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
                     setVerifiedEmail({ email: emailChallenge.email, proof });
                     setEmailChallenge(null);
                     setShowEmailVerification(false);
-                    goTo(1);
+                    finishStep();
                   }}
                 />
               ) : (
@@ -487,10 +484,10 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
               values={values}
               errors={errors}
               set={set}
-              idFile={idFile}
-              onIdFile={setIdDocument}
-              onIdRemove={removeIdDocument}
-              onPreview={(file) => setPreview({ file, title: GOVERNMENT_ID_SLOT.title })}
+              docs={docs}
+              onFile={setDocument}
+              onRemove={removeDocument}
+              onPreview={(file, title) => setPreview({ file, title })}
               onBack={back}
               onNext={next}
             />
@@ -524,13 +521,12 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
           {step === 3 && (
             <DocumentsStep
               uploads={uploads}
-              idFile={idFile}
               uploading={uploading}
               docs={docs}
               docErrors={docErrors}
               summaryError={errors.documents}
-              onFile={setBusinessDoc}
-              onRemove={removeBusinessDoc}
+              onFile={setDocument}
+              onRemove={removeDocument}
               onPreview={(file, title) => setPreview({ file, title })}
               onBack={back}
               onNext={next}
@@ -542,7 +538,6 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
               values={values}
               errors={errors}
               set={set}
-              idFile={idFile}
               logo={logo}
               docs={docs}
               submitting={submitting}
@@ -713,91 +708,61 @@ function StepActions({
 }
 
 function IdentityStep({
-  values,
-  errors,
-  set,
-  idFile,
-  onIdFile,
-  onIdRemove,
-  onPreview,
-  onBack,
-  onNext,
+  values, errors, set, docs, onFile, onRemove, onPreview, onBack, onNext,
 }: StepProps & {
-  idFile: File | null;
-  onIdFile: (file: File) => string | null;
-  onIdRemove: () => void;
-  onPreview: (file: File) => void;
+  docs: DocMap;
+  onFile: (key: IdentityDocumentKey, title: string, file: File) => string | null;
+  onRemove: (key: IdentityDocumentKey) => void;
+  onPreview: (file: File, title: string) => void;
   onBack: () => void;
   onNext: () => void;
 }) {
-  // Owners must be at least 18: the latest selectable date is exactly 18 years ago.
-  const now = new Date();
-  const latest = toIsoDate(now.getFullYear() - 18, now.getMonth(), now.getDate());
+  const latest = new Date();
+  latest.setFullYear(latest.getFullYear() - 18);
   return (
-    <form
-      noValidate
-      onSubmit={(event) => {
-        event.preventDefault();
-        onNext();
-      }}
-    >
+    <form noValidate onSubmit={(event) => { event.preventDefault(); onNext(); }}>
       <Heading
         center={false}
         title="Verify Your Identity"
         subtitle="We need to confirm the identity of the business owner. This information is kept secure and used only for verification purposes."
       />
       <Card>
-        <div className="grid gap-x-5 gap-y-5 sm:grid-cols-2">
-          <Field caps label="Owner's Legal Full Name" htmlFor="ownerLegalName" error={errors.ownerLegalName}>
-            <TextInput id="ownerLegalName" invalid={!!errors.ownerLegalName} autoComplete="name" placeholder="Maria Santos" value={values.ownerLegalName} onChange={(e) => set("ownerLegalName", e.target.value)} />
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="Owner's legal full name" htmlFor="ownerLegalName" error={errors.ownerLegalName}>
+            <TextInput id="ownerLegalName" invalid={!!errors.ownerLegalName} autoComplete="name" placeholder="Maria Santos" value={values.ownerLegalName} onChange={(event) => set("ownerLegalName", event.target.value)} />
           </Field>
-          <Field caps label="Date of Birth" htmlFor="dateOfBirth" error={errors.dateOfBirth} hint="You must be at least 18 years old.">
-            <DatePicker
-              id="dateOfBirth"
-              value={values.dateOfBirth}
-              onChange={(value) => set("dateOfBirth", value)}
-              max={latest}
-              invalid={!!errors.dateOfBirth}
-              placeholder="Select date of birth"
-              describedBy={errors.dateOfBirth ? "dateOfBirth-error" : "dateOfBirth-hint"}
+          <Field label="Date of birth" htmlFor="dateOfBirth" error={errors.dateOfBirth}>
+            <CalendarPicker id="dateOfBirth" panelLabel="Date of birth" value={values.dateOfBirth}
+              onChange={(value) => set("dateOfBirth", value)} min="1900-01-01" max={calendarDateKey(latest)}
+              locale="en-GB" showWeekdays={false} invalid={!!errors.dateOfBirth}
+              describedBy={errors.dateOfBirth ? "dateOfBirth-error" : undefined}
             />
           </Field>
-          <Field
-            caps
-            label="ID Type"
-            htmlFor="idType"
-            error={errors.idType}
-            className="sm:col-span-2"
-            hint="Accepted: Passport, Driver's License, National ID, SSS / GSIS ID, or PhilHealth ID"
-          >
-            <SelectField
-              id="idType"
-              value={values.idType}
-              options={ID_TYPES}
-              onChange={(value) => set("idType", value)}
-              invalid={!!errors.idType}
-              placeholder="Select an ID type"
-              className="w-full sm:max-w-[260px]"
-              describedBy={errors.idType ? "idType-error" : "idType-hint"}
+          <Field label="ID type" htmlFor="idType" error={errors.idType} className="sm:col-span-2">
+            <SelectField id="idType" value={values.idType} options={ID_TYPES}
+              onChange={(value) => set("idType", value)} invalid={!!errors.idType} placeholder="Select an ID type"
+              describedBy={errors.idType ? "idType-error" : undefined}
             />
           </Field>
-          <div className="flex flex-col gap-1.5 sm:col-span-2">
-            <p className="text-sm font-semibold uppercase tracking-wide text-body">
-              Government-Issued ID (Front)
-              <span aria-hidden className="ml-0.5 text-danger">
-                *
-              </span>
-              <span className="sr-only"> (required)</span>
-            </p>
-            <IdUpload label="Government-issued ID (front)" file={idFile} error={errors.idFile} onFile={onIdFile} onRemove={onIdRemove} onPreview={onPreview} />
-          </div>
-          <div className="sm:col-span-2">
-            <InfoNote icon="shield">
-              Your identity documents are encrypted and stored securely. They are used solely to verify your identity and will never be shared with third parties. Verification typically takes 1–2 business days.
-            </InfoNote>
-          </div>
         </div>
-        <StepActions onBack={onBack} />
+        <div className="mt-5 grid gap-6">
+          {IDENTITY_DOCUMENT_SLOTS.map(({ key, title, side }) => (
+            <IdUpload
+              key={key}
+              label={`Government-issued ID (${side.toLowerCase()})`}
+              side={side}
+              file={docs[key] ?? null}
+              error={errors[key]}
+              onFile={(file) => onFile(key, title, file)}
+              onRemove={() => onRemove(key)}
+              onPreview={(file) => onPreview(file, title)}
+            />
+          ))}
+          <InfoNote icon="shield">
+            Your identity documents are encrypted and stored securely. They are used solely to verify your identity. Verification typically takes 1–2 business days.
+          </InfoNote>
+        </div>
+        <StepActions onBack={onBack} nextLabel="Continue" />
       </Card>
     </form>
   );
@@ -937,7 +902,6 @@ function BusinessStep({
 
 function DocumentsStep({
   uploads,
-  idFile,
   uploading,
   docs,
   docErrors,
@@ -949,7 +913,6 @@ function DocumentsStep({
   onNext,
 }: {
   uploads: Uploads;
-  idFile: File | null;
   uploading: boolean;
   docs: DocMap;
   docErrors: Errors;
@@ -961,7 +924,7 @@ function DocumentsStep({
   onNext: () => void;
 }) {
   const files = ALL_DOCUMENTS.flatMap(({ key, title }) => {
-    const file = key === GOVERNMENT_ID_SLOT.key ? idFile : docs[key];
+    const file = docs[key];
     if (!file) return [];
     const upload = uploads[key];
     return [{ key, title, upload: upload?.file === file ? upload : undefined }];
@@ -1136,7 +1099,6 @@ function SummaryStep({
   values,
   errors,
   set,
-  idFile,
   logo,
   docs,
   submitting,
@@ -1147,7 +1109,6 @@ function SummaryStep({
   onSaveDraft,
   onSubmit,
 }: StepProps & {
-  idFile: File | null;
   logo: File | null;
   docs: DocMap;
   submitting: boolean;
@@ -1183,13 +1144,17 @@ function SummaryStep({
         <Row label="Owner Name" value={values.ownerLegalName} />
         <Row label="Date of Birth" value={dob} />
         <Row label="ID Type" value={idLabel} />
-        {idFile ? (
-          <FileRow name={idFile.name} size={idFile.size} />
-        ) : (
-          <p role="alert" className="rounded-lg bg-danger-bg px-3 py-2 text-sm text-danger-dark">
-            Government-issued ID is missing. Go back to upload it before submitting.
-          </p>
-        )}
+        {IDENTITY_DOCUMENT_SLOTS.map(({ key, title }) => {
+          const file = docs[key];
+          return (
+            <div key={key} className="space-y-1">
+              <p className="text-sm text-muted">{title}</p>
+              {file ? <FileRow name={file.name} size={file.size} /> : (
+                <p role="alert" className="rounded-lg bg-danger-bg px-3 py-2 text-sm text-danger-dark">Upload this file in Identity Verification.</p>
+              )}
+            </div>
+          );
+        })}
       </SummaryCard>
 
       <SummaryCard title="Business Information" icon="grid" onEdit={() => onEdit(2)}>

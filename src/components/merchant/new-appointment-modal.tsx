@@ -5,6 +5,7 @@ import { fieldOutlineClasses } from "@/components/admin/fields";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/admin/icon";
 import { AdminButton } from "@/components/admin/admin-button";
+import { CalendarPicker } from "@/components/ui/calendar-picker";
 import { createAppointmentBookingAction } from "@/app/actions/appointments";
 
 // ─── static option lists ─────────────────────────────────────────────────────
@@ -43,8 +44,6 @@ const TIME_SLOTS = [
   "03:30 PM","04:00 PM","04:30 PM","05:00 PM",
 ];
 
-const CALENDAR_WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
-
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
 function addMinutes(timeStr: string, mins: number): string {
@@ -61,14 +60,6 @@ function addMinutes(timeStr: string, mins: number): string {
   const ap = nh >= 12 ? "PM" : "AM";
   const displayH = nh === 0 ? 12 : nh > 12 ? nh - 12 : nh;
   return `${String(displayH).padStart(2, "0")}:${String(nm).padStart(2, "0")} ${ap}`;
-}
-
-function formatDateDisplay(iso: string): string {
-  if (!iso) return "";
-  const [y, mo, d] = iso.split("-").map(Number);
-  return new Date(y, mo - 1, d).toLocaleDateString("en-US", {
-    month: "long", day: "numeric", year: "numeric",
-  });
 }
 
 // ─── Shared input class ───────────────────────────────────────────────────────
@@ -182,134 +173,6 @@ export function Listbox(props: ListboxProps) {
           </ul>
         )}
       </div>
-    </div>
-  );
-}
-
-// ─── Calendar picker — fixed-position panel (never clipped) ──────────────────
-
-interface CalendarPickerProps {
-  id: string;
-  label: string;
-  required?: boolean;
-  value: string;
-  onChange: (iso: string) => void;
-}
-
-export function CalendarPicker({ id, label, required, value, onChange }: CalendarPickerProps) {
-  const [open, setOpen] = React.useState(false);
-  const [month, setMonth] = React.useState<Date>(() => {
-    if (value) { const [y, mo] = value.split("-").map(Number); return new Date(y, mo - 1, 1); }
-    return new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-  });
-  const triggerRef  = React.useRef<HTMLButtonElement>(null);
-  const panelRef    = React.useRef<HTMLDivElement>(null);
-  const [panelStyle, setPanelStyle] = React.useState<React.CSSProperties>({});
-
-  // position the fixed panel under the trigger button
-  const positionPanel = React.useCallback(() => {
-    if (!triggerRef.current) return;
-    const rect = triggerRef.current.getBoundingClientRect();
-    setPanelStyle({
-      position:  "fixed",
-      top:       rect.bottom + 4,
-      left:      rect.left,
-      width:     rect.width,
-      minWidth:  260,
-      zIndex:    9999,
-    });
-  }, []);
-
-  const handleOpen = () => {
-    if (!open) positionPanel();
-    setOpen((o) => !o);
-  };
-
-  React.useEffect(() => {
-    if (!open) return;
-    const closeHandler = (e: MouseEvent) => {
-      if (
-        triggerRef.current && triggerRef.current.contains(e.target as Node)
-      ) return;
-      if (
-        panelRef.current && panelRef.current.contains(e.target as Node)
-      ) return;
-      setOpen(false);
-    };
-    document.addEventListener("mousedown", closeHandler);
-    return () => document.removeEventListener("mousedown", closeHandler);
-  }, [open]);
-
-  const monthLabel   = month.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  const firstDay     = new Date(month.getFullYear(), month.getMonth(), 1).getDay();
-  const daysInMonth  = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
-  const cells: Array<number | null> = [
-    ...Array.from({ length: firstDay }, () => null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
-  ];
-
-  return (
-    <div>
-      <label htmlFor={id} className="mb-1.5 block text-sm font-semibold text-ink">
-        {label}{required && <span className="text-burnt"> *</span>}
-      </label>
-      <button
-        ref={triggerRef}
-        id={id}
-        type="button"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        onClick={handleOpen}
-        className={`${fieldOutlineClasses} flex h-11 w-full items-center justify-between px-3 text-left text-sm`}
-      >
-        <span className={value ? "text-ink" : "text-glyph"}>
-          {value ? formatDateDisplay(value) : "Select a date"}
-        </span>
-        <svg aria-hidden viewBox="0 0 24 24" className="size-4 text-glyph shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8">
-          <rect x="4" y="5.5" width="16" height="14" rx="1.5" />
-          <path d="M8 3.5v4M16 3.5v4M4 10h16" strokeLinecap="round" />
-        </svg>
-      </button>
-
-      {open && (
-        <div
-          ref={panelRef}
-          role="dialog"
-          aria-label="Choose appointment date"
-          style={panelStyle}
-          className="rounded-lg border border-outline bg-white p-3 shadow-lg"
-        >
-          <div className="mb-2 flex items-center justify-between">
-            <button type="button" aria-label="Previous month"
-              onClick={() => setMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
-              className="rounded-md px-2 py-1 text-body hover:bg-mist text-sm"
-            >‹</button>
-            <span className="text-sm font-semibold text-ink">{monthLabel}</span>
-            <button type="button" aria-label="Next month"
-              onClick={() => setMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
-              className="rounded-md px-2 py-1 text-body hover:bg-mist text-sm"
-            >›</button>
-          </div>
-          <div className="grid grid-cols-7 text-center text-[10px] font-semibold text-subtle mb-1">
-            {CALENDAR_WEEKDAYS.map((d, i) => <span key={`${d}-${i}`}>{d}</span>)}
-          </div>
-          <div className="grid grid-cols-7 gap-y-0.5 text-center">
-            {cells.map((day, index) => {
-              if (!day) return <span key={`empty-${index}`} />;
-              const iso = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-              const sel = iso === value;
-              return (
-                <button key={iso} type="button"
-                  onClick={() => { onChange(iso); setOpen(false); }}
-                  className={`mx-auto flex h-8 w-8 items-center justify-center rounded-md text-sm transition-colors ${sel ? "bg-burnt text-white font-bold" : "text-body hover:bg-mist"}`}
-                >
-                  {day}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

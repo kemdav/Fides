@@ -4,7 +4,7 @@ export const REGISTRATION_CODE_LENGTH = 6;
 export const ID_TYPES = [
   { value: "passport", label: "Passport" },
   { value: "drivers_license", label: "Driver's License" },
-  { value: "national_id", label: "National ID" },
+  { value: "national_id", label: "Philippine National ID" },
   { value: "sss_gsis", label: "SSS / GSIS ID" },
   { value: "philhealth", label: "PhilHealth ID" },
 ] as const;
@@ -25,10 +25,16 @@ export const BUSINESS_TYPES = [
 
 export const GOVERNMENT_ID_SLOT = {
   key: "government_id",
+  side: "Front",
   title: "Government-Issued ID (Front)",
   hint: "Passport, Driver's License, National ID, SSS / GSIS ID, or PhilHealth ID.",
   required: true,
 } as const;
+
+export const IDENTITY_DOCUMENT_SLOTS = [
+  GOVERNMENT_ID_SLOT,
+  { key: "government_id_back", side: "Back", title: "Government-Issued ID (Back)", hint: "Back of the same government-issued ID.", required: true },
+] as const;
 
 /** Business documents shown on the "Document Requirements" step. All are required. */
 export const DOCUMENT_SLOTS = [
@@ -41,11 +47,12 @@ export const DOCUMENT_SLOTS = [
 ] as const;
 
 export type BusinessDocumentKey = (typeof DOCUMENT_SLOTS)[number]["key"];
-export type DocumentKey = BusinessDocumentKey | typeof GOVERNMENT_ID_SLOT.key;
+export type IdentityDocumentKey = (typeof IDENTITY_DOCUMENT_SLOTS)[number]["key"];
+export type DocumentKey = BusinessDocumentKey | IdentityDocumentKey;
 
 /** Every document an application must contain, in display order. */
 export const ALL_DOCUMENTS: ReadonlyArray<{ key: DocumentKey; title: string; hint: string; required: boolean }> = [
-  GOVERNMENT_ID_SLOT,
+  ...IDENTITY_DOCUMENT_SLOTS,
   ...DOCUMENT_SLOTS,
 ];
 
@@ -62,10 +69,17 @@ export const DOCUMENT_BUCKET = "application-documents";
 
 export const FILE_LIMITS = {
   documentBytes: 50 * 1024 * 1024,
+  identityDocumentBytes: 5 * 1024 * 1024,
   documentTypes: ["application/pdf", "image/jpeg", "image/png"],
   logoBytes: 2 * 1024 * 1024,
   logoTypes: ["image/jpeg", "image/png", "image/webp"],
 } as const;
+
+export function documentByteLimit(key: DocumentKey): number {
+  return IDENTITY_DOCUMENT_SLOTS.some((slot) => slot.key === key)
+    ? FILE_LIMITS.identityDocumentBytes
+    : FILE_LIMITS.documentBytes;
+}
 
 export const PLAN_OPTIONS = [
   {

@@ -8,6 +8,7 @@ import { createAdminClient, type AdminClient } from "@/lib/supabase/admin";
 import {
   ALL_DOCUMENTS,
   DOCUMENT_BUCKET,
+  documentByteLimit,
   FILE_LIMITS,
   GOVERNMENT_ID_SLOT,
   ID_TYPES,
@@ -102,8 +103,9 @@ async function prepareDocuments(documents: DocumentUploads): Promise<PreparedDoc
     const title = ALL_DOCUMENTS.find((doc) => doc.key === key)?.title ?? key;
     const file = documents[key];
     if (!file || file.size === 0) throw new DocumentUploadError(key, `${title} is required. Please upload this document.`);
-    if (file.size > FILE_LIMITS.documentBytes) {
-      throw new DocumentUploadError(key, `${title} must be ${Math.round(FILE_LIMITS.documentBytes / (1024 * 1024))} MB or smaller.`);
+    const limit = documentByteLimit(key);
+    if (file.size > limit) {
+      throw new DocumentUploadError(key, `${title} must be ${limit / (1024 * 1024)} MB or smaller.`);
     }
     const bytes = Buffer.from(await file.arrayBuffer());
     const kind = sniffDocument(bytes);
@@ -369,7 +371,8 @@ function mimeLabel(mime: string | null): string {
 /** One entry per required document, in display order, flagged as uploaded or missing. */
 function buildDocumentList(rows: ApplicationDocumentRow[]): SubmissionDocument[] {
   const byType = new Map(rows.map((row) => [row.document_type, row]));
-  const list: SubmissionDocument[] = ALL_DOCUMENTS.map((doc) => {
+  // Older submissions predate the back-ID requirement.
+  const list: SubmissionDocument[] = ALL_DOCUMENTS.filter((doc) => doc.key !== "government_id_back" || byType.has(doc.key)).map((doc) => {
     const row = byType.get(doc.key);
     const uploaded = !!row?.storage_path;
     return {

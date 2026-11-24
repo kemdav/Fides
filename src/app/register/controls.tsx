@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Icon } from "@/components/admin/icon";
 import { Modal } from "@/components/ui";
 import { FILE_LIMITS } from "@/lib/registration/options";
@@ -179,236 +179,6 @@ export function SelectField({
 }
 
 /* -------------------------------------------------------------------------- */
-/* Date picker                                                                */
-/* -------------------------------------------------------------------------- */
-
-const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-
-const pad = (value: number) => String(value).padStart(2, "0");
-export const toIsoDate = (year: number, month: number, day: number) => `${year}-${pad(month + 1)}-${pad(day)}`;
-
-function parseIso(value: string): { y: number; m: number; d: number } | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) return null;
-  return { y: Number(match[1]), m: Number(match[2]) - 1, d: Number(match[3]) };
-}
-
-export function formatDisplayDate(value: string): string {
-  const parsed = parseIso(value);
-  if (!parsed) return "";
-  return `${parsed.d} ${MONTHS[parsed.m].slice(0, 3)} ${parsed.y}`;
-}
-
-export function DatePicker({
-  id,
-  value,
-  onChange,
-  max,
-  minYear = 1900,
-  invalid = false,
-  placeholder = "Select date",
-  describedBy,
-}: {
-  id: string;
-  value: string;
-  onChange: (value: string) => void;
-  /** Latest selectable date (ISO yyyy-mm-dd). */
-  max: string;
-  minYear?: number;
-  invalid?: boolean;
-  placeholder?: string;
-  describedBy?: string;
-}) {
-  const maxParts = parseIso(max) ?? { y: new Date().getFullYear(), m: 11, d: 31 };
-  const selected = parseIso(value);
-  const [open, setOpen] = useState(false);
-  const [view, setView] = useState<"days" | "years">("days");
-  const [cursor, setCursor] = useState<{ y: number; m: number }>(() => ({ y: (selected ?? maxParts).y, m: (selected ?? maxParts).m }));
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const yearRef = useRef<HTMLButtonElement>(null);
-  const panelId = useId();
-
-  const close = () => {
-    setOpen(false);
-    setView("days");
-  };
-  useOutsideClose(open, close, wrapRef);
-
-  useEffect(() => {
-    if (open && view === "years") yearRef.current?.scrollIntoView({ block: "center" });
-  }, [open, view]);
-
-  function toggle() {
-    if (open) return close();
-    const base = selected ?? maxParts;
-    setCursor({ y: base.y, m: base.m });
-    setView("days");
-    setOpen(true);
-  }
-
-  const cells = useMemo(() => {
-    const first = new Date(cursor.y, cursor.m, 1).getDay();
-    const count = new Date(cursor.y, cursor.m + 1, 0).getDate();
-    return [...Array.from({ length: first }, () => null), ...Array.from({ length: count }, (_, index) => index + 1)];
-  }, [cursor]);
-
-  const afterMax = (y: number, m: number, d: number) => y > maxParts.y || (y === maxParts.y && (m > maxParts.m || (m === maxParts.m && d > maxParts.d)));
-  const canGoNext = cursor.y < maxParts.y || (cursor.y === maxParts.y && cursor.m < maxParts.m);
-  const canGoPrev = cursor.y > minYear || cursor.m > 0;
-
-  function shift(delta: number) {
-    setCursor((current) => {
-      const date = new Date(current.y, current.m + delta, 1);
-      return { y: date.getFullYear(), m: date.getMonth() };
-    });
-  }
-
-  const years = Array.from({ length: maxParts.y - minYear + 1 }, (_, index) => maxParts.y - index);
-
-  return (
-    <div
-      ref={wrapRef}
-      className="relative"
-      onKeyDown={(event) => {
-        if (event.key === "Escape" && open) {
-          event.stopPropagation();
-          close();
-          buttonRef.current?.focus();
-        }
-      }}
-    >
-      <button
-        ref={buttonRef}
-        id={id}
-        type="button"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        aria-controls={open ? panelId : undefined}
-        data-invalid={invalid || undefined}
-        aria-describedby={describedBy}
-        onClick={toggle}
-        className={controlClass(invalid)}
-      >
-        <span className={cn(!value && "text-subtle")}>{value ? formatDisplayDate(value) : placeholder}</span>
-        <Icon name="calendar" className="size-5 text-glyph" />
-      </button>
-
-      {open ? (
-        <div
-          id={panelId}
-          role="dialog"
-          aria-label="Choose date of birth"
-          className="absolute left-0 top-[calc(100%+4px)] z-30 w-[288px] rounded-lg border border-line bg-white p-3 shadow-[0_12px_28px_-10px_rgb(44_58_75/0.35)] max-sm:right-0 max-sm:w-auto"
-        >
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <button
-              type="button"
-              onClick={() => setView((current) => (current === "days" ? "years" : "days"))}
-              aria-live="polite"
-              className="flex items-center gap-1 rounded-md px-2 py-1 text-base font-semibold text-ink hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
-            >
-              {MONTHS[cursor.m]} {cursor.y}
-              <Icon name="chevron-down" className={cn("size-4 transition-transform", view === "years" && "rotate-180")} />
-            </button>
-            {view === "days" ? (
-              <div className="flex items-center gap-1">
-                <button type="button" aria-label="Previous month" disabled={!canGoPrev} onClick={() => shift(-1)} className="flex size-8 items-center justify-center rounded-md text-ink hover:bg-mist disabled:opacity-30">
-                  <Icon name="chevron-down" className="size-4 rotate-90" />
-                </button>
-                <button type="button" aria-label="Next month" disabled={!canGoNext} onClick={() => shift(1)} className="flex size-8 items-center justify-center rounded-md text-ink hover:bg-mist disabled:opacity-30">
-                  <Icon name="chevron-down" className="size-4 -rotate-90" />
-                </button>
-              </div>
-            ) : null}
-          </div>
-
-          {view === "years" ? (
-            <div role="listbox" aria-label="Year" className="grid max-h-[232px] grid-cols-4 gap-1 overflow-auto pr-1">
-              {years.map((year) => {
-                const isCurrent = year === cursor.y;
-                return (
-                  <button
-                    key={year}
-                    ref={isCurrent ? yearRef : undefined}
-                    type="button"
-                    role="option"
-                    aria-selected={isCurrent}
-                    onClick={() => {
-                      setCursor((current) => ({ y: year, m: year === maxParts.y ? Math.min(current.m, maxParts.m) : current.m }));
-                      setView("days");
-                    }}
-                    className={cn("h-9 rounded-md text-base hover:bg-mist", isCurrent ? "bg-burnt font-semibold text-white hover:bg-burnt" : "text-ink")}
-                  >
-                    {year}
-                  </button>
-                );
-              })}
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-7 text-center text-sm font-semibold text-muted">
-                {WEEKDAYS.map((day) => (
-                  <span key={day} className="py-1">
-                    {day}
-                  </span>
-                ))}
-              </div>
-              <div role="grid" aria-label={`${MONTHS[cursor.m]} ${cursor.y}`} className="grid grid-cols-7 gap-y-0.5 text-center">
-                {cells.map((day, index) => {
-                  if (day === null) return <span key={`blank-${index}`} />;
-                  const disabled = afterMax(cursor.y, cursor.m, day);
-                  const isSelected = selected?.y === cursor.y && selected.m === cursor.m && selected.d === day;
-                  return (
-                    <button
-                      key={day}
-                      type="button"
-                      role="gridcell"
-                      disabled={disabled}
-                      aria-selected={isSelected}
-                      onClick={() => {
-                        onChange(toIsoDate(cursor.y, cursor.m, day));
-                        close();
-                        buttonRef.current?.focus();
-                      }}
-                      className={cn(
-                        "mx-auto flex size-9 items-center justify-center rounded-full text-base",
-                        isSelected ? "bg-burnt font-semibold text-white" : "text-ink hover:bg-mist",
-                        disabled && "cursor-not-allowed text-line hover:bg-transparent"
-                      )}
-                    >
-                      {day}
-                    </button>
-                  );
-                })}
-              </div>
-            </>
-          )}
-
-          <div className="mt-2 flex items-center justify-between border-t border-line pt-2 text-sm font-semibold">
-            <button
-              type="button"
-              onClick={() => {
-                onChange("");
-                close();
-              }}
-              className="rounded px-2 py-1 text-burnt hover:bg-burnt/10"
-            >
-              Clear
-            </button>
-            <button type="button" onClick={close} className="rounded px-2 py-1 text-muted hover:bg-mist">
-              <Icon name="close" className="size-4" />
-              <span className="sr-only">Close preview</span>
-            </button>
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
 /* File helpers                                                               */
 /* -------------------------------------------------------------------------- */
 
@@ -446,13 +216,13 @@ export function fileKind(file: { type: string; name?: string }): string {
 }
 
 /** Returns a user-facing error message, or null when the file is acceptable. */
-export function documentFileProblem(file: File, label: string): string | null {
+export function documentFileProblem(file: File, label: string, maxBytes: number = FILE_LIMITS.documentBytes): string | null {
   if (!(FILE_LIMITS.documentTypes as readonly string[]).includes(file.type)) {
     return `${label}: only PDF, JPG or PNG files are accepted.`;
   }
   if (file.size === 0) return `${label}: this file is empty. Please choose another file.`;
-  if (file.size > FILE_LIMITS.documentBytes) {
-    return `${label}: the file is ${formatBytes(file.size)}. The maximum size is ${Math.round(FILE_LIMITS.documentBytes / (1024 * 1024))} MB.`;
+  if (file.size > maxBytes) {
+    return `${label}: the file is ${formatBytes(file.size)}. The maximum size is ${Math.round(maxBytes / (1024 * 1024))} MB.`;
   }
   return null;
 }
@@ -489,10 +259,10 @@ export function FilePreviewDialog({ file, title, onClose }: { file: File | null;
   const url = file ? getObjectUrl(file) : null;
   const isImage = file?.type.startsWith("image/");
   return (
-    <Modal open={open} onClose={onClose} unstyled labelledBy="file-preview-title" className="w-[min(56rem,calc(100vw-2rem))] max-w-none rounded-xl bg-white p-0 shadow-2xl">
+    <Modal open={open} onClose={onClose} unstyled labelledBy="file-preview-title" className="fixed inset-0 m-auto h-fit max-h-[calc(100dvh-2rem)] w-[min(56rem,calc(100vw-2rem))] max-w-none overflow-hidden rounded-xl bg-white p-0 shadow-2xl">
       {file && url ? (
-        <div className="flex max-h-[88dvh] flex-col">
-          <header className="flex items-start justify-between gap-4 border-b border-line px-5 py-4">
+        <div className="flex max-h-[calc(100dvh-2rem)] flex-col">
+          <header className="flex shrink-0 items-start justify-between gap-4 border-b border-line px-5 py-4">
             <div className="min-w-0">
               <h2 id="file-preview-title" className="truncate text-base font-semibold text-ink">
                 {title}
@@ -506,7 +276,7 @@ export function FilePreviewDialog({ file, title, onClose }: { file: File | null;
               <span className="sr-only">Close preview</span>
             </button>
           </header>
-          <div className="min-h-[300px] flex-1 overflow-auto bg-mist p-3">
+          <div className="grid min-h-0 flex-1 place-items-center overflow-auto bg-mist p-3">
             {isImage ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={url} alt={`Preview of ${file.name}`} className="mx-auto max-h-[70dvh] w-auto max-w-full rounded-md object-contain" />
@@ -514,7 +284,7 @@ export function FilePreviewDialog({ file, title, onClose }: { file: File | null;
               <iframe src={url} title={`Preview of ${file.name}`} className="h-[70dvh] w-full rounded-md bg-white" />
             )}
           </div>
-          <footer className="flex items-center justify-between gap-3 border-t border-line px-5 py-3 text-sm text-muted">
+          <footer className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-3 text-sm text-muted">
             <span>Preview shown on this device only.</span>
             <a href={url} target="_blank" rel="noreferrer" className="font-semibold text-burnt hover:underline">
               Open in new tab
@@ -639,14 +409,10 @@ export function DocumentCard({
 /* -------------------------------------------------------------------------- */
 
 export function IdUpload({
-  label,
-  file,
-  error,
-  onFile,
-  onRemove,
-  onPreview,
+  label, side, file, error, onFile, onRemove, onPreview,
 }: {
   label: string;
+  side: "Front" | "Back";
   file: File | null;
   error?: string;
   onFile: (file: File) => string | null;
@@ -656,59 +422,64 @@ export function IdUpload({
   const [localError, setLocalError] = useState<string | null>(null);
   const message = localError ?? error;
   const picker = useFileInput((picked) => setLocalError(onFile(picked)));
+  const labelId = useId();
   const errorId = useId();
+  const url = file ? getObjectUrl(file) : null;
+  const focusClasses = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40";
 
   return (
-    <div className="flex flex-col gap-2">
-      {picker.input(label)}
-      {file ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-lg bg-[#eceff6] px-3 py-2.5">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-wash text-success">
-            <Icon name="shield" weight="fill" className="size-5" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-base font-semibold text-ink" title={file.name}>
-              {file.name}
-            </p>
-            <p className="flex items-center gap-1 text-sm text-success">
-              <Icon name="check" weight="bold" className="size-3.5" /> Uploaded · {formatBytes(file.size)}
-            </p>
+    <section aria-labelledby={labelId} className="grid gap-2">
+      <h2 id={labelId} className="text-sm font-semibold text-body">
+        {label} <span className="text-danger" aria-hidden="true">*</span><span className="sr-only"> (required)</span>
+      </h2>
+      <div className="grid items-start gap-3 sm:grid-cols-2">
+        <div className="min-w-0">
+          {picker.input("Choose file for " + label)}
+          {file ? (
+            <div className="flex items-center gap-3 rounded-lg border border-line bg-mist p-3">
+              <span className="grid size-10 shrink-0 place-items-center rounded-md bg-wash text-success">
+                <Icon name="file" className="size-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-ink" title={file.name}>{file.name}</p>
+                <p className="flex items-center gap-1 text-xs text-success-deep">
+                  <Icon name="check" weight="bold" className="size-3.5" /> Selected &middot; {formatBytes(file.size)}
+                </p>
+              </div>
+              <button type="button" aria-label={"Remove " + label} onClick={() => { setLocalError(null); onRemove(); }}
+                className={cn("min-h-9 rounded-md px-1.5 text-sm font-semibold text-burnt hover:underline", focusClasses)}>
+                Remove
+              </button>
+            </div>
+          ) : (
+            <button type="button" onClick={picker.open} aria-label={"Choose file for " + label}
+              aria-describedby={message ? errorId : undefined} data-invalid={message ? "true" : undefined}
+              className={cn("flex min-h-[220px] w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed bg-white p-4 text-sm text-muted hover:border-burnt hover:bg-burnt/5",
+                message ? "border-danger" : "border-outline", focusClasses)}>
+              <span className="rounded-full bg-burnt px-4 py-2 font-semibold text-white">Choose File</span>
+              <span>PDF, JPG or PNG &middot; max {FILE_LIMITS.identityDocumentBytes / (1024 * 1024)} MB</span>
+            </button>
+          )}
+          {message && <p id={errorId} role="alert" className="mt-2 text-sm text-danger">{message}</p>}
+        </div>
+
+        <div className="min-w-0 rounded-lg bg-[#d9dee4] p-3 text-center">
+          <p className="mb-2 text-xs font-semibold text-body">ID {side.toLowerCase()} preview</p>
+          <div className="relative grid aspect-[16/9] place-items-center overflow-hidden rounded-lg border border-outline bg-mist">
+            {file && url ? (file.type.startsWith("image/") ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={url} alt={label + " preview"} className="absolute inset-0 size-full object-contain object-center" />
+            ) : (
+              <iframe src={url + "#toolbar=0&navpanes=0&view=Fit"} title={label + " preview"} tabIndex={-1} className="pointer-events-none absolute inset-0 size-full bg-white" />
+            )) : <span className="text-sm text-muted">No file selected</span>}
           </div>
-          <div className="flex shrink-0 items-center gap-3 text-sm font-semibold">
-            <button type="button" onClick={() => onPreview(file)} className="text-ink hover:underline">
-              Preview
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setLocalError(null);
-                onRemove();
-              }}
-              className="text-burnt hover:underline"
-            >
-              Remove
-            </button>
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs">
+            <span className={file ? "text-success-deep" : "text-body"}>{file ? "Ready to upload" : "Choose an ID file"}</span>
+            {file && <button type="button" onClick={() => onPreview(file)}
+              aria-label={"Open " + label + " preview"} className={cn("rounded font-semibold text-burnt-dark hover:underline", focusClasses)}>Open preview</button>}
           </div>
         </div>
-      ) : null}
-      <button
-        type="button"
-        onClick={picker.open}
-        aria-describedby={message ? errorId : undefined}
-        data-invalid={message ? "true" : undefined}
-        className={cn(
-          "flex w-full flex-col items-center gap-0.5 rounded-lg border border-dashed px-4 py-4 text-base text-muted transition-colors hover:border-burnt hover:bg-burnt/5 hover:text-burnt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40",
-          message ? "border-danger" : "border-outline/60"
-        )}
-      >
-        <span className="font-medium">{file ? "Upload a different file" : "Upload File"}</span>
-        <span className="text-sm text-subtle">PDF, JPG or PNG · max {FILE_LIMITS.documentBytes / (1024 * 1024)} MB</span>
-      </button>
-      {message ? (
-        <p id={errorId} role="alert" className="text-sm text-danger">
-          {message}
-        </p>
-      ) : null}
-    </div>
+      </div>
+    </section>
   );
 }
