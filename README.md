@@ -33,7 +33,7 @@ cp .env.example .env.local        # then fill in real values (see docs/ENVIRONME
 
 docker compose up -d redis        # local Redis for rate limiting (host port 6380)
 supabase start                    # local Supabase stack
-supabase db reset                 # apply all migrations (00001 to 00028) + seed data
+supabase db reset                 # apply all migrations + seed data
 
 npm run dev
 ```
@@ -95,7 +95,7 @@ src/
     database.types.ts      Supabase schema types
   proxy.ts                 Next.js 16 proxy (session refresh + tenant routing)
 supabase/
-  migrations/              SQL migrations (00001 baseline to 00028 RPC tenant guard)
+  migrations/              SQL migrations, named <utc timestamp>_<name>.sql
   seed.sql                 Local seed data (Bella Vita demo tenant, owner@bellavita.com / Password123!)
 public/                    PWA manifest, service worker, offline shell, icons
 ```
@@ -111,7 +111,7 @@ Short version:
   dashboard, and the admin portal. `src/proxy.ts` (Next.js 16's replacement for
   `middleware.ts`) resolves the tenant from the request hostname using the
   wildcard subdomain strategy and forwards it via the `x-fides-tenant` header.
-- **Tenant isolation.** `supabase/migrations/00001_baseline.sql` enables
+- **Tenant isolation.** `supabase/migrations/*_baseline.sql` enables
   PostgreSQL Row Level Security on `tenants`, `profiles`, and
   `tenant_memberships`, with policies driven by tenant claims in the JWT.
 - **Sessions.** Supabase sessions are cookie-based; the proxy refreshes tokens
@@ -151,7 +151,7 @@ The app sends three emails through [Resend](https://resend.com): **account reque
 2. Set `MAIL_FROM_EMAIL`. `onboarding@resend.dev` is a test sender that only delivers to your own Resend account
    email. To email real applicants, verify a domain at <https://resend.com/domains> and use an address on it.
 3. Set `NEXT_PUBLIC_SITE_URL` to the public URL: the "log in" link in the approval email is built from it.
-4. Run `supabase/migrations/00014_password_reset_codes.sql` in the Supabase SQL Editor (forgot-password codes). `supabase db reset` already applies it locally.
+4. Run `supabase/migrations/*_password_reset_codes.sql` in the Supabase SQL Editor (forgot-password codes). `supabase db reset` already applies it locally.
 5. Check delivery: `npm run email:test` (sends to Resend's `delivered@resend.dev`) or `npm run email:test -- you@example.com`.
 6. Optional Edge Function (`supabase/functions/send-fides-email`): set `MAIL_TRANSPORT=edge` and
    `FIDES_EMAIL_FUNCTION_SECRET`, then

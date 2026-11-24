@@ -9,7 +9,7 @@ How the layers fit together (entry, DTO, guard, service, queries, database) is i
 | --- | --- | --- |
 | Row Level Security | every table in `public` | Always on. Tables with no policy (`admin_activity_log`, `password_reset_codes`, `rejected_accounts`) are reachable only with the service role. |
 | Tenant access checks | `src/lib/merchant/access.ts` (`resolveTenantAccess`) | Server actions must call this instead of trusting a `tenantId` sent by the browser. It only accepts a tenant the signed-in user is an owner/admin/receptionist/staff member of. |
-| Walk-in RPC guard | `public.assert_tenant_operator` (migration `00028`) | `create_walkin_appointment_safe` and `convert_waitlist_entry_to_appointment` call it first. It lets in the service role, platform admins and operators of that tenant, and rejects everyone else including requests with no session. |
+| Walk-in RPC guard | `public.assert_tenant_operator` (migration `rpc_tenant_guard`) | `create_walkin_appointment_safe` and `convert_waitlist_entry_to_appointment` call it first. It lets in the service role, platform admins and operators of that tenant, and rejects everyone else including requests with no session. |
 | Admin portal | `src/lib/admin/*`, `requireAdminPortal()` | Local accounts from `ADMIN_ACCOUNTS`, scrypt hashed, signed HttpOnly session cookie (8 hours). |
 | Rate limiting | `src/lib/rate-limit.ts` | See `docs/ENVIRONMENT.md` for Redis. |
 
@@ -30,7 +30,7 @@ How the layers fit together (entry, DTO, guard, service, queries, database) is i
 
 - [ ] Set `ADMIN_SESSION_SECRET` (32+ random characters) and `ADMIN_ACCOUNTS` with unique 12+ character passwords.
 - [ ] Set `REDIS_URL` to a managed Redis.
-- [ ] Apply all migrations (through `00028_rpc_tenant_guard.sql`) to the hosted database.
+- [ ] Apply all migrations (through `20261123094809_rpc_tenant_guard.sql`) to the hosted database.
 - [ ] Rotate any credential that was ever committed (the old Gmail app password is still in git history).
 - [ ] Run `npm audit --omit=dev` (currently clean) and keep `next`, `zod` and `nodemailer` up to date.
 - [ ] Confirm which Supabase keys the hosting environment uses. The service-role key must be server-side only.

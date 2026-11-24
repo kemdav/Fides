@@ -85,8 +85,8 @@ if (!placeholder(supabaseUrl) && !placeholder(secretKey)) {
   const db = createClient(supabaseUrl, secretKey, { auth: { persistSession: false, autoRefreshToken: false } });
   for (const [table, fix] of [
     ["account_applications", "run supabase/fides_account_setup.sql in the SQL Editor"],
-    ["application_documents", "run supabase/migrations/00012_application_documents.sql"],
-    ["password_reset_codes", "run supabase/migrations/00013_password_reset_codes.sql (forgot-password needs it)"],
+    ["application_documents", "run supabase/migrations/*_application_documents.sql"],
+    ["password_reset_codes", "run supabase/migrations/*_password_reset_codes.sql (forgot-password needs it)"],
   ]) {
     const { error } = await db.from(table).select("*", { head: true, count: "exact" }).limit(1);
     if (!error) ok(`Table ${table} exists.`);

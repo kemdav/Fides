@@ -152,7 +152,7 @@ src/
   types/
     database.types.ts           generated: never edit by hand
 supabase/
-  migrations/                   one concern per migration, forward-only
+  migrations/                   one concern per migration, forward-only, named <utc timestamp>_<name>.sql (create with `supabase migration new <name>`)
   functions/                    edge functions (email, scheduled jobs)
   seed.sql                      local demo data only
 docs/

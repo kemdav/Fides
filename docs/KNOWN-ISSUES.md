@@ -118,7 +118,7 @@ Controls that exist are listed in [SECURITY](SECURITY.md). Still open:
 ## 9. Fixed recently (for context)
 
 Unauthenticated account-request API removed; tenant checks added to walk-in and appointment-status actions; walk-in RPC guard
-(`assert_tenant_operator`, migration `00028`); rate limiting with Redis; admin accounts moved to hashed env config; patched `next`, `zod`,
+(`assert_tenant_operator`, migration `rpc_tenant_guard`); rate limiting with Redis; admin accounts moved to hashed env config; patched `next`, `zod`,
 `nodemailer`; shared `Modal`, `Button`, field and icon components; token-based colours and shadows; 404, error and loading pages;
 all lint warnings; type-aware lint rules and three extra compiler flags enabled.
 

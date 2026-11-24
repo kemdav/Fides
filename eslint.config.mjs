@@ -38,6 +38,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Static assets served verbatim (service worker, PWA fallbacks, icons).
     "public/**",
+    // Archived legacy code kept for reference only.
+    "docs/archived/**",
   ]),
 ]);
 
