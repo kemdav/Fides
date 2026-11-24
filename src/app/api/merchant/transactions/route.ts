@@ -29,6 +29,11 @@ export async function GET(request: NextRequest) {
     if (!profile?.tenant_id) {
       return NextResponse.json({ error: "No active merchant tenant." }, { status: 403 });
     }
+    const { data: membership } = await supabase.from("tenant_memberships").select("role")
+      .eq("tenant_id", profile.tenant_id).eq("profile_id", user.id).maybeSingle();
+    if (membership?.role !== "owner" && membership?.role !== "admin") {
+      return NextResponse.json({ error: "You do not have permission to view transaction reports." }, { status: 403 });
+    }
 
     const params = request.nextUrl.searchParams;
     const page = Number(params.get("page") ?? "1");

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { createAdminSession, clearAdminSession } from "@/lib/admin/session";
 import { verifyAdminCredentials } from "@/lib/admin/local-accounts";
 import { getAccountAccess } from "@/lib/applications/service";
@@ -108,12 +109,24 @@ export async function login(_previous: LoginState, formData: FormData): Promise<
   redirect(target);
 }
 
-export async function logout(): Promise<void> {
-  await clearAdminSession();
-  const supabase = await createClient();
-  await supabase.auth.signOut();
+export async function logout(formData?: FormData): Promise<void> {
+  const workspace = formData?.get("workspace");
+  const store = await cookies();
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.auth.signOut({ scope: "local" });
+    if (error) console.warn("Could not revoke the current Supabase session", error.code);
+  } catch {
+    console.warn("Could not contact Supabase during logout.");
+  } finally {
+    await clearAdminSession();
+    for (const { name } of store.getAll()) {
+      if (/^sb-[\w-]+-auth-token(?:-code-verifier)?(?:\.\d+)?$/.test(name)) store.delete(name);
+    }
+  }
+
   revalidatePath("/", "layout");
-  redirect("/login");
+  redirect(typeof workspace === "string" && /^[a-z0-9-]{1,80}$/.test(workspace) ? `/login?workspace=${workspace}` : "/login");
 }
 
 export async function updatePassword(formData: FormData): Promise<void> {
