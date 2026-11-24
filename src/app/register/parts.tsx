@@ -7,6 +7,7 @@ import { Input, PasswordInput as BasePasswordInput } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { getObjectUrl, formatBytes } from "./controls";
 import { registrationFieldClasses } from "./field-styles";
+import motion from "./sidebar-motion.module.css";
 
 export { formatBytes };
 
@@ -24,15 +25,15 @@ export function Sidebar({ current, onJump, furthest }: { current: number; furthe
     <aside className="hidden w-1/3 shrink-0 bg-[#faeed5] lg:block">
       <div className="sticky top-0 isolate h-dvh">
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-          <div className="absolute -left-[22%] -top-[12%] aspect-square w-[72%] rounded-full bg-[#efd0a5]/45" />
-          <div className="absolute left-[32%] top-[32%] aspect-square w-[34%] rounded-full bg-[#efd0a5]/20" />
-          <div className="absolute -right-[12%] top-[65%] aspect-square w-[54%] rounded-full bg-[#efd0a5]/35" />
-          <div className="absolute right-[11%] top-[14%] aspect-square w-[9%] rotate-[23deg] rounded-md bg-[#e9bb86]/30" />
-          <div className="absolute left-[7%] top-[34%] aspect-square w-[6%] -rotate-12 rounded bg-[#e9bb86]/40" />
-          <div className="absolute right-[7%] top-[77%] aspect-square w-[8%] rotate-[20deg] rounded bg-[#e9bb86]/30" />
-          <div className="absolute right-[17%] top-[22%] size-1.5 rounded-full bg-burnt/25" />
-          <div className="absolute right-[28%] top-[52%] size-1.5 rounded-full bg-burnt/25" />
-          <div className="absolute left-[17%] top-[81%] size-2 rounded-full bg-burnt/20" />
+          <div className={cn(motion.circle, "absolute -left-[22%] -top-[12%] aspect-square w-[72%] rounded-full bg-[#efd0a5]/45")} />
+          <div className={cn(motion.circle, "absolute left-[32%] top-[32%] aspect-square w-[34%] rounded-full bg-[#efd0a5]/20")} />
+          <div className={cn(motion.circle, "absolute -right-[12%] top-[65%] aspect-square w-[54%] rounded-full bg-[#efd0a5]/35")} />
+          <div className={cn(motion.square, "absolute right-[11%] top-[14%] aspect-square w-[9%] rotate-[23deg] rounded-md bg-[#e9bb86]/30")} />
+          <div className={cn(motion.square, "absolute left-[7%] top-[34%] aspect-square w-[6%] -rotate-12 rounded bg-[#e9bb86]/40")} />
+          <div className={cn(motion.square, "absolute right-[7%] top-[77%] aspect-square w-[8%] rotate-[20deg] rounded bg-[#e9bb86]/30")} />
+          <div className={cn(motion.dot, "absolute right-[17%] top-[22%] size-1.5 rounded-full bg-burnt/25")} />
+          <div className={cn(motion.dot, "absolute right-[28%] top-[52%] size-1.5 rounded-full bg-burnt/25")} />
+          <div className={cn(motion.dot, "absolute left-[17%] top-[81%] size-2 rounded-full bg-burnt/20")} />
         </div>
 
         <div className="grid h-full grid-rows-[minmax(max-content,1fr)_auto_minmax(0,1fr)] justify-items-start overflow-y-auto px-[10%] py-6">
@@ -81,7 +82,7 @@ export function Sidebar({ current, onJump, furthest }: { current: number; furthe
                         <Icon name={done ? "check" : step.icon} weight={done ? "bold" : active ? "fill" : "regular"} className="size-[22px]" />
                       </span>
                       <span className="flex min-w-0 flex-col gap-0.5">
-                        <span className={cn("text-lg font-bold leading-6 xl:text-xl xl:leading-7", active ? "text-burnt-dark" : "text-ink group-hover:underline")}>
+                        <span className={cn("text-lg font-bold leading-6 xl:text-xl xl:leading-7", active ? "text-burnt-dark" : "text-muted group-hover:text-ink group-hover:underline")}>
                           {step.title}
                         </span>
                         <span className={cn("text-sm leading-5", active ? "text-burnt-dark" : "text-muted")}>
@@ -202,11 +203,11 @@ export function InfoNote({ children, icon = "info" }: { children: ReactNode; ico
   );
 }
 
-export function SecureFooter() {
+export function SecureFooter({ children = "Your verification documents are stored securely." }: { children?: ReactNode }) {
   return (
-    <p className="flex items-center justify-center gap-2 text-sm text-subtle">
-      <Icon name="shield" weight="fill" className="size-4 text-glyph" />
-      Your verification documents are stored securely.
+    <p className="flex items-start justify-center gap-2 text-sm leading-6 text-muted">
+      <Icon name="shield" weight="fill" className="mt-0.5 size-5 text-muted" />
+      <span>{children}</span>
     </p>
   );
 }

@@ -21,7 +21,7 @@ import {
 import {
   accountStepSchema,
   businessStepSchema,
-  checkPassword,
+  registrationPasswordRules,
   identityStepSchema,
   planStepSchema,
   registrationSchema,
@@ -496,9 +496,9 @@ type StepProps = {
   set: <K extends keyof Values>(key: K, value: Values[K]) => void;
 };
 
-function Heading({ title, subtitle, center = true }: { title: string; subtitle: string; center?: boolean }) {
+function Heading({ title, subtitle, center = true, className = "mb-6" }: { title: string; subtitle: string; center?: boolean; className?: string }) {
   return (
-    <div className={cn("mb-6 flex flex-col gap-2", center ? "text-center" : "text-left")}>
+    <div className={cn("flex flex-col gap-2", center ? "text-center" : "text-left", className)}>
       <h1 tabIndex={-1} className="font-display text-[28px] leading-[38px] text-ink focus:outline-none sm:text-[32px] sm:leading-[42px]">{title}</h1>
       <p className="text-base leading-6 text-muted">{subtitle}</p>
     </div>
@@ -512,47 +512,60 @@ function Card({ children }: { children: React.ReactNode }) {
 }
 
 function AccountStep({ values, errors, set, onNext }: StepProps & { onNext: () => void }) {
-  const checks = checkPassword(values.password);
-  const rules = [
-    { ok: checks.length, text: "More than 6 characters" },
-    { ok: checks.mixedCase, text: "Both capital and lowercase letters" },
-    { ok: checks.unique, text: "At least one number or special character" },
-  ];
+  const [passwordFocused, setPasswordFocused] = useState(false);
+  const showPasswordRules = passwordFocused && values.password.length > 0;
+  const passwordDescription = [
+    errors.password ? "password-error" : null,
+    showPasswordRules ? "password-requirements" : null,
+  ].filter(Boolean).join(" ") || undefined;
 
   return (
     <form
       noValidate
+      className="mx-auto w-full max-w-md"
       onSubmit={(event) => {
         event.preventDefault();
         onNext();
       }}
     >
-      <Heading title="Create Your Account" subtitle="Enter your business email and choose a password to get started." />
-      <div className="grid gap-6">
+      <Heading title="Create Your Account" subtitle="Start your journey with Fides — it only takes a few minutes." className="mb-10" />
+      <div className="grid gap-7 sm:gap-8">
         <Field label="Business Email" htmlFor="email" error={errors.email}>
           <TextInput id="email" type="email" invalid={!!errors.email} autoComplete="email" placeholder="maria@bellavita.ph" value={values.email} onChange={(e) => set("email", e.target.value)} />
         </Field>
-        <Field label="Password" htmlFor="password" error={errors.password}>
-          <PasswordInput id="password" fieldLabel="password" aria-describedby={errors.password ? "password-error password-requirements" : "password-requirements"} invalid={!!errors.password} autoComplete="new-password" placeholder="Create a password" value={values.password} onChange={(e) => set("password", e.target.value)} />
-        </Field>
-        <ul id="password-requirements" className="-mt-3 flex flex-col gap-1.5 text-sm" aria-label="Password requirements">
-          {rules.map((rule) => (
-            <li key={rule.text} className={cn("flex items-center gap-2", rule.ok ? "text-success" : "text-subtle")}>
-              <span className={cn("flex size-4 items-center justify-center rounded-full", rule.ok ? "bg-success text-white" : "border border-outline/60")}>
-                {rule.ok ? <Icon name="check" className="size-2.5" /> : null}
-              </span>
-              <span className="sr-only">{rule.ok ? "Met: " : "Required: "}</span>
-              {rule.text}
-            </li>
-          ))}
-        </ul>
+        <div
+          onFocus={() => setPasswordFocused(true)}
+          onBlur={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget)) setPasswordFocused(false);
+          }}
+        >
+          <Field label="Password" htmlFor="password" error={errors.password}>
+            <PasswordInput id="password" fieldLabel="password" aria-describedby={passwordDescription} invalid={!!errors.password} autoComplete="new-password" placeholder="••••••••" value={values.password} onChange={(e) => set("password", e.target.value)} />
+          </Field>
+          {showPasswordRules && (
+            <ul id="password-requirements" className="mt-3 flex flex-col gap-1 text-sm leading-5" aria-label="Password requirements">
+              {registrationPasswordRules.map((rule) => {
+                const met = rule.passes(values.password);
+                return (
+                  <li key={rule.text} className={cn("flex items-center gap-2", met ? "text-success" : "text-muted")}>
+                    <span className={cn("flex size-4 items-center justify-center rounded-full", met ? "bg-success text-white" : "border border-outline/60")}>
+                      {met ? <Icon name="check" className="size-2.5" /> : null}
+                    </span>
+                    <span className="sr-only">{met ? "Met: " : "Required: "}</span>
+                    {rule.text}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
         <Field label="Confirm Password" htmlFor="confirmPassword" error={errors.confirmPassword}>
           <PasswordInput id="confirmPassword" fieldLabel="confirm password" invalid={!!errors.confirmPassword} autoComplete="new-password" placeholder="Re-enter your password" value={values.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)} />
         </Field>
       </div>
 
-      <div className="mt-6 flex flex-col gap-1">
-        <label className="flex cursor-pointer items-start gap-3 text-base text-body">
+      <div className="mt-8 flex flex-col gap-1">
+        <label className="flex min-h-6 cursor-pointer items-start gap-3 text-sm leading-6 text-body">
           <input
             type="checkbox"
             aria-invalid={Boolean(errors.acceptTerms)}
@@ -580,17 +593,13 @@ function AccountStep({ values, errors, set, onNext }: StepProps & { onNext: () =
         ) : null}
       </div>
 
-      <div className="mt-7 flex flex-col items-center gap-4">
+      <div className="mt-6 flex flex-col items-center gap-6">
         <button type="submit" className={primaryButton}>
           Create Account <Icon name="arrow-right" className="size-4" />
         </button>
-        <p className="text-base text-muted">
-          Already have an account?{" "}
-          <Link href="/login" className="font-semibold text-burnt hover:underline">
-            Log in
-          </Link>
-        </p>
-        <SecureFooter />
+        <div className="lg:w-max lg:whitespace-nowrap">
+          <SecureFooter>Your data is encrypted and secure. We never share your information.</SecureFooter>
+        </div>
       </div>
     </form>
   );

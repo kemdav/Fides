@@ -21,6 +21,13 @@ export function isStrongPassword(value: string): boolean {
   return checks.length && checks.mixedCase && checks.unique;
 }
 
+export const registrationPasswordRules = [
+  { text: "Use 8 or more characters", passes: (value: string) => Array.from(value).length >= 8 },
+  { text: "Include an uppercase letter (A–Z)", passes: (value: string) => /[A-Z]/.test(value) },
+  { text: "Include a number (0–9)", passes: (value: string) => /[0-9]/.test(value) },
+  { text: "Include a special character (like !, @, or #)", passes: (value: string) => /[\p{P}\p{S}]/u.test(value) },
+] as const;
+
 const PHONE_FORMAT_MESSAGE =
   "Enter a valid Philippine mobile number: 11 digits starting with 09 (e.g. 09171234567), or +63 followed by 10 digits.";
 
@@ -74,7 +81,10 @@ const base = z.object({
   password: z
     .string()
     .min(1, "Password is required.")
-    .refine(isStrongPassword, "Password does not meet all the requirements."),
+    .refine(
+      (value) => registrationPasswordRules.every((rule) => rule.passes(value)),
+      "Use 8 or more characters, including an uppercase letter, a number, and a special character."
+    ),
   confirmPassword: z.string().min(1, "Please confirm your password."),
   acceptTerms: z.literal(true, { error: "You must agree to the Terms of Service and Privacy Policy." }),
 
