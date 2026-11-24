@@ -4,81 +4,108 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon, type IconName } from "@/components/admin/icon";
-import { cn } from "@/lib/utils";
+import { cn, getInitials } from "@/lib/utils";
+import {
+  canManageBookings,
+  workspaceRoleFromLabel,
+  staffRoleLabels,
+  type WorkspaceRole,
+} from "@/lib/merchant/workspace-roles";
+import { merchantNameTypography } from "@/lib/brand-colors";
 
 interface MerchantSidebarProps {
   businessName?: string;
   userName?: string;
   userEmail?: string;
-  userRole?: string;
+  userRole?: WorkspaceRole | string;
   basePath?: string;
 }
 
-const manageItems: { label: string; icon: IconName; suffix?: string }[] = [
-  { label: "Overview", icon: "grid" },
+type NavigationItem = {
+  label: string;
+  icon: IconName;
+  suffix?: string;
+  access?: "operations" | "management";
+};
+
+const manageItems: NavigationItem[] = [
+  { label: "Overview", icon: "grid", suffix: "" },
   { label: "Appointments", icon: "calendar", suffix: "/appointments" },
-  { label: "Walk-ins", icon: "users", suffix: "/walk-ins" },
-  { label: "QR check-in", icon: "qr-code" },
-  { label: "Customers", icon: "users", suffix: "/customers" },
-  { label: "Services", icon: "layers", suffix: "/services" },
-  { label: "Staff & permissions", icon: "shield" },
-  { label: "Availability", icon: "clock" },
-  { label: "Payments", icon: "card" },
-  { label: "Reports", icon: "document" },
+  {
+    label: "Walk-ins",
+    icon: "users",
+    suffix: "/walk-ins",
+    access: "operations",
+  },
+  { label: "QR check-in", icon: "qr-code", access: "operations" },
+  {
+    label: "Customers",
+    icon: "users",
+    suffix: "/customers",
+    access: "operations",
+  },
+  {
+    label: "Services",
+    icon: "layers",
+    suffix: "/services",
+    access: "operations",
+  },
+  {
+    label: "Staff & permissions",
+    icon: "shield",
+    suffix: "/staff",
+    access: "management",
+  },
+  { label: "Availability", icon: "clock", access: "operations" },
+  { label: "Payments", icon: "card", access: "operations" },
+  { label: "Reports", icon: "document", access: "management" },
 ];
 
 export function MerchantSidebar({
   businessName = "Bella Vita",
-  userName = "Maria Santos",
-  userEmail = "Maria Santos",
-  userRole = "Business owner",
+  userName,
+  userEmail,
+  userRole,
   basePath = "",
 }: MerchantSidebarProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const dashboardPath = `${basePath}/dashboard`;
-  const displayName = userName || userEmail;
-  const isActive = (suffix?: string) =>
-    suffix
-      ? pathname.startsWith(`${dashboardPath}${suffix}`)
-      : pathname === dashboardPath;
+  const accountPath = `${dashboardPath}/account`;
+  const accountActive = pathname === accountPath;
+  const displayName = userName?.trim() || userEmail?.trim() || "My account";
+  const role = workspaceRoleFromLabel(userRole);
+  const managesTeam = role === "owner" || role === "admin";
+  const visibleItems = manageItems.filter(
+    ({ access }) =>
+      !access ||
+      (access === "operations" ? canManageBookings(role) : managesTeam),
+  );
 
-  const renderItem = (
-    item: (typeof manageItems)[number],
-    configuration = false,
-  ) => {
-    const href = item.suffix
-      ? `${dashboardPath}${item.suffix}`
-      : configuration
-        ? `${dashboardPath}/settings/website`
-        : dashboardPath;
-    const active = configuration
-      ? pathname.startsWith(href)
-      : isActive(item.suffix);
-    const available =
-      item.label === "Overview" ||
-      item.label === "Appointments" ||
-      item.label === "Walk-ins" ||
-      item.label === "Customers" ||
-      item.label === "Services" ||
-      configuration;
-
-    if (!available) {
+  const renderItem = (item: NavigationItem) => {
+    if (item.suffix === undefined) {
       return (
-        <div
+        <button
           key={item.label}
-          className="flex min-h-[clamp(32px,4.2vh,40px)] items-center gap-3 rounded-[9px] px-3 py-1.5 text-sm leading-[21px] text-neutral-400"
+          type="button"
+          disabled
+          className="flex min-h-[clamp(32px,4.2vh,40px)] cursor-not-allowed items-center gap-3 rounded-[9px] px-3 py-1.5 text-left text-sm leading-[21px] text-neutral-400"
         >
           <Icon name={item.icon} className="size-5" />
           <span>{item.label}</span>
-        </div>
+        </button>
       );
     }
+    const href = `${dashboardPath}${item.suffix}`;
+    const active =
+      pathname === href ||
+      (item.suffix !== "" && pathname.startsWith(`${href}/`));
 
     return (
       <Link
         key={item.label}
         href={href}
+        aria-current={active ? "page" : undefined}
         onClick={() => setMobileOpen(false)}
         className={cn(
           "flex min-h-[clamp(32px,4.2vh,40px)] items-center gap-3 whitespace-nowrap rounded-[9px] px-3 py-1.5 text-sm font-semibold leading-[21px] transition-colors",
@@ -111,9 +138,7 @@ export function MerchantSidebar({
         <span className="font-display text-2xl text-[#C35000]">
           {businessName}
         </span>
-        <span className="text-xs font-semibold uppercase tracking-[1.2px] text-neutral-400">
-          Merchant
-        </span>
+        <span aria-hidden="true" className="size-8" />
       </div>
 
       {mobileOpen && (
@@ -127,7 +152,7 @@ export function MerchantSidebar({
 
       <aside
         className={cn(
-          "fixed bottom-0 left-0 top-0 z-50 flex w-[248px] shrink-0 flex-col gap-[clamp(4px,1vh,12px)] overflow-hidden border-r border-[#EDECE8] bg-white p-4 transition-transform duration-200 lg:sticky lg:z-10 lg:flex lg:h-dvh",
+          "fixed bottom-0 left-0 top-0 z-50 flex w-[248px] shrink-0 flex-col gap-[clamp(4px,1vh,12px)] overflow-y-auto border-r border-[#EDECE8] bg-white p-4 transition-transform duration-200 lg:sticky lg:z-10 lg:flex lg:h-dvh",
           mobileOpen
             ? "translate-x-0 shadow-2xl"
             : "-translate-x-full lg:translate-x-0",
@@ -135,12 +160,9 @@ export function MerchantSidebar({
       >
         <div className="flex shrink-0 items-start justify-between border-b border-[#EDECE8] pb-4">
           <div>
-            <h1 className="break-words font-display text-[clamp(24px,3.2vh,32px)] leading-[clamp(29px,4vh,38px)] tracking-tight text-[#C35000]">
+            <h1 className={cn(merchantNameTypography, "text-burnt")}>
               {businessName}
             </h1>
-            <p className="text-xs font-semibold uppercase leading-[18px] tracking-[1.3px] text-neutral-400">
-              Merchant Workspace
-            </p>
           </div>
           <button
             type="button"
@@ -155,42 +177,68 @@ export function MerchantSidebar({
           WORKSPACE
         </p>
         <nav
-          aria-label="Merchant workspace"
+          aria-label="Workspace navigation"
           className="flex w-full flex-col gap-[clamp(1px,0.4vh,5px)]"
         >
-          {manageItems.map((item) => renderItem(item))}
+          {visibleItems.map((item) => renderItem(item))}
         </nav>
-        <p className="mt-2 text-xs leading-[18px] tracking-[1.3px] text-neutral-400">
-          CONFIGURATION
-        </p>
-        <nav
-          aria-label="Merchant configuration"
-          className="flex w-full flex-col gap-[clamp(1px,0.4vh,5px)]"
-        >
-          {renderItem({ label: "Website settings", icon: "settings" }, true)}
-          {renderItem(
-            {
-              label: "Booking settings",
-              icon: "book-settings",
-              suffix: "/settings/booking",
-            },
-            true,
-          )}
-          {renderItem({ label: "Subscription", icon: "card" })}
-        </nav>
+        {role === "owner" && (
+          <>
+            <p className="mt-2 text-xs leading-[18px] tracking-[1.3px] text-neutral-400">
+              CONFIGURATION
+            </p>
+            <nav
+              aria-label="Merchant configuration"
+              className="flex w-full flex-col gap-[clamp(1px,0.4vh,5px)]"
+            >
+              {renderItem({
+                label: "Website settings",
+                icon: "settings",
+                suffix: "/settings/website",
+              })}
+              {renderItem({
+                label: "Booking settings",
+                icon: "book-settings",
+                suffix: "/settings/booking",
+              })}
+              {renderItem({ label: "Subscription", icon: "card" })}
+            </nav>
+          </>
+        )}
         <div className="flex-1" />
-        <div className="flex shrink-0 items-center gap-3 border-t border-[#EDECE8] pt-4">
-          <div className="flex size-10 items-center justify-center rounded-full bg-[#C35000] text-sm font-semibold text-white">
-            MS
-          </div>
-          <div className="min-w-0">
-            <span className="block truncate text-sm font-semibold leading-[21px] text-[#354357]">
-              {displayName}
+        <div className="shrink-0 border-t border-hairline pt-3">
+          <Link
+            href={accountPath}
+            onClick={() => setMobileOpen(false)}
+            aria-current={accountActive ? "page" : undefined}
+            className={cn(
+              "flex min-w-0 items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40",
+              accountActive && "bg-burnt/10",
+            )}
+          >
+            <span
+              aria-hidden="true"
+              className="grid size-10 shrink-0 place-items-center rounded-full bg-burnt text-sm font-semibold text-white"
+            >
+              {getInitials(displayName)}
             </span>
-            <span className="block text-xs leading-[18px] text-neutral-400">
-              {userRole}
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-semibold text-ink">
+                {displayName}
+              </span>
+              <span className="block truncate text-xs text-muted">
+                {role === "owner"
+                  ? "Business owner"
+                  : role
+                    ? staffRoleLabels[role]
+                    : "My account"}
+              </span>
             </span>
-          </div>
+            <Icon
+              name="chevron-down"
+              className="size-3.5 -rotate-90 text-muted"
+            />
+          </Link>
         </div>
       </aside>
     </>

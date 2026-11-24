@@ -3,12 +3,13 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { canManageBookings, type WorkspaceRole } from "@/lib/merchant/workspace-roles";
 import { MerchantSidebar } from "../merchant-sidebar";
 import { Icon } from "@/components/admin/icon";
 import { AdminButton } from "@/components/admin/admin-button";
 import { MetricCard } from "@/components/admin/metric-card";
 import { PageContent, PageHeading, StatusPill, Surface } from "@/components/admin/primitives";
-import { updateAppointmentStatusAction } from "@/app/actions/appointments";
+import { AppointmentDetailsModal } from "./appointment-details-modal";
 import { NewAppointmentModal, type NewAppointmentResult } from "@/components/merchant/new-appointment-modal";
 import { WalkInModal, type WalkInResult } from "@/components/merchant/walk-in-modal";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -19,7 +20,7 @@ export interface AppointmentRow {
   customer: string;
   service: string;
   staff: string;
-  source: "Online" | "Walk-In";
+  source: "Online" | "Walk-In" | "Phone";
   status: "Confirmed" | "Pending approval" | "Check In" | "In service" | "Completed" | "Cancelled";
   startsAt?: string;
   calendarDate?: string;
@@ -37,7 +38,7 @@ export interface OverviewViewProps {
   businessName?: string;
   userName?: string;
   userEmail?: string;
-  userRole?: string;
+  userRole?: WorkspaceRole;
   tenantId?: string;
   todayCount?: number;
   confirmedCount?: number;
@@ -48,6 +49,9 @@ export interface OverviewViewProps {
   revenueChangePercent?: number;
   bookingCount?: number;
   activeCustomerCount?: number;
+  commissionThisMonth?: number;
+  calendarMonthKey?: string;
+  todayKey?: string;
   customerGrowthPercent?: number;
   averageOrderValue?: number;
   initialPeriod?: "Today" | "This Week" | "This Month";
@@ -77,7 +81,7 @@ export function OverviewView({
   businessName = "Bella Vita",
   userName = "Maria Santos",
   userEmail = "Maria Santos",
-  userRole = "Business owner",
+  userRole,
   tenantId,
   todayCount = 0,
   confirmedCount = 0,
@@ -88,6 +92,9 @@ export function OverviewView({
   revenueChangePercent = 0,
   bookingCount = 0,
   activeCustomerCount = 0,
+  commissionThisMonth = 0,
+  calendarMonthKey,
+  todayKey,
   customerGrowthPercent = 0,
   averageOrderValue = 0,
   initialPeriod = "This Week",
@@ -99,22 +106,36 @@ export function OverviewView({
   const router = useRouter();
   const [searchQuery, setSearchQuery] = React.useState("");
   const [appointments, setAppointments] = React.useState<AppointmentRow[]>(initialRows);
+  const [previousRows, setPreviousRows] = React.useState(initialRows);
+  if (previousRows !== initialRows) {
+    setPreviousRows(initialRows);
+    setAppointments(initialRows);
+  }
 
-  const [filterStatus, setFilterStatus] = React.useState<string>("All");
+  const [filterStatus, setFilterStatus] = React.useState("");
+  const [filterStaff, setFilterStaff] = React.useState("");
+  const [filterSource, setFilterSource] = React.useState("");
+  const filterTrigger = React.useRef<HTMLButtonElement>(null);
+  const canManage = canManageBookings(userRole);
+  const isServiceStaff = userRole === "staff";
+  const canViewBusinessMetrics = userRole === "owner" || userRole === "admin";
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [period, setPeriod] = React.useState(initialPeriod);
   const [isPeriodOpen, setIsPeriodOpen] = React.useState(false);
-  const [activeMenuId, setActiveMenuId] = React.useState<string | null>(null);
-  const [cancelTarget, setCancelTarget] = React.useState<AppointmentRow | null>(null);
+  const [selectedAppointmentId, setSelectedAppointmentId] = React.useState<string | null>(null);
   const [isNewBookingOpen, setIsNewBookingOpen] = React.useState(false);
   const [isWalkInOpen, setIsWalkInOpen] = React.useState(false);
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
   const [expandedAppointmentId, setExpandedAppointmentId] = React.useState<string | null>(null);
   const [selectedCalendarDay, setSelectedCalendarDay] = React.useState<number | null>(null);
-  const [calendarMonth, setCalendarMonth] = React.useState(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1);
-  });
+  const calendarMonth = calendarMonthKey ? new Date(`${calendarMonthKey}-01T12:00:00`) : new Date();
+  const changeCalendarMonth = (offset: number) => {
+    const month = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + offset, 1);
+    const key = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
+    if (key < "1900-01" || key > "9998-12") return;
+    setSelectedCalendarDay(null);
+    router.push(`${basePath}/dashboard?${new URLSearchParams({ period, month: key })}`, { scroll: false });
+  };
   const displayName = userName || userEmail;
 
   const showToast = (msg: string) => {
@@ -122,6 +143,14 @@ export function OverviewView({
     setTimeout(() => setToastMessage(null), 2500);
   };
 
+  const activeFilterCount = [filterStatus, filterStaff, filterSource].filter(Boolean).length;
+  const hasFilters = Boolean(searchQuery || activeFilterCount);
+  const staffOptions = [...new Set(appointments.map(({ staff }) => staff))].sort((a, b) => a.localeCompare(b));
+  const filterFields = [
+    { label: "Status", value: filterStatus, onChange: setFilterStatus, options: ["Confirmed", "Pending approval", "Check In", "In service", "Completed", "Cancelled"], placeholder: "All statuses" },
+    { label: "Staff", value: filterStaff, onChange: setFilterStaff, options: staffOptions, placeholder: "All staff" },
+    { label: "Source", value: filterSource, onChange: setFilterSource, options: ["Online", "Walk-In", "Phone"], placeholder: "All sources" },
+  ];
   const filtered = appointments.filter((app) => {
     const matchesSearch =
       !searchQuery ||
@@ -129,67 +158,10 @@ export function OverviewView({
       app.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
       app.staff.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesStatus =
-      filterStatus === "All" || app.status === filterStatus;
-
-    return matchesSearch && matchesStatus;
+    return matchesSearch && (!filterStatus || app.status === filterStatus)
+      && (!filterStaff || app.staff === filterStaff) && (!filterSource || app.source === filterSource);
   });
 
-  // QA #3: Row action persists status changes to Supabase
-  const handleStatusChange = async (id: string, newStatus: AppointmentRow["status"]) => {
-    setActiveMenuId(null);
-    const prevRows = appointments;
-    setAppointments((prev) =>
-      prev.map((row) => (row.id === id ? { ...row, status: newStatus } : row))
-    );
-
-    try {
-      const res = await updateAppointmentStatusAction({
-        appointmentId: id,
-        newStatus,
-        tenantIdParam: tenantId,
-      });
-
-      if (!res.success) {
-        setAppointments(prevRows);
-        showToast(res.error || "Failed to update appointment status.");
-        return;
-      }
-      showToast(`Appointment status updated to ${newStatus}`);
-      router.refresh();
-    } catch (err: unknown) {
-      setAppointments(prevRows);
-      showToast(err instanceof Error ? err.message : "Failed to update appointment status.");
-    }
-  };
-
-  // QA #3: Cancel row action persists cancellation to Supabase
-  const handleConfirmCancel = async () => {
-    if (!cancelTarget) return;
-    const target = cancelTarget;
-    setCancelTarget(null);
-    const prevRows = appointments;
-    setAppointments((prev) => prev.filter((row) => row.id !== target.id));
-
-    try {
-      const res = await updateAppointmentStatusAction({
-        appointmentId: target.id,
-        newStatus: "Cancelled",
-        tenantIdParam: tenantId,
-      });
-
-      if (!res.success) {
-        setAppointments(prevRows);
-        showToast(res.error || "Failed to cancel appointment.");
-        return;
-      }
-      showToast(`Appointment for ${target.customer} cancelled.`);
-      router.refresh();
-    } catch (err: unknown) {
-      setAppointments(prevRows);
-      showToast(err instanceof Error ? err.message : "Failed to cancel appointment.");
-    }
-  };
 
   // Chart statistics data (QA #1: dynamic chart bars from loaded records)
   const stats =
@@ -281,7 +253,7 @@ export function OverviewView({
         (item[key] / lineMaxVal) * (lineHeight - 24);
       return `${x},${y}`;
     }).join(" ");
-  const today = new Date();
+  const today = todayKey ? new Date(`${todayKey}T12:00:00`) : new Date();
   const currentMonthLabel = calendarMonth.toLocaleDateString("en-US", {
     month: "long",
     year: "numeric",
@@ -326,7 +298,7 @@ export function OverviewView({
         basePath={basePath}
       />
 
-      <div className="min-w-0 flex-1 lg:h-dvh lg:overflow-y-auto">
+      <div className="min-w-0 flex-1 lg:h-dvh lg:overflow-y-auto lg:[scrollbar-gutter:stable]">
         <PageContent>
           {/* Page Heading */}
           <PageHeading
@@ -354,8 +326,7 @@ export function OverviewView({
                             setPeriod(p as typeof initialPeriod);
                             setIsPeriodOpen(false);
                             setHoveredPoint(null);
-                            router.push(`${basePath}/dashboard?period=${encodeURIComponent(p)}`);
-                            router.refresh();
+                            router.push(`${basePath}/dashboard?${new URLSearchParams({ period: p, ...(calendarMonthKey && { month: calendarMonthKey }) })}`, { scroll: false });
                           }}
                           className={`w-full text-left px-4 py-2.5 hover:bg-mist ${period === p ? "text-burnt font-semibold" : "text-body"}`}
                         >
@@ -365,6 +336,7 @@ export function OverviewView({
                     </div>
                   )}
                 </div>
+                {canManage && <>
                 <AdminButton
                   variant="primary"
                   size="sm"
@@ -373,12 +345,13 @@ export function OverviewView({
                   + New Booking
                 </AdminButton>
                 <AdminButton
-                  variant="outline"
+                  variant="outline-accent"
                   size="sm"
                   onClick={() => setIsWalkInOpen(true)}
                 >
                   + Add Walk-in
                 </AdminButton>
+                </>}
               </div>
             }
           />
@@ -387,11 +360,12 @@ export function OverviewView({
           <div className="grid grid-cols-2 gap-5 xl:grid-cols-4">
             <MetricCard
               featured
-              label="Total revenue"
-              value={revenueTotal}
-              caption={`${revenueChangePercent >= 0 ? "+" : ""}${revenueChangePercent.toFixed(1)}% vs previous week`}
+              label={isServiceStaff ? "Commission this month" : canViewBusinessMetrics ? "Total revenue" : "Today’s appointments"}
+              value={isServiceStaff ? commissionThisMonth : canViewBusinessMetrics ? revenueTotal : todayCount}
+              valuePrefix={isServiceStaff ? "₱" : undefined}
+              caption={isServiceStaff ? "Earned from completed services" : canViewBusinessMetrics ? `${revenueChangePercent >= 0 ? "+" : ""}${revenueChangePercent.toFixed(1)}% vs previous week` : `${confirmedCount} confirmed today`}
               icon="calendar"
-              progress={Math.min(100, Math.max(0, 50 + revenueChangePercent / 2))}
+              progress={isServiceStaff ? (commissionThisMonth > 0 ? 100 : 0) : canViewBusinessMetrics ? Math.min(100, Math.max(0, 50 + revenueChangePercent / 2)) : todayCount ? confirmedCount / todayCount * 100 : 0}
             />
             <MetricCard
               label="Total bookings"
@@ -402,18 +376,18 @@ export function OverviewView({
               miniChart
             />
             <MetricCard
-              label="Active customers"
-              value={activeCustomerCount}
-              caption={`${customerGrowthPercent >= 0 ? "+" : ""}${customerGrowthPercent.toFixed(1)}% vs previous week · ${checkedInCount} checked in`}
+              label={isServiceStaff ? "Total customers" : canViewBusinessMetrics ? "Active customers" : "Checked-in customers"}
+              value={isServiceStaff || canViewBusinessMetrics ? activeCustomerCount : checkedInCount}
+              caption={isServiceStaff ? "Unique customers in the selected period" : canViewBusinessMetrics ? `${customerGrowthPercent >= 0 ? "+" : ""}${customerGrowthPercent.toFixed(1)}% vs previous week · ${checkedInCount} checked in` : "Checked in or in service today"}
               icon="users"
-              progress={Math.min(100, Math.max(0, 50 + customerGrowthPercent / 2))}
+              progress={isServiceStaff ? (bookingCount ? activeCustomerCount / bookingCount * 100 : 0) : canViewBusinessMetrics ? Math.min(100, Math.max(0, 50 + customerGrowthPercent / 2)) : todayCount ? checkedInCount / todayCount * 100 : 0}
             />
             <MetricCard
-              label="Average order value"
-              value={averageOrderValue}
-              caption={`${completedVisitsCount} completed today`}
-              icon="card"
-              progress={averageOrderValue > 0 ? 100 : 0}
+              label={canViewBusinessMetrics ? "Average order value" : "Completed today"}
+              value={canViewBusinessMetrics ? averageOrderValue : completedVisitsCount}
+              caption={canViewBusinessMetrics ? `${completedVisitsCount} completed today` : "Appointments completed today"}
+              icon={canViewBusinessMetrics ? "card" : "clock"}
+              progress={canViewBusinessMetrics ? (averageOrderValue > 0 ? 100 : 0) : todayCount ? completedVisitsCount / todayCount * 100 : 0}
             />
           </div>
 
@@ -713,10 +687,7 @@ export function OverviewView({
                     <button
                       type="button"
                       aria-label="Previous month"
-                      onClick={() => {
-                        setCalendarMonth((month) => new Date(month.getFullYear(), month.getMonth() - 1, 1));
-                        setSelectedCalendarDay(null);
-                      }}
+                      onClick={() => changeCalendarMonth(-1)}
                       className="flex size-8 items-center justify-center rounded-md text-2xl leading-none text-glyph hover:bg-mist hover:text-ink"
                     >
                       ‹
@@ -725,10 +696,7 @@ export function OverviewView({
                     <button
                       type="button"
                       aria-label="Next month"
-                      onClick={() => {
-                        setCalendarMonth((month) => new Date(month.getFullYear(), month.getMonth() + 1, 1));
-                        setSelectedCalendarDay(null);
-                      }}
+                      onClick={() => changeCalendarMonth(1)}
                       className="flex size-8 items-center justify-center rounded-md text-2xl leading-none text-glyph hover:bg-mist hover:text-ink"
                     >
                       ›
@@ -800,7 +768,7 @@ export function OverviewView({
           </div>
 
           {/* Bottom Section: Today's Appointments Table */}
-          <Surface className="overflow-hidden !p-0">
+          <Surface className="!p-0">
             {/* Card Controls */}
             <div className="p-4 sm:p-6 border-b border-hairline flex flex-wrap items-center justify-between gap-5">
               <div className="flex items-center gap-3">
@@ -815,61 +783,73 @@ export function OverviewView({
                 </span>
               </div>
 
-              <div className="flex items-center gap-2.5">
-                <div className="relative">
+              <div className="flex w-full items-center gap-2.5 sm:w-auto">
+                <div className="relative min-w-0 flex-1">
                   <input
                     type="text"
+                    aria-label="Search customer or service"
                     placeholder="Search customer or service"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="h-11 pl-10 pr-3 rounded-lg border border-hairline bg-white text-sm text-ink focus:outline-none focus:ring-2 focus:ring-burnt/40 focus:bg-white w-48 sm:w-64 transition-shadow"
+                    className="h-11 w-full rounded-lg border border-hairline bg-white pl-10 pr-3 text-sm text-ink transition-shadow focus:outline-none focus:ring-2 focus:ring-burnt/40 sm:w-64"
                   />
                   <Icon name="search" className="size-4 text-glyph absolute left-3 top-3 pointer-events-none" />
                 </div>
 
-                <div className="relative">
+                <div className="relative shrink-0" onKeyDown={(event) => {
+                  if (event.key === "Escape" && isFilterOpen) {
+                    setIsFilterOpen(false);
+                    filterTrigger.current?.focus();
+                  }
+                }}>
                   <button
+                    ref={filterTrigger}
                     type="button"
+                    aria-expanded={isFilterOpen}
+                    aria-controls="overview-appointment-filters"
+                    aria-label={activeFilterCount ? `Filter, ${activeFilterCount} active` : "Filter"}
                     onClick={() => setIsFilterOpen(!isFilterOpen)}
                     className="h-11 rounded-lg border border-hairline bg-white px-3 text-sm font-semibold text-ink hover:bg-mist flex items-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="size-3.5 text-glyph" aria-hidden>
                       <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
                     </svg>
-                    <span>Filter</span>
-                    <Icon name="chevron-down" className="size-3.5 text-glyph" />
+                    <span className="relative">
+                      Filter
+                      {activeFilterCount > 0 && (
+                        <span aria-hidden="true" className="absolute -right-1.5 top-0 size-1.5 rounded-full bg-burnt" />
+                      )}
+                    </span>
+                    <Icon name="chevron-down" className={`size-3.5 text-glyph transition-transform ${isFilterOpen ? "rotate-180" : ""}`} />
                   </button>
                   {isFilterOpen && (
-                    <div className="absolute right-0 mt-1 w-40 rounded-[10px] bg-white border border-hairline shadow-lg py-1 z-20 text-sm">
-                      {["All", "Confirmed", "Pending approval", "Check In"].map((status) => (
-                        <button
-                          key={status}
-                          type="button"
-                          onClick={() => { setFilterStatus(status); setIsFilterOpen(false); }}
-                          className={`w-full text-left px-4 py-2 hover:bg-mist ${filterStatus === status ? "text-burnt font-semibold" : "text-body"}`}
-                        >
-                          {status}
-                        </button>
+                    <div id="overview-appointment-filters" className="absolute right-0 z-20 mt-1 w-56 divide-y divide-hairline overflow-hidden rounded-[10px] border border-hairline bg-white text-sm shadow-lg">
+                      {filterFields.map(({ label, value, onChange, options, placeholder }) => (
+                        <details key={label} name="overview-filter-section" className="group">
+                          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-subtle hover:bg-mist [&::-webkit-details-marker]:hidden">
+                            <span className="flex items-center gap-2">
+                              {label}
+                              {value && <span aria-label="Filter active" className="size-1.5 rounded-full bg-burnt" />}
+                            </span>
+                            <span aria-hidden="true" className="group-open:hidden">+</span>
+                            <span aria-hidden="true" className="hidden group-open:inline">−</span>
+                          </summary>
+                          <div className="max-h-48 overflow-y-auto pb-2">
+                            {["", ...(value && !options.includes(value) ? [value] : []), ...options].map((option) => (
+                              <button key={option} type="button" aria-pressed={value === option}
+                                onClick={() => onChange(option)}
+                                className={`w-full break-words px-4 py-2 text-left hover:bg-mist ${value === option ? "font-semibold text-burnt" : "text-body"}`}>
+                                {option || placeholder}
+                              </button>
+                            ))}
+                          </div>
+                        </details>
                       ))}
+                      {activeFilterCount > 0 && <button type="button" className="w-full px-4 py-2.5 text-left text-xs font-semibold text-burnt hover:bg-mist"
+                        onClick={() => { setFilterStatus(""); setFilterStaff(""); setFilterSource(""); filterTrigger.current?.focus(); }}>Clear filters</button>}
                     </div>
                   )}
                 </div>
-                {filterStatus !== "All" && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-burnt/10 px-2.5 py-1 text-xs font-semibold text-burnt">
-                    {filterStatus}
-                    <button
-                      type="button"
-                      onClick={() => setFilterStatus("All")}
-                      className="flex size-4 items-center justify-center rounded-full hover:bg-burnt/20 transition-colors"
-                      aria-label="Clear filter"
-                    >
-                      <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2} className="size-2.5" aria-hidden>
-                        <line x1="2" y1="2" x2="10" y2="10" />
-                        <line x1="10" y1="2" x2="2" y2="10" />
-                      </svg>
-                    </button>
-                  </span>
-                )}
               </div>
             </div>
 
@@ -878,10 +858,10 @@ export function OverviewView({
               {filtered.length === 0 ? (
                 <EmptyState
                   compact
-                  title={searchQuery || filterStatus !== "All"
+                  title={hasFilters
                     ? "No appointments match your search."
                     : "No appointments scheduled."}
-                  description={searchQuery || filterStatus !== "All"
+                  description={hasFilters
                     ? "Try a different name, service, staff member, or status."
                     : "New bookings will appear here automatically."}
                 />
@@ -912,21 +892,8 @@ export function OverviewView({
                             <span>Staff <strong className="block text-ink">{row.staff}</strong></span>
                             <span>Source <strong className="block text-ink">{row.source}</strong></span>
                           </div>
-                          <div className="flex flex-wrap gap-2 pt-1">
-                            {row.status !== "Confirmed" && (
-                              <AdminButton size="xs" variant="primary" onClick={() => handleStatusChange(row.id, "Confirmed")}>
-                                Confirm
-                              </AdminButton>
-                            )}
-                            {row.status !== "Check In" && (
-                              <AdminButton size="xs" variant="outline" onClick={() => handleStatusChange(row.id, "Check In")}>
-                                Check In
-                              </AdminButton>
-                            )}
-                            <AdminButton size="xs" variant="danger" onClick={() => setCancelTarget(row)}>
-                              Cancel
-                            </AdminButton>
-                          </div>
+                          {canManage && <AdminButton size="xs" variant="outline" aria-haspopup="dialog"
+                            onClick={() => setSelectedAppointmentId(row.id)}>Appointment details</AdminButton>}
                         </div>
                       )}
                     </div>
@@ -937,7 +904,16 @@ export function OverviewView({
 
             {/* Desktop table (QA #1: Empty state row when 0 appointments) */}
             <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-left text-sm">
+              <table className="w-full min-w-[760px] table-fixed text-left text-sm">
+                <colgroup>
+                  <col className="w-[12%]" />
+                  <col className="w-[18%]" />
+                  <col className="w-[18%]" />
+                  <col className="w-[16%]" />
+                  <col className="w-[12%]" />
+                  <col className={canManage ? "w-32" : "w-[15%]"} />
+                  {canManage && <col />}
+                </colgroup>
                 <thead className="bg-mist border-b border-hairline text-subtle font-semibold">
                   <tr>
                     <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Time</th>
@@ -945,20 +921,20 @@ export function OverviewView({
                     <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Service</th>
                     <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Staff</th>
                     <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Source</th>
-                    <th className="px-6 py-4 text-[11px] leading-4 uppercase tracking-wide">Status</th>
-                    <th className="w-24 px-6 py-4 text-[11px] leading-4 uppercase tracking-wide text-right">Action</th>
+                    <th className="py-4 pl-6 pr-2 text-[11px] leading-4 uppercase tracking-wide">Status</th>
+                    {canManage && <th className="px-2 py-4 text-center text-[11px] leading-4 uppercase tracking-wide">Action</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-hairline">
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-5 py-2">
+                      <td colSpan={canManage ? 7 : 6} className="px-5 py-2">
                         <EmptyState
                           compact
-                          title={searchQuery || filterStatus !== "All"
+                          title={hasFilters
                             ? "No appointments match your search."
                             : "No appointments scheduled."}
-                          description={searchQuery || filterStatus !== "All"
+                          description={hasFilters
                             ? "Try a different name, service, staff member, or status."
                             : "New bookings will appear here automatically."}
                         />
@@ -976,48 +952,21 @@ export function OverviewView({
                             {row.source}
                           </span>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="whitespace-nowrap py-4 pl-6 pr-2">
                           <AppointmentStatusPill status={row.status} />
                         </td>
-                        <td className="w-24 px-6 py-4 text-right align-middle">
+                        {canManage && <td className="px-2 py-4 align-middle">
                           <button
                             type="button"
-                            onClick={() => setActiveMenuId(activeMenuId === row.id ? null : row.id)}
-                            className="ml-auto flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 text-glyph"
+                            aria-label={`Appointment details for ${row.customer}`}
+                            aria-haspopup="dialog"
+                            onClick={() => setSelectedAppointmentId(row.id)}
+                            className="mx-auto flex h-9 w-10 items-center justify-center rounded-lg transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 text-glyph"
                           >
                             <Icon name="more" weight="fill" className="size-5" />
                           </button>
 
-                          {activeMenuId === row.id && (
-                            <div className="absolute right-4 mt-1 w-40 rounded-[10px] bg-white border border-hairline shadow-lg py-1 z-30 text-left text-sm">
-                              {row.status !== "Confirmed" && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleStatusChange(row.id, "Confirmed")}
-                                  className="w-full text-left px-4 py-2 hover:bg-mist text-body"
-                                >
-                                  Confirm
-                                </button>
-                              )}
-                              {row.status !== "Check In" && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleStatusChange(row.id, "Check In")}
-                                  className="w-full text-left px-4 py-2 hover:bg-mist text-body"
-                                >
-                                  Check In
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => { setCancelTarget(row); setActiveMenuId(null); }}
-                                className="w-full text-left px-4 py-2 hover:bg-danger-bg text-danger font-medium"
-                              >
-                                Cancel booking
-                              </button>
-                            </div>
-                          )}
-                        </td>
+                        </td>}
                       </tr>
                     ))
                   )}
@@ -1048,26 +997,10 @@ export function OverviewView({
       )}
 
       {/* Cancel Confirmation Modal (QA #3) */}
-      {cancelTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div className="relative w-full max-w-sm rounded-[10px] bg-white p-6 shadow-2xl border border-line">
-            <h3 className="font-display text-[22px] leading-tight text-ink">
-              Cancel Appointment?
-            </h3>
-            <p className="mt-2 text-sm text-muted leading-relaxed">
-              Are you sure you want to cancel the appointment for{" "}
-              <span className="font-semibold text-ink">{cancelTarget.customer}</span> ({cancelTarget.service}) at {cancelTarget.time}?
-            </p>
-            <div className="mt-5 flex items-center justify-end gap-2.5">
-              <AdminButton variant="outline" size="xs" onClick={() => setCancelTarget(null)}>
-                Keep
-              </AdminButton>
-              <AdminButton variant="danger" size="xs" onClick={handleConfirmCancel}>
-                Confirm Cancel
-              </AdminButton>
-            </div>
-          </div>
-        </div>
+      {canManage && tenantId && selectedAppointmentId && (
+        <AppointmentDetailsModal key={selectedAppointmentId} tenantId={tenantId} appointmentId={selectedAppointmentId}
+          onClose={() => setSelectedAppointmentId(null)}
+          onUpdated={() => router.refresh()} />
       )}
 
       {/* New Appointment Modal (QA #4) */}

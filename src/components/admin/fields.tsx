@@ -3,6 +3,9 @@
 import { useId, type InputHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
+export const fieldOutlineClasses =
+  "rounded-lg border border-outline bg-white transition-colors focus-visible:border-burnt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40";
+
 type TextFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, "onChange"> & {
   label: string;
   required?: boolean;
@@ -16,9 +19,9 @@ export function TextField({ label, required, value, onChange, error, className, 
   const errorId = useId();
   return (
     <div className={cn("flex min-w-0 flex-col gap-2", className)}>
-      <label htmlFor={id} className="text-[13px] font-semibold leading-5 opacity-80">
+      <label htmlFor={id} className="text-sm font-semibold leading-5 text-ink">
         {label}
-        {required ? <span className="text-[#991b1b]"> *</span> : null}
+        {required ? <span className="text-burnt"> *</span> : null}
       </label>
       <input
         id={id}
@@ -27,9 +30,9 @@ export function TextField({ label, required, value, onChange, error, className, 
         aria-invalid={Boolean(error)}
         aria-describedby={error ? errorId : undefined}
         className={cn(
-          "h-11 w-full rounded-lg border bg-white px-4 text-sm text-body transition-colors placeholder:text-subtle",
-          "focus-visible:border-burnt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40",
-          error ? "border-danger" : "border-hairline hover:border-outline"
+          fieldOutlineClasses,
+          "h-11 w-full px-3 text-sm text-ink placeholder:text-glyph read-only:cursor-default read-only:bg-mist disabled:bg-mist",
+          error && "border-danger"
         )}
         {...props}
       />

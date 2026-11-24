@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { fieldOutlineClasses } from "@/components/admin/fields";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/admin/icon";
 import { AdminButton } from "@/components/admin/admin-button";
@@ -79,7 +80,7 @@ function formatDateDisplay(iso: string): string {
 // ─── Shared input class ───────────────────────────────────────────────────────
 
 const fieldCls =
-  "h-11 w-full rounded-lg border border-[#aeb6c0] bg-white px-3 text-sm text-ink placeholder:text-glyph focus:border-burnt focus:outline-none transition-shadow";
+  `${fieldOutlineClasses} h-11 w-full px-3 text-sm text-ink placeholder:text-glyph`;
 
 // ─── Chevron SVG ─────────────────────────────────────────────────────────────
 
@@ -96,17 +97,24 @@ function ChevronSvg({ open }: { open: boolean }) {
 
 // ─── Listbox (contact-page dropdown pattern) ─────────────────────────────────
 
-interface ListboxProps {
+interface BaseListboxProps {
   id: string;
   label: string;
   required?: boolean;
-  value: string;
-  onChange: (v: string) => void;
-  options: { value: string; label: string }[];
+  describedBy?: string;
+  disabled?: boolean;
+  placement?: "above" | "below";
+  options: { value: string; label: string; disabled?: boolean }[];
   placeholder?: string;
 }
 
-export function Listbox({ id, label, required, value, onChange, options, placeholder }: ListboxProps) {
+type ListboxProps = BaseListboxProps & (
+  | { multiple?: false; value: string; onChange: (value: string) => void }
+  | { multiple: true; value: string[]; onChange: (value: string[]) => void }
+);
+
+export function Listbox(props: ListboxProps) {
+  const { id, label, required, value, options, placeholder, describedBy, disabled, placement = "below" } = props;
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
@@ -117,34 +125,67 @@ export function Listbox({ id, label, required, value, onChange, options, placeho
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
-  const selected = options.find((o) => o.value === value);
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const selected = props.multiple
+    ? (props.value.length ? `${props.value.length} selected` : undefined)
+    : options.find((option) => option.value === value)?.label;
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-sm font-semibold text-ink">
+      <label htmlFor={id} className="mb-2 block text-sm font-semibold leading-5 text-ink">
         {label}{required && <span className="text-burnt"> *</span>}
       </label>
-      <div ref={ref} className="relative">
-        <button id={id} type="button" aria-haspopup="listbox" aria-expanded={open}
+      <div ref={ref} className="relative" onKeyDown={(event) => {
+        if (event.key === "Escape" && open) {
+          event.preventDefault();
+          event.stopPropagation();
+          setOpen(false);
+          triggerRef.current?.focus();
+        }
+      }}>
+        <button ref={triggerRef} id={id} type="button" disabled={disabled} aria-haspopup="listbox" aria-expanded={open} aria-describedby={describedBy}
           onClick={() => setOpen((o) => !o)}
-          className="flex h-11 w-full items-center justify-between rounded-lg border border-[#aeb6c0] bg-white px-3 text-left text-sm outline-none focus:border-burnt"
+          className={`${fieldOutlineClasses} flex h-11 w-full items-center justify-between px-3 text-left text-sm disabled:cursor-not-allowed disabled:opacity-50`}
         >
           <span className={selected ? "text-ink" : "text-glyph"}>
-            {selected ? selected.label : (placeholder ?? "Select an option")}
+            {selected ?? placeholder ?? "Select an option"}
           </span>
           <ChevronSvg open={open} />
         </button>
         {open && (
-          <ul role="listbox" className="absolute inset-x-0 top-full z-30 mt-1 max-h-56 overflow-y-auto rounded-lg border border-[#aeb6c0] bg-white py-1 shadow-md">
-            {options.map((opt) => (
-              <li key={opt.value}>
-                <button type="button" role="option" aria-selected={value === opt.value}
-                  onClick={() => { onChange(opt.value); setOpen(false); }}
-                  className={`w-full px-4 py-2.5 text-left text-sm transition-colors hover:bg-mist ${value === opt.value ? "text-burnt font-semibold" : "text-ink"}`}
-                >
-                  {opt.label}
-                </button>
-              </li>
-            ))}
+          <ul
+            role="listbox"
+            aria-label={label}
+            aria-multiselectable={props.multiple || undefined}
+            className={`absolute inset-x-0 z-30 max-h-56 overflow-y-auto rounded-lg border border-outline bg-white py-1 shadow-md ${placement === "above" ? "bottom-full mb-1" : "top-full mt-1"}`}
+          >
+            {options.map((option) => {
+              const isSelected = props.multiple
+                ? props.value.includes(option.value)
+                : value === option.value;
+
+              return (
+                <li key={option.value} role="presentation">
+                  <button type="button" role="option" aria-selected={isSelected} disabled={disabled || option.disabled}
+                    onClick={() => {
+                      if (props.multiple) {
+                        props.onChange(isSelected
+                          ? props.value.filter((entry) => entry !== option.value)
+                          : [...props.value, option.value]);
+                      } else {
+                        props.onChange(option.value);
+                        setOpen(false);
+                        triggerRef.current?.focus();
+                      }
+                    }}
+                    className={`flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left text-sm transition-colors hover:bg-mist disabled:cursor-default disabled:opacity-60 ${isSelected ? "text-burnt font-semibold" : "text-ink"}`}
+                  >
+                    {option.label}
+                    {props.multiple && isSelected && <span aria-hidden="true">✓</span>}
+                  </button>
+                </li>
+              );
+            })}
+            {options.length === 0 && <li role="option" aria-disabled="true" aria-selected="false" className="px-4 py-2.5 text-sm text-muted">No options available</li>}
           </ul>
         )}
       </div>
@@ -226,7 +267,7 @@ export function CalendarPicker({ id, label, required, value, onChange }: Calenda
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={handleOpen}
-        className="flex h-11 w-full items-center justify-between rounded-lg border border-[#aeb6c0] bg-white px-3 text-left text-sm outline-none focus:border-burnt"
+        className={`${fieldOutlineClasses} flex h-11 w-full items-center justify-between px-3 text-left text-sm`}
       >
         <span className={value ? "text-ink" : "text-glyph"}>
           {value ? formatDateDisplay(value) : "Select a date"}
@@ -243,7 +284,7 @@ export function CalendarPicker({ id, label, required, value, onChange }: Calenda
           role="dialog"
           aria-label="Choose appointment date"
           style={panelStyle}
-          className="rounded-lg border border-[#aeb6c0] bg-white p-3 shadow-lg"
+          className="rounded-lg border border-outline bg-white p-3 shadow-lg"
         >
           <div className="mb-2 flex items-center justify-between">
             <button type="button" aria-label="Previous month"
@@ -309,13 +350,13 @@ export function TimeListbox({ id, label, required, value, onChange }: TimeListbo
       <div ref={ref} className="relative">
         <button id={id} type="button" aria-haspopup="listbox" aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
-          className="flex h-11 w-full items-center justify-between rounded-lg border border-[#aeb6c0] bg-white px-3 text-left text-sm outline-none focus:border-burnt"
+          className={`${fieldOutlineClasses} flex h-11 w-full items-center justify-between px-3 text-left text-sm`}
         >
           <span className={value ? "text-ink" : "text-glyph"}>{value || "Select a time"}</span>
           <Icon name="clock" className="size-4 text-glyph" />
         </button>
         {open && (
-          <ul role="listbox" className="absolute inset-x-0 top-full z-30 mt-1 max-h-48 overflow-y-auto rounded-lg border border-[#aeb6c0] bg-white py-1 shadow-md">
+          <ul role="listbox" className="absolute inset-x-0 top-full z-30 mt-1 max-h-48 overflow-y-auto rounded-lg border border-outline bg-white py-1 shadow-md">
             {TIME_SLOTS.map((t) => (
               <li key={t}>
                 <button type="button" role="option" aria-selected={value === t}
@@ -859,7 +900,7 @@ export function NewAppointmentModal({
                 <textarea id="appt-notes" rows={3} value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Add notes (optional)..."
-                  className="w-full resize-none rounded-lg border border-[#aeb6c0] bg-white px-3 py-2.5 text-sm text-ink placeholder:text-glyph focus:border-burnt focus:outline-none transition-shadow"
+                  className={`${fieldOutlineClasses} w-full resize-none px-3 py-2.5 text-sm text-ink placeholder:text-glyph`}
                 />
               </div>
 

@@ -17,6 +17,7 @@ type MetricCardProps = {
   onClick?: () => void;
   pressed?: boolean;
   iconWeight?: "regular" | "bold" | "fill";
+  valuePrefix?: string;
 };
 
 export function MetricCard({
@@ -32,6 +33,7 @@ export function MetricCard({
   onClick,
   pressed,
   iconWeight,
+  valuePrefix,
 }: MetricCardProps) {
   const className = cn(
     "flex h-[184px] flex-col gap-3 overflow-hidden rounded-[10px] p-6 text-left shadow-[0_3px_7px_rgb(44_58_75/0.04)]",
@@ -50,7 +52,7 @@ export function MetricCard({
         <p className="truncate text-sm font-semibold leading-5">{label}</p>
       </div>
       <div className="flex h-9 items-center gap-2">
-        <p className="text-[32px] font-semibold leading-9">{value}</p>
+        <p className="text-[32px] font-semibold leading-9">{valuePrefix}{value.toLocaleString()}</p>
         {badge}
       </div>
       {miniChart ? (

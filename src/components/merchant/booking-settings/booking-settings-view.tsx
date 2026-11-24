@@ -389,7 +389,7 @@ export function BookingSettingsView({
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <main className="mx-auto flex w-full max-w-[1280px] flex-1 flex-col gap-5 px-4 pb-10 pt-6 sm:px-6 lg:px-8">
+        <main className="flex w-full min-w-0 flex-1 flex-col gap-5 p-4 sm:p-6 lg:p-8">
           {/* Page Header */}
           <header className="flex flex-col gap-1">
             <h1 className="font-display text-[28px] leading-[36px] text-[#1E293B] sm:text-[32px] sm:leading-[40px]">
@@ -865,7 +865,7 @@ export function BookingSettingsView({
 
         {/* Sticky Footer Save Bar */}
         <footer className="sticky bottom-0 z-20 border-t border-[#E7E5DC] bg-white/95 backdrop-blur-xs">
-          <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-3 px-4 py-3.5 sm:px-6 lg:px-8">
+          <div className="flex w-full flex-col gap-3 px-4 py-3.5 sm:px-6 lg:px-8">
             <div className="rounded-lg bg-[#F1F3F5] px-3.5 py-2 text-xs text-[#475569]">
               Changes apply to new bookings after saving. Existing confirmed
               appointments keep their original schedule.

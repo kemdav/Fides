@@ -1263,6 +1263,72 @@ type DatabaseCore = {
           },
         ];
       };
+      staff_email_change_requests: {
+        Row: {
+          profile_id: string;
+          tenant_id: string;
+          current_email: string;
+          new_email: string;
+          token_hash: string;
+          expires_at: string;
+          claimed_at: string | null;
+        };
+        Insert: Omit<Database["public"]["Tables"]["staff_email_change_requests"]["Row"], "claimed_at"> & {
+          claimed_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["staff_email_change_requests"]["Insert"]>;
+        Relationships: [{
+          foreignKeyName: "staff_email_change_requests_tenant_id_fkey";
+          columns: ["tenant_id"];
+          isOneToOne: false;
+          referencedRelation: "tenants";
+          referencedColumns: ["id"];
+        }];
+      };
+      staff_invitations: {
+        Row: {
+          last_resent_at: string | null;
+          token_hash: string | null;
+          service_ids: string[];
+          commission_type: Database["public"]["Enums"]["commission_type"];
+          commission_value: number;
+          id: string;
+          tenant_id: string;
+          full_name: string;
+          email: string;
+          role: Database["public"]["Enums"]["app_role"];
+          title: string | null;
+          created_at: string;
+          expires_at: string;
+          accepted_at: string | null;
+          cancelled_at: string | null;
+        };
+        Insert: {
+          last_resent_at?: string | null;
+          token_hash?: string | null;
+          service_ids?: string[];
+          commission_type?: Database["public"]["Enums"]["commission_type"];
+          commission_value?: number;
+          id?: string;
+          tenant_id: string;
+          full_name: string;
+          email: string;
+          role: Database["public"]["Enums"]["app_role"];
+          title?: string | null;
+          created_at?: string;
+          expires_at: string;
+          accepted_at?: string | null;
+          cancelled_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["staff_invitations"]["Insert"]>;
+        Relationships: [{
+          foreignKeyName: "staff_invitations_tenant_id_fkey";
+          columns: ["tenant_id"];
+          isOneToOne: false;
+          referencedRelation: "tenants";
+          referencedColumns: ["id"];
+        }];
+      };
       staff_members: {
         Row: {
           active: boolean;
@@ -1273,6 +1339,7 @@ type DatabaseCore = {
           full_name: string;
           id: string;
           image_url: string | null;
+          phone: string | null;
           profile_id: string | null;
           sort_order: number;
           tenant_id: string;
@@ -1289,6 +1356,7 @@ type DatabaseCore = {
           full_name: string;
           id?: string;
           image_url?: string | null;
+          phone?: string | null;
           profile_id?: string | null;
           sort_order?: number;
           tenant_id: string;
@@ -1304,6 +1372,7 @@ type DatabaseCore = {
           full_name?: string;
           id?: string;
           image_url?: string | null;
+          phone?: string | null;
           profile_id?: string | null;
           sort_order?: number;
           tenant_id?: string;
@@ -1883,6 +1952,51 @@ type DatabaseCore = {
       [_ in never]: never;
     };
     Functions: {
+      renew_staff_invitation: {
+        Args: { p_expected_expiry: string; p_invitation_id: string; p_tenant_id: string; p_token_hash: string }
+        Returns: boolean
+      }
+      reschedule_appointment: {
+        Args: { p_tenant_id: string; p_appointment_id: string; p_date: string; p_time: string; p_expected_start: string }
+        Returns: undefined
+      }
+      reserve_staff_invitation: {
+        Args: {
+          p_actor_id: string; p_tenant_id: string; p_full_name: string; p_email: string;
+          p_role: Database["public"]["Enums"]["app_role"]; p_title: string; p_service_ids: string[];
+          p_commission_type: Database["public"]["Enums"]["commission_type"]; p_commission_value: number; p_token_hash: string;
+        };
+        Returns: string;
+      };
+      accept_staff_invitation: {
+        Args: { p_token_hash: string; p_profile_id: string };
+        Returns: undefined;
+      };
+      get_staff_commission_totals: {
+        Args: { p_tenant_id: string; p_period_start: string; p_period_end: string; p_staff_id?: string };
+        Returns: { staff_id: string; commission_cents: number }[];
+      };
+      manage_staff_profile: {
+        Args: {
+          p_actor_id: string;
+          p_tenant_id: string;
+          p_staff_id: string;
+          p_full_name: string;
+          p_title: string;
+          p_phone: string | null;
+          p_bio: string;
+          p_role: Database["public"]["Enums"]["app_role"];
+          p_service_ids: string[];
+          p_commission_type: Database["public"]["Enums"]["commission_type"];
+          p_commission_value: number;
+          p_image_url: string | null;
+        };
+        Returns: undefined;
+      };
+      reserve_staff_email_change: {
+        Args: { p_profile_id: string };
+        Returns: boolean;
+      };
       current_profile_role: {
         Args: Record<PropertyKey, never>;
         Returns: Database["public"]["Enums"]["app_role"];
