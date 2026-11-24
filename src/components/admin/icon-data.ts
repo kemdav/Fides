@@ -1,5 +1,8 @@
 /* solar icon set (cc by 4.0): https://icon-sets.iconify.design/solar/ */
 export const iconBodies: Record<string, { regular: string; fill?: string }> = {
+  gallery: {
+    regular: '<g stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="stroke-width:var(--icon-stroke,1.5)"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m3 17 4-4a2 2 0 0 1 2.8 0l2.2 2.2 3.4-3.4a2 2 0 0 1 2.8 0l3.6 3.6"/></g>',
+  },
   "arrow-left": {
     regular: '<path d="M20 12H4m0 0 6-6m-6 6 6 6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="stroke-width:var(--icon-stroke,1.5)"/>',
   },

@@ -18,6 +18,7 @@ export type IconName =
   | "eye"
   | "eye-off"
   | "file"
+  | "gallery"
   | "grid"
   | "layers"
   | "lock"

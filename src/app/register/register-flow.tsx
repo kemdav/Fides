@@ -7,6 +7,7 @@ import { sendRegistrationCodeAction } from "@/app/actions/registration-email";
 import { adminButtonClasses } from "@/components/admin/admin-button";
 import { Icon, type IconName } from "@/components/admin/icon";
 import { CalendarPicker, calendarDateKey } from "@/components/ui/calendar-picker";
+import { Listbox } from "@/components/ui/listbox";
 import { StaffSuccessDialog } from "@/components/merchant/staff/staff-confirmation-dialog";
 import { Card as BaseCard } from "@/components/ui";
 import { MascotLoadingDialog } from "@/components/ui/mascot-loading-dialog";
@@ -34,6 +35,7 @@ import {
   validateStep,
 } from "@/lib/registration/schema";
 import { cn } from "@/lib/utils";
+import { philippineCities } from "@/lib/registration/philippine-cities";
 import { PlanCardGrid, PlanComparisonRow, SelectedPlanSummary } from "./plan-selection";
 import { EmailVerificationStep } from "./email-verification-step";
 import { SlugBadge } from "./slug-badge";
@@ -46,7 +48,6 @@ import {
   formatBytes,
   IdUpload,
   releaseObjectUrl,
-  SelectField,
 } from "./controls";
 import {
   Field,
@@ -348,10 +349,11 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
           ? 1
           : ["planCode"].includes(field)
             ? 4
-            : 2;
+            : ["fullName", "phone"].includes(field) ? 5 : 2;
       setErrors({ [field]: issue.message });
       setSubmitError(issue.message);
       setStep(target);
+      focusFirstError();
       return;
     }
     if (!emailProof) {
@@ -675,7 +677,7 @@ function AccountStep({ values, errors, set, onNext, sendingCode }: StepProps & {
 
         <div className="mt-6 flex flex-col items-center gap-6">
           <button type="submit" className={primaryButton}>
-            Create Account <Icon name="arrow-right" className="size-4" />
+            Continue <Icon name="arrow-right" className="size-4" />
           </button>
           <div className="lg:w-max lg:whitespace-nowrap">
             <SecureFooter>Your data is encrypted and secure. We never share your information.</SecureFooter>
@@ -688,10 +690,8 @@ function AccountStep({ values, errors, set, onNext, sendingCode }: StepProps & {
 
 function StepActions({
   onBack,
-  nextLabel = "Save & Continue",
 }: {
   onBack?: () => void;
-  nextLabel?: string;
 }) {
   return (
     <div className="mt-6 flex flex-col-reverse items-stretch gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-end">
@@ -701,7 +701,7 @@ function StepActions({
         </button>
       ) : null}
       <button type="submit" className={primaryButton}>
-        {nextLabel} <Icon name="arrow-right" className="size-4" />
+        Continue <Icon name="arrow-right" className="size-4" />
       </button>
     </div>
   );
@@ -728,22 +728,20 @@ function IdentityStep({
       />
       <Card>
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Owner's legal full name" htmlFor="ownerLegalName" error={errors.ownerLegalName}>
+          <Field label="Owner's Legal Full Name" htmlFor="ownerLegalName" error={errors.ownerLegalName}>
             <TextInput id="ownerLegalName" invalid={!!errors.ownerLegalName} autoComplete="name" placeholder="Maria Santos" value={values.ownerLegalName} onChange={(event) => set("ownerLegalName", event.target.value)} />
           </Field>
-          <Field label="Date of birth" htmlFor="dateOfBirth" error={errors.dateOfBirth}>
+          <Field label="Date of Birth" htmlFor="dateOfBirth" error={errors.dateOfBirth}>
             <CalendarPicker id="dateOfBirth" panelLabel="Date of birth" value={values.dateOfBirth}
               onChange={(value) => set("dateOfBirth", value)} min="1900-01-01" max={calendarDateKey(latest)}
               locale="en-GB" showWeekdays={false} invalid={!!errors.dateOfBirth}
               describedBy={errors.dateOfBirth ? "dateOfBirth-error" : undefined}
             />
           </Field>
-          <Field label="ID type" htmlFor="idType" error={errors.idType} className="sm:col-span-2">
-            <SelectField id="idType" value={values.idType} options={ID_TYPES}
-              onChange={(value) => set("idType", value)} invalid={!!errors.idType} placeholder="Select an ID type"
-              describedBy={errors.idType ? "idType-error" : undefined}
-            />
-          </Field>
+          <Listbox id="idType" label="ID Type" required value={values.idType} options={ID_TYPES}
+            onChange={(value) => set("idType", value)} error={errors.idType} placeholder="Select an ID type"
+            className="sm:col-span-2"
+          />
         </div>
         <div className="mt-5 grid gap-6">
           {IDENTITY_DOCUMENT_SLOTS.map(({ key, title, side }) => (
@@ -762,7 +760,7 @@ function IdentityStep({
             Your identity documents are encrypted and stored securely. They are used solely to verify your identity. Verification typically takes 1–2 business days.
           </InfoNote>
         </div>
-        <StepActions onBack={onBack} nextLabel="Continue" />
+        <StepActions onBack={onBack} />
       </Card>
     </form>
   );
@@ -787,8 +785,11 @@ function BusinessStep({
   onNext: () => void;
 }) {
   const logoUrl = useObjectUrl(logo);
+  const matchingCity = philippineCities.find(({ city, province }) => city === values.city && province === values.province);
+  const legacyCity = values.city && !matchingCity ? { value: "saved-city", label: values.city } : null;
   return (
     <form
+      className="my-auto py-4 sm:py-8"
       noValidate
       onSubmit={(event) => {
         event.preventDefault();
@@ -803,34 +804,36 @@ function BusinessStep({
       )}
       <Card>
         <div className="flex flex-col gap-5 border-b border-line pb-6 sm:flex-row sm:items-center">
-          <div className="flex size-[100px] shrink-0 items-center justify-center overflow-hidden rounded-xl border border-line bg-mist text-center">
+          <div className="relative grid size-[100px] shrink-0 place-items-center overflow-hidden rounded-xl border border-line bg-mist text-center">
             {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={logoUrl} alt="Business logo preview" className="size-full object-cover" />
+              <img src={logoUrl} alt="Business logo preview" className="absolute inset-0 size-full object-cover object-center" />
             ) : (
-              <span className="px-2 text-[11px] text-subtle">No logo selected</span>
+              <Icon name="gallery" className="size-9 text-glyph" />
             )}
           </div>
           <div className="flex min-w-0 flex-col items-start gap-2">
             <p className="text-base font-semibold text-ink">Business Logo</p>
             <p className="text-sm text-subtle">Recommended: square JPG or PNG, at least 400×400 px. Max 2 MB.</p>
-            <label className="inline-flex h-12 cursor-pointer items-center rounded-md border border-outline/70 px-5 text-base font-semibold text-muted transition-colors hover:border-burnt hover:text-burnt focus-within:ring-2 focus-within:ring-burnt/40">
-              {logo ? "Replace Logo" : "Upload Logo"}
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="sr-only"
-                onChange={(event) => {
-                  onLogo(event.target.files?.[0] ?? null);
-                  event.target.value = "";
-                }}
-              />
-            </label>
-            {logo ? (
-              <button type="button" onClick={() => onLogo(null)} className="text-sm font-semibold text-burnt hover:underline">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <label className="inline-flex h-12 w-40 cursor-pointer items-center justify-center rounded-md border border-outline/70 px-3 text-base font-semibold text-muted transition-colors hover:border-burnt hover:text-burnt focus-within:ring-2 focus-within:ring-burnt/40">
+                {logo ? "Replace Logo" : "Upload Logo"}
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="sr-only"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) onLogo(file);
+                    event.target.value = "";
+                  }}
+                />
+              </label>
+              <button type="button" onClick={() => onLogo(null)} disabled={!logo}
+                className={cn("min-h-11 text-sm font-semibold text-burnt hover:underline focus-visible:outline-2 focus-visible:outline-burnt", !logo && "invisible")}>
                 Remove logo
               </button>
-            ) : null}
+            </div>
             {logoError ? (
               <p role="alert" className="text-sm text-danger">
                 {logoError}
@@ -843,54 +846,35 @@ function BusinessStep({
           <Field label="Business Name" htmlFor="businessName" error={errors.businessName} className="sm:col-span-6">
             <TextInput id="businessName" invalid={!!errors.businessName} placeholder="Bella Vita Salon & Spa" value={values.businessName} onChange={(e) => set("businessName", e.target.value)} />
           </Field>
-          <Field label="Business Type" htmlFor="businessType" error={errors.businessType} className="sm:col-span-4">
-            <SelectField
-              id="businessType"
-              value={values.businessType}
-              options={BUSINESS_TYPES.map((type) => ({ value: type, label: type }))}
-              onChange={(value) => set("businessType", value)}
-              invalid={!!errors.businessType}
-              placeholder="Select a business type"
-            />
-          </Field>
+          <Listbox id="businessType" label="Business Type" required size="large" value={values.businessType}
+            options={BUSINESS_TYPES.map((type) => ({ value: type, label: type }))}
+            onChange={(value) => set("businessType", value)} error={errors.businessType}
+            placeholder="Select a business type" className="sm:col-span-4"
+          />
           <Field label="Established Year" htmlFor="establishedYear" error={errors.establishedYear} className="sm:col-span-2">
             <TextInput id="establishedYear" inputMode="numeric" maxLength={4} invalid={!!errors.establishedYear} placeholder="2020" value={values.establishedYear} onChange={(e) => set("establishedYear", e.target.value.replace(/\D/g, ""))} />
+          </Field>
+          <Listbox id="city" label="City" required size="large" value={matchingCity?.value ?? legacyCity?.value ?? ""}
+            options={legacyCity ? [legacyCity, ...philippineCities] : philippineCities}
+            onChange={(value) => {
+              const selectedCity = philippineCities.find((city) => city.value === value);
+              if (selectedCity) {
+                set("city", selectedCity.city);
+                set("province", selectedCity.province);
+              }
+            }}
+            error={errors.city} placeholder="Select a city" searchPlaceholder="Search cities" className="sm:col-span-2"
+          />
+          <Field label="Province" htmlFor="province" error={errors.province} className="sm:col-span-2">
+            <TextInput id="province" readOnly={!legacyCity} invalid={!!errors.province} placeholder="Auto-filled" value={values.province} onChange={(e) => set("province", e.target.value)} />
+          </Field>
+          <Field label="ZIP Code" htmlFor="zipCode" error={errors.zipCode} className="sm:col-span-2">
+            <TextInput id="zipCode" autoComplete="postal-code" inputMode="numeric" maxLength={12} invalid={!!errors.zipCode} placeholder="1200" value={values.zipCode} onChange={(e) => set("zipCode", e.target.value.replace(/\D/g, ""))} />
           </Field>
           <Field label="Street Address" htmlFor="streetAddress" error={errors.streetAddress} className="sm:col-span-6">
             <TextInput id="streetAddress" autoComplete="address-line1" invalid={!!errors.streetAddress} placeholder="123 Main Street, Suite 4B" value={values.streetAddress} onChange={(e) => set("streetAddress", e.target.value)} />
           </Field>
-          <Field label="City" htmlFor="city" error={errors.city} className="sm:col-span-2">
-            <TextInput id="city" autoComplete="address-level2" invalid={!!errors.city} placeholder="Makati City" value={values.city} onChange={(e) => set("city", e.target.value)} />
-          </Field>
-          <Field label="Province / Region" htmlFor="province" error={errors.province} className="sm:col-span-2">
-            <TextInput id="province" autoComplete="address-level1" invalid={!!errors.province} placeholder="Metro Manila" value={values.province} onChange={(e) => set("province", e.target.value)} />
-          </Field>
-          <Field label="ZIP Code" htmlFor="zipCode" error={errors.zipCode} className="sm:col-span-2">
-            <TextInput id="zipCode" autoComplete="postal-code" invalid={!!errors.zipCode} placeholder="1200" value={values.zipCode} onChange={(e) => set("zipCode", e.target.value)} />
-          </Field>
         </div>
-        <fieldset className="mt-7 border-t border-line pt-5">
-          <legend className="float-left mb-2 w-full text-lg font-semibold text-ink">Business contact</legend>
-          <div className="clear-both grid gap-5 sm:grid-cols-2">
-            <Field label="Full Name" htmlFor="fullName" error={errors.fullName}>
-              <TextInput id="fullName" invalid={!!errors.fullName} autoComplete="name" placeholder="Maria Santos" value={values.fullName} onChange={(e) => set("fullName", e.target.value)} />
-            </Field>
-            <Field label="Phone Number" htmlFor="phone" error={errors.phone} hint="Use 09XXXXXXXXX (11 digits) or +63 9XX XXX XXXX.">
-              <TextInput
-                id="phone"
-                type="tel"
-                inputMode="tel"
-                maxLength={17}
-                invalid={!!errors.phone}
-                aria-describedby={errors.phone ? "phone-error" : "phone-hint"}
-                autoComplete="tel"
-                placeholder="+63 917 000 0000"
-                value={values.phone}
-                onChange={(e) => set("phone", e.target.value.replace(/[^\d+\s()-]/g, ""))}
-              />
-            </Field>
-          </div>
-        </fieldset>
         <StepActions onBack={onBack} />
       </Card>
       <div className="mt-5">
@@ -930,7 +914,6 @@ function DocumentsStep({
     return [{ key, title, upload: upload?.file === file ? upload : undefined }];
   });
   const uploaded = files.filter(({ upload }) => upload?.receipt).length;
-  const hasFailures = files.some(({ upload }) => upload?.error);
   return (
     <form
       noValidate
@@ -988,7 +971,7 @@ function DocumentsStep({
             Back
           </button>
           <button type="submit" disabled={uploading} className={primaryButton}>
-            {uploading ? "Uploading documents…" : hasFailures ? "Retry failed uploads" : "Continue to Subscription Package"}
+            Continue <Icon name="arrow-right" className="size-4" />
           </button>
         </div>
       </div>
@@ -1040,7 +1023,7 @@ function PlanStep({ values, errors, set, onBack, onNext }: StepProps & { onBack:
           <Icon name="arrow-left" className="size-4" /> Back
         </button>
         <button type="submit" className={primaryButton}>
-          Continue to Summary <Icon name="arrow-right" className="size-4" />
+          Continue <Icon name="arrow-right" className="size-4" />
         </button>
       </div>
     </form>
@@ -1089,7 +1072,7 @@ function FileRow({ name, size }: { name: string; size: number }) {
       <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-burnt text-white">
         <Icon name="check" className="size-3" />
       </span>
-      <span className="min-w-0 flex-1 truncate">{name} — Ready to submit</span>
+      <span className="min-w-0 flex-1 truncate">{name}</span>
       <span className="shrink-0 text-subtle">{formatBytes(size)}</span>
     </div>
   );
@@ -1138,6 +1121,18 @@ function SummaryStep({
       <SummaryCard title="Account Details" icon="users" onEdit={() => onEdit(0)}>
         <Row label="Email Address" value={values.email} />
         <Row label="Password" value="Set securely" />
+        <fieldset disabled={submitting} className="mt-2 grid gap-4 border-t border-line pt-4 sm:grid-cols-2">
+          <Field label="Contact name" htmlFor="fullName" error={errors.fullName}>
+            <TextInput id="fullName" invalid={!!errors.fullName} autoComplete="name" placeholder="Maria Santos" value={values.fullName} onChange={(event) => set("fullName", event.target.value)} />
+          </Field>
+          <Field label="Contact phone" htmlFor="phone" error={errors.phone} hint="Use 09XXXXXXXXX (11 digits) or +63 9XX XXX XXXX.">
+            <TextInput id="phone" type="tel" inputMode="tel" maxLength={17} invalid={!!errors.phone}
+              aria-describedby={errors.phone ? "phone-error" : "phone-hint"}
+              autoComplete="tel" placeholder="+63 917 000 0000" value={values.phone}
+              onChange={(event) => set("phone", event.target.value.replace(/[^\d+\s()-]/g, ""))}
+            />
+          </Field>
+        </fieldset>
       </SummaryCard>
 
       <SummaryCard title="Identity Verification" icon="shield" onEdit={() => onEdit(1)}>
@@ -1158,8 +1153,6 @@ function SummaryStep({
       </SummaryCard>
 
       <SummaryCard title="Business Information" icon="grid" onEdit={() => onEdit(2)}>
-        <Row label="Contact name" value={values.fullName} />
-        <Row label="Contact phone" value={values.phone} />
         <Row label="Business Name" value={values.businessName} />
         {values.requestedSlug && <Row label="Requested subdomain" value={values.requestedSlug} />}
         <Row label="Category" value={values.businessType} />

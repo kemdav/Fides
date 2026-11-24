@@ -155,7 +155,7 @@ export function CalendarPicker({
     : [];
   const controlClasses = "grid size-10 shrink-0 place-items-center rounded-lg text-body hover:bg-mist focus-visible:outline-2 focus-visible:outline-burnt disabled:opacity-40 disabled:hover:bg-transparent";
   const choiceClasses = "min-h-11 rounded-lg px-1 text-sm text-body hover:bg-mist focus-visible:outline-2 focus-visible:outline-burnt disabled:opacity-40 disabled:hover:bg-transparent";
-  const captionClasses = "px-1 py-2 text-sm font-semibold text-ink hover:text-burnt-dark hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-burnt";
+  const captionClasses = "rounded-md px-2 py-2 text-sm font-semibold text-ink hover:bg-burnt/10 hover:text-burnt-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-burnt";
   const formattedDate = value && localDate(value).toLocaleDateString(locale, {
     month: locale === "en-GB" ? "short" : "long", day: "numeric", year: "numeric",
   });

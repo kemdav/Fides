@@ -115,7 +115,7 @@ const base = z.object({
   streetAddress: text("Street address", 200),
   city: text("City", 80),
   province: text("Province / region", 80),
-  zipCode: text("ZIP code", 12),
+  zipCode: text("ZIP code", 12).regex(/^[0-9]+$/, "Enter a ZIP code using numbers only."),
 
   planCode: z.enum(PLAN_OPTIONS.map((plan) => plan.code) as [string, ...string[]], {
     error: "Select a subscription package.",
@@ -140,8 +140,6 @@ export const identityStepSchema = base.pick({
 });
 
 export const businessStepSchema = base.pick({
-  fullName: true,
-  phone: true,
   businessName: true,
   businessType: true,
   requestedSlug: true,
