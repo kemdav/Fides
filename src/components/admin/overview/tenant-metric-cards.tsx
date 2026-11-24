@@ -1,7 +1,7 @@
 "use client";
 
 import { MetricCard } from "../metric-card";
-import { useTenants } from "../tenant-provider";
+import { useTenants } from "../tenants-provider";
 
 export function TenantMetricCards() {
   const { tenants } = useTenants();

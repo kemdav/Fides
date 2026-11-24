@@ -8,7 +8,7 @@ import { Icon } from "./icon";
 import { MetricCard } from "./metric-card";
 import { Checkbox, PageContent, PageHeading, StatusPill, Surface } from "./primitives";
 import { Select } from "./select";
-import { TenantsProvider, useTenants } from "./tenant-provider";
+import { TenantsProvider, useTenants } from "./tenants-provider";
 import { Button } from "@/components/ui/button";
 
 export type StatusFilter = "all" | "active" | "suspended" | "renewing";

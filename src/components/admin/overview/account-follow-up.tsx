@@ -2,7 +2,7 @@
 
 import { Icon, type IconName } from "../icon";
 import { Surface } from "../primitives";
-import { useTenants } from "../tenant-provider";
+import { useTenants } from "../tenants-provider";
 import { Button } from "@/components/ui/button";
 
 export function AccountFollowUp() {
