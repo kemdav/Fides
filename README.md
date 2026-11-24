@@ -6,8 +6,8 @@ requests, and walk-in visits flow through a single scheduling engine, with
 tenant isolation enforced at the database layer.
 
 > **Docs for the team:** [architecture guide](docs/ARCHITECTURE.md) (start here) ·
-> [environment variables](docs/ENVIRONMENT.md) · [security notes](docs/SECURITY.md) ·
-> [frontend reuse guide](docs/FRONTEND.md)
+> [known issues and backlog](docs/KNOWN-ISSUES.md) · [environment variables](docs/ENVIRONMENT.md) ·
+> [security notes](docs/SECURITY.md) · [frontend reuse guide](docs/FRONTEND.md)
 
 ## Tech stack
 

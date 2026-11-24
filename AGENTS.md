@@ -16,13 +16,15 @@ Fides is one Next.js 16 app (App Router, React 19, TypeScript, Tailwind v4) on S
 There is no separate backend. Read these first, they are short:
 
 - `docs/ARCHITECTURE.md`: layers, folder structure, rules, current state, migration plan, review checklist
+- `docs/KNOWN-ISSUES.md`: open backlog with IDs. Check it before touching an area, and update it in the same change
 - `docs/SECURITY.md`: access layers and rules for new code
 - `docs/FRONTEND.md`: shared components, tokens, icons, responsive checklist
 - `docs/ENVIRONMENT.md`: environment variables, admin accounts, Redis
 
 ### Commands
 
-`npm run dev` · `npm run typecheck` · `npm run lint` (must have 0 errors and 0 warnings) · `npm test` · `npm audit --omit=dev`.
+`npm run dev` · `npm run typecheck` · `npm run lint` (type-aware, must have 0 errors and 0 warnings) · `npm test` · `npm audit --omit=dev` ·
+`npm run typecheck:strict` (measures the remaining `noUncheckedIndexedAccess` work).
 Local database: `docker compose up -d redis`, `supabase start`, `supabase db reset`.
 
 ### Non-negotiables

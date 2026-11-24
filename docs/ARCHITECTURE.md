@@ -4,7 +4,7 @@ How Fides is structured, why, where we are today and how we get to a production-
 This is a **target and rules document**: nothing here requires a rewrite on its own. Features move over one at a time
 (see [Migration plan](#9-migration-plan)).
 
-Related docs: [ENVIRONMENT](ENVIRONMENT.md) · [SECURITY](SECURITY.md) · [FRONTEND](FRONTEND.md)
+Related docs: [KNOWN-ISSUES](KNOWN-ISSUES.md) (open backlog) · [ENVIRONMENT](ENVIRONMENT.md) · [SECURITY](SECURITY.md) · [FRONTEND](FRONTEND.md)
 
 ---
 
@@ -314,40 +314,32 @@ Audit snapshot (honest, so we can measure progress):
 | Database | RLS on every table, guarded walk-in RPCs, `assert_tenant_operator`, 24 migrations, edge function for email | Good. Add RLS tests and an index review |
 | Security controls | Rate limiter (Redis), admin accounts via hashed env, no unauthenticated legacy APIs, 0 audit findings | Keep; add request ids and structured logs |
 | Tests | 21 unit tests (date utils only) | No service, RLS or e2e tests |
-| Type safety and code standards | See the compliance snapshot below | Not yet enforced by the compiler or CI |
+| Type safety and code standards | See the compliance snapshot below. Most rules are now enforced by the compiler and ESLint | Remaining gaps are listed in KNOWN-ISSUES |
 | Observability | `console.*` in a few places, `/api/health` | Structured logging, error tracking, uptime checks |
 | UI consistency | Shared button/field/modal/icon/tokens in place | Good. Keep enforcing via [FRONTEND](FRONTEND.md) |
 
 ### 10.1 Code standards compliance snapshot
 
-Measured against section 6.5 (dry run of the stricter settings, nothing was changed in the config). "Rule" is what we adopt, "Today" is what the code does now.
+Measured against section 6.5. The full backlog with IDs, locations and fixes is in [KNOWN-ISSUES](KNOWN-ISSUES.md).
 
 | Standard | Today | Status |
 | --- | --- | --- |
-| `strict` mode | On | Done |
-| No `any` | 0 uses | Done |
-| No `@ts-ignore` / `@ts-nocheck` | 0 | Done |
-| No empty `catch` | 0 | Done |
-| Lint warnings | 0 errors, 0 warnings | Done |
-| `npm audit --omit=dev` | 0 vulnerabilities | Done |
-| Default exports only in Next special files | 1 exception (`components/landing/provider-header.tsx`) | Fix when touched |
-| No non-null `!` assertions | 3 | To fix |
-| No `as unknown as` | 17, mostly in the large action files (customers, booking settings, walk-ins, website settings, storefront contact) | To fix with generated types and mappers |
-| Casts on database rows (`as X`) | about 68 | To fix with typed mappers and zod |
-| `consistent-type-imports` | 7 violations | Easy autofix |
-| `no-unnecessary-type-assertion` | 5 | Easy autofix |
-| `switch-exhaustiveness-check` | 1 | To fix |
-| `no-floating-promises` | 31 | Review each: await, `void` with a reason, or handle |
-| `no-misused-promises` | 36 | Mostly async JSX event handlers. Configure `checksVoidReturn: { attributes: false }` and fix the rest |
-| `noUncheckedIndexedAccess` | 130 compiler errors if turned on | Phase it in per feature |
-| `noImplicitReturns` | 3 errors if turned on | Easy |
-| `noFallthroughCasesInSwitch`, `noImplicitOverride` | 0 errors if turned on | Turn on now |
-| `console.log` in app code | 1 (mailer); 14 `console.warn/error` | Replace with the `log` helper |
-| File size (about 300 lines) | 29 files above it; largest are `appointments-view` 1,575, `customers.ts` 1,305, `register-flow` 1,108, `overview-view` 1,086, `website-settings-view` 1,069, `lib/applications/service` 1,068 | Split as part of the migration |
-| `eslint-disable` lines | 9 | Each needs a reason comment (most already have one) |
+| `strict`, `noImplicitReturns`, `noFallthroughCasesInSwitch`, `noImplicitOverride` | On, typecheck clean | Enforced |
+| No `any`, no `@ts-ignore`, no non-null `!`, `import type`, no unnecessary assertions | 0 violations, enforced by `npm run lint` | Enforced |
+| `no-floating-promises`, `no-misused-promises`, `switch-exhaustiveness-check`, `eqeqeq` | 0 violations, enforced by `npm run lint` (type-aware) | Enforced |
+| Lint | 0 errors, 0 warnings | Enforced |
+| `npm audit --omit=dev` | 0 vulnerabilities | Enforced by hand, add to CI |
+| `noUncheckedIndexedAccess` | 130 errors if turned on (`npm run typecheck:strict`) | Open (T1) |
+| No `as unknown as` | 16 in app code, mostly the big action files | Open (T2), root cause is stale generated types (T3) |
+| Casts on database rows (`as X`) | about 68 | Open (T4) |
+| Default exports only in Next special files | 1 exception (`provider-header.tsx`) | Open (T7) |
+| `console.*` | 1 `console.log`, 14 `warn/error` | Open (A10), needs the `log` helper |
+| File size (about 300 lines) | 29 files above it, largest `appointments-view` 1,575 | Open (A9), part of the migration |
+| `eslint-disable` | 9 lines, each with a reason or a known cause | Open (T8) |
+| Zod on every action | Missing for appointments and walk-ins | Open (A4, T5) |
+| One result type and one tenant guard | 3 result shapes, 4 guard implementations | Open (A2, A3) |
 
-Quick wins that need no refactor: turn on `noFallthroughCasesInSwitch`, `noImplicitOverride`, `noImplicitReturns`, run the `consistent-type-imports` and
-`no-unnecessary-type-assertion` autofixes, and replace the 3 non-null assertions. The rest lands with the feature migrations in section 9.
+Turning on a rule that currently fails is part of fixing it: add it to `eslint.config.mjs` or `tsconfig.json` in the same PR.
 
 ## 11. Testing strategy
 

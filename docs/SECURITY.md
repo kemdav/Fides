@@ -37,6 +37,8 @@ How the layers fit together (entry, DTO, guard, service, queries, database) is i
 
 ## Known gaps
 
+The full, tracked list is in [KNOWN-ISSUES](KNOWN-ISSUES.md) (section 3). Highlights:
+
 - The in-memory fallback limiter is per process. Redis fixes that.
 - Admin accounts have no password reset or MFA yet. The "Forgot password?" screen on `/admin/login` is only the design,
   it does not send anything. The MFA and "unauthorized role" cards from the Figma are not wired up.
