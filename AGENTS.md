@@ -11,3 +11,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ## Supabase migrations
 
 Name each new migration in `supabase/migrations` with the current UTC timestamp as its prefix, using `YYYYMMDDHHMMSS_description.sql`. Use distinct timestamps in application order when adding multiple migrations.
+
+## Full-screen loading states
+
+Reuse [`MascotLoadingDialog`](src/components/ui/mascot-loading-dialog.tsx) when a pending operation blocks the whole screen. Render it only while the operation is pending and pass a short `label` when it helps explain the wait.

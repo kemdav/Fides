@@ -186,7 +186,7 @@ function renderActionEmail(input: ActionEmail) {
     ? `<table role="presentation" align="center" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto;">
          <tr>${Array.from(action.code, (digit) =>
            `<td align="center" valign="middle" width="36" height="36" style="width:36px;height:36px;border:1px solid ${outline};border-radius:6px;background-color:${panel};color:${strong};font-family:Courier,monospace;font-size:26px;line-height:36px;font-weight:700;text-align:center;">${escapeHtml(digit)}</td>`
-         ).join('<td width="4" style="width:4px;font-size:0;line-height:0;">&nbsp;</td>')}</tr>
+         ).join('<td width="6" style="width:6px;font-size:0;line-height:0;">&nbsp;</td>')}</tr>
        </table>`
     : `<p style="display:inline-block;margin:0;padding:14px 24px;border:1px solid ${outline};border-radius:8px;background-color:${panel};font-family:Courier,monospace;font-size:26px;letter-spacing:6px;font-weight:700;color:${strong};">${escapeHtml(action.code)}</p>`);
 
@@ -276,7 +276,7 @@ function renderActionEmail(input: ActionEmail) {
                   </td>
                 </tr>
               </table>` : codeMarkup}
-              ${note ? `<p style="margin:14px 0 0;font-size:13px;line-height:20px;color:#6b7280;${"code" in action && action.boxed ? "text-align:center;" : ""}">${escapeHtml(note)}</p>` : ""}
+              ${note ? `<p style="font-size:13px;line-height:20px;color:#6b7280;${"code" in action && action.boxed ? "margin:10px 0 0;text-align:center;" : "margin:14px 0 0;"}">${escapeHtml(note)}</p>` : ""}
             </td>
           </tr>
 
@@ -441,7 +441,7 @@ export async function sendRegistrationCodeEmail(input: { to: string; code: strin
       note: `This code expires in ${input.minutesValid} minutes.`,
       steps: [
         { text: "Return to your Fides application and enter the six-digit code." },
-        { text: "Select Confirm to continue to identity verification." },
+        { text: "Once your code is verified, you’ll continue to identity verification automatically." },
       ],
       closing: "If you did not request this code, you can safely ignore this email.",
       footer: `© ${new Date().getUTCFullYear()} Fides. All rights reserved.`,

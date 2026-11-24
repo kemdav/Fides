@@ -7,7 +7,8 @@ import { sendRegistrationCodeAction } from "@/app/actions/registration-email";
 import { adminButtonClasses } from "@/components/admin/admin-button";
 import { Icon, type IconName } from "@/components/admin/icon";
 import { StaffSuccessDialog } from "@/components/merchant/staff/staff-confirmation-dialog";
-import { Card as BaseCard, Modal } from "@/components/ui";
+import { Card as BaseCard } from "@/components/ui";
+import { MascotLoadingDialog } from "@/components/ui/mascot-loading-dialog";
 import {
   ALL_DOCUMENTS,
   BUSINESS_TYPES,
@@ -557,18 +558,7 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
       </main>
       <FilePreviewDialog file={preview?.file ?? null} title={preview?.title ?? ""} onClose={() => setPreview(null)} />
       {sendingCode ? (
-        <Modal
-          open
-          unstyled
-          labelledBy="registration-email-loading"
-          onClose={() => {}}
-          className="fixed inset-0 m-0 h-dvh w-dvw max-h-none max-w-none place-items-center bg-transparent p-4 open:grid"
-        >
-          <div role="status" className="flex items-center gap-3 rounded-2xl bg-white px-6 py-5 text-base font-semibold text-ink shadow-xl">
-            <span aria-hidden="true" className="size-6 rounded-full border-2 border-burnt/25 border-t-burnt motion-safe:animate-spin" />
-            <span id="registration-email-loading">Please wait…</span>
-          </div>
-        </Modal>
+        <MascotLoadingDialog />
       ) : sentEmail && (
         <StaffSuccessDialog
           title="Verification email sent"

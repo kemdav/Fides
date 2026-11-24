@@ -19,6 +19,7 @@ export function EmailVerificationStep({ email, retryAt, onResend, onResent, onVe
   const [pending, setPending] = useState<"confirm" | "resend" | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(() => Math.max(0, Math.ceil((retryAt - Date.now()) / 1000)));
   const input = useRef<HTMLInputElement>(null);
+  const requestInFlight = useRef(false);
 
   useEffect(() => { input.current?.focus(); }, []);
   useEffect(() => {
@@ -30,12 +31,13 @@ export function EmailVerificationStep({ email, retryAt, onResend, onResent, onVe
     return () => window.clearInterval(timer);
   }, [retryAt]);
 
-  async function confirm() {
-    if (pending || code.length !== DIGITS) return;
+  async function confirm(candidate: string) {
+    if (requestInFlight.current || candidate.length !== DIGITS) return;
+    requestInFlight.current = true;
     setPending("confirm");
     setError(null);
     try {
-      const result = await verifyRegistrationCodeAction(email, code);
+      const result = await verifyRegistrationCodeAction(email, candidate);
       if (result.ok) {
         onVerified(result.proof);
         return;
@@ -44,13 +46,18 @@ export function EmailVerificationStep({ email, retryAt, onResend, onResent, onVe
     } catch {
       setError("We couldn’t check your code. Please try again.");
     } finally {
+      requestInFlight.current = false;
       setPending(null);
     }
-    requestAnimationFrame(() => input.current?.select());
+    requestAnimationFrame(() => {
+      input.current?.focus();
+      input.current?.select();
+    });
   }
 
   async function resend() {
-    if (pending || secondsLeft > 0) return;
+    if (requestInFlight.current || secondsLeft > 0) return;
+    requestInFlight.current = true;
     setPending("resend");
     setError(null);
     try {
@@ -65,6 +72,7 @@ export function EmailVerificationStep({ email, retryAt, onResend, onResent, onVe
     } catch {
       setError("We couldn’t resend the code. Please try again.");
     } finally {
+      requestInFlight.current = false;
       setPending(null);
     }
   }
@@ -72,7 +80,7 @@ export function EmailVerificationStep({ email, retryAt, onResend, onResent, onVe
   return (
     <form className="mx-auto w-full max-w-md" aria-busy={pending !== null} onSubmit={(event) => {
       event.preventDefault();
-      void confirm();
+      void confirm(code);
     }}>
       <div className="mb-10 text-center">
         <h1 className="font-display text-[28px] leading-[38px] text-ink sm:text-[32px] sm:leading-[42px]">Verification Code</h1>
@@ -102,8 +110,10 @@ export function EmailVerificationStep({ email, retryAt, onResend, onResent, onVe
           aria-invalid={Boolean(error)}
           aria-describedby={error ? "registration-code-hint registration-code-error" : "registration-code-hint"}
           onChange={(event) => {
-            setCode(event.target.value.replace(/\D/g, "").slice(0, DIGITS));
+            const candidate = event.target.value.replace(/\D/g, "").slice(0, DIGITS);
+            setCode(candidate);
             setError(null);
+            void confirm(candidate);
           }}
           className="absolute inset-0 size-full opacity-0"
         />
