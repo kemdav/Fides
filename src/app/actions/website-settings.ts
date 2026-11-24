@@ -91,7 +91,7 @@ async function authenticateTenantMember(
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, role, tenant_id")
+    .select("tenant_id")
     .eq("id", user.id)
     .maybeSingle();
 
