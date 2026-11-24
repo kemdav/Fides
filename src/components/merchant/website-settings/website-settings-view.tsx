@@ -667,8 +667,7 @@ export function WebsiteSettingsView({
         <PageContent>
           {/* Page Heading */}
           <PageHeading
-            eyebrow="CONFIGURATION"
-            title="Website settings"
+            title="Website Settings"
             description="Set your logo, colors and homepage content. Preview your changes before publishing."
             actions={
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -678,7 +677,7 @@ export function WebsiteSettingsView({
                 </span>
                 <AdminButton
                   variant="outline"
-                  size="xs"
+                  size="sm"
                   onClick={() => setIsLivePreviewOpen(true)}
                 >
                   <EyeIcon className="w-3.5 h-3.5" />

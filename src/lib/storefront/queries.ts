@@ -218,6 +218,7 @@ export async function getStorefrontServices(
     `)
     .eq("tenant_id", tenantId)
     .eq("active", true)
+    .eq("is_archived", false)
     .order("created_at", { ascending: true });
 
   if (error || !data) return [];
