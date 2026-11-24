@@ -33,7 +33,7 @@ export function SlugBadge({ slug, onChange, error }: { slug: string; onChange: (
     <Field label="Storefront subdomain" htmlFor="requestedSlug" error={error} className="sm:col-span-6">
       <TextInput id="requestedSlug" value={slug} onChange={(event) => onChange(event.target.value.toLowerCase())}
         invalid={Boolean(error)} maxLength={63} placeholder="your-business" aria-describedby="slug-availability" />
-      <p id="slug-availability" role="status" className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
+      <p id="slug-availability" role="status" className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted">
         <span>{slug || "your-business"}.{publicEnv.platformDomain}</span>
         {valid && <span className={current?.available ? "rounded-full bg-success/10 px-2 py-1 text-success" : "rounded-full bg-mist px-2 py-1"}>{current?.message ?? "Checking availability…"}</span>}
       </p>

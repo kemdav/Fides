@@ -2,16 +2,7 @@
 
 import { useState, type InputHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
-
-function EyeIcon({ off }: { off: boolean }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="size-5">
-      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" />
-      <circle cx="12" cy="12" r="3" />
-      {off ? <path d="M4 4l16 16" /> : null}
-    </svg>
-  );
-}
+import { Icon } from "@/components/admin/icon";
 
 export type PasswordInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & {
   id: string;
@@ -39,7 +30,7 @@ export function PasswordInput({ id, inputClassName, fieldLabel = "password", cla
         title={visible ? `Hide ${fieldLabel}` : `Show ${fieldLabel}`}
         className="absolute right-1.5 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-glyph transition-colors hover:bg-burnt/10 hover:text-burnt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
       >
-        <EyeIcon off={visible} />
+        <Icon name={visible ? "eye-off" : "eye"} className="size-5" />
       </button>
     </div>
   );

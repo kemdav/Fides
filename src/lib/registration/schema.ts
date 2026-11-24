@@ -117,9 +117,7 @@ export type RegistrationInput = z.infer<typeof base>;
 export type RegistrationField = keyof RegistrationInput;
 
 export const accountStepSchema = base.pick({
-  fullName: true,
   email: true,
-  phone: true,
   password: true,
   confirmPassword: true,
   acceptTerms: true,
@@ -132,6 +130,8 @@ export const identityStepSchema = base.pick({
 });
 
 export const businessStepSchema = base.pick({
+  fullName: true,
+  phone: true,
   businessName: true,
   businessType: true,
   requestedSlug: true,

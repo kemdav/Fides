@@ -1,69 +1,18 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { Icon } from "@/components/admin/icon";
 import { Modal } from "@/components/ui";
 import { FILE_LIMITS } from "@/lib/registration/options";
 import { cn } from "@/lib/utils";
+import { registrationFieldClasses } from "./field-styles";
 
 /* -------------------------------------------------------------------------- */
 /* Shared bits                                                                */
 /* -------------------------------------------------------------------------- */
 
-export const controlClass = (invalid: boolean) =>
-  cn(
-    "flex h-11 w-full items-center justify-between gap-2 rounded-md border bg-white px-3.5 text-left text-sm text-ink focus-visible:outline-none focus-visible:ring-2",
-    invalid ? "border-danger focus-visible:ring-danger/30" : "border-outline/60 hover:border-outline focus-visible:border-burnt focus-visible:ring-burnt/30"
-  );
-
-function Svg({ className, children }: { className?: string; children: React.ReactNode }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={cn("size-4 shrink-0", className)}>
-      {children}
-    </svg>
-  );
-}
-
-export const ChevronDown = ({ className }: { className?: string }) => (
-  <Svg className={className}>
-    <path d="m6 9 6 6 6-6" />
-  </Svg>
-);
-const ChevronLeft = () => (
-  <Svg>
-    <path d="m15 6-6 6 6 6" />
-  </Svg>
-);
-const ChevronRight = () => (
-  <Svg>
-    <path d="m9 6 6 6-6 6" />
-  </Svg>
-);
-const CalendarIcon = () => (
-  <Svg className="size-5 text-glyph">
-    <path d="M7 2v3M17 2v3M4 8h16M5 4h14a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z" />
-  </Svg>
-);
-export const FileIcon = ({ className }: { className?: string }) => (
-  <Svg className={className}>
-    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" />
-    <path d="M14 3v5h5M9 13h6M9 17h6" />
-  </Svg>
-);
-export const UploadIcon = ({ className }: { className?: string }) => (
-  <Svg className={className}>
-    <path d="M12 16V5m0 0-4 4m4-4 4 4M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" />
-  </Svg>
-);
-export const CheckCircle = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" aria-hidden className={cn("size-4 shrink-0", className)}>
-    <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.2 14.2-4-4 1.4-1.4 2.6 2.6 5.6-5.6 1.4 1.4-7 7Z" fill="currentColor" />
-  </svg>
-);
-export const ShieldIcon = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" aria-hidden className={cn("size-5 shrink-0", className)}>
-    <path d="M12 2.5 4.5 5.5v5.8c0 4.4 3 8.4 7.5 10.2 4.5-1.8 7.5-5.8 7.5-10.2V5.5L12 2.5Zm-1.2 13.2-3-3 1.4-1.4 1.6 1.6 4-4 1.4 1.4-5.4 5.4Z" fill="currentColor" />
-  </svg>
-);
+const controlClass = (invalid: boolean) =>
+  cn(registrationFieldClasses(invalid), "flex items-center justify-between gap-2 text-left");
 
 function useOutsideClose(open: boolean, close: () => void, ref: React.RefObject<HTMLElement | null>) {
   useEffect(() => {
@@ -192,7 +141,7 @@ export function SelectField({
         className={controlClass(invalid)}
       >
         <span className={cn("truncate", !current && "text-subtle")}>{current?.label ?? placeholder}</span>
-        <ChevronDown className={cn("size-5 text-ink transition-transform", open && "rotate-180")} />
+        <Icon name="chevron-down" className={cn("size-5 text-ink transition-transform", open && "rotate-180")} />
       </button>
       {open ? (
         <ul
@@ -213,13 +162,13 @@ export function SelectField({
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => choose(index)}
                 className={cn(
-                  "flex cursor-pointer items-center justify-between gap-2 px-3.5 py-2 text-sm text-ink",
+                  "flex cursor-pointer items-center justify-between gap-2 px-3.5 py-2 text-base text-ink",
                   index === active && "bg-mist",
                   selected && "font-semibold text-burnt"
                 )}
               >
                 {option.label}
-                {selected ? <CheckCircle className="size-4 text-burnt" /> : null}
+                {selected ? <Icon name="check" weight="bold" className="size-4 text-burnt" /> : null}
               </li>
             );
           })}
@@ -336,14 +285,14 @@ export function DatePicker({
         type="button"
         aria-haspopup="dialog"
         aria-expanded={open}
-        aria-controls={panelId}
-        aria-invalid={invalid}
+        aria-controls={open ? panelId : undefined}
+        data-invalid={invalid || undefined}
         aria-describedby={describedBy}
         onClick={toggle}
         className={controlClass(invalid)}
       >
         <span className={cn(!value && "text-subtle")}>{value ? formatDisplayDate(value) : placeholder}</span>
-        <CalendarIcon />
+        <Icon name="calendar" className="size-5 text-glyph" />
       </button>
 
       {open ? (
@@ -358,18 +307,18 @@ export function DatePicker({
               type="button"
               onClick={() => setView((current) => (current === "days" ? "years" : "days"))}
               aria-live="polite"
-              className="flex items-center gap-1 rounded-md px-2 py-1 text-sm font-semibold text-ink hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-base font-semibold text-ink hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
             >
               {MONTHS[cursor.m]} {cursor.y}
-              <ChevronDown className={cn("size-4 transition-transform", view === "years" && "rotate-180")} />
+              <Icon name="chevron-down" className={cn("size-4 transition-transform", view === "years" && "rotate-180")} />
             </button>
             {view === "days" ? (
               <div className="flex items-center gap-1">
                 <button type="button" aria-label="Previous month" disabled={!canGoPrev} onClick={() => shift(-1)} className="flex size-8 items-center justify-center rounded-md text-ink hover:bg-mist disabled:opacity-30">
-                  <ChevronLeft />
+                  <Icon name="chevron-down" className="size-4 rotate-90" />
                 </button>
                 <button type="button" aria-label="Next month" disabled={!canGoNext} onClick={() => shift(1)} className="flex size-8 items-center justify-center rounded-md text-ink hover:bg-mist disabled:opacity-30">
-                  <ChevronRight />
+                  <Icon name="chevron-down" className="size-4 -rotate-90" />
                 </button>
               </div>
             ) : null}
@@ -390,7 +339,7 @@ export function DatePicker({
                       setCursor((current) => ({ y: year, m: year === maxParts.y ? Math.min(current.m, maxParts.m) : current.m }));
                       setView("days");
                     }}
-                    className={cn("h-9 rounded-md text-sm hover:bg-mist", isCurrent ? "bg-burnt font-semibold text-white hover:bg-burnt" : "text-ink")}
+                    className={cn("h-9 rounded-md text-base hover:bg-mist", isCurrent ? "bg-burnt font-semibold text-white hover:bg-burnt" : "text-ink")}
                   >
                     {year}
                   </button>
@@ -399,7 +348,7 @@ export function DatePicker({
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-7 text-center text-xs font-semibold text-muted">
+              <div className="grid grid-cols-7 text-center text-sm font-semibold text-muted">
                 {WEEKDAYS.map((day) => (
                   <span key={day} className="py-1">
                     {day}
@@ -424,7 +373,7 @@ export function DatePicker({
                         buttonRef.current?.focus();
                       }}
                       className={cn(
-                        "mx-auto flex size-9 items-center justify-center rounded-full text-sm",
+                        "mx-auto flex size-9 items-center justify-center rounded-full text-base",
                         isSelected ? "bg-burnt font-semibold text-white" : "text-ink hover:bg-mist",
                         disabled && "cursor-not-allowed text-line hover:bg-transparent"
                       )}
@@ -437,7 +386,7 @@ export function DatePicker({
             </>
           )}
 
-          <div className="mt-2 flex items-center justify-between border-t border-line pt-2 text-xs font-semibold">
+          <div className="mt-2 flex items-center justify-between border-t border-line pt-2 text-sm font-semibold">
             <button
               type="button"
               onClick={() => {
@@ -449,7 +398,8 @@ export function DatePicker({
               Clear
             </button>
             <button type="button" onClick={close} className="rounded px-2 py-1 text-muted hover:bg-mist">
-              Close
+              <Icon name="close" className="size-4" />
+              <span className="sr-only">Close preview</span>
             </button>
           </div>
         </div>
@@ -547,12 +497,13 @@ export function FilePreviewDialog({ file, title, onClose }: { file: File | null;
               <h2 id="file-preview-title" className="truncate text-base font-semibold text-ink">
                 {title}
               </h2>
-              <p className="truncate text-xs text-muted">
+              <p className="truncate text-sm text-muted">
                 {file.name} · {formatBytes(file.size)} · {fileKind(file)}
               </p>
             </div>
-            <button type="button" onClick={onClose} className="shrink-0 rounded-md border border-outline/60 px-3 py-1.5 text-sm font-semibold text-ink hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40">
-              Close
+            <button type="button" onClick={onClose} className="shrink-0 rounded-md border border-outline/60 px-3 py-1.5 text-base font-semibold text-ink hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40">
+              <Icon name="close" className="size-4" />
+              <span className="sr-only">Close preview</span>
             </button>
           </header>
           <div className="min-h-[300px] flex-1 overflow-auto bg-mist p-3">
@@ -563,7 +514,7 @@ export function FilePreviewDialog({ file, title, onClose }: { file: File | null;
               <iframe src={url} title={`Preview of ${file.name}`} className="h-[70dvh] w-full rounded-md bg-white" />
             )}
           </div>
-          <footer className="flex items-center justify-between gap-3 border-t border-line px-5 py-3 text-xs text-muted">
+          <footer className="flex items-center justify-between gap-3 border-t border-line px-5 py-3 text-sm text-muted">
             <span>Preview shown on this device only.</span>
             <a href={url} target="_blank" rel="noreferrer" className="font-semibold text-burnt hover:underline">
               Open in new tab
@@ -613,15 +564,15 @@ export function DocumentCard({
     >
       <div className="flex items-start justify-between gap-3">
         <span className={cn("flex size-9 items-center justify-center rounded-lg", file ? "bg-wash text-success" : "bg-mist text-glyph")}>
-          <FileIcon className="size-5" />
+          <Icon name="file" className="size-5" />
         </span>
-        <span className={cn("rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wide", required ? "bg-danger-bg text-danger" : "bg-mist text-muted")}>
+        <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold tracking-wide", required ? "bg-danger-bg text-danger" : "bg-mist text-muted")}>
           {required ? "REQUIRED" : "OPTIONAL"}
         </span>
       </div>
       <div>
-        <p className="text-sm font-semibold text-ink">{title}</p>
-        <p className="text-xs text-subtle">{hint}</p>
+        <p className="text-base font-semibold text-ink">{title}</p>
+        <p className="text-sm text-subtle">{hint}</p>
       </div>
 
       {picker.input(`Upload ${title}`)}
@@ -629,21 +580,21 @@ export function DocumentCard({
       {file ? (
         <div className="rounded-lg border border-success/60 bg-wash p-3">
           <div className="flex items-start gap-2.5">
-            <CheckCircle className="mt-0.5 size-5 text-success" />
+            <Icon name="check" weight="bold" className="mt-0.5 size-5 text-success" />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-success-deep" title={file.name}>
+              <p className="truncate text-base font-semibold text-success-deep" title={file.name}>
                 {file.name}
               </p>
-              <p className="text-xs text-success">
+              <p className="text-sm text-success">
                 {formatBytes(file.size)} · {fileKind(file)}
               </p>
             </div>
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <button type="button" onClick={() => onPreview(file)} className="h-8 rounded-md border border-success/50 bg-white px-3 text-xs font-semibold text-success-deep hover:bg-success/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success/40">
+            <button type="button" onClick={() => onPreview(file)} className="h-11 rounded-lg border border-success/50 bg-white px-3 text-sm font-semibold text-success-deep hover:bg-success/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success/40">
               Preview
             </button>
-            <button type="button" onClick={picker.open} className="h-8 rounded-md border border-ink/60 bg-white px-3 text-xs font-semibold text-ink hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40">
+            <button type="button" onClick={picker.open} className="h-11 rounded-lg border border-ink/60 bg-white px-3 text-sm font-semibold text-ink hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40">
               Replace
             </button>
             <button
@@ -652,7 +603,7 @@ export function DocumentCard({
                 setLocalError(null);
                 onRemove();
               }}
-              className="h-8 rounded-md px-2 text-xs font-semibold text-danger hover:bg-danger-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/40"
+              className="h-11 rounded-lg px-2 text-sm font-semibold text-danger hover:bg-danger-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/40"
             >
               Remove
             </button>
@@ -665,17 +616,17 @@ export function DocumentCard({
           aria-describedby={message ? errorId : undefined}
           data-invalid={message ? "true" : undefined}
           className={cn(
-            "flex h-11 w-full items-center justify-center gap-2 rounded-lg border bg-white text-sm font-semibold transition-colors hover:border-burnt hover:bg-burnt/5 hover:text-burnt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40",
+            "flex h-12 w-full items-center justify-center gap-2 rounded-lg border bg-white text-base font-semibold transition-colors hover:border-burnt hover:bg-burnt/5 hover:text-burnt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40",
             message ? "border-danger text-danger" : "border-outline/50 text-muted"
           )}
         >
-          <UploadIcon />
+          <Icon name="upload" className="size-5" />
           Upload File
         </button>
       )}
 
       {message ? (
-        <p id={errorId} role="alert" className="text-xs text-danger">
+        <p id={errorId} role="alert" className="text-sm text-danger">
           {message}
         </p>
       ) : null}
@@ -713,17 +664,17 @@ export function IdUpload({
       {file ? (
         <div className="flex flex-wrap items-center gap-3 rounded-lg bg-[#eceff6] px-3 py-2.5">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-wash text-success">
-            <ShieldIcon />
+            <Icon name="shield" weight="fill" className="size-5" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-ink" title={file.name}>
+            <p className="truncate text-base font-semibold text-ink" title={file.name}>
               {file.name}
             </p>
-            <p className="flex items-center gap-1 text-xs text-success">
-              <CheckCircle className="size-3.5" /> Uploaded · {formatBytes(file.size)}
+            <p className="flex items-center gap-1 text-sm text-success">
+              <Icon name="check" weight="bold" className="size-3.5" /> Uploaded · {formatBytes(file.size)}
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-3 text-xs font-semibold">
+          <div className="flex shrink-0 items-center gap-3 text-sm font-semibold">
             <button type="button" onClick={() => onPreview(file)} className="text-ink hover:underline">
               Preview
             </button>
@@ -746,15 +697,15 @@ export function IdUpload({
         aria-describedby={message ? errorId : undefined}
         data-invalid={message ? "true" : undefined}
         className={cn(
-          "flex w-full flex-col items-center gap-0.5 rounded-lg border border-dashed px-4 py-4 text-sm text-muted transition-colors hover:border-burnt hover:bg-burnt/5 hover:text-burnt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40",
+          "flex w-full flex-col items-center gap-0.5 rounded-lg border border-dashed px-4 py-4 text-base text-muted transition-colors hover:border-burnt hover:bg-burnt/5 hover:text-burnt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40",
           message ? "border-danger" : "border-outline/60"
         )}
       >
         <span className="font-medium">{file ? "Upload a different file" : "Upload File"}</span>
-        <span className="text-[11px] text-subtle">PDF, JPG or PNG · max {FILE_LIMITS.documentBytes / (1024 * 1024)} MB</span>
+        <span className="text-sm text-subtle">PDF, JPG or PNG · max {FILE_LIMITS.documentBytes / (1024 * 1024)} MB</span>
       </button>
       {message ? (
-        <p id={errorId} role="alert" className="text-xs text-danger">
+        <p id={errorId} role="alert" className="text-sm text-danger">
           {message}
         </p>
       ) : null}

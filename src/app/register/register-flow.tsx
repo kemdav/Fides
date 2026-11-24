@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useSyncExternalStore } from "react";
-import { CheckIcon } from "@/components/ui";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { adminButtonClasses } from "@/components/admin/admin-button";
+import { Icon, type IconName } from "@/components/admin/icon";
+import { Card as BaseCard } from "@/components/ui";
 import {
   ALL_DOCUMENTS,
   BUSINESS_TYPES,
@@ -48,7 +50,6 @@ import {
   PasswordInput,
   SecureFooter,
   Sidebar,
-  StepIcon,
   STEPS,
   TextInput,
   useObjectUrl,
@@ -109,10 +110,8 @@ type Errors = Partial<Record<string, string>>;
 const documentSizeMb = FILE_LIMITS.documentBytes / (1024 * 1024);
 const stepSchemas = [accountStepSchema, identityStepSchema, businessStepSchema, null, planStepSchema, null] as const;
 
-const primaryButton =
-  "inline-flex h-11 items-center justify-center rounded-md bg-burnt px-5 text-sm font-semibold text-white transition-colors hover:bg-burnt-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-60";
-const secondaryButton =
-  "inline-flex h-11 items-center justify-center rounded-md border border-ink/50 bg-white px-5 text-sm font-semibold text-ink transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:opacity-60";
+const primaryButton = adminButtonClasses({ size: "md", className: "gap-2 disabled:cursor-not-allowed" });
+const secondaryButton = adminButtonClasses({ variant: "outline-accent", size: "md", className: "gap-2 disabled:cursor-not-allowed disabled:hover:bg-transparent" });
 
 export function RegisterFlow({ requestAccount = false }: { requestAccount?: boolean }) {
   const draftKey = requestAccount ? "fides-account-request-draft" : "fides-registration-draft";
@@ -132,6 +131,8 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
   const [draftNote, setDraftNote] = useState<string | null>(null);
   const [uploads, setUploads] = useState<Uploads>({});
   const [uploading, setUploading] = useState(false);
+  const mainRef = useRef<HTMLElement>(null);
+  const previousStep = useRef(step);
   const busy = uploading || submitting;
   const payload = { ...values, requestedSlug: requestAccount ? values.requestedSlug : undefined };
 
@@ -155,7 +156,10 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
   }
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (previousStep.current === step) return;
+    previousStep.current = step;
+    window.scrollTo({ top: 0 });
+    mainRef.current?.querySelector("h1")?.focus({ preventScroll: true });
   }, [step]);
 
   function set<K extends keyof Values>(key: K, value: Values[K]) {
@@ -303,7 +307,7 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
     if (!parsed.success) {
       const issue = parsed.error.issues[0];
       const field = String(issue.path[0] ?? "");
-      const target = ["fullName", "email", "phone", "password", "confirmPassword", "acceptTerms"].includes(field)
+      const target = ["email", "password", "confirmPassword", "acceptTerms"].includes(field)
         ? 0
         : ["ownerLegalName", "dateOfBirth", "idType"].includes(field)
           ? 1
@@ -380,30 +384,32 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
     <div className="flex min-h-dvh flex-col bg-powder text-ink lg:flex-row">
       <Sidebar current={step} furthest={busy ? -1 : furthest} onJump={(index) => setStep(index)} />
       <MobileProgress current={step} />
-      <main className="flex min-w-0 flex-1 flex-col items-center px-4 py-6 sm:px-8 lg:px-12 lg:py-10">
-        <div className={cn("flex w-full flex-1 flex-col", step === 4 ? "max-w-[1100px]" : step === 5 ? "max-w-[820px]" : step === 3 ? "max-w-[900px]" : step === 0 ? "max-w-[560px]" : "max-w-[680px]")}>
-          {step === 0 && (
-            <>
-              <Link
-                href="/"
-                className="mb-4 inline-flex w-fit items-center gap-1.5 rounded-md py-1 pr-2 text-sm font-semibold text-burnt hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
-              >
-                <span aria-hidden>←</span> Back to home
+      <main ref={mainRef} className="flex min-w-0 flex-1 flex-col items-center px-4 py-6 sm:px-8 lg:px-6 lg:py-8 xl:px-8">
+        {step === 0 && (
+          <nav aria-label="Registration links" className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2 self-start">
+            <Link
+              href="/"
+              className="inline-flex min-h-11 items-center gap-2 rounded-md pr-2 text-base font-semibold text-burnt hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
+            >
+              <Icon name="arrow-left" className="size-5" /> Back to Home
+            </Link>
+            {requestAccount && (
+              <Link href="/reset-request?mode=application" className="inline-flex min-h-11 items-center text-base font-semibold text-burnt hover:underline">
+                Track an existing application
               </Link>
-              {requestAccount && (
-                <Link href="/reset-request?mode=application" className="mb-4 w-fit text-sm font-semibold text-burnt hover:underline">
-                  Track an existing application
-                </Link>
-              )}
-              <div className="my-auto">
-                {hasDraft ? (
-                  <button type="button" onClick={restoreDraft} className="mb-4 w-full rounded-lg bg-[#faece3] px-4 py-2.5 text-sm font-semibold text-burnt hover:bg-[#f6dfd0]">
-                    Restore your saved draft
-                  </button>
-                ) : null}
-                <AccountStep values={values} errors={errors} set={set} onNext={next} />
-              </div>
-            </>
+            )}
+          </nav>
+        )}
+        <div className={cn("flex w-full flex-1 flex-col", step === 4 ? "max-w-[1100px]" : step === 5 ? "max-w-[820px]" : step === 3 ? "max-w-[900px]" : step === 0 ? "max-w-lg" : "max-w-[680px]")}>
+          {step === 0 && (
+            <div className="my-auto py-4 sm:py-6">
+              {hasDraft ? (
+                <button type="button" onClick={restoreDraft} className="mb-4 w-full rounded-lg bg-[#faece3] px-4 py-2.5 text-base font-semibold text-burnt hover:bg-[#f6dfd0]">
+                  Restore your saved draft
+                </button>
+              ) : null}
+              <AccountStep values={values} errors={errors} set={set} onNext={next} />
+            </div>
           )}
           {step === 1 && (
             <IdentityStep
@@ -493,15 +499,15 @@ type StepProps = {
 function Heading({ title, subtitle, center = true }: { title: string; subtitle: string; center?: boolean }) {
   return (
     <div className={cn("mb-6 flex flex-col gap-2", center ? "text-center" : "text-left")}>
-      <h1 className="font-display text-3xl text-ink sm:text-4xl">{title}</h1>
-      <p className="text-sm text-muted sm:text-base">{subtitle}</p>
+      <h1 tabIndex={-1} className="font-display text-[28px] leading-[38px] text-ink focus:outline-none sm:text-[32px] sm:leading-[42px]">{title}</h1>
+      <p className="text-base leading-6 text-muted">{subtitle}</p>
     </div>
   );
 }
 
 function Card({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-line bg-white p-5 shadow-[0_8px_24px_-12px_rgb(44_58_75/0.18)] sm:p-7">{children}</div>
+    <BaseCard className="rounded-xl border-line p-5 text-ink sm:p-6">{children}</BaseCard>
   );
 }
 
@@ -521,51 +527,36 @@ function AccountStep({ values, errors, set, onNext }: StepProps & { onNext: () =
         onNext();
       }}
     >
-      <Heading title="Create Your Account" subtitle="Start your journey with Fides — it only takes a few minutes." />
-      <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
-        <Field label="Full Name" htmlFor="fullName" error={errors.fullName}>
-          <TextInput id="fullName" invalid={!!errors.fullName} autoComplete="name" placeholder="Maria Santos" value={values.fullName} onChange={(e) => set("fullName", e.target.value)} />
-        </Field>
+      <Heading title="Create Your Account" subtitle="Enter your business email and choose a password to get started." />
+      <div className="grid gap-6">
         <Field label="Business Email" htmlFor="email" error={errors.email}>
           <TextInput id="email" type="email" invalid={!!errors.email} autoComplete="email" placeholder="maria@bellavita.ph" value={values.email} onChange={(e) => set("email", e.target.value)} />
         </Field>
-        <Field label="Phone Number" htmlFor="phone" error={errors.phone} hint="Use 09XXXXXXXXX (11 digits) or +63 9XX XXX XXXX.">
-          <TextInput
-            id="phone"
-            type="tel"
-            inputMode="tel"
-            maxLength={17}
-            invalid={!!errors.phone}
-            aria-describedby={errors.phone ? "phone-error" : "phone-hint"}
-            autoComplete="tel"
-            placeholder="+63 917 000 0000"
-            value={values.phone}
-            onChange={(e) => set("phone", e.target.value.replace(/[^\d+\s()-]/g, ""))}
-          />
-        </Field>
         <Field label="Password" htmlFor="password" error={errors.password}>
-          <PasswordInput id="password" fieldLabel="password" invalid={!!errors.password} autoComplete="new-password" placeholder="Create a password" value={values.password} onChange={(e) => set("password", e.target.value)} />
+          <PasswordInput id="password" fieldLabel="password" aria-describedby={errors.password ? "password-error password-requirements" : "password-requirements"} invalid={!!errors.password} autoComplete="new-password" placeholder="Create a password" value={values.password} onChange={(e) => set("password", e.target.value)} />
         </Field>
-        <Field label="Confirm Password" htmlFor="confirmPassword" error={errors.confirmPassword} className="sm:col-span-2">
+        <ul id="password-requirements" className="-mt-3 flex flex-col gap-1.5 text-sm" aria-label="Password requirements">
+          {rules.map((rule) => (
+            <li key={rule.text} className={cn("flex items-center gap-2", rule.ok ? "text-success" : "text-subtle")}>
+              <span className={cn("flex size-4 items-center justify-center rounded-full", rule.ok ? "bg-success text-white" : "border border-outline/60")}>
+                {rule.ok ? <Icon name="check" className="size-2.5" /> : null}
+              </span>
+              <span className="sr-only">{rule.ok ? "Met: " : "Required: "}</span>
+              {rule.text}
+            </li>
+          ))}
+        </ul>
+        <Field label="Confirm Password" htmlFor="confirmPassword" error={errors.confirmPassword}>
           <PasswordInput id="confirmPassword" fieldLabel="confirm password" invalid={!!errors.confirmPassword} autoComplete="new-password" placeholder="Re-enter your password" value={values.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)} />
         </Field>
       </div>
 
-      <ul className="mt-4 flex flex-col gap-1.5 text-xs" aria-label="Password requirements">
-        {rules.map((rule) => (
-          <li key={rule.text} className={cn("flex items-center gap-2", rule.ok ? "text-success" : "text-subtle")}>
-            <span className={cn("flex size-4 items-center justify-center rounded-full", rule.ok ? "bg-success text-white" : "border border-outline/60")}>
-              {rule.ok ? <StepIcon name="check" className="size-2.5" /> : null}
-            </span>
-            {rule.text}
-          </li>
-        ))}
-      </ul>
-
       <div className="mt-6 flex flex-col gap-1">
-        <label className="flex cursor-pointer items-start gap-3 text-sm text-body">
+        <label className="flex cursor-pointer items-start gap-3 text-base text-body">
           <input
             type="checkbox"
+            aria-invalid={Boolean(errors.acceptTerms)}
+            aria-describedby={errors.acceptTerms ? "acceptTerms-error" : undefined}
             checked={values.acceptTerms}
             onChange={(e) => set("acceptTerms", e.target.checked)}
             className="mt-0.5 size-4 shrink-0 accent-burnt"
@@ -583,7 +574,7 @@ function AccountStep({ values, errors, set, onNext }: StepProps & { onNext: () =
           </span>
         </label>
         {errors.acceptTerms ? (
-          <p role="alert" className="text-xs text-danger">
+          <p id="acceptTerms-error" role="alert" className="text-sm text-danger">
             {errors.acceptTerms}
           </p>
         ) : null}
@@ -591,9 +582,9 @@ function AccountStep({ values, errors, set, onNext }: StepProps & { onNext: () =
 
       <div className="mt-7 flex flex-col items-center gap-4">
         <button type="submit" className={primaryButton}>
-          Create Account →
+          Create Account <Icon name="arrow-right" className="size-4" />
         </button>
-        <p className="text-sm text-muted">
+        <p className="text-base text-muted">
           Already have an account?{" "}
           <Link href="/login" className="font-semibold text-burnt hover:underline">
             Log in
@@ -607,7 +598,7 @@ function AccountStep({ values, errors, set, onNext }: StepProps & { onNext: () =
 
 function StepActions({
   onBack,
-  nextLabel = "Save & Continue →",
+  nextLabel = "Save & Continue",
 }: {
   onBack?: () => void;
   nextLabel?: string;
@@ -620,7 +611,7 @@ function StepActions({
         </button>
       ) : null}
       <button type="submit" className={primaryButton}>
-        {nextLabel}
+        {nextLabel} <Icon name="arrow-right" className="size-4" />
       </button>
     </div>
   );
@@ -696,7 +687,7 @@ function IdentityStep({
             />
           </Field>
           <div className="flex flex-col gap-1.5 sm:col-span-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-body">
+            <p className="text-sm font-semibold uppercase tracking-wide text-body">
               Government-Issued ID (Front)
               <span aria-hidden className="ml-0.5 text-danger">
                 *
@@ -761,9 +752,9 @@ function BusinessStep({
             )}
           </div>
           <div className="flex min-w-0 flex-col items-start gap-2">
-            <p className="text-sm font-semibold text-ink">Business Logo</p>
-            <p className="text-xs text-subtle">Recommended: square JPG or PNG, at least 400×400 px. Max 2 MB.</p>
-            <label className="inline-flex h-11 cursor-pointer items-center rounded-md border border-outline/70 px-5 text-sm font-semibold text-muted transition-colors hover:border-burnt hover:text-burnt focus-within:ring-2 focus-within:ring-burnt/40">
+            <p className="text-base font-semibold text-ink">Business Logo</p>
+            <p className="text-sm text-subtle">Recommended: square JPG or PNG, at least 400×400 px. Max 2 MB.</p>
+            <label className="inline-flex h-12 cursor-pointer items-center rounded-md border border-outline/70 px-5 text-base font-semibold text-muted transition-colors hover:border-burnt hover:text-burnt focus-within:ring-2 focus-within:ring-burnt/40">
               {logo ? "Replace Logo" : "Upload Logo"}
               <input
                 type="file"
@@ -776,12 +767,12 @@ function BusinessStep({
               />
             </label>
             {logo ? (
-              <button type="button" onClick={() => onLogo(null)} className="text-xs font-semibold text-burnt hover:underline">
+              <button type="button" onClick={() => onLogo(null)} className="text-sm font-semibold text-burnt hover:underline">
                 Remove logo
               </button>
             ) : null}
             {logoError ? (
-              <p role="alert" className="text-xs text-danger">
+              <p role="alert" className="text-sm text-danger">
                 {logoError}
               </p>
             ) : null}
@@ -818,6 +809,28 @@ function BusinessStep({
             <TextInput id="zipCode" autoComplete="postal-code" invalid={!!errors.zipCode} placeholder="1200" value={values.zipCode} onChange={(e) => set("zipCode", e.target.value)} />
           </Field>
         </div>
+        <fieldset className="mt-7 border-t border-line pt-5">
+          <legend className="float-left mb-2 w-full text-lg font-semibold text-ink">Business contact</legend>
+          <div className="clear-both grid gap-5 sm:grid-cols-2">
+            <Field label="Full Name" htmlFor="fullName" error={errors.fullName}>
+              <TextInput id="fullName" invalid={!!errors.fullName} autoComplete="name" placeholder="Maria Santos" value={values.fullName} onChange={(e) => set("fullName", e.target.value)} />
+            </Field>
+            <Field label="Phone Number" htmlFor="phone" error={errors.phone} hint="Use 09XXXXXXXXX (11 digits) or +63 9XX XXX XXXX.">
+              <TextInput
+                id="phone"
+                type="tel"
+                inputMode="tel"
+                maxLength={17}
+                invalid={!!errors.phone}
+                aria-describedby={errors.phone ? "phone-error" : "phone-hint"}
+                autoComplete="tel"
+                placeholder="+63 917 000 0000"
+                value={values.phone}
+                onChange={(e) => set("phone", e.target.value.replace(/[^\d+\s()-]/g, ""))}
+              />
+            </Field>
+          </div>
+        </fieldset>
         <StepActions onBack={onBack} />
       </Card>
       <div className="mt-5">
@@ -873,14 +886,14 @@ function DocumentsStep({
         subtitle="These documents help us verify your business before your application is reviewed. Review begins after your final submission on the last step."
       />
       {summaryError ? (
-        <p role="alert" className="mb-4 rounded-lg bg-danger-bg px-4 py-3 text-sm text-danger-dark">
+        <p role="alert" className="mb-4 rounded-lg bg-danger-bg px-4 py-3 text-base text-danger-dark">
           {summaryError}
         </p>
       ) : null}
-      <p className="mb-3 text-xs font-semibold text-muted" aria-live="polite">
+      <p className="mb-3 text-sm font-semibold text-muted" aria-live="polite">
         {uploaded} of {ALL_DOCUMENTS.length} required documents uploaded
       </p>
-      <ul className="mb-4 grid gap-2 text-sm" aria-label="Verification upload progress">
+      <ul className="mb-4 grid gap-2 text-base" aria-label="Verification upload progress">
         {files.map(({ key, title, upload }) => (
           <li key={key} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white p-3">
             <span>{title}</span>
@@ -911,7 +924,7 @@ function DocumentsStep({
         <InfoNote>
           These documents will be included in your application summary on the final step. Review by our team begins only after you submit your complete application. This typically takes 1–2 business days.
         </InfoNote>
-        <p className="text-xs text-subtle">PDF, JPG or PNG · Max {documentSizeMb} MB per file</p>
+        <p className="text-sm text-subtle">PDF, JPG or PNG · Max {documentSizeMb} MB per file</p>
         <div className="flex flex-col-reverse items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
           <button type="button" onClick={onBack} disabled={uploading} className={secondaryButton}>
             Back
@@ -940,7 +953,7 @@ function PlanStep({ values, errors, set, onBack, onNext }: StepProps & { onBack:
       />
       <PlanCardGrid selectedCode={values.planCode} onSelect={(code) => set("planCode", code)} />
       <div className="mx-auto mt-6 w-full max-w-3xl overflow-x-auto rounded-xl border border-line bg-white">
-        <table className="w-full text-xs sm:text-sm">
+        <table className="w-full text-base">
           <caption className="p-3 text-left font-semibold">Compare plans</caption>
           <thead>
             <tr>
@@ -956,20 +969,20 @@ function PlanStep({ values, errors, set, onBack, onNext }: StepProps & { onBack:
         </table>
       </div>
       {errors.planCode ? (
-        <p role="alert" className="mt-3 text-center text-xs text-danger">
+        <p role="alert" className="mt-3 text-center text-sm text-danger">
           {errors.planCode}
         </p>
       ) : null}
-      <p className="mt-6 flex items-center justify-center gap-2 text-center text-xs text-muted">
-        <CheckIcon tone="success" className="size-4" />
+      <p className="mt-6 flex items-center justify-center gap-2 text-center text-sm text-muted">
+        <Icon name="check" weight="bold" className="size-4 text-success" />
         {TRIAL_DAYS}-day free trial on all plans · No credit card required · Cancel anytime
       </p>
       <div className="mt-8 flex items-center justify-between gap-3">
         <button type="button" onClick={onBack} className={cn(secondaryButton, "border-burnt text-burnt hover:bg-burnt/5")}>
-          ← Back
+          <Icon name="arrow-left" className="size-4" /> Back
         </button>
         <button type="submit" className={primaryButton}>
-          Continue to Summary →
+          Continue to Summary <Icon name="arrow-right" className="size-4" />
         </button>
       </div>
     </form>
@@ -983,18 +996,18 @@ function SummaryCard({
   children,
 }: {
   title: string;
-  icon: "user" | "shield" | "building" | "document" | "card";
+  icon: IconName;
   onEdit: () => void;
   children: React.ReactNode;
 }) {
   return (
     <section className="overflow-hidden rounded-xl border border-line bg-white shadow-[0_3px_14px_rgb(44_58_75/0.05)]">
       <header className="flex items-center justify-between gap-3 border-b border-line px-5 py-3">
-        <h2 className="flex items-center gap-3 text-sm font-semibold text-ink">
-          <StepIcon name={icon} className="size-5 text-glyph" />
+        <h2 className="flex items-center gap-3 text-base font-semibold text-ink">
+          <Icon name={icon} className="size-5 text-glyph" />
           {title}
         </h2>
-        <button type="button" onClick={onEdit} className="rounded-md border border-burnt px-3 py-1 text-xs font-semibold text-burnt transition-colors hover:bg-burnt/10">
+        <button type="button" onClick={onEdit} className={adminButtonClasses({ variant: "outline-accent", size: "xs" })}>
           Edit
         </button>
       </header>
@@ -1005,7 +1018,7 @@ function SummaryCard({
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-6 text-sm">
+    <div className="flex items-start justify-between gap-6 text-base">
       <span className="text-subtle">{label}</span>
       <span className="min-w-0 break-words text-right font-medium text-ink">{value}</span>
     </div>
@@ -1014,9 +1027,9 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 
 function FileRow({ name, size }: { name: string; size: number }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg bg-[#eceff6] px-3 py-2.5 text-xs text-body">
+    <div className="flex items-center gap-3 rounded-lg bg-[#eceff6] px-3 py-2.5 text-sm text-body">
       <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-burnt text-white">
-        <StepIcon name="check" className="size-3" />
+        <Icon name="check" className="size-3" />
       </span>
       <span className="min-w-0 flex-1 truncate">{name} — Ready to submit</span>
       <span className="shrink-0 text-subtle">{formatBytes(size)}</span>
@@ -1058,19 +1071,16 @@ function SummaryStep({
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
-        <h1 className="flex items-center gap-3 font-display text-3xl text-ink sm:text-4xl">
-          <span className="flex size-9 items-center justify-center rounded-full bg-burnt font-sans text-lg font-semibold text-white">6</span>
+        <h1 tabIndex={-1} className="font-display text-[28px] leading-[38px] text-ink focus:outline-none sm:text-[32px] sm:leading-[42px]">
           Application Summary
         </h1>
-        <p className="text-sm text-muted">
+        <p className="text-base text-muted">
           Review all details carefully before submitting. Once confirmed, your application will be sent for review (1–2 business days).
         </p>
       </div>
 
-      <SummaryCard title="Account Details" icon="user" onEdit={() => onEdit(0)}>
-        <Row label="Full Name" value={values.fullName} />
+      <SummaryCard title="Account Details" icon="users" onEdit={() => onEdit(0)}>
         <Row label="Email Address" value={values.email} />
-        <Row label="Phone Number" value={values.phone} />
         <Row label="Password" value="Set securely" />
       </SummaryCard>
 
@@ -1081,13 +1091,15 @@ function SummaryStep({
         {idFile ? (
           <FileRow name={idFile.name} size={idFile.size} />
         ) : (
-          <p role="alert" className="rounded-lg bg-danger-bg px-3 py-2 text-xs text-danger-dark">
+          <p role="alert" className="rounded-lg bg-danger-bg px-3 py-2 text-sm text-danger-dark">
             Government-issued ID is missing. Go back to upload it before submitting.
           </p>
         )}
       </SummaryCard>
 
-      <SummaryCard title="Business Information" icon="building" onEdit={() => onEdit(2)}>
+      <SummaryCard title="Business Information" icon="grid" onEdit={() => onEdit(2)}>
+        <Row label="Contact name" value={values.fullName} />
+        <Row label="Contact phone" value={values.phone} />
         <Row label="Business Name" value={values.businessName} />
         {values.requestedSlug && <Row label="Requested subdomain" value={values.requestedSlug} />}
         <Row label="Category" value={values.businessType} />
@@ -1102,7 +1114,7 @@ function SummaryStep({
             </>
           }
         />
-        {logo ? <FileRow name={logo.name} size={logo.size} /> : <p className="text-xs text-subtle">No business logo selected.</p>}
+        {logo ? <FileRow name={logo.name} size={logo.size} /> : <p className="text-sm text-subtle">No business logo selected.</p>}
       </SummaryCard>
 
       <SummaryCard title="Document Requirements" icon="document" onEdit={() => onEdit(3)}>
@@ -1110,11 +1122,11 @@ function SummaryStep({
           const file = docs[slot.key];
           return file ? (
             <div key={slot.key} className="flex flex-col gap-1">
-              <p className="text-xs text-subtle">{slot.title}</p>
+              <p className="text-sm text-subtle">{slot.title}</p>
               <FileRow name={file.name} size={file.size} />
             </div>
           ) : (
-            <p key={slot.key} role="alert" className="rounded-lg bg-danger-bg px-3 py-2 text-xs text-danger-dark">
+            <p key={slot.key} role="alert" className="rounded-lg bg-danger-bg px-3 py-2 text-sm text-danger-dark">
               {slot.title} is missing. Go back to upload it before submitting.
             </p>
           );
@@ -1126,8 +1138,8 @@ function SummaryStep({
       </SummaryCard>
 
       <section className="rounded-xl border border-line bg-white p-5 shadow-[0_3px_14px_rgb(44_58_75/0.05)]">
-        <p className="text-[11px] font-semibold tracking-wider text-muted">ACCURACY &amp; CONSENT</p>
-        <label className="mt-3 flex cursor-pointer items-start gap-3 text-sm text-body">
+        <p className="text-sm font-semibold tracking-wide text-muted">ACCURACY &amp; CONSENT</p>
+        <label className="mt-3 flex cursor-pointer items-start gap-3 text-base text-body">
           <input
             type="checkbox"
             checked={values.confirmAccuracy}
@@ -1137,16 +1149,16 @@ function SummaryStep({
           I confirm that all information and documents provided are accurate and complete. I understand that submitting false information may result in rejection of my application.
         </label>
         {errors.confirmAccuracy ? (
-          <p role="alert" className="mt-2 text-xs text-danger">
+          <p role="alert" className="mt-2 text-sm text-danger">
             {errors.confirmAccuracy}
           </p>
         ) : null}
-        <p className="mt-4 border-t border-line pt-4 text-xs text-subtle">
+        <p className="mt-4 border-t border-line pt-4 text-sm text-subtle">
           After confirming, your application will be reviewed within 1–2 business days. You will be notified by email at {values.email}.
         </p>
 
         {submitError ? (
-          <p role="alert" className="mt-4 rounded-lg bg-danger-bg px-4 py-3 text-sm text-danger-dark">
+          <p role="alert" className="mt-4 rounded-lg bg-danger-bg px-4 py-3 text-base text-danger-dark">
             {submitError}
           </p>
         ) : null}
@@ -1156,14 +1168,14 @@ function SummaryStep({
         </button>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <button type="button" onClick={onBack} disabled={submitting} className={cn(secondaryButton, "w-full")}>
-            ← Back
+            <Icon name="arrow-left" className="size-4" /> Back
           </button>
           <button type="button" onClick={onSaveDraft} disabled={submitting} className={cn(secondaryButton, "w-full")}>
             Save Draft
           </button>
         </div>
         {draftNote ? (
-          <p role="status" className="mt-3 text-center text-xs text-success">
+          <p role="status" className="mt-3 text-center text-sm text-success">
             {draftNote}
           </p>
         ) : null}

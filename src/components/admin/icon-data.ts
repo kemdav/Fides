@@ -1,5 +1,17 @@
 /* solar icon set (cc by 4.0): https://icon-sets.iconify.design/solar/ */
 export const iconBodies: Record<string, { regular: string; fill?: string }> = {
+  "arrow-left": {
+    regular: '<path d="M20 12H4m0 0 6-6m-6 6 6 6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="stroke-width:var(--icon-stroke,1.5)"/>',
+  },
+  "arrow-right": {
+    regular: '<path d="M4 12h16m0 0-6-6m6 6-6 6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="stroke-width:var(--icon-stroke,1.5)"/>',
+  },
+  "eye": {
+    regular: '<g stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="stroke-width:var(--icon-stroke,1.5)"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></g>',
+  },
+  "eye-off": {
+    regular: '<path d="m3 3 18 18M10.5 5.1A10 10 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3 3.9M6.3 6.3A18 18 0 0 0 2 12s3.6 7 10 7c1.8 0 3.4-.6 4.8-1.4M9.9 9.9a3 3 0 0 0 4.2 4.2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="stroke-width:var(--icon-stroke,1.5)"/>',
+  },
   "upload": {
     "regular": "<path d=\"M12 16V3m-5 5 5-5 5 5M4 16v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"stroke-width:var(--icon-stroke,1.5)\"/>",
   },

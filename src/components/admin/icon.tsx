@@ -4,6 +4,8 @@ import { iconBodies } from "./icon-data";
 
 export type IconName =
   | "alert"
+  | "arrow-left"
+  | "arrow-right"
   | "bell"
   | "book-settings"
   | "calendar"
@@ -13,6 +15,8 @@ export type IconName =
   | "chevron-down"
   | "clock"
   | "close"
+  | "eye"
+  | "eye-off"
   | "file"
   | "grid"
   | "layers"
