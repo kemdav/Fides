@@ -86,8 +86,12 @@ export default async function TenantLayout({
 
   const theme = storefrontData?.tenant;
   const fonts = getTypographyFonts(theme?.typography);
-  const accentColor = theme?.accentColor;
-  const brandColor = theme?.brandColor || tenant.brand_color;
+  const mainColor = tenant.brand_color || theme?.brandColor;
+  const secondaryColor =
+    (tenant as { secondary_color?: string | null }).secondary_color ?? null;
+  const accentColor =
+    (tenant as { accent_color?: string | null }).accent_color ||
+    theme?.accentColor;
 
   const themeStyle = {
     "--font-display": fonts.display,
@@ -95,15 +99,12 @@ export default async function TenantLayout({
     "--font-sans": fonts.body,
     "--font-mulish": fonts.body,
     fontFamily: fonts.body,
+    ...(mainColor ? { "--color-powder": mainColor } : {}),
+    ...(secondaryColor ? { "--color-sky": secondaryColor } : {}),
     ...(accentColor
       ? {
           "--color-burnt": accentColor,
           "--color-burnt-dark": accentColor,
-        }
-      : {}),
-    ...(brandColor
-      ? {
-          "--color-sky": brandColor,
         }
       : {}),
   } as CSSProperties;
