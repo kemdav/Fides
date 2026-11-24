@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck:strict": "tsc --noEmit --noUncheckedIndexedAccess",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "node --experimental-strip-types --test src/lib/__tests__/*.test.ts",
     "email:test": "node scripts/send-test-email.mjs",
