@@ -1,7 +1,11 @@
 "use client";
 
 import * as React from "react";
+import { AdminButton } from "@/components/admin/admin-button";
+import { CheckboxDropdown } from "@/components/admin/checkbox-dropdown";
+import { fieldOutlineClasses } from "@/components/admin/fields";
 import { Icon } from "@/components/admin/icon";
+import { Listbox } from "@/components/admin/listbox";
 import type {
   AddonDTO,
   PackageDTO,
@@ -9,6 +13,77 @@ import type {
   ServiceDTO,
   StaffOptionDTO,
 } from "@/types/services";
+
+const fieldLabelClass = "mb-1.5 block text-sm font-semibold text-ink";
+const fieldClass = `${fieldOutlineClasses} h-11 w-full text-sm text-ink placeholder:text-glyph`;
+const textareaClass = `${fieldOutlineClasses} w-full resize-none px-3 py-2.5 text-sm text-ink placeholder:text-glyph`;
+
+function CatalogFormDialog({
+  title,
+  description,
+  submitLabel,
+  error,
+  isLoading,
+  onClose,
+  onSubmit,
+  onDelete,
+  children,
+}: {
+  title: string;
+  description: string;
+  submitLabel: string;
+  error: string | null;
+  isLoading: boolean;
+  onClose: () => void;
+  onSubmit: React.FormEventHandler<HTMLFormElement>;
+  onDelete?: () => void;
+  children: React.ReactNode;
+}) {
+  const titleId = React.useId();
+  const descriptionId = React.useId();
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-2 backdrop-blur-xs sm:p-4">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+        className="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-[14px] border border-line bg-white text-ink shadow-2xl"
+      >
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-hairline px-4 pb-4 pt-5 sm:px-6 sm:pb-5 sm:pt-6">
+          <div className="min-w-0">
+            <h2 id={titleId} className="font-display text-[26px] leading-[34px] text-ink">{title}</h2>
+            <p id={descriptionId} className="mt-1 text-sm text-muted">{description}</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close" className="flex size-8 shrink-0 items-center justify-center rounded-lg text-glyph transition-colors hover:bg-mist hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40">
+            <Icon name="close" className="size-5" />
+          </button>
+        </header>
+
+        <form onSubmit={onSubmit} aria-busy={isLoading} className="flex min-h-0 flex-1 flex-col">
+          <div data-checkbox-dropdown-boundary className="min-h-0 space-y-5 overflow-y-auto overscroll-contain px-4 py-5 sm:px-6 sm:py-6">
+            {error && <p role="alert" className="rounded-lg bg-danger-bg p-3 text-sm text-danger-dark">{error}</p>}
+            {children}
+          </div>
+          <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-hairline px-4 py-4 sm:px-6">
+            {onDelete && (
+              <AdminButton variant="danger" size="sm" className="order-last w-full sm:order-none sm:mr-auto sm:w-auto" disabled={isLoading} onClick={onDelete}>
+                Delete
+              </AdminButton>
+            )}
+            <AdminButton variant="outline" size="sm" disabled={isLoading} onClick={onClose}>
+              Cancel
+            </AdminButton>
+            <AdminButton variant="primary" size="sm" type="submit" disabled={isLoading}>
+              {isLoading ? "Saving..." : submitLabel}
+            </AdminButton>
+          </footer>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Service Form Modal (Add / Edit)
@@ -113,317 +188,164 @@ export function ServiceFormModal({
     });
   };
 
-  const toggleStaff = (staffId: string) => {
-    setSelectedStaffIds((prev) =>
-      prev.includes(staffId)
-        ? prev.filter((id) => id !== staffId)
-        : [...prev, staffId]
-    );
-  };
-
-  const toggleAllStaff = () => {
-    if (selectedStaffIds.length === staff.length) {
-      setSelectedStaffIds([]);
-    } else {
-      setSelectedStaffIds(staff.map((s) => s.id));
-    }
-  };
+  const allStaffSelected = staff.every((member) => selectedStaffIds.includes(member.id));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-150">
-      <div
-        className="relative my-8 w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-neutral-200 overflow-hidden"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="service-modal-title"
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-4">
-          <div>
-            <h2 id="service-modal-title" className="text-base font-semibold text-neutral-900">
-              {isEdit ? "Edit Service" : "Add Service"}
-            </h2>
-            <p className="text-xs text-neutral-500">
-              {isEdit
-                ? "Update pricing, duration, and staff assignments."
-                : "Create a new bookable service for your catalog."}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 transition"
-            aria-label="Close"
-          >
-            <Icon name="close" className="size-5" />
-          </button>
+    <CatalogFormDialog
+      title={isEdit ? "Edit Service" : "Add Service"}
+      description={
+        isEdit
+          ? "Update pricing, duration, and staff assignments."
+          : "Create a new bookable service for your catalog."
+      }
+      submitLabel={isEdit ? "Save changes" : "Add Service"}
+      error={error}
+      isLoading={isLoading}
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      onDelete={initialService && onDelete ? () => onDelete(initialService) : undefined}
+    >
+      <div className="grid gap-4 sm:grid-cols-2 sm:items-end">
+        <div className={categories.length === 0 ? "sm:col-span-2" : undefined}>
+          <label htmlFor="service-name" className={fieldLabelClass}>
+            Service Title <span className="text-burnt">*</span>
+          </label>
+          <input
+            id="service-name"
+            type="text"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Signature Haircut, Balayage, Manicure"
+            className={`${fieldClass} px-3`}
+          />
         </div>
+        {categories.length > 0 && (
+          <Listbox
+            id="service-category"
+            label="Category"
+            value={categoryId ?? ""}
+            onChange={(id) => setCategoryId(id || null)}
+            options={[
+              { value: "", label: "Uncategorized" },
+              ...categories.map((category) => ({ value: category.id, label: category.name })),
+            ]}
+          />
+        )}
+      </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4 max-h-[calc(85vh-120px)] overflow-y-auto">
-          {error && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
-              {error}
-            </div>
-          )}
+      {/* Description */}
+      <div>
+        <label htmlFor="service-description" className={fieldLabelClass}>
+          Description
+        </label>
+        <textarea
+          id="service-description"
+          rows={3}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Describe what is included in this service..."
+          className={textareaClass}
+        />
+      </div>
 
-          {/* Service Photo Dropzone (Figma aligned) */}
-          <div>
-            <label className="block text-xs font-semibold text-neutral-700 mb-1">
-              Service Photo <span className="text-neutral-400 font-normal">(optional)</span>
-            </label>
-            <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-neutral-300 bg-neutral-50/50 p-4 text-center hover:bg-neutral-50 transition cursor-pointer group">
-              <div className="flex size-9 items-center justify-center rounded-full bg-white text-neutral-500 shadow-2xs mb-1.5 group-hover:text-[#C84B00] group-hover:scale-105 transition">
-                <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                  <circle cx="8.5" cy="8.5" r="1.5" />
-                  <polyline points="21 15 16 10 5 21" />
-                </svg>
-              </div>
-              <p className="text-xs font-medium text-neutral-700">
-                Click to upload or drag & drop photo
-              </p>
-              <p className="text-[11px] text-neutral-400 mt-0.5">
-                PNG, JPG, or WEBP up to 5MB (1:1 aspect ratio recommended)
-              </p>
-            </div>
-          </div>
-
-          {/* Service Title */}
-          <div>
-            <label className="block text-xs font-semibold text-neutral-700 mb-1">
-              Service Title <span className="text-red-500">*</span>
-            </label>
+      <div className="grid gap-4 sm:grid-cols-3 sm:items-end">
+        <div>
+          <label htmlFor="service-duration" className={fieldLabelClass}>
+            Duration (minutes) <span className="text-burnt">*</span>
+          </label>
+          <input
+            id="service-duration"
+            type="number"
+            min="5"
+            step="5"
+            required
+            value={durationMinutes}
+            onChange={(e) => setDurationMinutes(Number(e.target.value))}
+            className={`${fieldClass} px-3`}
+          />
+        </div>
+        <div>
+          <label htmlFor="service-price" className={fieldLabelClass}>
+            Base Price (₱ PHP) <span className="text-burnt">*</span>
+          </label>
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-glyph">
+              ₱
+            </span>
             <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Signature Haircut, Balayage, Manicure"
-              className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-[#C84B00] focus:ring-2 focus:ring-[#C84B00]/20 focus:outline-none transition"
-            />
-          </div>
-
-          {/* Category */}
-          {categories.length > 0 && (
-            <div>
-              <label className="block text-xs font-semibold text-neutral-700 mb-1">
-                Category
-              </label>
-              <select
-                value={categoryId || ""}
-                onChange={(e) => setCategoryId(e.target.value || null)}
-                className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 focus:border-[#C84B00] focus:ring-2 focus:ring-[#C84B00]/20 focus:outline-none transition bg-white"
-              >
-                <option value="">Uncategorized</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Description */}
-          <div>
-            <label className="block text-xs font-semibold text-neutral-700 mb-1">
-              Description
-            </label>
-            <textarea
-              rows={3}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe what is included in this service..."
-              className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-[#C84B00] focus:ring-2 focus:ring-[#C84B00]/20 focus:outline-none transition resize-none"
-            />
-          </div>
-
-          {/* Duration & Price Grid */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-neutral-700 mb-1">
-                Duration (minutes) <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                min="5"
-                step="5"
-                required
-                value={durationMinutes}
-                onChange={(e) => setDurationMinutes(Number(e.target.value))}
-                className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 focus:border-[#C84B00] focus:ring-2 focus:ring-[#C84B00]/20 focus:outline-none transition"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-neutral-700 mb-1">
-                Base Price (₱ PHP) <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <span className="absolute left-3.5 top-2 text-sm font-medium text-neutral-400">
-                  ₱
-                </span>
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  required
-                  value={pricePesos}
-                  onChange={(e) => setPricePesos(Number(e.target.value))}
-                  className="w-full rounded-xl border border-neutral-300 pl-8 pr-3.5 py-2 text-sm text-neutral-900 focus:border-[#C84B00] focus:ring-2 focus:ring-[#C84B00]/20 focus:outline-none transition"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Buffer Minutes */}
-          <div>
-            <label className="block text-xs font-semibold text-neutral-700 mb-1">
-              Buffer Time (minutes between bookings)
-            </label>
-            <input
+              id="service-price"
               type="number"
               min="0"
-              step="5"
-              value={bufferMinutes}
-              onChange={(e) => setBufferMinutes(Number(e.target.value))}
-              placeholder="e.g. 10 mins clean-up"
-              className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 focus:border-[#C84B00] focus:ring-2 focus:ring-[#C84B00]/20 focus:outline-none transition"
+              step="1"
+              required
+              value={pricePesos}
+              onChange={(e) => setPricePesos(Number(e.target.value))}
+              className={`${fieldClass} pl-8 pr-3`}
             />
           </div>
-
-          {/* Staff Eligibility */}
-          <div className="rounded-xl border border-neutral-200 bg-neutral-50/60 p-3.5">
-            <div className="flex items-center justify-between mb-2.5">
-              <div>
-                <span className="text-xs font-semibold text-neutral-800">
-                  Eligible Staff Members
-                </span>
-                <p className="text-[11px] text-neutral-500">
-                  Assign stylists or staff who can provide this service.
-                </p>
-              </div>
-              {staff.length > 0 && (
-                <button
-                  type="button"
-                  onClick={toggleAllStaff}
-                  className="text-xs font-semibold text-[#C84B00] hover:underline"
-                >
-                  {selectedStaffIds.length === staff.length
-                    ? "Deselect all"
-                    : "Select all"}
-                </button>
-              )}
-            </div>
-
-            {staff.length === 0 ? (
-              <p className="text-xs text-neutral-400 italic py-2">
-                No active staff members registered yet.
-              </p>
-            ) : (
-              <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
-                {staff.map((member) => {
-                  const checked = selectedStaffIds.includes(member.id);
-                  const initials = member.fullName
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .substring(0, 2)
-                    .toUpperCase();
-                  return (
-                    <label
-                      key={member.id}
-                      className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs transition cursor-pointer hover:bg-neutral-50"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleStaff(member.id)}
-                        className="size-4 rounded text-[#C84B00] focus:ring-[#C84B00]"
-                      />
-                      <div className="flex size-6 items-center justify-center rounded-full bg-[#C84B00]/15 text-[10px] font-bold text-[#C84B00]">
-                        {initials}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <span className="font-medium text-neutral-900 block truncate">
-                          {member.fullName}
-                        </span>
-                        {member.title && (
-                          <span className="text-[10px] text-neutral-400 block truncate">
-                            {member.title}
-                          </span>
-                        )}
-                      </div>
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Active Toggle Switch */}
-          <div className="flex items-center justify-between rounded-xl border border-neutral-200 bg-white p-3.5">
-            <div>
-              <span className="text-xs font-semibold text-neutral-900 block">
-                Active on booking menu
-              </span>
-              <span className="text-[11px] text-neutral-500 block">
-                When enabled, clients can browse and book this service online.
-              </span>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={active}
-              onClick={() => setActive(!active)}
-              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                active ? "bg-[#C84B00]" : "bg-neutral-200"
-              }`}
-            >
-              <span
-                className={`pointer-events-none inline-block size-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                  active ? "translate-x-5" : "translate-x-0"
-                }`}
-              />
-            </button>
-          </div>
-
-          {/* Footer Actions */}
-          <div className="pt-3 border-t border-neutral-100 flex items-center justify-between gap-2">
-            <div>
-              {isEdit && initialService && onDelete && (
-                <button
-                  type="button"
-                  disabled={isLoading}
-                  onClick={() => onDelete(initialService)}
-                  className="rounded-xl bg-red-600 px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-red-700 disabled:opacity-50"
-                >
-                  Delete
-                </button>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                disabled={isLoading}
-                onClick={onClose}
-                className="px-4 py-2 text-xs font-medium text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 rounded-xl transition shadow-2xs disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="px-5 py-2 text-xs font-semibold text-white bg-[#C84B00] hover:bg-[#A94400] rounded-xl shadow-xs transition disabled:opacity-50"
-              >
-                {isLoading ? "Saving..." : isEdit ? "Save changes" : "Add Service"}
-              </button>
-            </div>
-          </div>
-        </form>
+        </div>
+        <div>
+          <label htmlFor="service-buffer" className={fieldLabelClass}>
+            Buffer Time (minutes)
+          </label>
+          <input
+            id="service-buffer"
+            type="number"
+            min="0"
+            step="5"
+            value={bufferMinutes}
+            onChange={(e) => setBufferMinutes(Number(e.target.value))}
+            placeholder="Between bookings"
+            className={`${fieldClass} px-3`}
+          />
+        </div>
       </div>
-    </div>
+
+      <CheckboxDropdown
+        label="Eligible Staff Members"
+        description="Choose staff who can provide this service."
+        options={staff.map((member) => ({ id: member.id, name: member.fullName, description: member.title ?? undefined }))}
+        value={selectedStaffIds}
+        onChange={setSelectedStaffIds}
+        disabled={isLoading}
+        selectionSummary={(count) => count ? `${count} staff ${count === 1 ? "member" : "members"} selected` : "Select staff members"}
+        selectedLabel="Selected staff members"
+        emptyMessage="No active staff members available."
+        bulkAction={staff.length > 0 ? {
+          label: allStaffSelected ? "Deselect all" : "Select all",
+          onClick: () => setSelectedStaffIds(allStaffSelected ? [] : staff.map((member) => member.id)),
+        } : undefined}
+      />
+
+      {/* Active Toggle Switch */}
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-hairline bg-white p-4">
+        <div>
+          <span className="text-sm font-semibold text-ink block">
+            Active on booking menu
+          </span>
+          <span className="text-xs text-muted block">
+            When enabled, clients can browse and book this service online.
+          </span>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-label="Active on booking menu"
+          aria-checked={active}
+          onClick={() => setActive(!active)}
+          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${
+            active ? "bg-burnt" : "bg-neutral-200"
+          }`}
+        >
+          <span
+            className={`pointer-events-none inline-block size-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+              active ? "translate-x-5" : "translate-x-0"
+            }`}
+          />
+        </button>
+      </div>
+    </CatalogFormDialog>
   );
 }
 
@@ -544,212 +466,159 @@ export function PackageFormModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-150">
-      <div
-        className="relative my-8 w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-neutral-200 overflow-hidden"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="package-modal-title"
-      >
-        <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-4">
-          <div>
-            <h2 id="package-modal-title" className="text-base font-semibold text-neutral-900">
-              {isEdit ? "Edit Package" : "Add Package"}
-            </h2>
-            <p className="text-xs text-neutral-500">
-              Bundle multiple services together at a special bundle price.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 transition"
-            aria-label="Close"
-          >
-            <Icon name="close" className="size-5" />
-          </button>
+    <CatalogFormDialog
+      title={isEdit ? "Edit Package" : "Add Package"}
+      description="Bundle multiple services together at a special bundle price."
+      submitLabel={isEdit ? "Save changes" : "Create Package"}
+      error={error}
+      isLoading={isLoading}
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      onDelete={initialPackage && onDelete ? () => onDelete(initialPackage) : undefined}
+    >
+      <div>
+        <label htmlFor="package-name" className={fieldLabelClass}>
+          Package Title <span className="text-burnt">*</span>
+        </label>
+        <input
+          id="package-name"
+          type="text"
+          required
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. Total Glow Makeover, Bridal Package"
+          className={`${fieldClass} px-3`}
+        />
+      </div>
+
+      <div>
+        <label htmlFor="package-description" className={fieldLabelClass}>
+          Description
+        </label>
+        <textarea
+          id="package-description"
+          rows={2}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Describe the benefits or inclusions of this package..."
+          className={textareaClass}
+        />
+      </div>
+
+      {/* Bundled Services Selection */}
+      <div className="rounded-lg border border-hairline bg-mist p-4">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-semibold text-ink">
+            Bundled Services <span className="text-burnt">*</span>
+          </span>
+          <span className="text-[11px] font-medium text-muted">
+            {selectedServiceIds.length} selected
+            {regularTotalPrice > 0 && ` (Regular: ₱${regularTotalPrice.toLocaleString("en-PH")})`}
+          </span>
         </div>
 
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4 max-h-[calc(85vh-120px)] overflow-y-auto">
-          {error && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
-              {error}
-            </div>
-          )}
-
-          <div>
-            <label className="block text-xs font-semibold text-neutral-700 mb-1">
-              Package Title <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Total Glow Makeover, Bridal Package"
-              className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-[#C84B00] focus:ring-2 focus:ring-[#C84B00]/20 focus:outline-none transition"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-neutral-700 mb-1">
-              Description
-            </label>
-            <textarea
-              rows={2}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe the benefits or inclusions of this package..."
-              className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-[#C84B00] focus:ring-2 focus:ring-[#C84B00]/20 focus:outline-none transition resize-none"
-            />
-          </div>
-
-          {/* Bundled Services Selection */}
-          <div className="rounded-xl border border-neutral-200 bg-neutral-50/60 p-3.5">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-neutral-800">
-                Bundled Services <span className="text-red-500">*</span>
-              </span>
-              <span className="text-[11px] font-medium text-neutral-500">
-                {selectedServiceIds.length} selected
-                {regularTotalPrice > 0 && ` (Regular: ₱${regularTotalPrice.toLocaleString("en-PH")})`}
-              </span>
-            </div>
-
-            {availableServices.length === 0 ? (
-              <p className="text-xs text-neutral-400 italic py-2">
-                No active services available to bundle. Create services first.
-              </p>
-            ) : (
-              <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                {availableServices.map((srv) => {
-                  const checked = selectedServiceIds.includes(srv.id);
-                  return (
-                    <label
-                      key={srv.id}
-                      className="flex items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs transition cursor-pointer hover:bg-neutral-50"
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => toggleService(srv.id)}
-                          className="size-4 rounded text-[#C84B00] focus:ring-[#C84B00]"
-                        />
-                        <span className="font-medium text-neutral-900 truncate">
-                          {srv.name}
-                        </span>
-                      </div>
-                      <div className="text-right shrink-0 text-neutral-500 text-[11px]">
-                        <span>{srv.durationMinutes} min</span> •{" "}
-                        <span className="font-semibold text-neutral-700">
-                          {srv.priceFormatted}
-                        </span>
-                      </div>
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-neutral-700 mb-1">
-                Package Duration (mins) <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                min="10"
-                step="5"
-                required
-                value={durationMinutes}
-                onChange={(e) => setDurationMinutes(Number(e.target.value))}
-                className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 focus:border-[#C84B00] focus:ring-2 focus:ring-[#C84B00]/20 focus:outline-none transition"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-neutral-700 mb-1">
-                Bundle Price (₱ PHP) <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <span className="absolute left-3.5 top-2 text-sm font-medium text-neutral-400">
-                  ₱
-                </span>
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  required
-                  value={pricePesos}
-                  onChange={(e) => setPricePesos(Number(e.target.value))}
-                  className="w-full rounded-xl border border-neutral-300 pl-8 pr-3.5 py-2 text-sm text-neutral-900 focus:border-[#C84B00] focus:ring-2 focus:ring-[#C84B00]/20 focus:outline-none transition"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between rounded-xl border border-neutral-200 bg-white p-3.5">
-            <div>
-              <span className="text-xs font-semibold text-neutral-900 block">
-                Active on booking menu
-              </span>
-              <span className="text-[11px] text-neutral-500 block">
-                Make this package available for clients to book online.
-              </span>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={active}
-              onClick={() => setActive(!active)}
-              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                active ? "bg-[#C84B00]" : "bg-neutral-200"
-              }`}
-            >
-              <span
-                className={`pointer-events-none inline-block size-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                  active ? "translate-x-5" : "translate-x-0"
-                }`}
-              />
-            </button>
-          </div>
-
-          <div className="pt-3 border-t border-neutral-100 flex items-center justify-between gap-2">
-            <div>
-              {isEdit && initialPackage && onDelete && (
-                <button
-                  type="button"
-                  disabled={isLoading}
-                  onClick={() => onDelete(initialPackage)}
-                  className="rounded-xl bg-red-600 px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-red-700 disabled:opacity-50"
+        {availableServices.length === 0 ? (
+          <p className="text-xs text-glyph italic py-2">
+            No active services available to bundle. Create services first.
+          </p>
+        ) : (
+          <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+            {availableServices.map((srv) => {
+              const checked = selectedServiceIds.includes(srv.id);
+              return (
+                <label
+                  key={srv.id}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-hairline bg-white px-3 py-2 text-xs transition cursor-pointer hover:bg-mist"
                 >
-                  Delete
-                </button>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                disabled={isLoading}
-                onClick={onClose}
-                className="px-4 py-2 text-xs font-medium text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 rounded-xl transition shadow-2xs disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="px-5 py-2 text-xs font-semibold text-white bg-[#C84B00] hover:bg-[#A94400] rounded-xl shadow-xs transition disabled:opacity-50"
-              >
-                {isLoading ? "Saving..." : isEdit ? "Save changes" : "Create Package"}
-              </button>
-            </div>
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleService(srv.id)}
+                      className="size-4 rounded accent-burnt focus-visible:ring-2 focus-visible:ring-burnt/40"
+                    />
+                    <span className="font-medium text-ink truncate">
+                      {srv.name}
+                    </span>
+                  </div>
+                  <div className="text-right shrink-0 text-muted text-[11px]">
+                    <span>{srv.durationMinutes} min</span> •{" "}
+                    <span className="font-semibold text-body">
+                      {srv.priceFormatted}
+                    </span>
+                  </div>
+                </label>
+              );
+            })}
           </div>
-        </form>
+        )}
       </div>
-    </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label htmlFor="package-duration" className={fieldLabelClass}>
+            Package Duration (mins) <span className="text-burnt">*</span>
+          </label>
+          <input
+            id="package-duration"
+            type="number"
+            min="10"
+            step="5"
+            required
+            value={durationMinutes}
+            onChange={(e) => setDurationMinutes(Number(e.target.value))}
+            className={`${fieldClass} px-3`}
+          />
+        </div>
+        <div>
+          <label htmlFor="package-price" className={fieldLabelClass}>
+            Bundle Price (₱ PHP) <span className="text-burnt">*</span>
+          </label>
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-glyph">
+              ₱
+            </span>
+            <input
+              id="package-price"
+              type="number"
+              min="0"
+              step="1"
+              required
+              value={pricePesos}
+              onChange={(e) => setPricePesos(Number(e.target.value))}
+              className={`${fieldClass} pl-8 pr-3`}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-hairline bg-white p-4">
+        <div>
+          <span className="text-sm font-semibold text-ink block">
+            Active on booking menu
+          </span>
+          <span className="text-xs text-muted block">
+            Make this package available for clients to book online.
+          </span>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-label="Active on booking menu"
+          aria-checked={active}
+          onClick={() => setActive(!active)}
+          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${
+            active ? "bg-burnt" : "bg-neutral-200"
+          }`}
+        >
+          <span
+            className={`pointer-events-none inline-block size-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+              active ? "translate-x-5" : "translate-x-0"
+            }`}
+          />
+        </button>
+      </div>
+    </CatalogFormDialog>
   );
 }
 
@@ -857,209 +726,156 @@ export function AddonFormModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-150">
-      <div
-        className="relative my-8 w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-neutral-200 overflow-hidden"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="addon-modal-title"
-      >
-        <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-4">
-          <div>
-            <h2 id="addon-modal-title" className="text-base font-semibold text-neutral-900">
-              {isEdit ? "Edit Add-on" : "Add Add-on"}
-            </h2>
-            <p className="text-xs text-neutral-500">
-              Optional upgrades or extras clients can attach to their appointment.
-            </p>
+    <CatalogFormDialog
+      title={isEdit ? "Edit Add-on" : "Add Add-on"}
+      description="Optional upgrades or extras clients can attach to their appointment."
+      submitLabel={isEdit ? "Save changes" : "Add Add-on"}
+      error={error}
+      isLoading={isLoading}
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      onDelete={initialAddon && onDelete ? () => onDelete(initialAddon) : undefined}
+    >
+      <div>
+        <label htmlFor="addon-name" className={fieldLabelClass}>
+          Add-on Name <span className="text-burnt">*</span>
+        </label>
+        <input
+          id="addon-name"
+          type="text"
+          required
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. Scalp Massage, Deep Conditioning, Beard Oil"
+          className={`${fieldClass} px-3`}
+        />
+      </div>
+
+      <div>
+        <label htmlFor="addon-description" className={fieldLabelClass}>
+          Description
+        </label>
+        <textarea
+          id="addon-description"
+          rows={2}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Explain the add-on treatment or extra..."
+          className={textareaClass}
+        />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label htmlFor="addon-duration" className={fieldLabelClass}>
+            Extra Duration (mins)
+          </label>
+          <input
+            id="addon-duration"
+            type="number"
+            min="0"
+            step="5"
+            value={durationMinutes}
+            onChange={(e) => setDurationMinutes(Number(e.target.value))}
+            className={`${fieldClass} px-3`}
+          />
+        </div>
+        <div>
+          <label htmlFor="addon-price" className={fieldLabelClass}>
+            Extra Price (₱ PHP) <span className="text-burnt">*</span>
+          </label>
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-glyph">
+              +₱
+            </span>
+            <input
+              id="addon-price"
+              type="number"
+              min="0"
+              step="1"
+              required
+              value={pricePesos}
+              onChange={(e) => setPricePesos(Number(e.target.value))}
+              className={`${fieldClass} pl-8 pr-3`}
+            />
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 transition"
-            aria-label="Close"
-          >
-            <Icon name="close" className="size-5" />
-          </button>
+        </div>
+      </div>
+
+      {/* Applicable Services */}
+      <div className="rounded-lg border border-hairline bg-mist p-4">
+        <span className="text-sm font-semibold text-ink block mb-2">
+          Service Applicability
+        </span>
+        <div className="mb-2.5 flex flex-wrap items-center gap-4 text-sm">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="applicability"
+              checked={applyToAll}
+              onChange={() => setApplyToAll(true)}
+              className="accent-burnt focus-visible:ring-2 focus-visible:ring-burnt/40"
+            />
+            <span className="text-ink font-medium">All services</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="applicability"
+              checked={!applyToAll}
+              onChange={() => setApplyToAll(false)}
+              className="accent-burnt focus-visible:ring-2 focus-visible:ring-burnt/40"
+            />
+            <span className="text-ink font-medium">Specific services only</span>
+          </label>
         </div>
 
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4 max-h-[calc(85vh-120px)] overflow-y-auto">
-          {error && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
-              {error}
-            </div>
-          )}
-
-          <div>
-            <label className="block text-xs font-semibold text-neutral-700 mb-1">
-              Add-on Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Scalp Massage, Deep Conditioning, Beard Oil"
-              className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-[#C84B00] focus:ring-2 focus:ring-[#C84B00]/20 focus:outline-none transition"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-neutral-700 mb-1">
-              Description
-            </label>
-            <textarea
-              rows={2}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Explain the add-on treatment or extra..."
-              className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-[#C84B00] focus:ring-2 focus:ring-[#C84B00]/20 focus:outline-none transition resize-none"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-neutral-700 mb-1">
-                Extra Duration (mins)
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="5"
-                value={durationMinutes}
-                onChange={(e) => setDurationMinutes(Number(e.target.value))}
-                className="w-full rounded-xl border border-neutral-300 px-3.5 py-2 text-sm text-neutral-900 focus:border-[#C84B00] focus:ring-2 focus:ring-[#C84B00]/20 focus:outline-none transition"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-neutral-700 mb-1">
-                Extra Price (₱ PHP) <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <span className="absolute left-3.5 top-2 text-sm font-medium text-neutral-400">
-                  +₱
-                </span>
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  required
-                  value={pricePesos}
-                  onChange={(e) => setPricePesos(Number(e.target.value))}
-                  className="w-full rounded-xl border border-neutral-300 pl-9 pr-3.5 py-2 text-sm text-neutral-900 focus:border-[#C84B00] focus:ring-2 focus:ring-[#C84B00]/20 focus:outline-none transition"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Applicable Services */}
-          <div className="rounded-xl border border-neutral-200 bg-neutral-50/60 p-3.5">
-            <span className="text-xs font-semibold text-neutral-800 block mb-2">
-              Service Applicability
-            </span>
-            <div className="flex items-center gap-4 text-xs mb-2.5">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="applicability"
-                  checked={applyToAll}
-                  onChange={() => setApplyToAll(true)}
-                  className="text-[#C84B00] focus:ring-[#C84B00]"
-                />
-                <span className="text-neutral-800 font-medium">All services</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="applicability"
-                  checked={!applyToAll}
-                  onChange={() => setApplyToAll(false)}
-                  className="text-[#C84B00] focus:ring-[#C84B00]"
-                />
-                <span className="text-neutral-800 font-medium">Specific services only</span>
-              </label>
-            </div>
-
-            {!applyToAll && (
-              <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1 pt-1 border-t border-neutral-200">
-                {availableServices.map((srv) => (
-                  <label
-                    key={srv.id}
-                    className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs transition cursor-pointer hover:bg-neutral-50"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={applicableServiceIds.includes(srv.id)}
-                      onChange={() => toggleService(srv.id)}
-                      className="size-3.5 rounded text-[#C84B00] focus:ring-[#C84B00]"
-                    />
-                    <span className="font-medium text-neutral-800 truncate">{srv.name}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center justify-between rounded-xl border border-neutral-200 bg-white p-3.5">
-            <div>
-              <span className="text-xs font-semibold text-neutral-900 block">
-                Active on booking menu
-              </span>
-              <span className="text-[11px] text-neutral-500 block">
-                Enable clients to select this add-on during booking.
-              </span>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={active}
-              onClick={() => setActive(!active)}
-              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                active ? "bg-[#C84B00]" : "bg-neutral-200"
-              }`}
-            >
-              <span
-                className={`pointer-events-none inline-block size-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                  active ? "translate-x-5" : "translate-x-0"
-                }`}
-              />
-            </button>
-          </div>
-
-          <div className="pt-3 border-t border-neutral-100 flex items-center justify-between gap-2">
-            <div>
-              {isEdit && initialAddon && onDelete && (
-                <button
-                  type="button"
-                  disabled={isLoading}
-                  onClick={() => onDelete(initialAddon)}
-                  className="rounded-xl bg-red-600 px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-red-700 disabled:opacity-50"
-                >
-                  Delete
-                </button>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                disabled={isLoading}
-                onClick={onClose}
-                className="px-4 py-2 text-xs font-medium text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 rounded-xl transition shadow-2xs disabled:opacity-50"
+        {!applyToAll && (
+          <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1 pt-1 border-t border-hairline">
+            {availableServices.map((srv) => (
+              <label
+                key={srv.id}
+                className="flex items-center gap-2 rounded-lg border border-hairline bg-white px-2.5 py-1.5 text-xs transition cursor-pointer hover:bg-mist"
               >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="px-5 py-2 text-xs font-semibold text-white bg-[#C84B00] hover:bg-[#A94400] rounded-xl shadow-xs transition disabled:opacity-50"
-              >
-                {isLoading ? "Saving..." : isEdit ? "Save changes" : "Add Add-on"}
-              </button>
-            </div>
+                <input
+                  type="checkbox"
+                  checked={applicableServiceIds.includes(srv.id)}
+                  onChange={() => toggleService(srv.id)}
+                  className="size-3.5 rounded accent-burnt focus-visible:ring-2 focus-visible:ring-burnt/40"
+                />
+                <span className="font-medium text-ink truncate">{srv.name}</span>
+              </label>
+            ))}
           </div>
-        </form>
+        )}
       </div>
-    </div>
+
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-hairline bg-white p-4">
+        <div>
+          <span className="text-sm font-semibold text-ink block">
+            Active on booking menu
+          </span>
+          <span className="text-xs text-muted block">
+            Enable clients to select this add-on during booking.
+          </span>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-label="Active on booking menu"
+          aria-checked={active}
+          onClick={() => setActive(!active)}
+          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${
+            active ? "bg-burnt" : "bg-neutral-200"
+          }`}
+        >
+          <span
+            className={`pointer-events-none inline-block size-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+              active ? "translate-x-5" : "translate-x-0"
+            }`}
+          />
+        </button>
+      </div>
+    </CatalogFormDialog>
   );
 }

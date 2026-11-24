@@ -5,32 +5,18 @@ import { fieldOutlineClasses } from "@/components/admin/fields";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/admin/icon";
 import { AdminButton } from "@/components/admin/admin-button";
+import { Listbox } from "@/components/admin/listbox";
 import { createAppointmentBookingAction } from "@/app/actions/appointments";
+import { getEligibleBookingStaff } from "@/lib/merchant/booking-staff-eligibility";
 import type {
   AppointmentServiceOption,
   AppointmentStaffOption,
 } from "@/types/appointments";
 
 export type { AppointmentServiceOption, AppointmentStaffOption };
+export { Listbox } from "@/components/admin/listbox";
 
 // ─── static option lists ─────────────────────────────────────────────────────
-
-const SERVICE_OPTIONS = [
-  { value: "Signature haircut",      label: "Signature haircut – 60 min · ₱450",   price: 450,  duration: 60 },
-  { value: "Balayage & gloss",       label: "Balayage & gloss – 90 min · ₱1,500",  price: 1500, duration: 90 },
-  { value: "Botanical spa manicure", label: "Botanical spa manicure – 45 min · ₱950", price: 950, duration: 45 },
-  { value: "Facial treatment",       label: "Facial treatment – 60 min · ₱900",    price: 900,  duration: 60 },
-  { value: "Wellness massage",       label: "Wellness massage – 60 min · ₱1,200",  price: 1200, duration: 60 },
-];
-
-const STAFF_OPTIONS = [
-  "Any available",
-  "Sofia Cruz",
-  "Miguel Tan",
-  "Lia Ramos",
-  "Elena Cruz",
-  "Marco Reyes",
-];
 
 const RESOURCE_OPTIONS: Record<string, string[]> = {
   "Signature haircut":        ["Chair A", "Chair B", "Chair C"],
@@ -81,117 +67,6 @@ function formatDateDisplay(iso: string): string {
 
 const fieldCls =
   `${fieldOutlineClasses} h-11 w-full px-3 text-sm text-ink placeholder:text-glyph`;
-
-// ─── Chevron SVG ─────────────────────────────────────────────────────────────
-
-function ChevronSvg({ open }: { open: boolean }) {
-  return (
-    <svg aria-hidden viewBox="0 0 16 10"
-      className={`size-4 text-glyph shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
-      fill="currentColor"
-    >
-      <path d="M1.2 1.4a1 1 0 0 1 1.4-.2L8 5.7l5.4-4.5a1 1 0 1 1 1.2 1.6l-6 5a1 1 0 0 1-1.2 0l-6-5a1 1 0 0 1-.2-1.4Z" />
-    </svg>
-  );
-}
-
-// ─── Listbox (contact-page dropdown pattern) ─────────────────────────────────
-
-interface BaseListboxProps {
-  id: string;
-  label: string;
-  required?: boolean;
-  describedBy?: string;
-  disabled?: boolean;
-  placement?: "above" | "below";
-  options: { value: string; label: string; disabled?: boolean }[];
-  placeholder?: string;
-}
-
-type ListboxProps = BaseListboxProps & (
-  | { multiple?: false; value: string; onChange: (value: string) => void }
-  | { multiple: true; value: string[]; onChange: (value: string[]) => void }
-);
-
-export function Listbox(props: ListboxProps) {
-  const { id, label, required, value, options, placeholder, describedBy, disabled, placement = "below" } = props;
-  const [open, setOpen] = React.useState(false);
-  const ref = React.useRef<HTMLDivElement>(null);
-  React.useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-  const triggerRef = React.useRef<HTMLButtonElement>(null);
-  const selected = props.multiple
-    ? (props.value.length ? `${props.value.length} selected` : undefined)
-    : options.find((option) => option.value === value)?.label;
-  return (
-    <div>
-      <label htmlFor={id} className="mb-2 block text-sm font-semibold leading-5 text-ink">
-        {label}{required && <span className="text-burnt"> *</span>}
-      </label>
-      <div ref={ref} className="relative" onKeyDown={(event) => {
-        if (event.key === "Escape" && open) {
-          event.preventDefault();
-          event.stopPropagation();
-          setOpen(false);
-          triggerRef.current?.focus();
-        }
-      }}>
-        <button ref={triggerRef} id={id} type="button" disabled={disabled} aria-haspopup="listbox" aria-expanded={open} aria-describedby={describedBy}
-          onClick={() => setOpen((o) => !o)}
-          className={`${fieldOutlineClasses} flex h-11 w-full items-center justify-between px-3 text-left text-sm disabled:cursor-not-allowed disabled:opacity-50`}
-        >
-          <span className={selected ? "text-ink" : "text-glyph"}>
-            {selected ?? placeholder ?? "Select an option"}
-          </span>
-          <ChevronSvg open={open} />
-        </button>
-        {open && (
-          <ul
-            role="listbox"
-            aria-label={label}
-            aria-multiselectable={props.multiple || undefined}
-            className={`absolute inset-x-0 z-30 max-h-56 overflow-y-auto rounded-lg border border-outline bg-white py-1 shadow-md ${placement === "above" ? "bottom-full mb-1" : "top-full mt-1"}`}
-          >
-            {options.map((option) => {
-              const isSelected = props.multiple
-                ? props.value.includes(option.value)
-                : value === option.value;
-
-              return (
-                <li key={option.value} role="presentation">
-                  <button type="button" role="option" aria-selected={isSelected} disabled={disabled || option.disabled}
-                    onClick={() => {
-                      if (props.multiple) {
-                        props.onChange(isSelected
-                          ? props.value.filter((entry) => entry !== option.value)
-                          : [...props.value, option.value]);
-                      } else {
-                        props.onChange(option.value);
-                        setOpen(false);
-                        triggerRef.current?.focus();
-                      }
-                    }}
-                    className={`flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left text-sm transition-colors hover:bg-mist disabled:cursor-default disabled:opacity-60 ${isSelected ? "text-burnt font-semibold" : "text-ink"}`}
-                  >
-                    {option.label}
-                    {props.multiple && isSelected && <span aria-hidden="true">✓</span>}
-                  </button>
-                </li>
-              );
-            })}
-            {options.length === 0 && <li role="option" aria-disabled="true" aria-selected="false" className="px-4 py-2.5 text-sm text-muted">No options available</li>}
-          </ul>
-        )}
-      </div>
-    </div>
-  );
-}
 
 // ─── Calendar picker — fixed-position panel (never clipped) ──────────────────
 
@@ -476,8 +351,8 @@ interface SelectedCustomer {
 export function NewAppointmentModal({
   isOpen,
   tenantId,
-  services: propServices,
-  staff: propStaff,
+  services = [],
+  staff = [],
   onClose,
   onCreated,
   showToast,
@@ -499,8 +374,8 @@ export function NewAppointmentModal({
   const [step1Error, setStep1Error]       = React.useState<string | null>(null);
 
   // step 2
-  const [serviceName, setServiceName]       = React.useState("");
-  const [staffName, setStaffName]           = React.useState("");
+  const [serviceId, setServiceId]           = React.useState("");
+  const [requestedStaffId, setRequestedStaffId] = React.useState("");
   const [resource, setResource]             = React.useState("");
   const [addon, setAddon]                   = React.useState("None selected");
   const [date, setDate]                     = React.useState(new Date().toISOString().slice(0, 10));
@@ -509,128 +384,51 @@ export function NewAppointmentModal({
   const [conflictWarning, setConflictWarning] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting]     = React.useState(false);
 
-  // available services and staff (using props if provided, fallback to constants)
-  const availableServices = React.useMemo<AppointmentServiceOption[]>(() => {
-    if (propServices && propServices.length > 0) {
-      return propServices;
-    }
-    return SERVICE_OPTIONS.map((s, idx) => ({
-      id: `fallback-${idx}`,
-      name: s.value,
-      priceCents: s.price * 100,
-      durationMinutes: s.duration,
-      eligibleStaffIds: [],
-    }));
-  }, [propServices]);
-
-  const availableStaff = React.useMemo<AppointmentStaffOption[]>(() => {
-    if (propStaff && propStaff.length > 0) {
-      return propStaff;
-    }
-    return STAFF_OPTIONS.filter((s) => s !== "Any available").map((name, idx) => ({
-      id: `fallback-staff-${idx}`,
-      fullName: name,
-    }));
-  }, [propStaff]);
-
-  // derived service details
-  const selectedService = availableServices.find(
-    (s) => s.name === serviceName || s.id === serviceName
-  );
+  const selectedService = services.find((service) => service.id === serviceId);
   const servicePrice    = selectedService ? Math.round(selectedService.priceCents / 100) : 0;
   const serviceDuration = selectedService?.durationMinutes ?? 60;
-  const resourceOptions = serviceName
-    ? (RESOURCE_OPTIONS[selectedService?.name || serviceName] ?? ["Chair A", "Chair B"])
+  const resourceOptions = selectedService
+    ? (RESOURCE_OPTIONS[selectedService.name] ?? ["Chair A", "Chair B"])
     : [];
   const displayCustomer = customerType === "existing" ? customerSearch.trim() : customerName.trim();
   const sourceLabel     = bookingSource === "Walk-in" ? "Walk-In" : "Online";
   const endTime         = time ? addMinutes(time, serviceDuration)      : null;
   const bufferEnd       = time ? addMinutes(time, serviceDuration + 10) : null;
 
-  // Filter staff by selected service's eligibleStaffIds (staff_service_skills)
-  // If eligibleStaffIds is empty (0 restrictions configured), show all active staff
-  const eligibleStaff = React.useMemo<AppointmentStaffOption[]>(() => {
-    if (!selectedService) {
-      return availableStaff;
+  const eligibleStaff = getEligibleBookingStaff(selectedService, staff);
+  const selectedStaff = eligibleStaff.find((member) => member.id === requestedStaffId);
+  const staffId = eligibleStaff.length > 0 && requestedStaffId
+    ? (selectedStaff?.id ?? "any")
+    : "";
+  const noEligibleStaff = Boolean(selectedService) && eligibleStaff.length === 0;
+  const staffDropdownOptions = [
+    { value: "any", label: "Any available" },
+    ...eligibleStaff.map((member) => ({ value: member.id, label: member.fullName })),
+  ];
+  const serviceDropdownOptions = services.map((service) => {
+    const price = Math.round(service.priceCents / 100).toLocaleString("en-PH");
+    return {
+      value: service.id,
+      label: `${service.name} – ${service.durationMinutes} min · ₱${price}`,
+    };
+  });
+
+  const handleServiceChange = (id: string) => {
+    const nextService = services.find((service) => service.id === id);
+    if (requestedStaffId && requestedStaffId !== "any"
+      && !getEligibleBookingStaff(nextService, staff).some((member) => member.id === requestedStaffId)) {
+      setRequestedStaffId("any");
     }
-    if (selectedService.eligibleStaffIds && selectedService.eligibleStaffIds.length > 0) {
-      return availableStaff.filter((sm) =>
-        selectedService.eligibleStaffIds.includes(sm.id)
-      );
-    }
-    return availableStaff;
-  }, [selectedService, availableStaff]);
-
-  // Dropdown options for Service Staff: "Any available" + eligible staff members
-  const staffDropdownOptions = React.useMemo(() => {
-    return [
-      { value: "Any available", label: "Any available" },
-      ...eligibleStaff.map((sm) => ({
-        value: sm.fullName,
-        label: sm.fullName,
-      })),
-    ];
-  }, [eligibleStaff]);
-
-  // Dropdown options for Requested Service
-  const serviceDropdownOptions = React.useMemo(() => {
-    return availableServices.map((s) => {
-      const peso = `₱${Math.round(s.priceCents / 100).toLocaleString("en-PH")}`;
-      return {
-        value: s.name,
-        label: `${s.name} – ${s.durationMinutes} min · ${peso}`,
-      };
-    });
-  }, [availableServices]);
-
-  // Auto-Reset on Service Change:
-  // If the user switches Requested Service and the currently selected staff member
-  // is no longer eligible for the new service, automatically reset Service Staff to "Any available"
-  React.useEffect(() => {
-    if (!selectedService) return;
-    if (staffName && staffName !== "Any available") {
-      const stillEligible = eligibleStaff.some(
-        (sm) => sm.fullName === staffName
-      );
-      if (!stillEligible) {
-        setStaffName("Any available");
-      }
-    }
-  }, [selectedService, eligibleStaff, staffName]);
-
-  const handleServiceChange = (newServiceName: string) => {
-    setServiceName(newServiceName);
+    setServiceId(id);
     setStep2Error(null);
     setConflictWarning(null);
-
-    const newSelectedService = availableServices.find(
-      (s) => s.name === newServiceName || s.id === newServiceName
-    );
-    if (newSelectedService) {
-      const newEligible =
-        newSelectedService.eligibleStaffIds &&
-        newSelectedService.eligibleStaffIds.length > 0
-          ? availableStaff.filter((sm) =>
-              newSelectedService.eligibleStaffIds.includes(sm.id)
-            )
-          : availableStaff;
-
-      if (staffName && staffName !== "Any available") {
-        const stillEligible = newEligible.some(
-          (sm) => sm.fullName === staffName
-        );
-        if (!stillEligible) {
-          setStaffName("Any available");
-        }
-      }
-    }
   };
 
   React.useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setResource(resourceOptions[0] ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [serviceName]);
+  }, [serviceId]);
 
   React.useEffect(() => {
     if (!isOpen) {
@@ -642,7 +440,7 @@ export function NewAppointmentModal({
       setCustomerEmail(""); setCustomerPhone("");
       setBookingSource(bookingMode === "walk-in" ? "Walk-in" : "Phone"); setNotes("");
       setStep1Error(null);
-      setServiceName(""); setStaffName("");
+      setServiceId(""); setRequestedStaffId("");
       setResource(""); setAddon("None selected");
       setDate(new Date().toISOString().slice(0, 10));
       setTime("");
@@ -681,17 +479,13 @@ export function NewAppointmentModal({
 
   const handleSubmit = async () => {
     setStep2Error(null); setConflictWarning(null);
-    if (!serviceName) { setStep2Error("Please select a service or package."); return; }
-    if (!staffName)   { setStep2Error("Please select a staff member."); return; }
+    if (!selectedService) { setStep2Error("Please select a service or package."); return; }
+    if (!staffId)     { setStep2Error("Please select a staff member."); return; }
     if (!resource)    { setStep2Error("Please select a required resource."); return; }
     if (!date)        { setStep2Error("Please select an appointment date."); return; }
     if (!time)        { setStep2Error("Please select an available start time."); return; }
 
     const resolvedName  = customerType === "existing" ? customerSearch.trim() : customerName.trim();
-    const resolvedStaff = staffName === "Any available" ? undefined : staffName;
-    const selectedStaffMember = availableStaff.find((sm) => sm.fullName === staffName);
-    const resolvedStaffId = (staffName === "Any available" || !staffName) ? undefined : selectedStaffMember?.id;
-    const resolvedServiceId = selectedService?.id && !selectedService.id.startsWith("fallback-") ? selectedService.id : undefined;
     const sourceValue   = bookingSource === "Walk-in" ? "walk_in" as const : "online" as const;
 
     setIsSubmitting(true);
@@ -700,10 +494,10 @@ export function NewAppointmentModal({
         customerName:  resolvedName,
         customerEmail: customerEmail.trim() || undefined,
         customerPhone: customerPhone.trim() || undefined,
-        serviceName:   selectedService?.name || serviceName,
-        serviceId:     resolvedServiceId,
-        staffName:     resolvedStaff,
-        staffId:       resolvedStaffId,
+        serviceName:   selectedService.name,
+        serviceId:     selectedService.id,
+        staffName:     selectedStaff?.fullName,
+        staffId:       selectedStaff?.id,
         date, time, source: sourceValue,
         notes: notes.trim() || undefined,
         tenantIdParam: tenantId,
@@ -944,7 +738,7 @@ export function NewAppointmentModal({
                     id="service-select"
                     label="Service or package"
                     required
-                    value={serviceName}
+                    value={serviceId}
                     onChange={handleServiceChange}
                     options={serviceDropdownOptions}
                     placeholder="Select an option"
@@ -953,18 +747,19 @@ export function NewAppointmentModal({
                     id="staff-select"
                     label="Staff"
                     required
-                    value={staffName}
-                    onChange={(v) => { setStaffName(v); setStep2Error(null); setConflictWarning(null); }}
+                    value={staffId}
+                    onChange={(v) => { setRequestedStaffId(v); setStep2Error(null); setConflictWarning(null); }}
                     options={staffDropdownOptions}
-                    placeholder="Select an option"
+                    disabled={!selectedService || noEligibleStaff}
+                    placeholder={noEligibleStaff ? "No eligible staff" : "Select an option"}
                   />
                 </div>
 
                 {/* Eligibility hint */}
-                {serviceName && staffName && staffName !== "Any available" && (
+                {selectedService && selectedStaff && (
                   <p className="text-xs text-muted">
-                    Only staff qualified for {(selectedService?.name || serviceName).toLowerCase()} are shown.{" "}
-                    <span className="font-medium text-body">{staffName}</span> is available for the full slot.
+                    Only staff qualified for {selectedService.name.toLowerCase()} are shown.{" "}
+                    <span className="font-medium text-body">{selectedStaff.fullName}</span> is available for the full slot.
                   </p>
                 )}
 
@@ -1048,7 +843,7 @@ export function NewAppointmentModal({
               </div>
 
               {/* Slot verification note */}
-              {!conflictWarning && serviceName && staffName && date && time && (
+              {!conflictWarning && selectedService && staffId && date && time && (
                 <p className="text-xs text-muted flex items-center gap-1.5">
                   <svg viewBox="0 0 14 14" fill="none" className="size-3.5 text-success shrink-0" aria-hidden>
                     <path d="M2 7l3.5 3.5L12 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -1085,7 +880,7 @@ export function NewAppointmentModal({
               </AdminButton>
             ) : (
               <AdminButton variant="primary" size="sm" type="button"
-                disabled={isSubmitting || !serviceName || !staffName || !date || !time}
+                disabled={isSubmitting || !selectedService || !staffId || !date || !time}
                 onClick={handleSubmit}
               >
                 {isSubmitting ? "Creating..." : "Create Appointment"}

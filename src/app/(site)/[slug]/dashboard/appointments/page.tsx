@@ -5,6 +5,7 @@ import {
   type AppointmentItem,
 } from "@/components/merchant/appointments/appointments-view";
 import { createClient } from "@/lib/supabase/server";
+import { getAppointmentBookingOptions } from "@/lib/merchant/appointment-booking-options";
 import { getActiveStaffForProfile } from "@/lib/merchant/staff-profile";
 import {
   formatTimeManila,
@@ -16,10 +17,6 @@ import {
   resolveServiceName,
   resolveStaffName,
 } from "@/lib/date-utils";
-import type {
-  AppointmentServiceOption,
-  AppointmentStaffOption,
-} from "@/types/appointments";
 
 interface MerchantAppointmentsPageProps {
   params: Promise<{ slug: string }>;
@@ -179,53 +176,8 @@ export default async function MerchantAppointmentsPage({
       : { data: ownStaff },
   ]);
 
-  const [
-    { data: activeServices },
-    { data: activeStaffMembers },
-    { data: staffSkills },
-  ] = await Promise.all([
-    supabase
-      .from("services")
-      .select("id, name, price_cents, duration_minutes")
-      .eq("tenant_id", tenant.id)
-      .eq("active", true)
-      .eq("is_archived", false)
-      .order("name", { ascending: true }),
-    supabase
-      .from("staff_members")
-      .select("id, full_name")
-      .eq("tenant_id", tenant.id)
-      .eq("active", true)
-      .order("full_name", { ascending: true }),
-    supabase
-      .from("staff_service_skills")
-      .select("service_id, staff_id")
-      .eq("tenant_id", tenant.id),
-  ]);
-
-  const skillsByServiceId = new Map<string, string[]>();
-  for (const row of staffSkills || []) {
-    const existing = skillsByServiceId.get(row.service_id) ?? [];
-    existing.push(row.staff_id);
-    skillsByServiceId.set(row.service_id, existing);
-  }
-
-  const serviceOptions: AppointmentServiceOption[] = (activeServices || []).map(
-    (s) => ({
-      id: s.id,
-      name: s.name,
-      priceCents: s.price_cents ?? 0,
-      durationMinutes: s.duration_minutes ?? 60,
-      eligibleStaffIds: skillsByServiceId.get(s.id) ?? [],
-    }),
-  );
-
-  const staffOptions: AppointmentStaffOption[] = (activeStaffMembers || []).map(
-    (sm) => ({
-      id: sm.id,
-      fullName: sm.full_name,
-    }),
-  );
+  const { services: serviceOptions, staff: staffOptions } =
+    await getAppointmentBookingOptions(supabase, tenant.id);
 
   const todayManilaKey = getManilaTodayKey();
 

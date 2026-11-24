@@ -27,6 +27,7 @@ import {
   type WalkInResult,
 } from "@/components/merchant/walk-in-modal";
 import { EmptyState } from "@/components/ui/empty-state";
+import type { AppointmentServiceOption, AppointmentStaffOption } from "@/types/appointments";
 
 export interface AppointmentRow {
   id: string;
@@ -60,6 +61,7 @@ export interface OverviewViewProps {
   userEmail?: string;
   userRole?: WorkspaceRole;
   tenantId?: string;
+  bookingOptions?: { services: AppointmentServiceOption[]; staff: AppointmentStaffOption[] };
   todayCount?: number;
   confirmedCount?: number;
   pendingCount?: number;
@@ -110,6 +112,7 @@ export function OverviewView({
   userEmail = "Maria Santos",
   userRole,
   tenantId,
+  bookingOptions,
   todayCount = 0,
   confirmedCount = 0,
   pendingCount = 0,
@@ -1383,6 +1386,8 @@ export function OverviewView({
       <NewAppointmentModal
         isOpen={isNewBookingOpen}
         tenantId={tenantId}
+        services={bookingOptions?.services}
+        staff={bookingOptions?.staff}
         onClose={() => setIsNewBookingOpen(false)}
         onCreated={(result: NewAppointmentResult) => {
           const newRow: AppointmentRow = {

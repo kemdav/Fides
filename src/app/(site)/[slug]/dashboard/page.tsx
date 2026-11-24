@@ -5,8 +5,9 @@ import {
 } from "@/components/merchant/overview/overview-view";
 import { getMerchantOverview } from "@/lib/merchant/overview";
 import type { OverviewPeriod } from "@/lib/merchant/overview";
+import { getAppointmentBookingOptions } from "@/lib/merchant/appointment-booking-options";
 import { getActiveStaffForProfile, getMonthlyStaffCommission } from "@/lib/merchant/staff-profile";
-import { workspaceRoleFromLabel } from "@/lib/merchant/workspace-roles";
+import { canManageBookings, workspaceRoleFromLabel } from "@/lib/merchant/workspace-roles";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -68,7 +69,10 @@ export default async function MerchantDashboardPage({
   const canViewBusinessMetrics = userRole === "owner" || userRole === "admin";
   const staff = userRole === "staff" ? await getActiveStaffForProfile(tenant.id, user.id) : undefined;
   const now = new Date();
-  const overview = await getMerchantOverview(supabase, tenant.id, now, period, { staff, calendarMonth: month });
+  const [overview, bookingOptions] = await Promise.all([
+    getMerchantOverview(supabase, tenant.id, now, period, { staff, calendarMonth: month }),
+    canManageBookings(userRole) ? getAppointmentBookingOptions(supabase, tenant.id) : undefined,
+  ]);
   const db = staff ? getAdminClient() : null;
   const commission = staff && db
     ? await getMonthlyStaffCommission(db, tenant.id, overview.timezone, now, staff.id)
@@ -90,6 +94,7 @@ export default async function MerchantDashboardPage({
       userEmail={user.email ?? "Merchant staff"}
       userRole={userRole}
       tenantId={tenant.id}
+      bookingOptions={bookingOptions}
       basePath={`/${slug}`}
       todayCount={rows.length}
       confirmedCount={confirmedToday}
