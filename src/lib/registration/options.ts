@@ -1,4 +1,5 @@
 export const TRIAL_DAYS = 14;
+export const REGISTRATION_CODE_LENGTH = 6;
 
 export const ID_TYPES = [
   { value: "passport", label: "Passport" },

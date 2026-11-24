@@ -2197,6 +2197,18 @@ type AccountTable<Row, Insert = Partial<Row>, Update = Partial<Row>> = {
   Relationships: [];
 };
 
+type RegistrationEmailCodeRow = {
+  email: string;
+  id: string;
+  code_hash: string;
+  attempts: number;
+  sent_at: string;
+  expires_at: string;
+  used_at: string | null;
+  window_started_at: string;
+  send_count: number;
+};
+
 type AccountTables = {
   subscription_plans: AccountTable<SubscriptionPlanRow>;
   account_applications: AccountTable<AccountApplicationRow>;
@@ -2204,6 +2216,7 @@ type AccountTables = {
   application_identities: AccountTable<ApplicationIdentityRow>;
   application_businesses: AccountTable<ApplicationBusinessRow>;
   password_reset_codes: AccountTable<PasswordResetCodeRow>;
+  registration_email_codes: AccountTable<RegistrationEmailCodeRow>;
   document_types: AccountTable<DocumentTypeRow>;
   application_documents: AccountTable<ApplicationDocumentRow>;
   admin_activity_log: AccountTable<AdminActivityRow>;

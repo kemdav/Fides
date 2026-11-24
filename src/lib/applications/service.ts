@@ -14,7 +14,7 @@ import {
   REQUIRED_DOCUMENT_KEYS,
   type DocumentKey,
 } from "@/lib/registration/options";
-import { registrationSchema, type RegistrationInput } from "@/lib/registration/schema";
+import type { RegistrationInput } from "@/lib/registration/schema";
 import type { ActivityEvent } from "@/lib/admin/activity";
 import type { PlanSummary, Tenant } from "@/lib/admin/tenants";
 import type { Tier } from "@/lib/admin/tiers";
@@ -135,15 +135,10 @@ export async function checkRequestedSlug(raw: string) {
 }
 
 export async function submitApplication(
-  raw: unknown,
+  data: RegistrationInput,
   logo: File | null,
   documents: DocumentUploads
 ): Promise<{ referenceCode: string }> {
-  const parsed = registrationSchema.safeParse(raw);
-  if (!parsed.success) {
-    throw new ServiceError(parsed.error.issues[0]?.message ?? "Invalid application details.", 400);
-  }
-  const data: RegistrationInput = parsed.data;
   if (data.requestedSlug) {
     const availability = await checkRequestedSlug(data.requestedSlug);
     if (!availability.available) throw new ServiceError(availability.reason, 409);

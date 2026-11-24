@@ -131,6 +131,7 @@ function renderStaffMessage(input: StaffMessageRecipient & { url: URL } & (
 type ActionEmail = {
   brandName?: string;
   header?: "fides-wordmark";
+  wordmarkAccent?: boolean;
   name?: string;
   colors?: StaffMessageRecipient["colors"];
   typography?: string | null;
@@ -139,10 +140,11 @@ type ActionEmail = {
   heading: string;
   preheader: string;
   body: string[];
-  action: { label: string; url: string } | { code: string };
+  action: { label: string; url: string } | { code: string; boxed?: boolean };
   note?: string;
   steps: { text: string; link?: { label: string; url: string } }[];
   closing: string;
+  footer?: string;
 };
 
 function renderActionEmail(input: ActionEmail) {
@@ -180,6 +182,14 @@ function renderActionEmail(input: ActionEmail) {
       <td valign="top" style="padding:2px 0 ${last ? 0 : 14}px;font-family:${font};font-size:14px;line-height:21px;color:#374151;">${content}</td>
     </tr>`;
 
+  const codeMarkup = "code" in action && (action.boxed
+    ? `<table role="presentation" align="center" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto;">
+         <tr>${Array.from(action.code, (digit) =>
+           `<td align="center" valign="middle" width="36" height="36" style="width:36px;height:36px;border:1px solid ${outline};border-radius:6px;background-color:${panel};color:${strong};font-family:Courier,monospace;font-size:26px;line-height:36px;font-weight:700;text-align:center;">${escapeHtml(digit)}</td>`
+         ).join('<td width="4" style="width:4px;font-size:0;line-height:0;">&nbsp;</td>')}</tr>
+       </table>`
+    : `<p style="display:inline-block;margin:0;padding:14px 24px;border:1px solid ${outline};border-radius:8px;background-color:${panel};font-family:Courier,monospace;font-size:26px;letter-spacing:6px;font-weight:700;color:${strong};">${escapeHtml(action.code)}</p>`);
+
   return {
     subject: input.subject,
     text: [
@@ -193,7 +203,7 @@ function renderActionEmail(input: ActionEmail) {
       "",
       closing,
       "",
-      "Powered by Fides",
+      input.footer ?? "Powered by Fides",
     ].join("\n"),
 
     html: `<!doctype html>
@@ -235,7 +245,7 @@ function renderActionEmail(input: ActionEmail) {
           <tr>
             <td class="px" style="background-color:${soft};border-bottom:1px solid ${outline};border-radius:13px 13px 0 0;padding:20px 32px;">
               ${input.header === "fides-wordmark" ? `
-              <div style="font-family:${systemEmailFonts.heading};font-size:38px;line-height:44px;color:${headingColor};">Fides</div>
+              <div style="font-family:${systemEmailFonts.heading};font-size:38px;line-height:44px;color:${input.wordmarkAccent ? accent : headingColor};">Fides</div>
               <div style="padding-top:4px;font-family:${font};font-size:12px;line-height:18px;letter-spacing:0.6px;text-transform:uppercase;color:${strong};">${escapeHtml(label)}</div>
               ` : `
               <table role="presentation" cellspacing="0" cellpadding="0" border="0">
@@ -265,9 +275,8 @@ function renderActionEmail(input: ActionEmail) {
                     <a class="btn" href="${actionUrl}" target="_blank" style="display:inline-block;padding:14px 28px;font-family:${font};font-size:15px;line-height:20px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:8px;">${escapeHtml(action.label)}</a>
                   </td>
                 </tr>
-              </table>` : `
-              <p style="display:inline-block;margin:0;padding:14px 24px;border:1px solid ${outline};border-radius:8px;background-color:${panel};font-family:Courier,monospace;font-size:26px;letter-spacing:6px;font-weight:700;color:${strong};">${escapeHtml(action.code)}</p>`}
-              ${note ? `<p style="margin:14px 0 0;font-size:13px;line-height:20px;color:#6b7280;">${escapeHtml(note)}</p>` : ""}
+              </table>` : codeMarkup}
+              ${note ? `<p style="margin:14px 0 0;font-size:13px;line-height:20px;color:#6b7280;${"code" in action && action.boxed ? "text-align:center;" : ""}">${escapeHtml(note)}</p>` : ""}
             </td>
           </tr>
 
@@ -305,7 +314,7 @@ function renderActionEmail(input: ActionEmail) {
           <!-- Footer -->
           <tr>
             <td align="center" style="background-color:${panel};border-top:1px solid ${outline};border-radius:0 0 13px 13px;padding:18px 24px;font-family:${systemEmailFonts.body};font-size:13px;line-height:normal;color:#c35000;">
-              Powered by <span style="font-family:${systemEmailFonts.heading};font-weight:400;">Fides</span>
+              ${input.footer ? escapeHtml(input.footer) : `Powered by <span style="font-family:${systemEmailFonts.heading};font-weight:400;">Fides</span>`}
             </td>
           </tr>
         </table>
@@ -413,6 +422,29 @@ export async function sendRejectionEmail(input: {
         { text: "Submit a new application. You can use the same email address." },
       ],
       closing: "Thank you for applying to Fides.",
+    }),
+  });
+}
+
+export async function sendRegistrationCodeEmail(input: { to: string; code: string; minutesValid: number }) {
+  return sendMail({
+    to: input.to,
+    ...renderActionEmail({
+      header: "fides-wordmark",
+      wordmarkAccent: true,
+      label: "Email verification",
+      subject: "Verify your email for Fides",
+      heading: "Verify your email address",
+      preheader: "Enter this code to continue your Fides application.",
+      body: ["Use the verification code below to confirm your business email address."],
+      action: { code: input.code, boxed: true },
+      note: `This code expires in ${input.minutesValid} minutes.`,
+      steps: [
+        { text: "Return to your Fides application and enter the six-digit code." },
+        { text: "Select Confirm to continue to identity verification." },
+      ],
+      closing: "If you did not request this code, you can safely ignore this email.",
+      footer: `© ${new Date().getUTCFullYear()} Fides. All rights reserved.`,
     }),
   });
 }

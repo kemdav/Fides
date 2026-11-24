@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { sendRegistrationCodeAction } from "@/app/actions/registration-email";
 import { adminButtonClasses } from "@/components/admin/admin-button";
 import { Icon, type IconName } from "@/components/admin/icon";
-import { Card as BaseCard } from "@/components/ui";
+import { StaffSuccessDialog } from "@/components/merchant/staff/staff-confirmation-dialog";
+import { Card as BaseCard, Modal } from "@/components/ui";
 import {
   ALL_DOCUMENTS,
   BUSINESS_TYPES,
@@ -29,6 +31,7 @@ import {
 } from "@/lib/registration/schema";
 import { cn } from "@/lib/utils";
 import { PlanCardGrid, PlanComparisonRow, SelectedPlanSummary } from "./plan-selection";
+import { EmailVerificationStep } from "./email-verification-step";
 import { SlugBadge } from "./slug-badge";
 import { uploadDocument } from "./upload-document";
 import { normalizeSlugInput } from "@/lib/account-request/schema";
@@ -131,9 +134,16 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
   const [draftNote, setDraftNote] = useState<string | null>(null);
   const [uploads, setUploads] = useState<Uploads>({});
   const [uploading, setUploading] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
+  const [sentEmail, setSentEmail] = useState<string | null>(null);
+  const [emailChallenge, setEmailChallenge] = useState<{ email: string; retryAt: number } | null>(null);
+  const [showEmailVerification, setShowEmailVerification] = useState(false);
+  const [verifiedEmail, setVerifiedEmail] = useState<{ email: string; proof: string } | null>(null);
   const mainRef = useRef<HTMLElement>(null);
   const previousStep = useRef(step);
-  const busy = uploading || submitting;
+  const busy = uploading || submitting || sendingCode;
+  const email = values.email.trim().toLowerCase();
+  const emailProof = verifiedEmail?.email === email ? verifiedEmail.proof : null;
   const payload = { ...values, requestedSlug: requestAccount ? values.requestedSlug : undefined };
 
   function fileFor(key: DocumentKey) {
@@ -249,9 +259,36 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
     setFurthest((current) => Math.max(current, next));
   }
 
+  async function sendEmailCode(address: string): ReturnType<typeof sendRegistrationCodeAction> {
+    setSendingCode(true);
+    try {
+      const result = await sendRegistrationCodeAction(address);
+      if (result.ok) setSentEmail(address);
+      return result;
+    } catch {
+      return { ok: false, error: "We couldn’t send the verification code. Please try again." };
+    } finally {
+      setSendingCode(false);
+    }
+  }
+
   async function next() {
     if (busy) return;
     if (!validateCurrent()) return;
+    if (step === 0 && !emailProof) {
+      if (emailChallenge?.email === email) {
+        setShowEmailVerification(true);
+        return;
+      }
+      const result = await sendEmailCode(email);
+      if (result.ok) {
+        setEmailChallenge({ email, retryAt: result.retryAt });
+        setShowEmailVerification(true);
+      } else {
+        setErrors({ email: result.error });
+      }
+      return;
+    }
     if (step === 3 && !await uploadVerificationDocuments()) return;
     goTo(Math.min(step + 1, STEPS.length - 1));
   }
@@ -319,6 +356,11 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
       setStep(target);
       return;
     }
+    if (!emailProof) {
+      setErrors({ email: "Verify your business email before submitting your application." });
+      setStep(0);
+      return;
+    }
 
     const missingDocs = ALL_DOCUMENTS.filter((doc) => (doc.key === GOVERNMENT_ID_SLOT.key ? !idFile : !docs[doc.key as BusinessDocumentKey]));
     if (missingDocs.length > 0) {
@@ -351,12 +393,19 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
     try {
       const body = new FormData();
       body.set("payload", JSON.stringify(parsed.data));
+      body.set("emailProof", emailProof);
       if (logo) body.set("logo", logo);
       body.set("uploadedDocuments", JSON.stringify(receipts));
       const response = await fetch("/api/applications", { method: "POST", body });
-      const result = (await response.json().catch(() => ({}))) as { error?: string; documentKey?: DocumentKey; referenceCode?: string };
+      const result = (await response.json().catch(() => ({}))) as { error?: string; documentKey?: DocumentKey; referenceCode?: string; emailVerificationRequired?: boolean };
       if (!response.ok) {
         setSubmitError(result.error ?? "We could not submit your application. Please try again.");
+        if (result.emailVerificationRequired) {
+          setVerifiedEmail(null);
+          setErrors({ email: result.error });
+          setStep(0);
+          return;
+        }
         const failedKey = result.documentKey;
         if (failedKey) {
           setUploads((current) => ({ ...current, [failedKey]: undefined }));
@@ -382,7 +431,7 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
 
   return (
     <div className="flex min-h-dvh flex-col bg-powder text-ink lg:flex-row">
-      <Sidebar current={step} furthest={busy ? -1 : furthest} onJump={(index) => setStep(index)} />
+      <Sidebar current={step} furthest={busy || showEmailVerification ? -1 : emailProof ? furthest : 0} onJump={(index) => setStep(index)} />
       <MobileProgress current={step} />
       <main ref={mainRef} className="flex min-w-0 flex-1 flex-col items-center px-4 py-6 sm:px-8 lg:px-6 lg:py-8 xl:px-8">
         {step === 0 && (
@@ -403,12 +452,33 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
         <div className={cn("flex w-full flex-1 flex-col", step === 4 ? "max-w-[1100px]" : step === 5 ? "max-w-[820px]" : step === 3 ? "max-w-[900px]" : step === 0 ? "max-w-lg" : "max-w-[680px]")}>
           {step === 0 && (
             <div className="my-auto py-4 sm:py-6">
-              {hasDraft ? (
-                <button type="button" onClick={restoreDraft} className="mb-4 w-full rounded-lg bg-[#faece3] px-4 py-2.5 text-base font-semibold text-burnt hover:bg-[#f6dfd0]">
-                  Restore your saved draft
-                </button>
-              ) : null}
-              <AccountStep values={values} errors={errors} set={set} onNext={next} />
+              {showEmailVerification && emailChallenge ? (
+                <EmailVerificationStep
+                  email={emailChallenge.email}
+                  retryAt={emailChallenge.retryAt}
+                  onResend={() => sendEmailCode(emailChallenge.email)}
+                  onResent={(retryAt) => setEmailChallenge({ email: emailChallenge.email, retryAt })}
+                  onEdit={() => {
+                    setShowEmailVerification(false);
+                    requestAnimationFrame(() => mainRef.current?.querySelector<HTMLInputElement>("#email")?.focus());
+                  }}
+                  onVerified={(proof) => {
+                    setVerifiedEmail({ email: emailChallenge.email, proof });
+                    setEmailChallenge(null);
+                    setShowEmailVerification(false);
+                    goTo(1);
+                  }}
+                />
+              ) : (
+                <>
+                  {hasDraft && (
+                    <button type="button" onClick={restoreDraft} disabled={sendingCode} className="mb-4 w-full rounded-lg bg-[#faece3] px-4 py-2.5 text-base font-semibold text-burnt hover:bg-[#f6dfd0] disabled:opacity-50">
+                      Restore your saved draft
+                    </button>
+                  )}
+                  <AccountStep values={values} errors={errors} set={set} onNext={next} sendingCode={sendingCode} />
+                </>
+              )}
             </div>
           )}
           {step === 1 && (
@@ -486,6 +556,29 @@ export function RegisterFlow({ requestAccount = false }: { requestAccount?: bool
         </div>
       </main>
       <FilePreviewDialog file={preview?.file ?? null} title={preview?.title ?? ""} onClose={() => setPreview(null)} />
+      {sendingCode ? (
+        <Modal
+          open
+          unstyled
+          labelledBy="registration-email-loading"
+          onClose={() => {}}
+          className="fixed inset-0 m-0 h-dvh w-dvw max-h-none max-w-none place-items-center bg-transparent p-4 open:grid"
+        >
+          <div role="status" className="flex items-center gap-3 rounded-2xl bg-white px-6 py-5 text-base font-semibold text-ink shadow-xl">
+            <span aria-hidden="true" className="size-6 rounded-full border-2 border-burnt/25 border-t-burnt motion-safe:animate-spin" />
+            <span id="registration-email-loading">Please wait…</span>
+          </div>
+        </Modal>
+      ) : sentEmail && (
+        <StaffSuccessDialog
+          title="Verification email sent"
+          description={`Check ${sentEmail} for the six-digit code, then enter it to continue.`}
+          onClose={() => {
+            setSentEmail(null);
+            requestAnimationFrame(() => mainRef.current?.querySelector<HTMLInputElement>("#registration-code")?.focus());
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -511,7 +604,7 @@ function Card({ children }: { children: React.ReactNode }) {
   );
 }
 
-function AccountStep({ values, errors, set, onNext }: StepProps & { onNext: () => void }) {
+function AccountStep({ values, errors, set, onNext, sendingCode }: StepProps & { onNext: () => void; sendingCode: boolean }) {
   const [passwordFocused, setPasswordFocused] = useState(false);
   const showPasswordRules = passwordFocused && values.password.length > 0;
   const passwordDescription = [
@@ -523,84 +616,87 @@ function AccountStep({ values, errors, set, onNext }: StepProps & { onNext: () =
     <form
       noValidate
       className="mx-auto w-full max-w-md"
+      aria-busy={sendingCode}
       onSubmit={(event) => {
         event.preventDefault();
         onNext();
       }}
     >
       <Heading title="Create Your Account" subtitle="Start your journey with Fides — it only takes a few minutes." className="mb-10" />
-      <div className="grid gap-7 sm:gap-8">
-        <Field label="Business Email" htmlFor="email" error={errors.email}>
-          <TextInput id="email" type="email" invalid={!!errors.email} autoComplete="email" placeholder="maria@bellavita.ph" value={values.email} onChange={(e) => set("email", e.target.value)} />
-        </Field>
-        <div
-          onFocus={() => setPasswordFocused(true)}
-          onBlur={(event) => {
-            if (!event.currentTarget.contains(event.relatedTarget)) setPasswordFocused(false);
-          }}
-        >
-          <Field label="Password" htmlFor="password" error={errors.password}>
-            <PasswordInput id="password" fieldLabel="password" aria-describedby={passwordDescription} invalid={!!errors.password} autoComplete="new-password" placeholder="••••••••" value={values.password} onChange={(e) => set("password", e.target.value)} />
+      <fieldset disabled={sendingCode} className="min-w-0">
+        <div className="grid gap-7 sm:gap-8">
+          <Field label="Business Email" htmlFor="email" error={errors.email}>
+            <TextInput id="email" type="email" invalid={!!errors.email} autoComplete="email" placeholder="maria@bellavita.ph" value={values.email} onChange={(e) => set("email", e.target.value)} />
           </Field>
-          {showPasswordRules && (
-            <ul id="password-requirements" className="mt-3 flex flex-col gap-1 text-sm leading-5" aria-label="Password requirements">
-              {registrationPasswordRules.map((rule) => {
-                const met = rule.passes(values.password);
-                return (
-                  <li key={rule.text} className={cn("flex items-center gap-2", met ? "text-success" : "text-muted")}>
-                    <span className={cn("flex size-4 items-center justify-center rounded-full", met ? "bg-success text-white" : "border border-outline/60")}>
-                      {met ? <Icon name="check" className="size-2.5" /> : null}
-                    </span>
-                    <span className="sr-only">{met ? "Met: " : "Required: "}</span>
-                    {rule.text}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+          <div
+            onFocus={() => setPasswordFocused(true)}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget)) setPasswordFocused(false);
+            }}
+          >
+            <Field label="Password" htmlFor="password" error={errors.password}>
+              <PasswordInput id="password" fieldLabel="password" aria-describedby={passwordDescription} invalid={!!errors.password} autoComplete="new-password" placeholder="••••••••" value={values.password} onChange={(e) => set("password", e.target.value)} />
+            </Field>
+            {showPasswordRules && (
+              <ul id="password-requirements" className="mt-3 flex flex-col gap-1 text-sm leading-5" aria-label="Password requirements">
+                {registrationPasswordRules.map((rule) => {
+                  const met = rule.passes(values.password);
+                  return (
+                    <li key={rule.text} className={cn("flex items-center gap-2", met ? "text-success" : "text-muted")}>
+                      <span className={cn("flex size-4 items-center justify-center rounded-full", met ? "bg-success text-white" : "border border-outline/60")}>
+                        {met ? <Icon name="check" className="size-2.5" /> : null}
+                      </span>
+                      <span className="sr-only">{met ? "Met: " : "Required: "}</span>
+                      {rule.text}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+          <Field label="Confirm Password" htmlFor="confirmPassword" error={errors.confirmPassword}>
+            <PasswordInput id="confirmPassword" fieldLabel="confirm password" invalid={!!errors.confirmPassword} autoComplete="new-password" placeholder="Re-enter your password" value={values.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)} />
+          </Field>
         </div>
-        <Field label="Confirm Password" htmlFor="confirmPassword" error={errors.confirmPassword}>
-          <PasswordInput id="confirmPassword" fieldLabel="confirm password" invalid={!!errors.confirmPassword} autoComplete="new-password" placeholder="Re-enter your password" value={values.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)} />
-        </Field>
-      </div>
 
-      <div className="mt-8 flex flex-col gap-1">
-        <label className="flex min-h-6 cursor-pointer items-start gap-3 text-sm leading-6 text-body">
-          <input
-            type="checkbox"
-            aria-invalid={Boolean(errors.acceptTerms)}
-            aria-describedby={errors.acceptTerms ? "acceptTerms-error" : undefined}
-            checked={values.acceptTerms}
-            onChange={(e) => set("acceptTerms", e.target.checked)}
-            className="mt-0.5 size-4 shrink-0 accent-burnt"
-          />
-          <span>
-            I agree to the{" "}
-            <Link href="/#contact" className="font-semibold text-burnt hover:underline">
-              Terms of Service
-            </Link>{" "}
-            and{" "}
-            <Link href="/#contact" className="font-semibold text-burnt hover:underline">
-              Privacy Policy
-            </Link>{" "}
-            of Fides.
-          </span>
-        </label>
-        {errors.acceptTerms ? (
-          <p id="acceptTerms-error" role="alert" className="text-sm text-danger">
-            {errors.acceptTerms}
-          </p>
-        ) : null}
-      </div>
-
-      <div className="mt-6 flex flex-col items-center gap-6">
-        <button type="submit" className={primaryButton}>
-          Create Account <Icon name="arrow-right" className="size-4" />
-        </button>
-        <div className="lg:w-max lg:whitespace-nowrap">
-          <SecureFooter>Your data is encrypted and secure. We never share your information.</SecureFooter>
+        <div className="mt-8 flex flex-col gap-1">
+          <label className="flex min-h-6 cursor-pointer items-start gap-3 text-sm leading-6 text-body">
+            <input
+              type="checkbox"
+              aria-invalid={Boolean(errors.acceptTerms)}
+              aria-describedby={errors.acceptTerms ? "acceptTerms-error" : undefined}
+              checked={values.acceptTerms}
+              onChange={(e) => set("acceptTerms", e.target.checked)}
+              className="mt-0.5 size-4 shrink-0 accent-burnt"
+            />
+            <span>
+              I agree to the{" "}
+              <Link href="/#contact" className="font-semibold text-burnt hover:underline">
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link href="/#contact" className="font-semibold text-burnt hover:underline">
+                Privacy Policy
+              </Link>{" "}
+              of Fides.
+            </span>
+          </label>
+          {errors.acceptTerms ? (
+            <p id="acceptTerms-error" role="alert" className="text-sm text-danger">
+              {errors.acceptTerms}
+            </p>
+          ) : null}
         </div>
-      </div>
+
+        <div className="mt-6 flex flex-col items-center gap-6">
+          <button type="submit" className={primaryButton}>
+            Create Account <Icon name="arrow-right" className="size-4" />
+          </button>
+          <div className="lg:w-max lg:whitespace-nowrap">
+            <SecureFooter>Your data is encrypted and secure. We never share your information.</SecureFooter>
+          </div>
+        </div>
+      </fieldset>
     </form>
   );
 }

@@ -12,7 +12,7 @@ import motion from "./sidebar-motion.module.css";
 export { formatBytes };
 
 export const STEPS = [
-  { title: "Account Creation", icon: "users" },
+  { title: "Account Creation", icon: "user" },
   { title: "Identity Verification", icon: "shield" },
   { title: "Business Information", icon: "grid" },
   { title: "Document Requirements", icon: "document" },
@@ -75,18 +75,18 @@ export function Sidebar({ current, onJump, furthest }: { current: number; furthe
                         className={cn(
                           "grid size-(--step-size) shrink-0 place-items-center rounded-full border",
                           active ? "border-burnt bg-burnt text-white shadow-md shadow-burnt/25"
-                            : done ? "border-success/35 bg-white text-success"
+                            : done ? "border-success-deep bg-success/15 text-success-deep"
                             : "border-outline/30 bg-mist text-muted"
                         )}
                       >
-                        <Icon name={done ? "check" : step.icon} weight={done ? "bold" : active ? "fill" : "regular"} className="size-[22px]" />
+                        <Icon name={step.icon} weight={active || done ? "fill" : "regular"} className="size-[22px]" />
                       </span>
                       <span className="flex min-w-0 flex-col gap-0.5">
                         <span className={cn("text-lg font-bold leading-6 xl:text-xl xl:leading-7", active ? "text-burnt-dark" : "text-muted group-hover:text-ink group-hover:underline")}>
                           {step.title}
                         </span>
-                        <span className={cn("text-sm leading-5", active ? "text-burnt-dark" : "text-muted")}>
-                          Step {index + 1}{active ? " - Active" : done ? " - Completed" : ""}
+                        <span className={cn("text-sm leading-5", active ? "text-burnt-dark" : done ? "text-success-deep" : "text-muted")}>
+                          {done ? "Completed" : `Step ${index + 1}${active ? " - Active" : ""}`}
                         </span>
                       </span>
                     </Row>

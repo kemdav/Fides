@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { DocumentUploadError, ServiceError, submitApplication, type DocumentUploads } from "@/lib/applications/service";
 import { ALL_DOCUMENTS, documentFieldName } from "@/lib/registration/options";
 import { loadStagedDocuments } from "@/lib/applications/staged-documents";
+import { hasRegistrationEmailProof } from "@/lib/auth/registration-email";
+import { registrationSchema } from "@/lib/registration/schema";
 
 export const runtime = "nodejs";
 
@@ -20,10 +22,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid application details." }, { status: 400 });
     }
 
+    const parsed = registrationSchema.safeParse(raw);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid application details." }, { status: 400 });
+    }
+    if (!hasRegistrationEmailProof(parsed.data.email, form.get("emailProof"))) {
+      return NextResponse.json({
+        error: "Verify your business email before submitting your application.",
+        emailVerificationRequired: true,
+      }, { status: 403 });
+    }
+
     const logo = form.get("logo");
     if (form.has("uploadedDocuments")) {
       const staged = await loadStagedDocuments(form.get("uploadedDocuments"));
-      const result = await submitApplication(raw, logo instanceof File && logo.size > 0 ? logo : null, staged.documents);
+      const result = await submitApplication(parsed.data, logo instanceof File && logo.size > 0 ? logo : null, staged.documents);
       await staged.cleanup();
       return NextResponse.json(result, { status: 201 });
     }
@@ -32,7 +45,7 @@ export async function POST(request: Request) {
       const file = form.get(documentFieldName(doc.key));
       if (file instanceof File && file.size > 0) documents[doc.key] = file;
     }
-    const result = await submitApplication(raw, logo instanceof File && logo.size > 0 ? logo : null, documents);
+    const result = await submitApplication(parsed.data, logo instanceof File && logo.size > 0 ? logo : null, documents);
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
     if (error instanceof DocumentUploadError) {

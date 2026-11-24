@@ -29,6 +29,7 @@ export type IconName =
   | "shield"
   | "trash"
   | "upload"
+  | "user"
   | "users"
   | "verified";
 
