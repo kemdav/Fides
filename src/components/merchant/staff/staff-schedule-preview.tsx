@@ -126,7 +126,7 @@ function ScheduleDialog({ tenantId, staffId, name, role, timezone, today, onClos
               {views.map((mode) => (
                 <button key={mode} type="button" aria-pressed={view === mode}
                   className={cn("flex min-h-9 flex-1 items-center justify-center rounded-full px-4 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-burnt sm:min-w-16",
-                    view === mode ? "bg-burnt text-white shadow-sm" : "text-body hover:bg-white")}
+                    view === mode ? "bg-burnt text-on-burnt shadow-sm" : "text-body hover:bg-white")}
                   onClick={() => { setView(mode); setSelected(null); }}>{mode}</button>
               ))}
             </div>

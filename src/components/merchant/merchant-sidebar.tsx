@@ -109,9 +109,7 @@ export function MerchantSidebar({
         onClick={() => setMobileOpen(false)}
         className={cn(
           "flex min-h-[clamp(32px,4.2vh,40px)] items-center gap-3 whitespace-nowrap rounded-[9px] px-3 py-1.5 text-sm font-semibold leading-[21px] transition-colors",
-          active
-            ? "bg-[#C35000]/10 text-[#C35000]"
-            : "text-[#354357] hover:bg-[#F4F1EA]",
+          active ? "bg-sky/45 text-burnt" : "text-[#354357] hover:bg-[#F4F1EA]",
         )}
       >
         <Icon
@@ -135,9 +133,7 @@ export function MerchantSidebar({
         >
           <Icon name="grid" className="size-6" />
         </button>
-        <span className="font-display text-2xl text-[#C35000]">
-          {businessName}
-        </span>
+        <span className="font-display text-2xl text-burnt">{businessName}</span>
         <span aria-hidden="true" className="size-8" />
       </div>
 
@@ -213,7 +209,7 @@ export function MerchantSidebar({
             aria-current={accountActive ? "page" : undefined}
             className={cn(
               "flex min-w-0 items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40",
-              accountActive && "bg-burnt/10",
+              accountActive && "bg-sky/45",
             )}
           >
             <span

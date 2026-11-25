@@ -5,6 +5,13 @@ export interface ColorOption {
 
 export type ColorType = "main" | "secondary" | "accent";
 
+export interface PreviewServiceItem {
+  id: string;
+  name: string;
+  durationMinutes: number;
+  priceCents: number;
+}
+
 export interface WebsiteSettingsData {
   // Brand identity
   businessName: string;
@@ -51,6 +58,8 @@ export interface WebsiteSettingsData {
   allowIndexing: boolean;
   socialTitle: string;
   socialDescription: string;
+  socialImageUrl?: string;
+  socialImageName?: string;
 }
 
 export type ActiveTab =
