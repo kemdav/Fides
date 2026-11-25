@@ -1,3 +1,5 @@
+import type { AppointmentServiceOption } from "./appointments";
+
 export type WaitlistStatus =
   | "waiting"
   | "notified"
@@ -5,12 +7,7 @@ export type WaitlistStatus =
   | "expired"
   | "cancelled";
 
-export interface WalkInServiceOption {
-  id: string;
-  name: string;
-  priceCents: number;
-  durationMinutes: number;
-}
+export type WalkInServiceOption = AppointmentServiceOption;
 
 export interface WalkInStaffOption {
   id: string;

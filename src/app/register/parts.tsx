@@ -82,7 +82,7 @@ export function Sidebar({ current, onJump, furthest }: { current: number; furthe
                       className={cn(
                         "flex size-[38px] shrink-0 items-center justify-center rounded-full border-2",
                         done && "border-success bg-white text-success",
-                        active && "border-burnt bg-burnt text-white shadow-[0_4px_10px_-2px_rgb(195_80_0/0.45)]",
+                        active && "border-burnt bg-burnt text-on-burnt shadow-[0_4px_10px_-2px_rgb(195_80_0/0.45)]",
                         !done && !active && "border-hairline bg-mist text-muted"
                       )}
                     >

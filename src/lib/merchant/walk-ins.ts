@@ -162,7 +162,7 @@ export async function getWalkInWorkspaceData(
   const [servicesRes, staffRes, waitlistRes, todayApptsRes] = await Promise.all([
     supabase
       .from("services")
-      .select("id, name, price_cents, duration_minutes")
+      .select("id, name, price_cents, duration_minutes, staff_service_skills(staff_id)")
       .eq("tenant_id", tenantId)
       .order("name", { ascending: true }),
     supabase
@@ -192,6 +192,7 @@ export async function getWalkInWorkspaceData(
     name: s.name,
     priceCents: s.price_cents ?? 0,
     durationMinutes: s.duration_minutes ?? 60,
+    eligibleStaffIds: s.staff_service_skills.map((skill) => skill.staff_id),
   }));
 
   const serviceById = new Map(services.map((s) => [s.id, s]));

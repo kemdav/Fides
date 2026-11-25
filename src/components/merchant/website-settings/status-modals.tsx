@@ -127,7 +127,7 @@ export function PublishReviewModal({
           Appointments, services, and customer accounts are unaffected.
         </p>
 
-        <div className="mt-5 flex items-center justify-center gap-3">
+        <div className="mt-6 flex items-center justify-center gap-3">
           <button
             type="button"
             onClick={onClose}
@@ -139,7 +139,7 @@ export function PublishReviewModal({
             type="button"
             disabled={isPublishing}
             onClick={() => onPublish()}
-            className="px-4 py-2 text-xs font-semibold text-white bg-burnt hover:bg-burnt-dark disabled:opacity-60 rounded-xl shadow-xs transition"
+            className="px-4 py-2 text-xs font-semibold text-on-burnt bg-burnt hover:bg-burnt-dark disabled:opacity-60 rounded-xl shadow-xs transition"
           >
             {isPublishing ? "Publishing..." : "Publish website"}
           </button>
@@ -189,11 +189,11 @@ export function PublishedModal({
           </div>
         </div>
 
-        <div className="mt-5 flex items-center justify-center">
+        <div className="mt-6 flex items-center justify-center">
           <button
             type="button"
             onClick={onClose}
-            className="px-6 py-2 text-xs font-semibold text-white bg-burnt hover:bg-burnt-dark rounded-xl shadow-xs transition"
+            className="px-6 py-2 text-xs font-semibold text-on-burnt bg-burnt hover:bg-burnt-dark rounded-xl shadow-xs transition"
           >
             Close
           </button>
@@ -236,11 +236,11 @@ export function DraftSavedModal({ isOpen, onClose }: DraftSavedModalProps) {
           </p>
         </div>
 
-        <div className="mt-5 flex items-center justify-center">
+        <div className="mt-6 flex items-center justify-center">
           <button
             type="button"
             onClick={onClose}
-            className="px-6 py-2 text-xs font-semibold text-white bg-burnt hover:bg-burnt-dark rounded-xl shadow-xs transition"
+            className="px-6 py-2 text-xs font-semibold text-on-burnt bg-burnt hover:bg-burnt-dark rounded-xl shadow-xs transition"
           >
             Close
           </button>

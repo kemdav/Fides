@@ -1,8 +1,10 @@
 "use client";
 
 import * as React from "react";
-import type { ColorType, ColorOption } from "./types";
 import { Modal } from "@/components/ui/modal";
+import { normalizeBrandColor } from "@/lib/brand-colors";
+import { HEX_COLOR_REGEX } from "@/lib/validations/website-settings";
+import type { ColorType, ColorOption } from "./types";
 
 const COLOR_CONFIG: Record<
   ColorType,
@@ -75,76 +77,118 @@ export function ColorPickerModal({
   );
 }
 
+function formatHex(value: string): string | null {
+  const trimmed = value.trim().toUpperCase();
+  const hex = trimmed.startsWith("#") ? trimmed : "#" + trimmed;
+  return HEX_COLOR_REGEX.test(hex) ? hex : null;
+}
+
 function ColorPickerContent({
   type,
   currentColor,
   onClose,
   onApply,
 }: Omit<ColorPickerModalProps, "isOpen"> & { type: ColorType }) {
-  const [selectedHex, setSelectedHex] = React.useState(currentColor);
+  const [selectedHex, setSelectedHex] = React.useState(() =>
+    normalizeBrandColor(currentColor, currentColor),
+  );
+  const [pickerHex, setPickerHex] = React.useState(() =>
+    formatHex(selectedHex) ?? "#FFFFFF",
+  );
+  const titleId = React.useId();
+  const hexId = React.useId();
+  const hexHelpId = React.useId();
+  const validHex = formatHex(selectedHex);
   const config = COLOR_CONFIG[type];
 
-  const handleApply = () => {
-    const formatted = selectedHex.startsWith("#")
-      ? selectedHex.toUpperCase()
-      : `#${selectedHex.toUpperCase()}`;
-    onApply(type, formatted);
-    onClose();
+  const updateColor = (value: string) => {
+    setSelectedHex(value);
+    const formatted = formatHex(value);
+    if (formatted) setPickerHex(formatted);
   };
 
   return (
-    <Modal open onClose={onClose} labelledBy="color-modal-title" unstyled className="w-[calc(100%-1rem)] max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-hairline overflow-visible text-ink">
+    <Modal
+      open
+      unstyled
+      onClose={onClose}
+      labelledBy={titleId}
+      className="m-auto w-[calc(100%-2rem)] max-w-sm rounded-2xl border border-line bg-white p-6 text-ink shadow-2xl backdrop:backdrop-blur-xs"
+    >
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!validHex) return;
+          onApply(type, validHex);
+          onClose();
+        }}
+      >
         <div className="mb-4">
-          <h3
-            id="color-modal-title"
-            className="text-base font-semibold text-ink"
-          >
+          <h3 id={titleId} className="text-lg font-semibold">
             {config.title}
           </h3>
-          <p className="mt-1 text-xs text-subtle leading-relaxed">
+          <p className="mt-1 text-xs text-muted leading-relaxed">
             {config.description}
           </p>
         </div>
 
-        {/* Large Horizontal Color Preview Rectangle */}
-        <div
-          className="w-full h-10 rounded-xl border border-black/10 shadow-inner mb-4 transition-colors"
-          style={{ backgroundColor: selectedHex }}
-        />
+        <label
+          className="relative mb-4 flex h-10 w-full items-center justify-end rounded-lg border border-black/10 px-2 shadow-inner focus-within:ring-2 focus-within:ring-burnt/50"
+          style={{ backgroundColor: pickerHex }}
+        >
+          <span className="rounded-md border border-black/10 bg-white px-2 py-1 text-xs font-medium text-ink">
+            Choose color
+          </span>
+          <input
+            type="color"
+            value={pickerHex}
+            onChange={(event) =>
+              updateColor(event.currentTarget.value.toUpperCase())
+            }
+            className="absolute inset-0 size-full cursor-pointer opacity-0"
+          />
+        </label>
 
         <div className="space-y-3.5">
-          {/* HEX Input */}
           <div>
-            <label className="block text-xs font-medium text-body mb-1">
+            <label
+              htmlFor={hexId}
+              className="mb-1 block text-xs font-medium text-body"
+            >
               HEX color*
             </label>
             <input
+              id={hexId}
               type="text"
               value={selectedHex}
-              onChange={(e) => setSelectedHex(e.target.value)}
+              onChange={(event) => updateColor(event.currentTarget.value)}
+              aria-invalid={!validHex}
+              aria-describedby={hexHelpId}
+              autoComplete="off"
+              spellCheck={false}
               maxLength={7}
               placeholder="#000000"
-              className="w-full px-3 py-2 rounded-xl border border-line font-mono text-xs uppercase text-ink focus:outline-none focus:ring-1 focus:ring-burnt focus:border-burnt transition"
+              className="w-full rounded-lg border border-outline px-3 py-2.5 font-mono text-xs uppercase text-ink transition focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/25 aria-invalid:border-danger"
             />
-            <p className="mt-1 text-xs text-glyph">
-              Choose a color or enter a 6-digit HEX value.
+            <p id={hexHelpId} className="mt-1 text-[11px] text-muted">
+              Enter a 6-digit HEX value, such as #0D6E6E.
             </p>
           </div>
 
           {/* Curated Preset Swatches (2x2 Grid) */}
           <div className="grid grid-cols-2 gap-2 pt-1">
             {config.presets.map((preset) => {
-              const isSelected =
-                selectedHex.toUpperCase() === preset.hex.toUpperCase();
+              const isSelected = validHex === preset.hex;
               return (
                 <button
                   key={preset.name}
                   type="button"
-                  onClick={() => setSelectedHex(preset.hex)}
-                  className={`flex items-center justify-center px-3 py-2 rounded-xl border text-xs font-medium transition ${
+                  onClick={() => updateColor(preset.hex)}
+                  aria-pressed={isSelected}
+                  className={`flex items-center justify-center px-3 py-2 rounded-lg border text-xs font-medium transition cursor-pointer ${
                     isSelected
                       ? "border-ink bg-mist ring-1 ring-ink text-ink font-semibold"
-                      : "border-hairline hover:border-line bg-white text-body"
+                      : "border-line hover:border-outline bg-white text-body"
                   }`}
                 >
                   <span className="truncate">{preset.name}</span>
@@ -155,22 +199,23 @@ function ColorPickerContent({
         </div>
 
         {/* Action Buttons */}
-        <div className="mt-6 flex items-center justify-end gap-2.5 pt-3 border-t border-mist">
+        <div className="mt-6 flex items-center justify-end gap-3 pt-3 border-t border-mist">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-medium text-body bg-white border border-line hover:bg-mist rounded-xl shadow-2xs transition"
+            className="inline-flex items-center justify-center h-10 px-4 text-sm font-medium text-ink bg-white border border-glyph/80 hover:bg-mist rounded-lg transition cursor-pointer"
           >
             Cancel
           </button>
           <button
-            type="button"
-            onClick={handleApply}
-            className="px-4 py-2 text-xs font-semibold text-white bg-burnt hover:bg-burnt-dark rounded-xl shadow-xs transition"
+            type="submit"
+            disabled={!validHex}
+            className="inline-flex items-center justify-center h-10 px-5 text-sm font-semibold text-on-burnt bg-burnt hover:opacity-90 rounded-lg transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
           >
             Apply color
           </button>
         </div>
-      </Modal>
+      </form>
+    </Modal>
   );
 }

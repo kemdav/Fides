@@ -946,7 +946,7 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 function FileRow({ name, size }: { name: string; size: number }) {
   return (
     <div className="flex items-center gap-3 rounded-lg bg-mist px-3 py-2.5 text-xs text-body">
-      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-burnt text-white">
+      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-burnt text-on-burnt">
         <StepIcon name="check" className="size-3" />
       </span>
       <span className="min-w-0 flex-1 truncate">{name} — Ready to submit</span>
@@ -991,7 +991,7 @@ function SummaryStep({
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
         <h1 className="flex items-center gap-3 font-display text-3xl text-ink sm:text-4xl">
-          <span className="flex size-9 items-center justify-center rounded-full bg-burnt font-sans text-lg font-semibold text-white">6</span>
+          <span className="flex size-9 items-center justify-center rounded-full bg-burnt font-sans text-lg font-semibold text-on-burnt">6</span>
           Application Summary
         </h1>
         <p className="text-sm text-muted">
@@ -1057,7 +1057,7 @@ function SummaryStep({
         <Row label="Price" value={`${formatPeso(plan.price)} / month`} />
         <Row label="Billing Cycle" value="Monthly" />
         <p className="flex items-center gap-2 rounded-lg bg-blush px-3 py-2.5 text-xs text-burnt">
-          <StepIcon name="check" className="size-4 rounded-full bg-burnt p-0.5 text-white" />
+          <StepIcon name="check" className="size-4 rounded-full bg-burnt p-0.5 text-on-burnt" />
           {TRIAL_DAYS}-day free trial included — no charge until trial ends
         </p>
       </SummaryCard>

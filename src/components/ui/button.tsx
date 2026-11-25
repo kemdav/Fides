@@ -21,7 +21,7 @@ const variantClasses: Record<ButtonVariant, string> = {
   solid: "bg-ink text-white hover:bg-ink",
   outline: "border border-line bg-transparent text-ink hover:bg-mist",
   ghost: "bg-transparent text-ink hover:bg-mist",
-  brand: "bg-burnt text-white hover:bg-burnt-dark",
+  brand: "bg-burnt text-on-burnt hover:bg-burnt-dark",
   "brand-outline":
     "bg-transparent text-burnt shadow-[inset_0_0_0_2px_var(--color-burnt)] hover:bg-burnt/10",
   accent: "bg-sky text-ink shadow-[0_2px_3px_rgb(9_16_29/0.22)] hover:brightness-95",

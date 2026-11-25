@@ -1,26 +1,67 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
-import type { WebsiteSettingsData } from "./types";
-import { Modal } from "@/components/ui/modal";
 import { Icon } from "@/components/admin/icon";
+import Image from "next/image";
+import { Modal } from "@/components/ui/modal";
+import type { WebsiteSettingsData, PreviewServiceItem } from "./types";
+
+const FALLBACK_SERVICES: PreviewServiceItem[] = [
+  {
+    id: "fallback-1",
+    name: "Signature haircut",
+    durationMinutes: 45,
+    priceCents: 65000,
+  },
+  {
+    id: "fallback-2",
+    name: "Wellness massage",
+    durationMinutes: 60,
+    priceCents: 120000,
+  },
+  {
+    id: "fallback-3",
+    name: "Facial treatment",
+    durationMinutes: 50,
+    priceCents: 95000,
+  },
+];
 
 interface LivePreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   data: WebsiteSettingsData;
+  services?: PreviewServiceItem[];
 }
 
 export function LivePreviewModal({
   isOpen,
   onClose,
   data,
+  services = [],
 }: LivePreviewModalProps) {
   if (!isOpen) return null;
 
+  const displayedServices =
+    services.length > 0 ? services.slice(0, 3) : FALLBACK_SERVICES;
+
+  const locationText = [data.streetAddress, data.cityProvince]
+    .filter(Boolean)
+    .join(", ");
+  const contactText = [data.businessEmail, data.phoneNumber]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
-    <Modal open onClose={onClose} unstyled className="w-[calc(100%-1rem)] max-w-4xl max-h-[92vh] flex flex-col rounded-2xl bg-white shadow-2xl overflow-hidden border border-line p-0 text-ink backdrop:bg-black/60">
+    <Modal
+      open
+      onClose={onClose}
+      unstyled
+      labelledBy="live-preview-title"
+      className="relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-outline bg-white shadow-2xl"
+    >
+      <h2 id="live-preview-title" className="sr-only">Website preview</h2>
+      <div className="flex min-h-0 flex-1 flex-col">
         {/* Preview header bar */}
         <div className="flex items-center justify-between px-5 py-3.5 bg-ink text-white select-none">
           <div className="flex items-center gap-3">
@@ -29,15 +70,16 @@ export function LivePreviewModal({
               <span className="w-2.5 h-2.5 rounded-full bg-body" />
               <span className="w-2.5 h-2.5 rounded-full bg-body" />
             </span>
-            <div className="px-3 py-1 rounded-md bg-ink text-xs font-mono text-line flex items-center gap-1.5">
+            <div className="px-3 py-1 rounded-md bg-ink text-xs font-mono text-outline flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-success" />
               <span>{data.subdomain}.fides.app</span>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={onClose}
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium text-line hover:text-white hover:bg-ink transition"
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium text-outline hover:text-white hover:bg-ink transition"
           >
             <span>Close preview</span>
             <Icon name="close" className="w-4 h-4" />
@@ -58,16 +100,26 @@ export function LivePreviewModal({
           <header className="px-6 sm:px-12 py-5 flex items-center justify-between border-b border-black/5 bg-white/40 backdrop-blur-xs sticky top-0 z-10">
             <div className="flex items-center gap-3">
               <div
-                className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-xs"
+                className="relative w-9 h-9 rounded-full overflow-hidden flex items-center justify-center text-xs font-bold text-white shadow-xs shrink-0"
                 style={{ backgroundColor: data.accentColor || "#CC5000" }}
               >
-                {data.logoInitials || "BV"}
+                {data.logoUrl ? (
+                  <Image
+                    src={data.logoUrl}
+                    alt={`${data.businessName || "Business"} logo`}
+                    fill
+                    unoptimized
+                    className="object-cover"
+                  />
+                ) : (
+                  data.logoInitials || "BV"
+                )}
               </div>
               <div>
                 <span className="text-base font-semibold tracking-tight text-ink">
                   {data.businessName || "Bella Vita"}
                 </span>
-                <span className="block text-[10px] uppercase tracking-wider font-semibold text-subtle">
+                <span className="block text-[10px] uppercase tracking-wider font-semibold text-muted">
                   {data.businessCategory || "BEAUTY & WELLNESS"}
                 </span>
               </div>
@@ -76,7 +128,9 @@ export function LivePreviewModal({
             <nav className="flex items-center gap-6">
               <div className="hidden sm:flex items-center gap-5 text-xs font-medium text-body">
                 <span className="cursor-pointer hover:text-black">Home</span>
-                <span className="cursor-pointer hover:text-black">Services</span>
+                <span className="cursor-pointer hover:text-black">
+                  Services
+                </span>
                 <span className="cursor-pointer hover:text-black">Contact</span>
               </div>
               <button
@@ -143,56 +197,33 @@ export function LivePreviewModal({
                   Find your moment of care
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-sans">
-                  <div className="rounded-xl bg-white/85 p-5 shadow-xs border border-black/5 flex flex-col justify-between">
-                    <div>
-                      <h3 className="font-semibold text-sm text-ink">
-                        Signature haircut
-                      </h3>
-                      <p className="text-xs text-subtle mt-1">
-                        45 min · ₱650
-                      </p>
-                    </div>
-                    <span
-                      className="mt-4 inline-flex items-center gap-1 text-xs font-semibold"
-                      style={{ color: data.accentColor || "#CC5000" }}
-                    >
-                      View service <Icon name="arrow-right" className="w-3.5 h-3.5" />
-                    </span>
-                  </div>
-
-                  <div className="rounded-xl bg-white/85 p-5 shadow-xs border border-black/5 flex flex-col justify-between">
-                    <div>
-                      <h3 className="font-semibold text-sm text-ink">
-                        Wellness massage
-                      </h3>
-                      <p className="text-xs text-subtle mt-1">
-                        60 min · ₱1,200
-                      </p>
-                    </div>
-                    <span
-                      className="mt-4 inline-flex items-center gap-1 text-xs font-semibold"
-                      style={{ color: data.accentColor || "#CC5000" }}
-                    >
-                      View service <Icon name="arrow-right" className="w-3.5 h-3.5" />
-                    </span>
-                  </div>
-
-                  <div className="rounded-xl bg-white/85 p-5 shadow-xs border border-black/5 flex flex-col justify-between">
-                    <div>
-                      <h3 className="font-semibold text-sm text-ink">
-                        Facial treatment
-                      </h3>
-                      <p className="text-xs text-subtle mt-1">
-                        50 min · ₱950
-                      </p>
-                    </div>
-                    <span
-                      className="mt-4 inline-flex items-center gap-1 text-xs font-semibold"
-                      style={{ color: data.accentColor || "#CC5000" }}
-                    >
-                      View service <Icon name="arrow-right" className="w-3.5 h-3.5" />
-                    </span>
-                  </div>
+                  {displayedServices.map((svc) => {
+                    const formattedPrice = `₱${Math.round(
+                      svc.priceCents / 100,
+                    ).toLocaleString("en-PH")}`;
+                    return (
+                      <div
+                        key={svc.id}
+                        className="rounded-xl bg-white/85 p-5 shadow-xs border border-black/5 flex flex-col justify-between"
+                      >
+                        <div>
+                          <h3 className="font-semibold text-sm text-ink">
+                            {svc.name}
+                          </h3>
+                          <p className="text-xs text-muted mt-1">
+                            {svc.durationMinutes} min · {formattedPrice}
+                          </p>
+                        </div>
+                        <span
+                          className="mt-4 inline-flex items-center gap-1 text-xs font-semibold"
+                          style={{ color: data.accentColor || "#CC5000" }}
+                        >
+                          View service{" "}
+                          <Icon name="arrow-right" className="w-3.5 h-3.5" />
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </section>
@@ -200,24 +231,24 @@ export function LivePreviewModal({
 
           {/* Contact Details Section if enabled */}
           {data.showContactDetails && (
-            <section className="px-6 sm:px-12 py-8 border-t border-black/5 text-xs text-muted font-sans">
+            <section className="px-6 sm:px-12 py-8 border-t border-black/5 text-xs text-body font-sans">
               <div className="max-w-4xl flex flex-wrap gap-8 items-center justify-between">
-                <div>
-                  <span className="font-semibold text-ink block mb-0.5">
-                    Location
-                  </span>
-                  <span>
-                    {data.streetAddress}, {data.cityProvince}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-semibold text-ink block mb-0.5">
-                    Contact
-                  </span>
-                  <span>
-                    {data.businessEmail} · {data.phoneNumber}
-                  </span>
-                </div>
+                {locationText && (
+                  <div>
+                    <span className="font-semibold text-ink block mb-0.5">
+                      Location
+                    </span>
+                    <span>{locationText}</span>
+                  </div>
+                )}
+                {contactText && (
+                  <div>
+                    <span className="font-semibold text-ink block mb-0.5">
+                      Contact
+                    </span>
+                    <span>{contactText}</span>
+                  </div>
+                )}
                 {data.showOpeningHours && (
                   <div>
                     <span className="font-semibold text-ink block mb-0.5">
@@ -233,11 +264,12 @@ export function LivePreviewModal({
           )}
 
           {/* Client Site Footer */}
-          <footer className="px-6 sm:px-12 py-6 border-t border-black/10 flex items-center justify-between text-xs text-muted font-sans">
+          <footer className="px-6 sm:px-12 py-6 border-t border-black/10 flex items-center justify-between text-xs text-body font-sans">
             <div>{data.businessName || "Bella Vita Salon & Spa"}</div>
-            <div className="text-[11px] text-subtle">Powered by Fides</div>
+            <div className="text-[11px] text-muted">Powered by Fides</div>
           </footer>
         </div>
-      </Modal>
+      </div>
+    </Modal>
   );
 }

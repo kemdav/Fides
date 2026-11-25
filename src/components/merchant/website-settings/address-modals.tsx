@@ -67,7 +67,9 @@ function ChangeAddressDialogContent({
       // 3. Only transition to address-updated state after server action succeeds
       onConfirm(cleaned);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to update address.");
+      setError(
+        err instanceof Error ? err.message : "Failed to update address.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -139,7 +141,7 @@ function ChangeAddressDialogContent({
             type="button"
             disabled={isSubmitting}
             onClick={handleConfirm}
-            className="px-4 py-2 text-xs font-semibold text-white bg-burnt hover:bg-burnt-dark disabled:opacity-60 rounded-xl shadow-xs transition"
+            className="px-4 py-2 text-xs font-semibold text-on-burnt bg-burnt hover:bg-burnt-dark disabled:opacity-60 rounded-xl shadow-xs transition"
           >
             {isSubmitting ? "Updating..." : "Confirm address"}
           </button>

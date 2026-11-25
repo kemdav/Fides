@@ -1,6 +1,9 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import * as React from "react";
+import { MetricCard } from "@/components/admin/metric-card";
+import { PageContent, PageHeading } from "@/components/admin/primitives";
 import { createClient } from "@/lib/supabase/client";
 import {
   getWalkInWorkspaceAction,
@@ -14,8 +17,7 @@ import type {
   WalkInWorkspaceData,
 } from "@/types/walk-ins";
 import { Icon } from "@/components/admin/icon";
-import { MetricCard } from "@/components/admin/metric-card";
-import { buttonClasses, SearchField, SelectField, type SelectOption } from "@/components/ui";
+import { SearchField, SelectField, type SelectOption } from "@/components/ui";
 
 interface WalkInsViewProps {
   initialData: WalkInWorkspaceData;
@@ -185,76 +187,57 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
   };
 
   const { kpis } = data;
-  const staffRatio = Math.min(
-    100,
-    Math.round((kpis.availableStaffCount / kpis.totalActiveStaff) * 100),
-  );
-  const waitRatio = Math.min(100, kpis.waitingNow * 25);
-  const servedRatio = Math.min(100, kpis.walkInsServedToday * 10);
-  const avgWaitRatio = Math.min(
-    100,
-    Math.round((kpis.typicalWaitingMinutes / 60) * 100),
-  );
 
   return (
-    <div className="min-h-full space-y-6 px-4 py-6 sm:px-8">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="font-display text-[32px] leading-tight text-body">
-            Walk-ins &amp; waiting list
-          </h1>
-          <p className="mt-1 text-sm text-muted">
-            Welcome every walk-in. Fill available slots without displacing
-            existing bookings.
-          </p>
-        </div>
+    <PageContent>
+      <PageHeading
+        title="Walk-Ins & Waiting List"
+        description="Welcome every walk-in. Fill available slots without displacing existing bookings."
+        actions={
+          <Button variant="brand" size="form"
+            onClick={() => {
+              setDefaultModalStaffId("any");
+              setWalkInOpen(true);
+            }}
+            className="shrink-0 shadow-xs"
+          >
+            + Add walk-in
+          </Button>
+        }
+      />
 
-        <button
-          type="button"
-          onClick={() => {
-            setDefaultModalStaffId("any");
-            setWalkInOpen(true);
-          }}
-          className={buttonClasses({ variant: "brand", size: "xs", className: "shrink-0" })}
-        >
-          + Add walk-in
-        </button>
-      </div>
-
-      {/* KPI cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section aria-label="Walk-in metrics" className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          featured
           label="Waiting now"
           value={kpis.waitingNow}
           caption="First come, first served"
-          icon="clock"
-          progress={Math.max(waitRatio, kpis.waitingNow > 0 ? 20 : 0)}
+          icon="users"
+          progress={100}
+          featured
         />
         <MetricCard
           label="Available staff"
           value={kpis.availableStaffCount}
           caption={kpis.availableStaffSummary}
-          icon="users"
-          progress={staffRatio}
+          icon="calendar"
+          progress={100}
         />
         <MetricCard
           label="Walk-ins served today"
           value={kpis.walkInsServedToday}
           caption="No scheduled bookings displaced"
-          icon="chart"
-          progress={servedRatio}
+          icon="check"
+          progress={100}
         />
         <MetricCard
           label="Typical waiting time"
           value={kpis.typicalWaitingMinutes}
-          badge={<span className="text-sm font-medium text-muted">min</span>}
+          valueSuffix=" min"
           caption="Based on the current queue"
           icon="clock"
-          progress={avgWaitRatio}
+          progress={100}
         />
-      </div>
+      </section>
 
       {/* Active Waiting Lists Table */}
       <section className="rounded-xl border border-hairline bg-white p-5 shadow-xs">
@@ -311,7 +294,7 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
                 </tr>
               ) : (
                 filteredQueue.map((item) => (
-                  <tr key={item.id} className="hover:bg-mist">
+                  <tr key={item.id} className="hover:bg-sky/20">
                     <td className="py-3.5 pr-4 text-ink">
                       {item.joinedTimeLabel}
                     </td>
@@ -417,7 +400,7 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
 
       {/* Available Now Table */}
       <section className="rounded-xl border border-hairline bg-white p-5 shadow-xs">
-        <h2 className="text-base font-semibold text-ink">Available now</h2>
+        <h2 className="text-base font-semibold text-ink">Available Now</h2>
 
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[640px] border-collapse text-left text-sm">
@@ -443,7 +426,7 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
                 </tr>
               ) : (
                 data.availableNow.map((member) => (
-                  <tr key={member.id} className="hover:bg-mist">
+                  <tr key={member.id} className="hover:bg-sky/20">
                     <td className="py-3.5 pr-4 font-medium text-ink">
                       {member.fullName}
                     </td>
@@ -539,6 +522,6 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
           {toast}
         </div>
       )}
-    </div>
+    </PageContent>
   );
 }

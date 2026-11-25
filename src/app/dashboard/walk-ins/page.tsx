@@ -1,22 +1,19 @@
 import { redirect } from "next/navigation";
-import { getWalkInWorkspaceData } from "@/lib/merchant/walk-ins";
-import { MerchantSidebar } from "@/components/merchant/merchant-sidebar";
-import { WalkInsView } from "@/components/merchant/walk-ins/walk-ins-view";
+import { resolveMerchantTenantId } from "@/lib/merchant/walk-ins";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardWalkInsPage() {
-  const initialData = await getWalkInWorkspaceData();
-  if (!initialData) {
-    redirect("/login");
-  }
+export default async function DashboardWalkInsRedirect() {
+  const supabase = await createClient();
+  const tenantId = await resolveMerchantTenantId(supabase);
+  if (!tenantId) redirect("/login");
 
-  return (
-    <div className="flex min-h-dvh flex-col bg-powder lg:flex-row">
-      <MerchantSidebar />
-      <main className="min-w-0 flex-1">
-        <WalkInsView initialData={initialData} />
-      </main>
-    </div>
-  );
+  const { data: tenant } = await supabase
+    .from("tenants")
+    .select("slug")
+    .eq("id", tenantId)
+    .maybeSingle();
+
+  redirect(tenant?.slug ? "/" + tenant.slug + "/dashboard/walk-ins" : "/dashboard");
 }

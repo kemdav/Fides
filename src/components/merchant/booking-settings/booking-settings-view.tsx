@@ -444,7 +444,7 @@ export function BookingSettingsView({
                       className={cn(
                         "flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-60",
                         form.autoConfirm
-                          ? "bg-burnt text-white shadow-xs"
+                          ? "bg-burnt text-on-burnt shadow-xs"
                           : "bg-glyph text-white hover:bg-glyph",
                       )}
                     >
@@ -461,7 +461,7 @@ export function BookingSettingsView({
                       className={cn(
                         "flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-60",
                         !form.autoConfirm
-                          ? "bg-burnt text-white shadow-xs"
+                          ? "bg-burnt text-on-burnt shadow-xs"
                           : "bg-glyph text-white hover:bg-glyph",
                       )}
                     >
@@ -509,7 +509,7 @@ export function BookingSettingsView({
                       className={cn(
                         "flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-60",
                         form.staffAssignmentMode === "specific_staff"
-                          ? "bg-burnt text-white shadow-xs"
+                          ? "bg-burnt text-on-burnt shadow-xs"
                           : "bg-glyph text-white hover:bg-glyph",
                       )}
                     >
@@ -532,7 +532,7 @@ export function BookingSettingsView({
                       className={cn(
                         "flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-60",
                         form.staffAssignmentMode === "any_available"
-                          ? "bg-burnt text-white shadow-xs"
+                          ? "bg-burnt text-on-burnt shadow-xs"
                           : "bg-glyph text-white hover:bg-glyph",
                       )}
                     >
@@ -801,7 +801,7 @@ export function BookingSettingsView({
                   type="button"
                   disabled={!canEdit || !isDirty || isSaving}
                   onClick={handleSave}
-                  className="h-10 min-w-[124px] rounded-lg bg-burnt px-5 text-xs font-semibold text-white transition-colors hover:bg-burnt-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-45"
+                  className="h-10 min-w-[124px] rounded-lg bg-burnt px-5 text-xs font-semibold text-on-burnt transition-colors hover:bg-burnt-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   {isSaving ? "Saving..." : "Save changes"}
                 </button>

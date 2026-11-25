@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonClasses } from "@/components/ui/button";
 import * as React from "react";
 import { Icon } from "@/components/admin/icon";
 import Link from "next/link";
@@ -252,9 +253,8 @@ export function CustomerProfileView({
               history.
             </p>
           </div>
-          <Link
+          <Link className={buttonClasses({ variant: "brand", size: "form", className: "inline-flex h-10 items-center justify-center rounded-lg border-2 border-burnt bg-white px-4 text-xs font-semibold text-burnt transition-colors hover:bg-burnt/10" })}
             href={appointmentsHref}
-            className="inline-flex h-10 items-center justify-center rounded-lg border-2 border-burnt bg-white px-4 text-xs font-semibold text-burnt transition-colors hover:bg-burnt/10"
           >
             Book Appointment
           </Link>

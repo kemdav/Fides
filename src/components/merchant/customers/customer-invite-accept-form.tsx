@@ -53,7 +53,7 @@ export function CustomerInviteAcceptForm({
           <div className="mt-6">
             <Link
               href={`/${preview.tenantSlug}`}
-              className="inline-flex h-10 items-center justify-center rounded-lg bg-burnt px-5 text-sm font-semibold text-white hover:bg-burnt-dark"
+              className="inline-flex h-10 items-center justify-center rounded-lg bg-burnt px-5 text-sm font-semibold text-on-burnt hover:bg-burnt-dark"
             >
               Visit {preview.businessName ?? "Storefront"}
             </Link>
@@ -82,7 +82,7 @@ export function CustomerInviteAcceptForm({
         <div className="mt-6 flex justify-center gap-3">
           <Link
             href={`/${completed.tenantSlug}`}
-            className="inline-flex h-10 items-center justify-center rounded-lg bg-burnt px-5 text-sm font-semibold text-white hover:bg-burnt-dark"
+            className="inline-flex h-10 items-center justify-center rounded-lg bg-burnt px-5 text-sm font-semibold text-on-burnt hover:bg-burnt-dark"
           >
             Visit {completed.businessName}
           </Link>
@@ -185,7 +185,7 @@ export function CustomerInviteAcceptForm({
       <button
         type="submit"
         disabled={submitting}
-        className="mt-6 h-11 w-full rounded-lg bg-burnt text-sm font-semibold text-white transition-colors hover:bg-burnt-dark disabled:opacity-50"
+        className="mt-6 h-11 w-full rounded-lg bg-burnt text-sm font-semibold text-on-burnt transition-colors hover:bg-burnt-dark disabled:opacity-50"
       >
         {submitting ? "Activating account..." : "Set Password & Activate"}
       </button>

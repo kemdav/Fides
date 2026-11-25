@@ -8,6 +8,7 @@ import {
 } from "@/app/actions/walk-ins";
 import { buttonClasses, inputClasses } from "@/components/ui";
 import type { WalkInServiceOption, WalkInStaffOption } from "@/types/walk-ins";
+import { getEligibleBookingStaff } from "@/lib/merchant/booking-staff-eligibility";
 import { CalendarPicker, Listbox, TimeListbox } from "./new-appointment-modal";
 import { Icon } from "@/components/admin/icon";
 import { Modal } from "@/components/ui/modal";
@@ -69,7 +70,7 @@ export function WalkInModal({
   const [email, setEmail] = React.useState("");
   const [phone, setPhone] = React.useState("");
   const [serviceId, setServiceId] = React.useState("");
-  const [staffId, setStaffId] = React.useState(defaultStaffId ?? "any");
+  const [requestedStaffId, setRequestedStaffId] = React.useState(defaultStaffId ?? "any");
   const [date, setDate] = React.useState(getTodayManilaDate);
   const [time, setTime] = React.useState("10:45 AM");
   const [notes, setNotes] = React.useState("");
@@ -109,7 +110,8 @@ export function WalkInModal({
     setError(null);
     setSlotFull(false);
     setConfirmation(null);
-    setStaffId(defaultStaffId ?? "any");
+    setRequestedStaffId(defaultStaffId ?? "any");
+    setServiceId(propServices?.[0]?.id ?? "");
 
     if (
       !propServices ||
@@ -121,7 +123,7 @@ export function WalkInModal({
         if (res.success && res.data) {
           setServices(res.data.services);
           setStaffList(res.data.staff);
-          if (res.data.services[0]) setServiceId(res.data.services[0].id);
+          setServiceId(res.data.services[0]?.id ?? "");
         }
       });
     } else if (propServices[0]) {
@@ -131,6 +133,22 @@ export function WalkInModal({
   }, [isOpen, tenantId, propServices, propStaff, defaultStaffId]);
 
   if (!isOpen) return null;
+
+  const selectedService = services.find((service) => service.id === serviceId);
+  const eligibleStaff = getEligibleBookingStaff(selectedService, staffList);
+  const staffId = eligibleStaff.some((member) => member.id === requestedStaffId)
+    ? requestedStaffId
+    : "any";
+  const noEligibleStaff = Boolean(selectedService) && eligibleStaff.length === 0;
+
+  const handleServiceChange = (id: string) => {
+    const nextService = services.find((service) => service.id === id);
+    if (requestedStaffId !== "any"
+      && !getEligibleBookingStaff(nextService, staffList).some((member) => member.id === requestedStaffId)) {
+      setRequestedStaffId("any");
+    }
+    setServiceId(id);
+  };
 
   if (confirmation) {
     const isWaitlist = confirmation === "waitlist";
@@ -152,7 +170,7 @@ export function WalkInModal({
           <button
             type="button"
             onClick={onClose}
-            className="mt-6 h-10 w-32 rounded-md bg-burnt text-sm font-semibold text-white hover:bg-burnt/90"
+            className="mt-6 h-10 w-32 rounded-md bg-burnt text-sm font-semibold text-on-burnt hover:bg-burnt/90"
           >
             Done
           </button>
@@ -198,10 +216,14 @@ export function WalkInModal({
     event: React.FormEvent<HTMLFormElement>,
   ) => {
     event.preventDefault();
-    if (!customer.trim() || !phone.trim() || !serviceId || !date || !time) {
+    if (!customer.trim() || !phone.trim() || !selectedService || !date || !time) {
       setError(
         "Customer name, contact number, service, date, and time are required.",
       );
+      return;
+    }
+    if (noEligibleStaff) {
+      setError("No eligible staff are available for this service.");
       return;
     }
 
@@ -257,7 +279,7 @@ export function WalkInModal({
 
   const staffOptions = [
     { value: "any", label: "Any available" },
-    ...staffList.map((s) => ({
+    ...eligibleStaff.map((s) => ({
       value: s.id,
       label: s.isAvailableNow ? `${s.fullName} (Available)` : s.fullName,
     })),
@@ -354,7 +376,7 @@ export function WalkInModal({
                   id="walk-in-service"
                   label=""
                   value={serviceId}
-                  onChange={setServiceId}
+                  onChange={handleServiceChange}
                   options={
                     serviceOptions.length > 0
                       ? serviceOptions
@@ -367,9 +389,11 @@ export function WalkInModal({
                 <Listbox
                   id="walk-in-staff"
                   label=""
-                  value={staffId}
-                  onChange={setStaffId}
+                  value={eligibleStaff.length ? staffId : ""}
+                  onChange={setRequestedStaffId}
                   options={staffOptions}
+                  disabled={!selectedService || noEligibleStaff}
+                  placeholder={noEligibleStaff ? "No eligible staff" : "Select a service first"}
                 />
               </div>
             </div>

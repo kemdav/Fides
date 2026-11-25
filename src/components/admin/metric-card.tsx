@@ -21,6 +21,7 @@ type MetricCardProps = {
   pressed?: boolean;
   iconWeight?: "regular" | "bold" | "fill";
   valuePrefix?: string;
+  valueSuffix?: string;
 };
 
 export function MetricCard({
@@ -38,10 +39,11 @@ export function MetricCard({
   pressed,
   iconWeight,
   valuePrefix,
+  valueSuffix,
 }: MetricCardProps) {
   const className = cn(
     "flex min-h-[184px] flex-col gap-3 overflow-hidden rounded-[10px] p-6 text-left shadow-card-sm",
-    featured ? "bg-burnt text-white" : "bg-white text-ink",
+    featured ? "bg-burnt text-on-burnt" : "bg-white text-ink",
     (href || onClick) && interactiveRing,
   );
 
@@ -58,7 +60,9 @@ export function MetricCard({
         <p className="min-w-0 break-words text-sm font-semibold leading-5">{label}</p>
       </div>
       <div className="flex h-9 items-center gap-2">
-        <p className="text-[32px] font-semibold leading-9">{valuePrefix}{value.toLocaleString()}</p>
+        <p className="text-[32px] font-semibold leading-9">
+          {valuePrefix}{value.toLocaleString()}{valueSuffix}
+        </p>
         {badge}
       </div>
       {miniChart ? (
@@ -107,7 +111,7 @@ export function MetricCard({
             <div
               className={cn(
                 "h-[5px] rounded-[3px]",
-                featured ? "bg-white" : "bg-burnt",
+                featured ? "bg-on-burnt" : "bg-burnt",
               )}
               style={{ width: `${progress}%` }}
             />

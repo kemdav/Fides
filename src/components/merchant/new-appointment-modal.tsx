@@ -4,28 +4,21 @@ import * as React from "react";
 import { fieldOutlineClasses } from "@/components/admin/fields";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/admin/icon";
+import { Listbox } from "@/components/admin/listbox";
 import { DatePicker, SelectField } from "@/components/ui";
 import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
 import { createAppointmentBookingAction } from "@/app/actions/appointments";
+import { getEligibleBookingStaff } from "@/lib/merchant/booking-staff-eligibility";
+import type {
+  AppointmentServiceOption,
+  AppointmentStaffOption,
+} from "@/types/appointments";
+
+export type { AppointmentServiceOption, AppointmentStaffOption };
+export { Listbox } from "@/components/admin/listbox";
 
 // ─── static option lists ─────────────────────────────────────────────────────
-
-const SERVICE_OPTIONS = [
-  { value: "Signature haircut",      label: "Signature haircut – 60 min · ₱450",   price: 450,  duration: 60 },
-  { value: "Balayage & gloss",       label: "Balayage & gloss – 90 min · ₱1,500",  price: 1500, duration: 90 },
-  { value: "Botanical spa manicure", label: "Botanical spa manicure – 45 min · ₱950", price: 950, duration: 45 },
-  { value: "Facial treatment",       label: "Facial treatment – 60 min · ₱900",    price: 900,  duration: 60 },
-  { value: "Wellness massage",       label: "Wellness massage – 60 min · ₱1,200",  price: 1200, duration: 60 },
-];
-
-const STAFF_OPTIONS = [
-  "Any available",
-  "Sofia Cruz",
-  "Miguel Tan",
-  "Lia Ramos",
-  "Elena Cruz",
-  "Marco Reyes",
-];
 
 const RESOURCE_OPTIONS: Record<string, string[]> = {
   "Signature haircut":        ["Chair A", "Chair B", "Chair C"],
@@ -80,37 +73,6 @@ function PickerLabel({ id, label, required }: { id: string; label: string; requi
   );
 }
 
-interface BaseListboxProps {
-  id: string;
-  label: string;
-  required?: boolean;
-  describedBy?: string;
-  disabled?: boolean;
-  placement?: "above" | "below";
-  options: { value: string; label: string; disabled?: boolean }[];
-  placeholder?: string;
-}
-
-type ListboxProps = BaseListboxProps & (
-  | { multiple?: false; value: string; onChange: (value: string) => void }
-  | { multiple: true; value: string[]; onChange: (value: string[]) => void }
-);
-
-export function Listbox(props: ListboxProps) {
-  const { id, label, required, options, placeholder, describedBy, disabled, placement } = props;
-  const shared = { id, options, placeholder, describedBy, disabled, placement };
-  return (
-    <div>
-      <PickerLabel id={id} label={label} required={required} />
-      {props.multiple ? (
-        <SelectField {...shared} multiple value={props.value} onChange={props.onChange} />
-      ) : (
-        <SelectField {...shared} value={props.value} onChange={props.onChange} />
-      )}
-    </div>
-  );
-}
-
 function todayIso(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -153,8 +115,8 @@ function StepperIndicator({ step }: { step: 1 | 2 }) {
       <div className="flex min-w-0 flex-1 flex-col items-center gap-1">
         <span className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ring-2 transition-colors ${
           step === 1
-            ? "bg-burnt text-white ring-burnt"
-            : "bg-burnt text-white ring-burnt"
+            ? "bg-burnt text-on-burnt ring-burnt"
+            : "bg-burnt text-on-burnt ring-burnt"
         }`}>
           {step === 2 ? (
             <Icon name="check" weight="bold" className="size-3.5" />
@@ -172,7 +134,7 @@ function StepperIndicator({ step }: { step: 1 | 2 }) {
       <div className="flex min-w-0 flex-1 flex-col items-center gap-1">
         <span className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ring-2 transition-colors ${
           step === 2
-            ? "bg-burnt text-white ring-burnt"
+            ? "bg-burnt text-on-burnt ring-burnt"
             : "bg-white text-muted ring-line"
         }`}>
           2
@@ -221,6 +183,8 @@ export interface NewAppointmentResult {
 interface Props {
   isOpen: boolean;
   tenantId?: string;
+  services?: AppointmentServiceOption[];
+  staff?: AppointmentStaffOption[];
   onClose: () => void;
   onCreated: (result: NewAppointmentResult) => void;
   showToast: (msg: string) => void;
@@ -238,6 +202,8 @@ interface SelectedCustomer {
 export function NewAppointmentModal({
   isOpen,
   tenantId,
+  services = [],
+  staff = [],
   onClose,
   onCreated,
   showToast,
@@ -259,8 +225,8 @@ export function NewAppointmentModal({
   const [step1Error, setStep1Error]       = React.useState<string | null>(null);
 
   // step 2
-  const [serviceName, setServiceName]       = React.useState("");
-  const [staffName, setStaffName]           = React.useState("");
+  const [serviceId, setServiceId]           = React.useState("");
+  const [requestedStaffId, setRequestedStaffId] = React.useState("");
   const [resource, setResource]             = React.useState("");
   const [addon, setAddon]                   = React.useState("None selected");
   const [date, setDate]                     = React.useState(new Date().toISOString().slice(0, 10));
@@ -269,21 +235,51 @@ export function NewAppointmentModal({
   const [conflictWarning, setConflictWarning] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting]     = React.useState(false);
 
-  // derived
-  const selectedService = SERVICE_OPTIONS.find((s) => s.value === serviceName);
-  const servicePrice    = selectedService?.price    ?? 0;
-  const serviceDuration = selectedService?.duration ?? 60;
-  const resourceOptions = serviceName ? (RESOURCE_OPTIONS[serviceName] ?? ["Chair A"]) : [];
+  const selectedService = services.find((service) => service.id === serviceId);
+  const servicePrice    = selectedService ? Math.round(selectedService.priceCents / 100) : 0;
+  const serviceDuration = selectedService?.durationMinutes ?? 60;
+  const resourceOptions = selectedService
+    ? (RESOURCE_OPTIONS[selectedService.name] ?? ["Chair A", "Chair B"])
+    : [];
   const displayCustomer = customerType === "existing" ? customerSearch.trim() : customerName.trim();
   const sourceLabel     = bookingSource === "Walk-in" ? "Walk-In" : "Online";
   const endTime         = time ? addMinutes(time, serviceDuration)      : null;
   const bufferEnd       = time ? addMinutes(time, serviceDuration + 10) : null;
 
+  const eligibleStaff = getEligibleBookingStaff(selectedService, staff);
+  const selectedStaff = eligibleStaff.find((member) => member.id === requestedStaffId);
+  const staffId = eligibleStaff.length > 0 && requestedStaffId
+    ? (selectedStaff?.id ?? "any")
+    : "";
+  const noEligibleStaff = Boolean(selectedService) && eligibleStaff.length === 0;
+  const staffDropdownOptions = [
+    { value: "any", label: "Any available" },
+    ...eligibleStaff.map((member) => ({ value: member.id, label: member.fullName })),
+  ];
+  const serviceDropdownOptions = services.map((service) => {
+    const price = Math.round(service.priceCents / 100).toLocaleString("en-PH");
+    return {
+      value: service.id,
+      label: `${service.name} – ${service.durationMinutes} min · ₱${price}`,
+    };
+  });
+
+  const handleServiceChange = (id: string) => {
+    const nextService = services.find((service) => service.id === id);
+    if (requestedStaffId && requestedStaffId !== "any"
+      && !getEligibleBookingStaff(nextService, staff).some((member) => member.id === requestedStaffId)) {
+      setRequestedStaffId("any");
+    }
+    setServiceId(id);
+    setStep2Error(null);
+    setConflictWarning(null);
+  };
+
   React.useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setResource(resourceOptions[0] ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [serviceName]);
+  }, [serviceId]);
 
   React.useEffect(() => {
     if (!isOpen) {
@@ -295,7 +291,7 @@ export function NewAppointmentModal({
       setCustomerEmail(""); setCustomerPhone("");
       setBookingSource(bookingMode === "walk-in" ? "Walk-in" : "Phone"); setNotes("");
       setStep1Error(null);
-      setServiceName(""); setStaffName("");
+      setServiceId(""); setRequestedStaffId("");
       setResource(""); setAddon("None selected");
       setDate(new Date().toISOString().slice(0, 10));
       setTime("");
@@ -334,14 +330,13 @@ export function NewAppointmentModal({
 
   const handleSubmit = async () => {
     setStep2Error(null); setConflictWarning(null);
-    if (!serviceName) { setStep2Error("Please select a service or package."); return; }
-    if (!staffName)   { setStep2Error("Please select a staff member."); return; }
+    if (!selectedService) { setStep2Error("Please select a service or package."); return; }
+    if (!staffId)     { setStep2Error("Please select a staff member."); return; }
     if (!resource)    { setStep2Error("Please select a required resource."); return; }
     if (!date)        { setStep2Error("Please select an appointment date."); return; }
     if (!time)        { setStep2Error("Please select an available start time."); return; }
 
     const resolvedName  = customerType === "existing" ? customerSearch.trim() : customerName.trim();
-    const resolvedStaff = staffName === "Any available" ? undefined : staffName;
     const sourceValue   = bookingSource === "Walk-in" ? "walk_in" as const : "online" as const;
 
     setIsSubmitting(true);
@@ -350,7 +345,10 @@ export function NewAppointmentModal({
         customerName:  resolvedName,
         customerEmail: customerEmail.trim() || undefined,
         customerPhone: customerPhone.trim() || undefined,
-        serviceName, staffName: resolvedStaff,
+        serviceName:   selectedService.name,
+        serviceId:     selectedService.id,
+        staffName:     selectedStaff?.fullName,
+        staffId:       selectedStaff?.id,
         date, time, source: sourceValue,
         notes: notes.trim() || undefined,
         tenantIdParam: tenantId,
@@ -380,13 +378,14 @@ export function NewAppointmentModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-200" onClick={onClose}>
-      <div
-        role="dialog" aria-modal="true" aria-labelledby="appt-modal-title"
-        className="relative w-full max-w-lg rounded-[14px] bg-white shadow-2xl border border-line flex flex-col animate-in fade-in zoom-in-95 slide-in-from-bottom-3 duration-200"
-        style={{ maxHeight: "92dvh" }}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal
+      open
+      onClose={onClose}
+      unstyled
+      labelledBy="appt-modal-title"
+      className="relative flex w-full max-w-lg flex-col rounded-[14px] border border-line bg-white shadow-2xl"
+      style={{ maxHeight: "92dvh" }}
+    >
         {/* ── Header ───────────────────────────────────────────────────── */}
         <div className="px-6 pt-6 pb-5 border-b border-hairline shrink-0 space-y-4">
           <div className="flex items-start justify-between">
@@ -424,7 +423,7 @@ export function NewAppointmentModal({
                   {(["existing", "new"] as const).map((type) => (
                     <button key={type} type="button"
                       onClick={() => { setCustomerType(type); setStep1Error(null); }}
-                      className={`py-2.5 text-sm font-semibold transition-colors ${customerType === type ? "bg-burnt text-white" : "bg-white text-body hover:bg-mist"}`}
+                      className={`py-2.5 text-sm font-semibold transition-colors ${customerType === type ? "bg-burnt text-on-burnt" : "bg-white text-body hover:bg-mist"}`}
                     >
                       {type === "existing" ? "Existing Customer" : "New Customer"}
                     </button>
@@ -470,7 +469,7 @@ export function NewAppointmentModal({
                         className={`flex shrink-0 items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold ${
                           selectedCustomer
                             ? "bg-success text-white"
-                            : "bg-burnt text-white hover:bg-burnt/90"
+                            : "bg-burnt text-on-burnt hover:bg-burnt/90"
                         }`}
                       >
                         {selectedCustomer && <Icon name="verified" className="size-3.5" />}
@@ -531,7 +530,7 @@ export function NewAppointmentModal({
                 <div className="grid grid-cols-2 rounded-lg border border-hairline overflow-hidden">
                   {(["Phone", "Walk-in"] as const).map((src) => (
                     <button key={src} type="button" onClick={() => setBookingSource(src)}
-                      className={`py-2.5 text-sm font-semibold transition-colors ${bookingSource === src ? "bg-burnt text-white" : "bg-white text-body hover:bg-mist"}`}
+                      className={`py-2.5 text-sm font-semibold transition-colors ${bookingSource === src ? "bg-burnt text-on-burnt" : "bg-white text-body hover:bg-mist"}`}
                     >
                       {src}
                     </button>
@@ -591,27 +590,28 @@ export function NewAppointmentModal({
                     id="service-select"
                     label="Service or package"
                     required
-                    value={serviceName}
-                    onChange={(v) => { setServiceName(v); setStep2Error(null); setConflictWarning(null); }}
-                    options={SERVICE_OPTIONS.map((s) => ({ value: s.value, label: s.label }))}
+                    value={serviceId}
+                    onChange={handleServiceChange}
+                    options={serviceDropdownOptions}
                     placeholder="Select an option"
                   />
                   <Listbox
                     id="staff-select"
                     label="Staff"
                     required
-                    value={staffName}
-                    onChange={(v) => { setStaffName(v); setStep2Error(null); setConflictWarning(null); }}
-                    options={STAFF_OPTIONS.map((s) => ({ value: s, label: s }))}
-                    placeholder="Select an option"
+                    value={staffId}
+                    onChange={(v) => { setRequestedStaffId(v); setStep2Error(null); setConflictWarning(null); }}
+                    options={staffDropdownOptions}
+                    disabled={!selectedService || noEligibleStaff}
+                    placeholder={noEligibleStaff ? "No eligible staff" : "Select an option"}
                   />
                 </div>
 
                 {/* Eligibility hint */}
-                {serviceName && staffName && staffName !== "Any available" && (
+                {selectedService && selectedStaff && (
                   <p className="text-xs text-muted">
-                    Only staff qualified for {serviceName.toLowerCase()} are shown.{" "}
-                    <span className="font-medium text-body">{staffName}</span> is available for the full slot.
+                    Only staff qualified for {selectedService.name.toLowerCase()} are shown.{" "}
+                    <span className="font-medium text-body">{selectedStaff.fullName}</span> is available for the full slot.
                   </p>
                 )}
 
@@ -695,7 +695,7 @@ export function NewAppointmentModal({
               </div>
 
               {/* Slot verification note */}
-              {!conflictWarning && serviceName && staffName && date && time && (
+              {!conflictWarning && selectedService && staffId && date && time && (
                 <p className="text-xs text-muted flex items-center gap-1.5">
                   <Icon name="check" weight="bold" className="size-3.5 shrink-0 text-success" />
                   Slot checked against staff shifts, breaks, leave, closures, resource allocation, and cleanup buffer.
@@ -730,7 +730,7 @@ export function NewAppointmentModal({
               </Button>
             ) : (
               <Button variant="brand" size="form" type="button"
-                disabled={isSubmitting || !serviceName || !staffName || !date || !time}
+                disabled={isSubmitting || !selectedService || !staffId || !date || !time}
                 onClick={handleSubmit}
               >
                 {isSubmitting ? "Creating..." : "Create Appointment"}
@@ -738,7 +738,6 @@ export function NewAppointmentModal({
             )}
           </div>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

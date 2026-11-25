@@ -268,7 +268,7 @@ export function StaffView({
         <PageContent>
           {/* ── Page Heading ─────────────────────────────────────────────── */}
           <PageHeading
-            title="Staff & permissions"
+            title="Staff & Permissions"
             description="Manage team access, service eligibility, invitations, and commission rules."
             actions={
               <div className="flex flex-wrap items-center gap-2">

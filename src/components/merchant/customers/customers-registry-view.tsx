@@ -1,9 +1,11 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MerchantSidebar } from "@/components/merchant/merchant-sidebar";
+import { MetricCard } from "@/components/admin/metric-card";
 import { Surface } from "@/components/admin/primitives";
 import {
   cancelCustomerInviteAction,
@@ -294,23 +296,9 @@ export function CustomersRegistryView({
   };
 
   const { meta, stats } = data;
-  const newRatio =
-    stats.totalCustomers > 0
-      ? Math.min(
-          100,
-          Math.round((stats.newThisMonth / stats.totalCustomers) * 100),
-        )
-      : 0;
-  const inviteRatio =
-    stats.totalCustomers > 0
-      ? Math.min(
-          100,
-          Math.round((stats.invitesPending / stats.totalCustomers) * 100),
-        )
-      : 0;
 
   return (
-    <div className="flex min-h-dvh flex-col bg-mist text-ink lg:flex-row">
+    <div className="flex min-h-dvh flex-col bg-powder text-ink lg:flex-row">
       <MerchantSidebar
         businessName={meta.businessName}
         userName={meta.userName}
@@ -330,14 +318,13 @@ export function CustomersRegistryView({
               One customer registry for online bookings and in-person visits.
             </p>
           </div>
-          <button
-            type="button"
+          <Button variant="brand" size="form"
             onClick={() => setShowAddModal(true)}
-            className="inline-flex h-10 items-center gap-2 rounded-lg bg-burnt px-4 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-burnt-dark"
+            className="gap-2 shadow-xs"
           >
             <span className="text-base leading-none">+</span>
             <span>Add Customer</span>
-          </button>
+          </Button>
         </header>
 
         {errorBanner && (
@@ -349,80 +336,37 @@ export function CustomersRegistryView({
           </div>
         )}
 
-        {/* 4 KPI Cards */}
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-xl bg-burnt p-5 text-white shadow-[0_3px_14px_rgb(195_80_0/0.18)]">
-            <p className="text-xs font-semibold text-white/90">
-              Total customers
-            </p>
-            <p className="mt-3 text-3xl font-bold tracking-tight">
-              {stats.totalCustomers}
-            </p>
-            <p className="mt-1 text-xs text-white/80">
-              Registered and walk-in clients
-            </p>
-            <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-white/25">
-              <div className="h-full w-3/4 rounded-full bg-white" />
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-hairline bg-white p-5 shadow-card">
-            <p className="text-xs font-semibold text-ink">
-              New this month
-            </p>
-            <p className="mt-3 text-3xl font-bold tracking-tight text-ink">
-              {stats.newThisMonth}
-            </p>
-            <p className="mt-1 text-xs text-subtle">
-              Across all booking sources
-            </p>
-            <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-mist">
-              <div
-                className="h-full rounded-full bg-burnt"
-                style={{
-                  width: `${Math.max(newRatio, stats.newThisMonth > 0 ? 15 : 0)}%`,
-                }}
-              />
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-hairline bg-white p-5 shadow-card">
-            <p className="text-xs font-semibold text-ink">
-              Returning customers
-            </p>
-            <p className="mt-3 text-3xl font-bold tracking-tight text-ink">
-              {stats.returningPercentage}%
-            </p>
-            <p className="mt-1 text-xs text-subtle">
-              Customers with more than one visit
-            </p>
-            <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-mist">
-              <div
-                className="h-full rounded-full bg-burnt"
-                style={{ width: `${stats.returningPercentage}%` }}
-              />
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-hairline bg-white p-5 shadow-card">
-            <p className="text-xs font-semibold text-ink">
-              Invites pending
-            </p>
-            <p className="mt-3 text-3xl font-bold tracking-tight text-ink">
-              {stats.invitesPending}
-            </p>
-            <p className="mt-1 text-xs text-subtle">
-              Walk-in registration invitations
-            </p>
-            <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-mist">
-              <div
-                className="h-full rounded-full bg-burnt"
-                style={{
-                  width: `${Math.max(inviteRatio, stats.invitesPending > 0 ? 15 : 0)}%`,
-                }}
-              />
-            </div>
-          </div>
+        <section aria-label="Customer metrics" className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+          <MetricCard
+            label="Total customers"
+            value={stats.totalCustomers}
+            caption="Registered and walk-in clients"
+            icon="users"
+            progress={100}
+            featured
+          />
+          <MetricCard
+            label="New this month"
+            value={stats.newThisMonth}
+            caption="Across all booking sources"
+            icon="calendar"
+            progress={100}
+          />
+          <MetricCard
+            label="Returning customers"
+            value={stats.returningPercentage}
+            valueSuffix="%"
+            caption="Customers with more than one visit"
+            icon="chart"
+            progress={100}
+          />
+          <MetricCard
+            label="Invites pending"
+            value={stats.invitesPending}
+            caption="Walk-in registration invitations"
+            icon="bell"
+            progress={100}
+          />
         </section>
 
         {/* Registry Table Card */}
@@ -491,7 +435,7 @@ export function CustomersRegistryView({
                     return (
                       <tr
                         key={item.id}
-                        className="transition-colors hover:bg-mist"
+                        className="transition-colors hover:bg-sky/20"
                       >
                         <td className="px-6 py-4">
                           <Link

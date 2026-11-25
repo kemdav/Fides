@@ -37,7 +37,7 @@ export function BookingSettingsSavedModal({
           <button
             type="button"
             onClick={onClose}
-            className="min-w-[140px] rounded-lg bg-burnt px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-burnt-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
+            className="min-w-[140px] rounded-lg bg-burnt px-6 py-2.5 text-sm font-semibold text-on-burnt transition-colors hover:bg-burnt-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
           >
             Done
           </button>

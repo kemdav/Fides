@@ -25,6 +25,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { AppointmentStatusPill } from "@/components/merchant/appointment-status-pill";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
+import type { AppointmentServiceOption, AppointmentStaffOption } from "@/types/appointments";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
 import { statusFilterOptions } from "@/components/merchant/appointment-filter-options";
@@ -60,6 +61,8 @@ interface AppointmentsViewProps {
   initialItems?: AppointmentItem[];
   focusedStaffName?: string;
   basePath?: string;
+  services?: AppointmentServiceOption[];
+  staff?: AppointmentStaffOption[];
 }
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -192,6 +195,8 @@ export function AppointmentsView({
   initialItems = EMPTY_ITEMS,
   focusedStaffName,
   basePath = "",
+  services,
+  staff,
 }: AppointmentsViewProps) {
   const router = useRouter();
   const canManage = canManageBookings(workspaceRoleFromLabel(userRole));
@@ -390,7 +395,6 @@ export function AppointmentsView({
         <PageContent>
           {/* Page Heading */}
           <PageHeading
-            eyebrow={businessName}
             title="Appointments"
             description="Manage bookings, approvals, and appointment outcomes in one place."
             actions={canManage && (
@@ -497,7 +501,7 @@ export function AppointmentsView({
                     onClick={() => setViewMode("list")}
                     className={`flex size-9 items-center justify-center rounded-md transition-colors ${
                       viewMode === "list"
-                        ? "bg-burnt text-white"
+                        ? "bg-burnt text-on-burnt"
                         : "text-muted hover:text-ink hover:bg-mist"
                     }`}
                   >
@@ -512,7 +516,7 @@ export function AppointmentsView({
                     onClick={() => setViewMode("calendar")}
                     className={`flex size-9 items-center justify-center rounded-md transition-colors ${
                       viewMode === "calendar"
-                        ? "bg-burnt text-white"
+                        ? "bg-burnt text-on-burnt"
                         : "text-muted hover:text-ink hover:bg-mist"
                     }`}
                   >
@@ -1433,6 +1437,8 @@ export function AppointmentsView({
       <NewAppointmentModal
         isOpen={isNewBookingOpen}
         tenantId={tenantId}
+        services={services}
+        staff={staff}
         onClose={() => setIsNewBookingOpen(false)}
         onCreated={(result: NewAppointmentResult) => {
           setItems((prev) => [

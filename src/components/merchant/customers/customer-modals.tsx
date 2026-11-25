@@ -130,7 +130,7 @@ export function StatusFeedbackModal({
           <button
             type="button"
             onClick={onClose}
-            className="min-w-[140px] rounded-lg bg-burnt px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-burnt-dark"
+            className="min-w-[140px] rounded-lg bg-burnt px-6 py-2.5 text-sm font-semibold text-on-burnt transition-colors hover:bg-burnt-dark"
           >
             Done
           </button>
@@ -179,11 +179,11 @@ export function ConfirmActionModal({
       ? "bg-danger text-white hover:bg-danger-dark"
       : confirmTone === "outline"
         ? "border border-line bg-white text-body hover:bg-mist"
-        : "bg-burnt text-white hover:bg-burnt-dark";
+        : "bg-burnt text-on-burnt hover:bg-burnt-dark";
 
   const cancelButtonClass =
     cancelTone === "brand"
-      ? "bg-burnt text-white hover:bg-burnt-dark"
+      ? "bg-burnt text-on-burnt hover:bg-burnt-dark"
       : "border border-line bg-white text-body hover:bg-mist";
 
   return (
@@ -495,7 +495,7 @@ export function AddCustomerModal({
           <button
             type="submit"
             disabled={submitting}
-            className="h-9 rounded-lg bg-burnt px-4 text-xs font-semibold text-white hover:bg-burnt-dark disabled:opacity-50"
+            className="h-9 rounded-lg bg-burnt px-4 text-xs font-semibold text-on-burnt hover:bg-burnt-dark disabled:opacity-50"
           >
             {submitting ? "Adding..." : "Add customer"}
           </button>
@@ -767,7 +767,7 @@ export function EditCustomerModal({
               <button
                 type="submit"
                 disabled={submitting || !isDirty}
-                className="h-9 rounded-lg bg-burnt px-4 text-xs font-semibold text-white hover:bg-burnt-dark disabled:opacity-45"
+                className="h-9 rounded-lg bg-burnt px-4 text-xs font-semibold text-on-burnt hover:bg-burnt-dark disabled:opacity-45"
               >
                 {submitting ? "Saving..." : "Save customer"}
               </button>

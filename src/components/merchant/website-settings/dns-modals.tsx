@@ -42,7 +42,8 @@ export function ConnectDomainModal({
 
   const domain = domainName || "www.bellavita.example";
   const rootDomain = domain.replace(/^www\./, "");
-  const dynamicTxtToken = verificationToken || `fides-site-verification=${tenantId || "site"}`;
+  const dynamicTxtToken =
+    verificationToken || `fides-site-verification=${tenantId || "site"}`;
   const cnameHost = `domains.${PLATFORM_DOMAIN}`;
 
   const handleCheckDnsStatus = async () => {
@@ -55,20 +56,24 @@ export function ConnectDomainModal({
         if (res.data.status === "active") {
           setCheckResult({
             status: "active",
-            message: "Domain verified and active! Your custom domain is now connected.",
+            message:
+              "Domain verified and active! Your custom domain is now connected.",
           });
           onVerified?.();
         } else {
           setCheckResult({
             status: "pending_dns",
-            message: "DNS records pending propagation. Please allow up to 24-48 hours for your registrar changes to propagate.",
+            message:
+              "DNS records pending propagation. Please allow up to 24-48 hours for your registrar changes to propagate.",
           });
           onCheckStatus?.();
         }
       } else {
         setCheckResult({
           status: "error",
-          message: ("error" in res && res.error) || "DNS check failed. Please check your domain name.",
+          message:
+            ("error" in res && res.error) ||
+            "DNS check failed. Please check your domain name.",
         });
       }
     } catch (err: unknown) {
@@ -280,7 +285,7 @@ export function ConnectDomainModal({
           {/* Result / Pending status advisory (QA #12) */}
           {checkResult ? (
             <div
-              className={`rounded-xl border p-4 text-xs ${
+              className={`rounded-lg border p-4 text-xs ${
                 checkResult.status === "active"
                   ? "bg-wash/80 border-success/30 text-success-deep"
                   : checkResult.status === "pending_dns"
@@ -298,11 +303,13 @@ export function ConnectDomainModal({
                   {checkResult.status === "active"
                     ? "Domain Verified & Active"
                     : checkResult.status === "pending_dns"
-                    ? "Pending DNS Setup"
-                    : "DNS Check Error"}
+                      ? "Pending DNS Setup"
+                      : "DNS Check Error"}
                 </span>
               </div>
-              <p className="leading-relaxed opacity-90">{checkResult.message}</p>
+              <p className="leading-relaxed opacity-90">
+                {checkResult.message}
+              </p>
             </div>
           ) : (
             <div className="rounded-xl bg-warn-bg/70 border border-warn-bg/80 p-4 text-xs text-warn-fg">
@@ -340,7 +347,7 @@ export function ConnectDomainModal({
               type="button"
               disabled={isChecking}
               onClick={handleCheckDnsStatus}
-              className="px-4 py-2 text-sm font-medium text-white bg-burnt hover:bg-burnt-dark disabled:opacity-60 rounded-lg shadow-xs transition flex items-center gap-1.5"
+              className="px-4 py-2 text-sm font-medium text-on-burnt bg-burnt hover:bg-burnt-dark disabled:opacity-60 rounded-lg shadow-xs transition flex items-center gap-1.5"
             >
               {isChecking ? (
                 <>

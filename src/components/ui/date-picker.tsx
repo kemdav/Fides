@@ -207,7 +207,7 @@ export function DatePicker({
                       setCursor((current) => ({ y: year, m: year === maxParts.y ? Math.min(current.m, maxParts.m) : current.m }));
                       setView("days");
                     }}
-                    className={cn("h-9 rounded-md text-sm hover:bg-mist", isCurrent ? "bg-burnt font-semibold text-white hover:bg-burnt" : "text-ink")}
+                    className={cn("h-9 rounded-md text-sm hover:bg-mist", isCurrent ? "bg-burnt font-semibold text-on-burnt hover:bg-burnt" : "text-ink")}
                   >
                     {year}
                   </button>
@@ -242,7 +242,7 @@ export function DatePicker({
                       }}
                       className={cn(
                         "mx-auto flex size-9 items-center justify-center rounded-full text-sm",
-                        isSelected ? "bg-burnt font-semibold text-white" : "text-ink hover:bg-mist",
+                        isSelected ? "bg-burnt font-semibold text-on-burnt" : "text-ink hover:bg-mist",
                         blocked && "cursor-not-allowed text-line hover:bg-transparent"
                       )}
                     >

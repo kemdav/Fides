@@ -131,7 +131,7 @@ export function AssignSlotModal({
           <button
             type="button"
             onClick={onClose}
-            className="mt-6 h-10 w-32 rounded-md bg-burnt text-sm font-semibold text-white hover:bg-burnt/90"
+            className="mt-6 h-10 w-32 rounded-md bg-burnt text-sm font-semibold text-on-burnt hover:bg-burnt/90"
           >
             Done
           </button>
@@ -348,7 +348,7 @@ export function AssignSlotModal({
             type="button"
             onClick={handleConfirm}
             disabled={isSubmitting || loadingSlots || !selectedSlot}
-            className="h-10 rounded-md bg-burnt px-5 text-sm font-semibold text-white hover:bg-burnt/90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="h-10 rounded-md bg-burnt px-5 text-sm font-semibold text-on-burnt hover:bg-burnt/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSubmitting ? "Confirming..." : "Confirm Appointment"}
           </button>
