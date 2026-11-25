@@ -39,6 +39,7 @@ export default async function BookingPage({
           id: service.id,
           name: service.name,
           category: service.categoryName || "Service",
+          description: service.description,
           duration: `${service.durationMinutes} min`,
           price: `₱${Math.round(service.priceCents / 100).toLocaleString("en-PH")}`,
         }))

@@ -18,6 +18,7 @@ export type BookingServiceOption = {
   id: string;
   name: string;
   category: string;
+  description?: string | null;
   duration: string;
   price: string;
 };
@@ -118,7 +119,7 @@ export function StorefrontServicePage({
 }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
-  const [selectedServiceId, setSelectedServiceId] = useState(() =>
+  const [selectedServiceId] = useState(() =>
     services.some((service) => service.id === initialServiceId)
       ? initialServiceId
       : ""
@@ -228,60 +229,63 @@ export function StorefrontServicePage({
             {step === 0 ? (
               <div>
                 <h2 className="text-xl font-semibold text-ink">
-                  Choose your service
+                  Your selected service
                 </h2>
                 <p className="mt-1 text-sm text-muted">
                   {selectedService
-                    ? "The service you selected is ready. You can change it here."
-                    : "Select a service to begin your booking."}
+                    ? "Review the service details before choosing your staff member."
+                    : "Choose a service from the storefront to begin your booking."}
                 </p>
-                {services.length === 0 ? (
-                  <p className="mt-6 rounded-lg bg-wash p-4 text-sm text-muted">
-                    There are no services available to book right now.
-                  </p>
-                ) : (
-                  <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                    {services.map((service) => {
-                      const isSelected = selectedServiceId === service.id;
-                      return (
-                        <button
-                          key={service.id}
-                          type="button"
-                          aria-pressed={isSelected}
-                          onClick={() => {
-                            setSelectedServiceId(service.id);
-                            setError(null);
-                          }}
-                          className={`rounded-xl border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${
-                            isSelected
-                              ? "border-burnt bg-burnt/5"
-                              : "border-line hover:border-burnt/50"
-                          }`}
-                        >
-                          <span className="flex items-start justify-between gap-3">
-                            <span>
-                              <span className="block text-xs font-bold uppercase tracking-wide text-burnt">
-                                {service.category}
-                              </span>
-                              <span className="mt-2 block font-semibold text-ink">
-                                {service.name}
-                              </span>
-                              <span className="mt-2 block text-sm text-muted">
-                                {service.duration} · {service.price}
-                              </span>
-                            </span>
-                            {isSelected ? (
-                              <CheckIcon
-                                tone="success"
-                                className="size-5"
-                              />
-                            ) : null}
-                          </span>
-                        </button>
-                      );
-                    })}
+                {selectedService ? (
+                  <div className="mt-6 rounded-xl border border-burnt/40 bg-burnt/5 p-5 sm:p-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-wide text-burnt">
+                          {selectedService.category}
+                        </p>
+                        <h3 className="mt-2 text-lg font-semibold text-ink">
+                          {selectedService.name}
+                        </h3>
+                        {selectedService.description ? (
+                          <p className="mt-2 max-w-2xl text-sm/6 text-muted">
+                            {selectedService.description}
+                          </p>
+                        ) : null}
+                      </div>
+                      <CheckIcon tone="success" className="size-6" />
+                    </div>
+                    <dl className="mt-5 grid gap-4 border-t border-burnt/15 pt-4 sm:grid-cols-2">
+                      <div>
+                        <dt className="text-xs font-semibold uppercase tracking-wide text-muted">
+                          Duration
+                        </dt>
+                        <dd className="mt-1 text-sm font-semibold text-ink">
+                          {selectedService.duration}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs font-semibold uppercase tracking-wide text-muted">
+                          Price
+                        </dt>
+                        <dd className="mt-1 text-sm font-semibold text-ink">
+                          {selectedService.price}
+                        </dd>
+                      </div>
+                    </dl>
                   </div>
+                ) : (
+                  <p className="mt-6 rounded-lg bg-wash p-4 text-sm text-muted">
+                    {services.length === 0
+                      ? "There are no services available to book right now."
+                      : "No service is selected. Return to the services page to choose one."}
+                  </p>
                 )}
+                <Link
+                  href={`/${slug}/services`}
+                  className="mt-4 inline-flex text-sm font-semibold text-burnt hover:underline"
+                >
+                  {selectedService ? "Change service" : "Browse services"}
+                </Link>
               </div>
             ) : null}
 
