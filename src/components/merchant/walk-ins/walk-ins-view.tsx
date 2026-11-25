@@ -217,14 +217,14 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
 
       {/* 4 KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {/* Waiting now (primary burnt orange card) */}
-        <div className="rounded-xl bg-burnt p-5 text-white shadow-xs">
-          <p className="text-xs font-medium text-white/90">Waiting now</p>
+        {/* Waiting now */}
+        <div className="rounded-xl bg-burnt p-5 text-on-burnt shadow-xs">
+          <p className="text-xs font-medium text-on-burnt">Waiting now</p>
           <p className="mt-3 text-3xl font-semibold">{kpis.waitingNow}</p>
-          <p className="mt-2 text-xs text-white/85">First come, first served</p>
-          <div className="mt-4 h-1 w-full rounded-full bg-white/25">
+          <p className="mt-2 text-xs text-on-burnt">First come, first served</p>
+          <div className="mt-4 h-1 w-full rounded-full bg-on-burnt/25">
             <div
-              className="h-1 rounded-full bg-white transition-all"
+              className="h-1 rounded-full bg-on-burnt transition-all"
               style={{
                 width: `${Math.max(waitRatio, kpis.waitingNow > 0 ? 20 : 0)}%`,
               }}
@@ -241,7 +241,7 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
           <p className="mt-2 truncate text-xs text-muted">
             {kpis.availableStaffSummary}
           </p>
-          <div className="mt-4 h-1 w-full rounded-full bg-[#eef0f3]">
+          <div className="mt-4 h-1 w-full rounded-full bg-sky/40">
             <div
               className="h-1 rounded-full bg-burnt transition-all"
               style={{ width: `${staffRatio}%` }}
@@ -260,7 +260,7 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
           <p className="mt-2 text-xs text-muted">
             No scheduled bookings displaced
           </p>
-          <div className="mt-4 h-1 w-full rounded-full bg-[#eef0f3]">
+          <div className="mt-4 h-1 w-full rounded-full bg-sky/40">
             <div
               className="h-1 rounded-full bg-burnt transition-all"
               style={{ width: `${servedRatio}%` }}
@@ -275,7 +275,7 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
             {kpis.typicalWaitingMinutes} min
           </p>
           <p className="mt-2 text-xs text-muted">Based on the current queue</p>
-          <div className="mt-4 h-1 w-full rounded-full bg-[#eef0f3]">
+          <div className="mt-4 h-1 w-full rounded-full bg-sky/40">
             <div
               className="h-1 rounded-full bg-burnt transition-all"
               style={{ width: `${avgWaitRatio}%` }}
@@ -345,7 +345,7 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
                 </tr>
               ) : (
                 filteredQueue.map((item) => (
-                  <tr key={item.id} className="hover:bg-[#fafafa]">
+                  <tr key={item.id} className="hover:bg-sky/20">
                     <td className="py-3.5 pr-4 text-ink">
                       {item.joinedTimeLabel}
                     </td>
@@ -477,7 +477,7 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
                 </tr>
               ) : (
                 data.availableNow.map((member) => (
-                  <tr key={member.id} className="hover:bg-[#fafafa]">
+                  <tr key={member.id} className="hover:bg-sky/20">
                     <td className="py-3.5 pr-4 font-medium text-ink">
                       {member.fullName}
                     </td>

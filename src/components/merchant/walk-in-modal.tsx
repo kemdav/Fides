@@ -187,7 +187,7 @@ export function WalkInModal({
           <button
             type="button"
             onClick={onClose}
-            className="mt-6 h-10 w-32 rounded-md bg-burnt text-sm font-semibold text-white hover:bg-burnt/90"
+            className="mt-6 h-10 w-32 rounded-md bg-burnt text-sm font-semibold text-on-burnt hover:bg-burnt/90"
           >
             Done
           </button>
@@ -489,7 +489,7 @@ export function WalkInModal({
             <button
               type="submit"
               disabled={isSubmitting || isAddingWaitlist || noEligibleStaff}
-              className="h-10 rounded-md bg-burnt px-6 text-sm font-semibold text-white hover:bg-burnt/90 disabled:opacity-60"
+              className="h-10 rounded-md bg-burnt px-6 text-sm font-semibold text-on-burnt hover:bg-burnt/90 disabled:opacity-60"
             >
               {isSubmitting ? "Creating..." : "Create walk-in appointment"}
             </button>

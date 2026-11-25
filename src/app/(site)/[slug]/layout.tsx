@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { notFound } from "next/navigation";
+import { normalizeBrandColor, readableForeground } from "@/lib/brand-colors";
 import { getTenantBySlug } from "@/lib/supabase/queries";
 import { getStorefrontHomeData } from "@/lib/storefront";
 import {
@@ -86,12 +87,9 @@ export default async function TenantLayout({
 
   const theme = storefrontData?.tenant;
   const fonts = getTypographyFonts(theme?.typography);
-  const mainColor = tenant.brand_color || theme?.brandColor;
-  const secondaryColor =
-    (tenant as { secondary_color?: string | null }).secondary_color ?? null;
-  const accentColor =
-    (tenant as { accent_color?: string | null }).accent_color ||
-    theme?.accentColor;
+  const mainColor = normalizeBrandColor(tenant.brand_color || theme?.brandColor || null, "");
+  const secondaryColor = normalizeBrandColor(tenant.secondary_color, "");
+  const accentColor = normalizeBrandColor(tenant.accent_color || theme?.accentColor || null, "");
 
   const themeStyle = {
     "--font-display": fonts.display,
@@ -105,6 +103,7 @@ export default async function TenantLayout({
       ? {
           "--color-burnt": accentColor,
           "--color-burnt-dark": accentColor,
+          "--color-on-burnt": readableForeground(accentColor, "#ffffff"),
         }
       : {}),
   } as CSSProperties;

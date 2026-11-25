@@ -118,7 +118,7 @@ function formatLastSavedDate(iso: string | null): string | null {
 function CheckBadgeIcon() {
   return (
     <span
-      className="inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-white text-[#C35000]"
+      className="inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-on-burnt text-burnt"
       aria-hidden="true"
     >
       <svg
@@ -379,7 +379,7 @@ export function BookingSettingsView({
   const formattedSavedDate = formatLastSavedDate(lastSavedAt);
 
   return (
-    <div className="flex min-h-dvh flex-col bg-[#FCFAE8] text-[#1E293B] lg:flex-row">
+    <div className="flex min-h-dvh flex-col bg-powder text-[#1E293B] lg:flex-row">
       <MerchantSidebar
         businessName={meta.businessName}
         userName={meta.userName}
@@ -401,7 +401,7 @@ export function BookingSettingsView({
           </header>
 
           {/* Timezone Info Banner */}
-          <div className="flex flex-col justify-between gap-3 rounded-xl border border-[#E7E9EE] bg-[#F4F5F7] px-4 py-3.5 sm:flex-row sm:items-center sm:px-5">
+          <div className="flex flex-col justify-between gap-3 rounded-xl border border-[#E7E9EE] bg-sky/25 px-4 py-3.5 sm:flex-row sm:items-center sm:px-5">
             <div className="space-y-0.5">
               <p className="text-sm font-semibold text-[#1E293B]">
                 Business timezone: {meta.timeZone}
@@ -413,7 +413,7 @@ export function BookingSettingsView({
             </div>
             <Link
               href={websiteSettingsHref}
-              className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-[#C35000] transition-colors hover:text-[#A64400]"
+              className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-burnt transition-colors hover:text-burnt-dark"
             >
               <span>Go to Website Settings</span>
               <span aria-hidden="true">&rarr;</span>
@@ -467,9 +467,9 @@ export function BookingSettingsView({
                       disabled={!canEdit}
                       onClick={() => updateField("autoConfirm", true)}
                       className={cn(
-                        "flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C35000]/40 disabled:cursor-not-allowed disabled:opacity-60",
+                        "flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-60",
                         form.autoConfirm
-                          ? "bg-[#C35000] text-white shadow-xs"
+                          ? "bg-burnt text-on-burnt shadow-xs"
                           : "bg-[#949BA3] text-white hover:bg-[#7F8790]",
                       )}
                     >
@@ -484,9 +484,9 @@ export function BookingSettingsView({
                       disabled={!canEdit}
                       onClick={() => updateField("autoConfirm", false)}
                       className={cn(
-                        "flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C35000]/40 disabled:cursor-not-allowed disabled:opacity-60",
+                        "flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-60",
                         !form.autoConfirm
-                          ? "bg-[#C35000] text-white shadow-xs"
+                          ? "bg-burnt text-on-burnt shadow-xs"
                           : "bg-[#949BA3] text-white hover:bg-[#7F8790]",
                       )}
                     >
@@ -532,9 +532,9 @@ export function BookingSettingsView({
                         updateField("staffAssignmentMode", "specific_staff")
                       }
                       className={cn(
-                        "flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C35000]/40 disabled:cursor-not-allowed disabled:opacity-60",
+                        "flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-60",
                         form.staffAssignmentMode === "specific_staff"
-                          ? "bg-[#C35000] text-white shadow-xs"
+                          ? "bg-burnt text-on-burnt shadow-xs"
                           : "bg-[#949BA3] text-white hover:bg-[#7F8790]",
                       )}
                     >
@@ -555,9 +555,9 @@ export function BookingSettingsView({
                         updateField("staffAssignmentMode", "any_available")
                       }
                       className={cn(
-                        "flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C35000]/40 disabled:cursor-not-allowed disabled:opacity-60",
+                        "flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-60",
                         form.staffAssignmentMode === "any_available"
-                          ? "bg-[#C35000] text-white shadow-xs"
+                          ? "bg-burnt text-on-burnt shadow-xs"
                           : "bg-[#949BA3] text-white hover:bg-[#7F8790]",
                       )}
                     >
@@ -594,7 +594,7 @@ export function BookingSettingsView({
                           Number(e.target.value),
                         )
                       }
-                      className="h-10 w-full appearance-none rounded-lg border border-[#D9DDE3] bg-white pl-3.5 pr-9 text-sm text-[#1E293B] transition-colors focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20 disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+                      className="h-10 w-full appearance-none rounded-lg border border-[#D9DDE3] bg-white pl-3.5 pr-9 text-sm text-[#1E293B] transition-colors focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20 disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
                     >
                       {bufferOptions.map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -650,7 +650,7 @@ export function BookingSettingsView({
                             Number(e.target.value),
                           )
                         }
-                        className="h-10 w-full appearance-none rounded-lg border border-[#D9DDE3] bg-white pl-3.5 pr-9 text-sm text-[#1E293B] transition-colors focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20 disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+                        className="h-10 w-full appearance-none rounded-lg border border-[#D9DDE3] bg-white pl-3.5 pr-9 text-sm text-[#1E293B] transition-colors focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20 disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
                       >
                         {leadTimeOptions.map((opt) => (
                           <option key={opt.value} value={opt.value}>
@@ -683,7 +683,7 @@ export function BookingSettingsView({
                         onChange={(e) =>
                           updateField("maxAdvanceDays", Number(e.target.value))
                         }
-                        className="h-10 w-full appearance-none rounded-lg border border-[#D9DDE3] bg-white pl-3.5 pr-9 text-sm text-[#1E293B] transition-colors focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20 disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+                        className="h-10 w-full appearance-none rounded-lg border border-[#D9DDE3] bg-white pl-3.5 pr-9 text-sm text-[#1E293B] transition-colors focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20 disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
                       >
                         {maxAdvanceOptions.map((opt) => (
                           <option key={opt.value} value={opt.value}>
@@ -720,7 +720,7 @@ export function BookingSettingsView({
                           Number(e.target.value),
                         )
                       }
-                      className="h-10 w-full appearance-none rounded-lg border border-[#D9DDE3] bg-white pl-3.5 pr-9 text-sm text-[#1E293B] transition-colors focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20 disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+                      className="h-10 w-full appearance-none rounded-lg border border-[#D9DDE3] bg-white pl-3.5 pr-9 text-sm text-[#1E293B] transition-colors focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20 disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
                     >
                       {cancellationOptions.map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -756,7 +756,7 @@ export function BookingSettingsView({
                           Number(e.target.value),
                         )
                       }
-                      className="h-10 w-full appearance-none rounded-lg border border-[#D9DDE3] bg-white pl-3.5 pr-9 text-sm text-[#1E293B] transition-colors focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20 disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+                      className="h-10 w-full appearance-none rounded-lg border border-[#D9DDE3] bg-white pl-3.5 pr-9 text-sm text-[#1E293B] transition-colors focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20 disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
                     >
                       {rescheduleOptions.map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -796,7 +796,7 @@ export function BookingSettingsView({
                       updateField("cancellationPolicyNotes", e.target.value)
                     }
                     placeholder="Optional rules shown to customers (e.g., Late cancellations within 24 hours may require rebooking approval)."
-                    className="mt-2 w-full resize-none rounded-lg border border-[#D9DDE3] bg-white px-3.5 py-2.5 text-sm text-[#1E293B] placeholder:text-[#94A3B8] transition-colors focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20 disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+                    className="mt-2 w-full resize-none rounded-lg border border-[#D9DDE3] bg-white px-3.5 py-2.5 text-sm text-[#1E293B] placeholder:text-[#94A3B8] transition-colors focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20 disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
                   />
                   {fieldErrors.cancellationPolicyNotes && (
                     <p className="mt-1.5 text-xs font-medium text-[#DC2626]">
@@ -838,7 +838,7 @@ export function BookingSettingsView({
                           Number(e.target.value),
                         )
                       }
-                      className="h-10 w-full appearance-none rounded-lg border border-[#D9DDE3] bg-white pl-3.5 pr-9 text-sm text-[#1E293B] transition-colors focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20 disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+                      className="h-10 w-full appearance-none rounded-lg border border-[#D9DDE3] bg-white pl-3.5 pr-9 text-sm text-[#1E293B] transition-colors focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20 disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
                     >
                       {slotIntervalOptions.map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -876,7 +876,7 @@ export function BookingSettingsView({
                 <p
                   className={cn(
                     "text-xs font-semibold",
-                    isDirty ? "text-[#C35000]" : "text-[#334155]",
+                    isDirty ? "text-burnt" : "text-[#334155]",
                   )}
                 >
                   {isDirty ? "Unsaved changes" : "All changes saved"}
@@ -893,7 +893,7 @@ export function BookingSettingsView({
                   type="button"
                   disabled={!canEdit || !isDirty || isSaving}
                   onClick={() => setShowDiscardModal(true)}
-                  className="h-10 rounded-lg border border-[#D9DDE3] bg-white px-4 text-xs font-semibold text-[#334155] transition-colors hover:bg-[#F8FAFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C35000]/40 disabled:cursor-not-allowed disabled:opacity-45"
+                  className="h-10 rounded-lg border border-[#D9DDE3] bg-white px-4 text-xs font-semibold text-[#334155] transition-colors hover:bg-[#F8FAFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   Discard changes
                 </button>
@@ -901,7 +901,7 @@ export function BookingSettingsView({
                   type="button"
                   disabled={!canEdit || !isDirty || isSaving}
                   onClick={handleSave}
-                  className="h-10 min-w-[124px] rounded-lg bg-[#C35000] px-5 text-xs font-semibold text-white transition-colors hover:bg-[#A64400] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C35000]/40 disabled:cursor-not-allowed disabled:opacity-45"
+                  className="h-10 min-w-[124px] rounded-lg bg-burnt px-5 text-xs font-semibold text-on-burnt transition-colors hover:bg-burnt-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   {isSaving ? "Saving..." : "Save changes"}
                 </button>

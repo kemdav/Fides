@@ -237,7 +237,7 @@ export function CustomerProfileView({
   const appointmentsHref = `${basePath}/dashboard/appointments`;
 
   return (
-    <div className="flex min-h-dvh flex-col bg-[#FCFAE8] text-[#1E293B] lg:flex-row">
+    <div className="flex min-h-dvh flex-col bg-powder text-[#1E293B] lg:flex-row">
       <MerchantSidebar
         businessName={meta.businessName}
         userName={meta.userName}
@@ -250,7 +250,7 @@ export function CustomerProfileView({
         <div>
           <Link
             href={customersHref}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#C35000] hover:text-[#A64400]"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-burnt hover:text-burnt-dark"
           >
             <span aria-hidden="true">&larr;</span>
             <span>Back to Customers</span>
@@ -291,7 +291,7 @@ export function CustomerProfileView({
         <Surface className="rounded-xl border border-[#ECEAE0] bg-white p-5 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#F1EFE7] pb-5">
             <div className="flex items-center gap-4">
-              <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#ECEEF2] text-sm font-semibold text-[#334155]">
+              <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-sky/45 text-sm font-semibold text-ink">
                 {getInitials(customer.fullName)}
               </div>
               <div>
@@ -434,7 +434,7 @@ export function CustomerProfileView({
                     type="button"
                     disabled={actionBusy}
                     onClick={() => setShowResendModal(true)}
-                    className="h-9 rounded-lg border-2 border-[#C35000] bg-white px-4 text-xs font-semibold text-[#C35000] transition-colors hover:bg-[#FFF7ED] disabled:opacity-50"
+                    className="h-9 rounded-lg border-2 border-burnt bg-white px-4 text-xs font-semibold text-burnt transition-colors hover:bg-burnt/10 disabled:opacity-50"
                   >
                     Resend Invite
                   </button>
@@ -482,7 +482,7 @@ export function CustomerProfileView({
                           void handleSendInvite();
                         }
                       }}
-                      className="h-9 rounded-lg border-2 border-[#C35000] bg-white px-4 text-xs font-semibold text-[#C35000] transition-colors hover:bg-[#FFF7ED] disabled:opacity-50"
+                      className="h-9 rounded-lg border-2 border-burnt bg-white px-4 text-xs font-semibold text-burnt transition-colors hover:bg-burnt/10 disabled:opacity-50"
                     >
                       {customer.invitations.length > 0
                         ? "Resend Invite"
@@ -529,7 +529,7 @@ export function CustomerProfileView({
                     customer.invitations.map((inv) => (
                       <div
                         key={inv.id}
-                        className="rounded-lg border border-[#F1EFE7] bg-[#FCFBF7] px-3 py-2 text-xs"
+                        className="rounded-lg border border-[#F1EFE7] bg-sky/20 px-3 py-2 text-xs"
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span className="font-medium text-[#1E293B]">
@@ -576,7 +576,7 @@ export function CustomerProfileView({
                 value={noteInput}
                 onChange={(e) => setNoteInput(e.target.value)}
                 placeholder="Add a note (not visible to the customer)"
-                className="mt-2 w-full resize-none rounded-lg border border-[#D9DDE3] bg-white px-3.5 py-2.5 text-sm text-[#1E293B] placeholder:text-[#94A3B8] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+                className="mt-2 w-full resize-none rounded-lg border border-[#D9DDE3] bg-white px-3.5 py-2.5 text-sm text-[#1E293B] placeholder:text-[#94A3B8] focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20"
               />
               <div className="mt-2.5">
                 <button
@@ -650,7 +650,7 @@ export function CustomerProfileView({
                   </tr>
                 ) : (
                   visibleVisits.map((visit) => (
-                    <tr key={visit.id} className="hover:bg-[#FCFBF4]">
+                    <tr key={visit.id} className="hover:bg-sky/20">
                       <td className="px-6 py-4 font-medium text-[#1E293B]">
                         {formatShortDate(visit.visitDate)}
                       </td>

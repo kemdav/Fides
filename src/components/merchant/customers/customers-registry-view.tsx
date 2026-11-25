@@ -299,7 +299,7 @@ export function CustomersRegistryView({
       : 0;
 
   return (
-    <div className="flex min-h-dvh flex-col bg-[#FCFAE8] text-[#1E293B] lg:flex-row">
+    <div className="flex min-h-dvh flex-col bg-powder text-[#1E293B] lg:flex-row">
       <MerchantSidebar
         businessName={meta.businessName}
         userName={meta.userName}
@@ -341,18 +341,18 @@ export function CustomersRegistryView({
 
         {/* 4 KPI Cards */}
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-xl bg-[#C35000] p-5 text-white shadow-[0_3px_14px_rgb(195_80_0/0.18)]">
-            <p className="text-xs font-semibold text-white/90">
+          <div className="rounded-xl bg-burnt p-5 text-on-burnt shadow-sm shadow-burnt/20">
+            <p className="text-xs font-semibold text-on-burnt">
               Total customers
             </p>
             <p className="mt-3 text-3xl font-bold tracking-tight">
               {stats.totalCustomers}
             </p>
-            <p className="mt-1 text-xs text-white/80">
+            <p className="mt-1 text-xs text-on-burnt">
               Registered and walk-in clients
             </p>
-            <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-white/25">
-              <div className="h-full w-3/4 rounded-full bg-white" />
+            <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-on-burnt/25">
+              <div className="h-full w-3/4 rounded-full bg-on-burnt" />
             </div>
           </div>
 
@@ -366,9 +366,9 @@ export function CustomersRegistryView({
             <p className="mt-1 text-xs text-[#64748B]">
               Across all booking sources
             </p>
-            <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-[#F1F3F5]">
+            <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-sky/40">
               <div
-                className="h-full rounded-full bg-[#C35000]"
+                className="h-full rounded-full bg-burnt"
                 style={{
                   width: `${Math.max(newRatio, stats.newThisMonth > 0 ? 15 : 0)}%`,
                 }}
@@ -386,9 +386,9 @@ export function CustomersRegistryView({
             <p className="mt-1 text-xs text-[#64748B]">
               Customers with more than one visit
             </p>
-            <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-[#F1F3F5]">
+            <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-sky/40">
               <div
-                className="h-full rounded-full bg-[#C35000]"
+                className="h-full rounded-full bg-burnt"
                 style={{ width: `${stats.returningPercentage}%` }}
               />
             </div>
@@ -404,9 +404,9 @@ export function CustomersRegistryView({
             <p className="mt-1 text-xs text-[#64748B]">
               Walk-in registration invitations
             </p>
-            <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-[#F1F3F5]">
+            <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-sky/40">
               <div
-                className="h-full rounded-full bg-[#C35000]"
+                className="h-full rounded-full bg-burnt"
                 style={{
                   width: `${Math.max(inviteRatio, stats.invitesPending > 0 ? 15 : 0)}%`,
                 }}
@@ -444,7 +444,7 @@ export function CustomersRegistryView({
                     setPage(1);
                   }}
                   placeholder="Search name, email, or phone"
-                  className="h-9 w-full rounded-lg border border-[#D9DDE3] bg-white pl-9 pr-3 text-xs text-[#1E293B] placeholder:text-[#94A3B8] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20 sm:w-[250px]"
+                  className="h-9 w-full rounded-lg border border-[#D9DDE3] bg-white pl-9 pr-3 text-xs text-[#1E293B] placeholder:text-[#94A3B8] focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20 sm:w-[250px]"
                 />
               </div>
 
@@ -455,7 +455,7 @@ export function CustomersRegistryView({
                   setFilter(e.target.value as CustomerFilterOption);
                   setPage(1);
                 }}
-                className="h-9 rounded-lg border border-[#D9DDE3] bg-white px-3 text-xs font-medium text-[#334155] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+                className="h-9 rounded-lg border border-[#D9DDE3] bg-white px-3 text-xs font-medium text-[#334155] focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20"
               >
                 <option value="all">Filter: All active</option>
                 <option value="registered">Registered accounts</option>
@@ -500,12 +500,12 @@ export function CustomersRegistryView({
                     return (
                       <tr
                         key={item.id}
-                        className="transition-colors hover:bg-[#FCFBF4]"
+                        className="transition-colors hover:bg-sky/20"
                       >
                         <td className="px-6 py-4">
                           <Link
                             href={profileHref}
-                            className="font-semibold text-[#1E293B] hover:text-[#C35000]"
+                            className="font-semibold text-[#1E293B] hover:text-burnt"
                           >
                             {item.fullName}
                           </Link>
@@ -598,7 +598,7 @@ export function CustomersRegistryView({
                                             setOpenMenuId(null);
                                             setResendingCustomer(item);
                                           }}
-                                          className="block w-full px-3.5 py-2 text-xs font-medium text-[#C35000] hover:bg-[#FFF7ED]"
+                                          className="block w-full px-3.5 py-2 text-xs font-medium text-burnt hover:bg-burnt/10"
                                         >
                                           Resend invite
                                         </button>
@@ -620,7 +620,7 @@ export function CustomersRegistryView({
                                           setOpenMenuId(null);
                                           void handleSendInvite(item);
                                         }}
-                                        className="block w-full px-3.5 py-2 text-xs font-medium text-[#C35000] hover:bg-[#FFF7ED]"
+                                        className="block w-full px-3.5 py-2 text-xs font-medium text-burnt hover:bg-burnt/10"
                                       >
                                         Send account invite
                                       </button>

@@ -149,7 +149,7 @@ export function StatusFeedbackModal({
               <button
                 type="button"
                 onClick={handleCopy}
-                className="text-xs font-semibold text-[#C35000] hover:text-[#A64400]"
+                className="text-xs font-semibold text-burnt hover:text-burnt-dark"
               >
                 {copied ? "Copied!" : "Copy link"}
               </button>
@@ -169,7 +169,7 @@ export function StatusFeedbackModal({
           <button
             type="button"
             onClick={onClose}
-            className="min-w-[140px] rounded-lg bg-[#C35000] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#A64400]"
+            className="min-w-[140px] rounded-lg bg-burnt px-6 py-2.5 text-sm font-semibold text-on-burnt transition-colors hover:bg-burnt-dark"
           >
             Done
           </button>
@@ -218,11 +218,11 @@ export function ConfirmActionModal({
       ? "bg-[#DC2626] text-white hover:bg-[#B91C1C]"
       : confirmTone === "outline"
         ? "border border-[#D9DDE3] bg-white text-[#334155] hover:bg-[#F8FAFC]"
-        : "bg-[#C35000] text-white hover:bg-[#A64400]";
+        : "bg-burnt text-on-burnt hover:bg-burnt-dark";
 
   const cancelButtonClass =
     cancelTone === "brand"
-      ? "bg-[#C35000] text-white hover:bg-[#A64400]"
+      ? "bg-burnt text-on-burnt hover:bg-burnt-dark"
       : "border border-[#D9DDE3] bg-white text-[#334155] hover:bg-[#F8FAFC]";
 
   return (
@@ -405,7 +405,7 @@ export function AddCustomerModal({
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Ari Mendoza"
-              className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] px-3 text-sm text-[#1E293B] placeholder:text-[#94A3B8] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+              className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] px-3 text-sm text-[#1E293B] placeholder:text-[#94A3B8] focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20"
             />
             {fieldErrors.fullName && (
               <p className="mt-1 text-[11px] text-[#DC2626]">
@@ -430,7 +430,7 @@ export function AddCustomerModal({
                 if (!e.target.value.trim()) setSendInvite(false);
               }}
               placeholder="ari.mendoza@gmail.com"
-              className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] px-3 text-sm text-[#1E293B] placeholder:text-[#94A3B8] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+              className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] px-3 text-sm text-[#1E293B] placeholder:text-[#94A3B8] focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20"
             />
             {fieldErrors.email && (
               <p className="mt-1 text-[11px] text-[#DC2626]">
@@ -453,7 +453,7 @@ export function AddCustomerModal({
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="+63 917 555 0142"
-              className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] px-3 text-sm text-[#1E293B] placeholder:text-[#94A3B8] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+              className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] px-3 text-sm text-[#1E293B] placeholder:text-[#94A3B8] focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20"
             />
             {fieldErrors.phone && (
               <p className="mt-1 text-[11px] text-[#DC2626]">
@@ -474,7 +474,7 @@ export function AddCustomerModal({
               type="date"
               value={birthday}
               onChange={(e) => setBirthday(e.target.value)}
-              className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] px-3 text-sm text-[#1E293B] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+              className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] px-3 text-sm text-[#1E293B] focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20"
             />
           </div>
         </div>
@@ -502,7 +502,7 @@ export function AddCustomerModal({
                   disabled={!hasValidEmail}
                   checked={hasValidEmail && sendInvite}
                   onChange={(e) => setSendInvite(e.target.checked)}
-                  className="size-4 rounded border-[#CBD5E1] accent-[#C35000]"
+                  className="size-4 rounded border-[#CBD5E1] accent-burnt"
                 />
                 <span>Send account invite</span>
               </label>
@@ -519,7 +519,7 @@ export function AddCustomerModal({
                   type="checkbox"
                   checked={marketingOptIn}
                   onChange={(e) => setMarketingOptIn(e.target.checked)}
-                  className="size-4 rounded border-[#CBD5E1] accent-[#C35000]"
+                  className="size-4 rounded border-[#CBD5E1] accent-burnt"
                 />
                 <span>Send occasional offers (marketing consent)</span>
               </label>
@@ -543,7 +543,7 @@ export function AddCustomerModal({
           <button
             type="submit"
             disabled={submitting}
-            className="h-9 rounded-lg bg-[#C35000] px-4 text-xs font-semibold text-white hover:bg-[#A64400] disabled:opacity-50"
+            className="h-9 rounded-lg bg-burnt px-4 text-xs font-semibold text-on-burnt hover:bg-burnt-dark disabled:opacity-50"
           >
             {submitting ? "Adding..." : "Add customer"}
           </button>
@@ -698,7 +698,7 @@ export function EditCustomerModal({
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] px-3 text-sm text-[#1E293B] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+                className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] px-3 text-sm text-[#1E293B] focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20"
               />
               {fieldErrors.fullName && (
                 <p className="mt-1 text-[11px] text-[#DC2626]">
@@ -719,7 +719,7 @@ export function EditCustomerModal({
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] px-3 text-sm text-[#1E293B] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+                className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] px-3 text-sm text-[#1E293B] focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20"
               />
               {fieldErrors.email && (
                 <p className="mt-1 text-[11px] text-[#DC2626]">
@@ -741,7 +741,7 @@ export function EditCustomerModal({
                 required
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] px-3 text-sm text-[#1E293B] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+                className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] px-3 text-sm text-[#1E293B] focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20"
               />
               {fieldErrors.phone && (
                 <p className="mt-1 text-[11px] text-[#DC2626]">
@@ -762,7 +762,7 @@ export function EditCustomerModal({
                 type="date"
                 value={birthday}
                 onChange={(e) => setBirthday(e.target.value)}
-                className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] px-3 text-sm text-[#1E293B] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+                className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] px-3 text-sm text-[#1E293B] focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20"
               />
             </div>
           </div>
@@ -785,7 +785,7 @@ export function EditCustomerModal({
                   type="checkbox"
                   checked={marketingOptIn}
                   onChange={(e) => setMarketingOptIn(e.target.checked)}
-                  className="size-4 rounded border-[#CBD5E1] accent-[#C35000]"
+                  className="size-4 rounded border-[#CBD5E1] accent-burnt"
                 />
                 <span>Send occasional offers (marketing consent)</span>
               </label>
@@ -812,7 +812,7 @@ export function EditCustomerModal({
               <button
                 type="submit"
                 disabled={submitting || !isDirty}
-                className="h-9 rounded-lg bg-[#C35000] px-4 text-xs font-semibold text-white hover:bg-[#A64400] disabled:opacity-45"
+                className="h-9 rounded-lg bg-burnt px-4 text-xs font-semibold text-on-burnt hover:bg-burnt-dark disabled:opacity-45"
               >
                 {submitting ? "Saving..." : "Save customer"}
               </button>
