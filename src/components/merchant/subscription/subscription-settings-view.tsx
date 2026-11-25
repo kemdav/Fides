@@ -1,0 +1,1332 @@
+"use client";
+
+import * as React from "react";
+import { flushSync } from "react-dom";
+import { useRouter } from "next/navigation";
+import { MerchantSidebar } from "@/components/merchant/merchant-sidebar";
+import { PageContent } from "@/components/admin/primitives";
+import { Icon } from "@/components/admin/icon";
+import { Button } from "@/components/ui/button";
+import {
+  confirmTrialConversionAction,
+  keepSubscriptionPlanAction,
+  requestReactivationAction,
+  scheduleCancellationAction,
+  schedulePlanChangeAction,
+  submitInvoicePaymentDetailsAction,
+  updateBillingDetailsAction,
+  updateInvoiceDeliveryPreferencesAction,
+  updateRenewalRemindersAction,
+} from "@/app/actions/subscription";
+import {
+  FEATURE_CATALOG,
+  type SubscriptionInvoice,
+  type SubscriptionTierCode,
+  type SubscriptionWorkspaceData,
+} from "@/types/subscription";
+import { cn } from "@/lib/utils";
+import {
+  formatLastSaved,
+  formatLongDate,
+  formatMonthDay,
+  formatPeriodNoYear,
+  formatPeriodRange,
+  formatPhp,
+  formatShortDate,
+  getNextCycleBounds,
+} from "./formatters";
+import { CancelFinalConfirmModal, OutcomeModal } from "./modal-shell";
+import {
+  CancelSubscriptionModal,
+  ChangePlanModal,
+  ComparePlansModal,
+  ConvertTrialModal,
+  ReactivateSubscriptionModal,
+  ReactivationRequestedModal,
+  WhyCannotAddBranchModal,
+} from "./plan-modals";
+import {
+  BillingDetailsModal,
+  InvoiceDeliveryPreferencesModal,
+  SubmitPaymentDetailsModal,
+  SubscriptionInvoiceModal,
+} from "./billing-modals";
+
+interface SubscriptionSettingsViewProps {
+  initialData: SubscriptionWorkspaceData;
+  basePath: string;
+}
+
+const INVOICES_PER_PAGE = 5;
+
+const cardClass =
+  "rounded-[14px] bg-white p-6 shadow-[0_2px_12px_rgba(36,50,66,0.04)] sm:p-7";
+
+function InvoiceRowActions({
+  invoiceNumber,
+  downloading,
+  onView,
+  onDownload,
+  onSubmitPayment,
+}: {
+  invoiceNumber: string;
+  downloading: boolean;
+  onView: () => void;
+  onDownload: () => void;
+  onSubmitPayment?: () => void;
+}) {
+  const menuId = React.useId();
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const menuRef = React.useRef<HTMLDivElement>(null);
+  const [open, setOpen] = React.useState(false);
+
+  React.useLayoutEffect(() => {
+    const trigger = triggerRef.current;
+    const menu = menuRef.current;
+    if (!open || !trigger || !menu) return;
+
+    const positionMenu = () => {
+      const { top, right, bottom } = trigger.getBoundingClientRect();
+      const { clientWidth, clientHeight } = document.documentElement;
+      const gap = 6;
+      const edge = 8;
+      const left = Math.max(edge, Math.min(right, clientWidth - edge) - menu.offsetWidth);
+      const opensAbove = bottom + gap + menu.offsetHeight > clientHeight - edge;
+      const menuTop = opensAbove ? top - gap - menu.offsetHeight : bottom + gap;
+
+      menu.style.left = `${left}px`;
+      menu.style.top = `${Math.max(edge, menuTop)}px`;
+      menu.style.visibility = "visible";
+    };
+
+    positionMenu();
+    window.addEventListener("scroll", positionMenu, true);
+    window.addEventListener("resize", positionMenu);
+    return () => {
+      window.removeEventListener("scroll", positionMenu, true);
+      window.removeEventListener("resize", positionMenu);
+      menu.style.visibility = "hidden";
+    };
+  }, [open]);
+
+  const actionClass =
+    "block w-full px-3.5 py-2 text-left text-xs font-medium text-ink hover:bg-mist";
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        aria-label={`Actions for ${invoiceNumber}`}
+        popoverTarget={menuId}
+        className="inline-flex size-8 items-center justify-center rounded-lg text-body hover:bg-mist"
+      >
+        <Icon name="more" className="size-4" />
+      </button>
+      <div
+        ref={menuRef}
+        id={menuId}
+        popover="auto"
+        onToggle={(event) => setOpen(event.newState === "open")}
+        style={{ visibility: "hidden" }}
+        className="fixed inset-auto m-0 w-48 max-w-[calc(100vw-1rem)] rounded-[10px] border border-line bg-white px-0 py-1.5 shadow-lg"
+      >
+        <button
+          type="button"
+          popoverTarget={menuId}
+          popoverTargetAction="hide"
+          onClick={onView}
+          className={actionClass}
+        >
+          View invoice
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            menuRef.current?.hidePopover();
+            onDownload();
+          }}
+          disabled={downloading}
+          className={cn(actionClass, "disabled:opacity-50")}
+        >
+          Download PDF
+        </button>
+        {onSubmitPayment && (
+          <button
+            type="button"
+            popoverTarget={menuId}
+            popoverTargetAction="hide"
+            onClick={onSubmitPayment}
+            className="block w-full px-3.5 py-2 text-left text-xs font-semibold text-burnt hover:bg-warn-bg"
+          >
+            Submit payment details
+          </button>
+        )}
+      </div>
+    </>
+  );
+}
+
+export function SubscriptionSettingsView({
+  initialData,
+  basePath,
+}: SubscriptionSettingsViewProps) {
+  const router = useRouter();
+  const data = initialData;
+  const {
+    subscription,
+    tiers,
+    usage,
+    billingProfile,
+    invoices,
+    canEdit,
+    timezone,
+  } = data;
+
+  const currentTier =
+    tiers.find((t) => t.code === subscription.tierCode) ?? tiers[0];
+  const basicTier = tiers.find((t) => t.code === "basic");
+  const enterpriseTier = tiers.find((t) => t.code === "enterprise");
+
+  // Modal state
+  const [compareOpen, setCompareOpen] = React.useState(false);
+  const [changePlanOpen, setChangePlanOpen] = React.useState(false);
+  const [changePlanKey, setChangePlanKey] = React.useState(0);
+  const [whyBranchOpen, setWhyBranchOpen] = React.useState(false);
+  const [billingDetailsOpen, setBillingDetailsOpen] = React.useState(false);
+  const [billingDetailsKey, setBillingDetailsKey] = React.useState(0);
+  const [deliveryPrefsOpen, setDeliveryPrefsOpen] = React.useState(false);
+  const [deliveryPrefsKey, setDeliveryPrefsKey] = React.useState(0);
+  const [cancelStep1Open, setCancelStep1Open] = React.useState(false);
+  const [cancelStep1Key, setCancelStep1Key] = React.useState(0);
+  const [cancelStep2Open, setCancelStep2Open] = React.useState(false);
+  const [pendingCancelReason, setPendingCancelReason] = React.useState("");
+  const [convertTrialOpen, setConvertTrialOpen] = React.useState(false);
+  const [reactivateOpen, setReactivateOpen] = React.useState(false);
+  const [reactivationRequestedOpen, setReactivationRequestedOpen] =
+    React.useState(false);
+  const [reactivationInvoiceId, setReactivationInvoiceId] = React.useState<
+    string | null
+  >(null);
+
+  const [viewingInvoice, setViewingInvoice] =
+    React.useState<SubscriptionInvoice | null>(null);
+  const [invoiceDownload, setInvoiceDownload] = React.useState<{
+    invoiceId: string;
+    invoiceNumber: string;
+    status: "pending" | "error";
+  } | null>(null);
+  const downloadingInvoice = invoiceDownload?.status === "pending";
+  const invoiceDownloadError = invoiceDownload?.status === "error"
+    ? `Couldn’t download ${invoiceDownload.invoiceNumber}. Please try again.`
+    : undefined;
+  const [submitPaymentInvoice, setSubmitPaymentInvoice] =
+    React.useState<SubscriptionInvoice | null>(null);
+  const [submitPaymentKey, setSubmitPaymentKey] = React.useState(0);
+
+  const [outcomeModal, setOutcomeModal] = React.useState<{
+    title: string;
+    description: string;
+  } | null>(null);
+  const [justScheduledPlanBanner, setJustScheduledPlanBanner] =
+    React.useState(false);
+
+  const [submitting, setSubmitting] = React.useState(false);
+  const [modalError, setModalError] = React.useState<string | null>(null);
+  const [invoicePage, setInvoicePage] = React.useState(1);
+
+  // Derived dates & labels
+  const { nextStartIso, nextEndIso } = getNextCycleBounds(
+    subscription.currentPeriodEnd,
+    timezone,
+  );
+  const currentPeriodLabel = formatPeriodRange(
+    subscription.currentPeriodStart,
+    subscription.currentPeriodEnd,
+    timezone,
+  );
+  const currentPeriodNoYear = formatPeriodNoYear(
+    subscription.currentPeriodStart,
+    subscription.currentPeriodEnd,
+    timezone,
+  );
+  const nextInvoiceDateLabel = formatLongDate(nextStartIso, timezone);
+  const nextInvoicePeriodLabel = formatPeriodRange(
+    nextStartIso,
+    nextEndIso,
+    timezone,
+  );
+  const nextResetDateLabel = formatMonthDay(nextStartIso, timezone);
+  const periodEndLabel = formatLongDate(
+    subscription.currentPeriodEnd,
+    timezone,
+  );
+
+  const nextPlanName = subscription.scheduledTierName ?? subscription.tierName;
+  const nextPlanPriceCents =
+    subscription.scheduledTierPriceCents ?? subscription.priceCents;
+
+  const isCancelling =
+    subscription.cancelAtPeriodEnd &&
+    subscription.status !== "cancelled" &&
+    subscription.status !== "expired";
+  const isEnded =
+    subscription.status === "cancelled" || subscription.status === "expired";
+  const isTrialing = subscription.status === "trialing";
+  const isPastDue = subscription.status === "past_due";
+  const hasScheduledChange = Boolean(
+    subscription.scheduledTierId &&
+    subscription.scheduledTierName &&
+    !isCancelling &&
+    !isEnded,
+  );
+
+  // Usage bar calculations
+  const staffLimit = currentTier?.limits.staffAccounts ?? 15;
+  const branchLimit = currentTier?.limits.branches ?? 1;
+  const apptLimit = currentTier?.limits.appointmentsPerMonth ?? 1000;
+
+  const staffPct = Math.min(
+    100,
+    Math.round((usage.totalStaffSeatsUsed / staffLimit) * 100),
+  );
+  const branchPct = Math.min(
+    100,
+    Math.round((usage.branchesCount / branchLimit) * 100),
+  );
+  const apptPct = Math.min(
+    100,
+    Math.round((usage.appointmentsThisPeriod / apptLimit) * 100),
+  );
+  const branchAtLimit = usage.branchesCount >= branchLimit;
+
+  // Included features for current tier
+  const includedFeatures = FEATURE_CATALOG.filter(
+    (item) => currentTier?.features[item.key],
+  );
+
+  // Invoices pagination
+  const totalPages = Math.max(
+    1,
+    Math.ceil(invoices.length / INVOICES_PER_PAGE),
+  );
+  const safePage = Math.min(invoicePage, totalPages);
+  const pagedInvoices = invoices.slice(
+    (safePage - 1) * INVOICES_PER_PAGE,
+    safePage * INVOICES_PER_PAGE,
+  );
+  const latestInvoice = invoices[0] ?? null;
+  const latestUnpaidInvoice =
+    invoices.find(
+      (inv) => inv.status === "overdue" || inv.status === "unpaid",
+    ) ?? latestInvoice;
+
+  // Action handlers
+  const handleOpenChangePlan = () => {
+    setModalError(null);
+    setChangePlanKey((k) => k + 1);
+    setChangePlanOpen(true);
+  };
+
+  const handleOpenBillingDetails = () => {
+    setModalError(null);
+    setBillingDetailsKey((k) => k + 1);
+    setBillingDetailsOpen(true);
+  };
+
+  const handleOpenDeliveryPrefs = () => {
+    setModalError(null);
+    setDeliveryPrefsKey((k) => k + 1);
+    setDeliveryPrefsOpen(true);
+  };
+
+  const handleOpenCancelStep1 = () => {
+    setModalError(null);
+    setCancelStep1Key((k) => k + 1);
+    setCancelStep1Open(true);
+  };
+
+  const handleConfirmPlanChange = async (
+    targetTierCode: SubscriptionTierCode,
+  ) => {
+    setSubmitting(true);
+    setModalError(null);
+    const result = await schedulePlanChangeAction({
+      tenantId: data.tenantId,
+      targetTierCode,
+    });
+    setSubmitting(false);
+
+    if (!result.success) {
+      setModalError(result.error);
+      return;
+    }
+
+    setChangePlanOpen(false);
+    setJustScheduledPlanBanner(true);
+    const targetName = result.data?.targetTierName ?? "New plan";
+    const effDate = formatLongDate(
+      result.data?.effectiveAt ?? nextStartIso,
+      timezone,
+    );
+    const priceLabel = formatPhp(result.data?.priceCents ?? nextPlanPriceCents);
+
+    setOutcomeModal({
+      title: "Plan change scheduled",
+      description: `${targetName} starts ${effDate}. Your next invoice will be ${priceLabel}. No payment is due today.`,
+    });
+    router.refresh();
+  };
+
+  const handleFinalCancelConfirm = async () => {
+    setSubmitting(true);
+    const result = await scheduleCancellationAction({
+      tenantId: data.tenantId,
+      reason: pendingCancelReason,
+    });
+    setSubmitting(false);
+
+    if (!result.success) {
+      setModalError(result.error);
+      setCancelStep2Open(false);
+      return;
+    }
+
+    setCancelStep2Open(false);
+    setPendingCancelReason("");
+    setJustScheduledPlanBanner(false);
+    router.refresh();
+  };
+
+  const handleKeepMyPlan = async () => {
+    setSubmitting(true);
+    await keepSubscriptionPlanAction({ tenantId: data.tenantId });
+    setSubmitting(false);
+    router.refresh();
+  };
+
+  const handleConfirmTrialConversion = async () => {
+    setSubmitting(true);
+    const result = await confirmTrialConversionAction({
+      tenantId: data.tenantId,
+    });
+    setSubmitting(false);
+
+    if (!result.success) return;
+
+    setConvertTrialOpen(false);
+    const trialEnd = subscription.trialEndsAt ?? subscription.currentPeriodEnd;
+    const { nextStartIso: paidStart } = getNextCycleBounds(trialEnd, timezone);
+    setOutcomeModal({
+      title: "Paid plan scheduled",
+      description: `${subscription.tierName} billing starts ${formatLongDate(paidStart, timezone)}. Your trial remains active until ${formatMonthDay(trialEnd, timezone)}.`,
+    });
+    router.refresh();
+  };
+
+  const handleRequestReactivation = async () => {
+    setSubmitting(true);
+    const result = await requestReactivationAction({ tenantId: data.tenantId });
+    setSubmitting(false);
+
+    if (!result.success) return;
+
+    setReactivateOpen(false);
+    setReactivationInvoiceId(result.data?.invoiceId ?? null);
+    setReactivationRequestedOpen(true);
+    router.refresh();
+  };
+
+  const handleSaveBillingDetails = async (values: {
+    billingName: string;
+    billingEmail: string;
+    sameAsBusinessEmail: boolean;
+    streetBarangay: string;
+    city: string;
+    province: string;
+    postalCode: string;
+    tin: string;
+    branchCode: string;
+  }) => {
+    setSubmitting(true);
+    setModalError(null);
+    const result = await updateBillingDetailsAction({
+      tenantId: data.tenantId,
+      ...values,
+    });
+    setSubmitting(false);
+
+    if (!result.success) {
+      setModalError(result.error);
+      return;
+    }
+
+    setBillingDetailsOpen(false);
+    setOutcomeModal({
+      title: "Billing details saved",
+      description:
+        "Your billing contact and invoice preferences have been updated. Owner login details remain unchanged.",
+    });
+    router.refresh();
+  };
+
+  const handleSaveDeliveryPrefs = async (payload: {
+    ccEmail: string;
+    renewalRemindersEnabled: boolean;
+  }) => {
+    setSubmitting(true);
+    setModalError(null);
+
+    const [ccRes, remRes] = await Promise.all([
+      updateInvoiceDeliveryPreferencesAction({
+        tenantId: data.tenantId,
+        ccEmail: payload.ccEmail,
+      }),
+      updateRenewalRemindersAction({
+        tenantId: data.tenantId,
+        renewalRemindersEnabled: payload.renewalRemindersEnabled,
+      }),
+    ]);
+    setSubmitting(false);
+
+    if (!ccRes.success) {
+      setModalError(ccRes.error);
+      return;
+    }
+    if (!remRes.success) {
+      setModalError(remRes.error);
+      return;
+    }
+
+    setDeliveryPrefsOpen(false);
+    setOutcomeModal({
+      title: "Billing details saved",
+      description:
+        "Your billing contact and invoice preferences have been updated. Owner login details remain unchanged.",
+    });
+    router.refresh();
+  };
+
+  const handleDownloadInvoicePdf = async (invoice: SubscriptionInvoice) => {
+    if (downloadingInvoice) return;
+
+    const download = { invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber };
+    const filename = `${invoice.invoiceNumber}.pdf`;
+    setInvoiceDownload({ ...download, status: "pending" });
+
+    try {
+      const response = await fetch(`/api/merchant/subscription/invoices/${invoice.id}/pdf`);
+      if (!response.ok || response.headers.get("content-type") !== "application/pdf") {
+        throw new Error("Invoice PDF unavailable");
+      }
+
+      const pdf = await response.blob();
+      if (pdf.size === 0) throw new Error("Invoice PDF is empty");
+
+      const pdfUrl = URL.createObjectURL(pdf);
+      const link = document.createElement("a");
+      link.href = pdfUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      try {
+        flushSync(() => {
+          setViewingInvoice((current) => current?.id === invoice.id ? null : current);
+          setOutcomeModal({
+            title: "Invoice download",
+            description: "Your invoice PDF download will start automatically. If it doesn’t start, try again.",
+          });
+        });
+
+        // Give the browser a chance to paint the modal before starting the download.
+        await new Promise<void>((resolve) => {
+          window.requestAnimationFrame(() => window.setTimeout(resolve, 0));
+        });
+        link.click();
+      } finally {
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(pdfUrl), 30_000);
+      }
+    } catch {
+      setOutcomeModal((current) => current?.title === "Invoice download" ? null : current);
+      setInvoiceDownload({ ...download, status: "error" });
+      return;
+    }
+
+    setInvoiceDownload(null);
+  };
+
+  const handleOpenSubmitPayment = (invoice: SubscriptionInvoice) => {
+    setViewingInvoice(null);
+    setModalError(null);
+    setSubmitPaymentKey((k) => k + 1);
+    setSubmitPaymentInvoice(invoice);
+  };
+
+  const handleSubmitPaymentDetails = async (payload: {
+    invoiceId: string;
+    bankTransferReference: string;
+    transferDate: string;
+    amountPhp: string;
+    receiptFile: File | null;
+  }) => {
+    setSubmitting(true);
+    setModalError(null);
+
+    const formData = new FormData();
+    formData.set("tenantId", data.tenantId);
+    formData.set("invoiceId", payload.invoiceId);
+    formData.set("bankTransferReference", payload.bankTransferReference);
+    formData.set("transferDate", payload.transferDate);
+    formData.set("amountPhp", payload.amountPhp);
+    if (payload.receiptFile) {
+      formData.set("receipt", payload.receiptFile);
+    }
+
+    const result = await submitInvoicePaymentDetailsAction(formData);
+    setSubmitting(false);
+
+    if (!result.success) {
+      setModalError(result.error);
+      return;
+    }
+
+    setSubmitPaymentInvoice(null);
+    if (result.data?.isPastDue) {
+      setOutcomeModal({
+        title: "Payment verification pending",
+        description:
+          "Your payment report has been received. The subscription stays past due until billing verifies the transfer. Do not submit another transfer unless requested.",
+      });
+    } else {
+      setOutcomeModal({
+        title: "Payment details submitted",
+        description:
+          "We’ll verify your bank transfer. Your invoice remains unpaid until verification is complete; no duplicate payment is needed.",
+      });
+    }
+    router.refresh();
+  };
+
+  const statusPillLabel = isEnded
+    ? subscription.status === "expired"
+      ? "Expired"
+      : "Cancelled"
+    : isPastDue
+      ? "Past due"
+      : isTrialing
+        ? "Trial"
+        : "Active";
+
+  const statusPillClass = isEnded
+    ? "bg-mist text-body"
+    : isPastDue
+      ? "bg-danger-bg text-danger-dark"
+      : isTrialing
+        ? "bg-info-bg text-info"
+        : "bg-wash text-success";
+
+  return (
+    <div className="flex min-h-dvh flex-col bg-powder lg:flex-row">
+      <MerchantSidebar
+        businessName={data.businessName}
+        userName={data.userName}
+        userEmail={data.userEmail}
+        userRole={data.userRoleLabel}
+        basePath={basePath}
+      />
+
+      <div className="min-w-0 flex-1">
+        <PageContent>
+          {/* Page Header */}
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h1 className="font-display text-[28px] leading-[36px] text-ink sm:text-[32px] sm:leading-[40px]">
+                Subscription settings
+              </h1>
+              <p className="mt-2 text-[13px] leading-[20px] text-muted">
+                Manage your plan, usage, invoices, and billing preferences.
+              </p>
+            </div>
+            <Button size="md" variant="brand-outline" onClick={() => setCompareOpen(true)}>
+              Compare plans
+            </Button>
+          </div>
+
+          {/* Status Banners */}
+          {!canEdit ? (
+            <div className="rounded-[10px] border border-hairline bg-mist px-4 py-3 text-[12.5px] leading-[19px] text-body">
+              Read-only access · Only the business owner can change the
+              subscription and billing details.
+            </div>
+          ) : isCancelling ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-hairline bg-mist px-4 py-2.5 text-[12.5px] leading-[19px] text-body">
+              <p>
+                Cancellation scheduled · {subscription.tierName} stays active
+                through {periodEndLabel} at 23:59 ({timezone}). Renewal on{" "}
+                {nextResetDateLabel} is cancelled.
+              </p>
+              <button
+                type="button"
+                onClick={handleKeepMyPlan}
+                disabled={submitting}
+                className="inline-flex h-9 items-center justify-center rounded-[7px] bg-burnt px-4 text-[12.5px] font-semibold text-on-burnt transition-colors hover:bg-burnt-dark disabled:opacity-50"
+              >
+                Keep my Plan
+              </button>
+            </div>
+          ) : isEnded ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-danger/30 bg-danger-bg px-4 py-2.5 text-[12.5px] leading-[19px] text-danger-text">
+              <p>
+                Subscription {subscription.status} · Your workspace is in
+                read-only mode. Reactivate your plan to resume bookings.
+              </p>
+              <button
+                type="button"
+                onClick={() => setReactivateOpen(true)}
+                className="inline-flex h-9 items-center justify-center rounded-[7px] bg-burnt px-4 text-[12.5px] font-semibold text-on-burnt transition-colors hover:bg-burnt-dark"
+              >
+                Reactivate subscription
+              </button>
+            </div>
+          ) : isPastDue ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-warn-bg bg-warn-bg px-4 py-2.5 text-[12.5px] leading-[19px] text-warn-fg">
+              <p>
+                Payment past due · Submit your bank transfer details for the
+                overdue invoice to avoid service interruption.
+              </p>
+              {latestUnpaidInvoice && (
+                <button
+                  type="button"
+                  onClick={() => setViewingInvoice(latestUnpaidInvoice)}
+                  className="inline-flex h-9 items-center justify-center rounded-[7px] bg-burnt px-4 text-[12.5px] font-semibold text-on-burnt transition-colors hover:bg-burnt-dark"
+                >
+                  View overdue invoice
+                </button>
+              )}
+            </div>
+          ) : isTrialing ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-hairline bg-mist px-4 py-2.5 text-[12.5px] leading-[19px] text-body">
+              <p>
+                {subscription.trialConversionScheduled
+                  ? `Paid plan scheduled · ${subscription.tierName} billing starts after your trial ends on ${formatLongDate(subscription.trialEndsAt ?? subscription.currentPeriodEnd, timezone)}.`
+                  : `Free trial active · Your ${subscription.tierName} trial ends ${formatLongDate(subscription.trialEndsAt ?? subscription.currentPeriodEnd, timezone)}.`}
+              </p>
+              {!subscription.trialConversionScheduled && (
+                <button
+                  type="button"
+                  onClick={() => setConvertTrialOpen(true)}
+                  className="inline-flex h-9 items-center justify-center rounded-[7px] bg-burnt px-4 text-[12.5px] font-semibold text-on-burnt transition-colors hover:bg-burnt-dark"
+                >
+                  Convert trial to paid
+                </button>
+              )}
+            </div>
+          ) : hasScheduledChange ? (
+            <div className="space-y-2.5">
+              {justScheduledPlanBanner && (
+                <div className="rounded-[10px] border border-hairline bg-mist px-4 py-3 text-[12.5px] leading-[19px] text-body">
+                  Plan change scheduled. No charge is due today.
+                </div>
+              )}
+              <div className="rounded-[10px] border border-hairline bg-mist px-4 py-3 text-[12.5px] leading-[19px] text-body">
+                Plan change scheduled · {subscription.scheduledTierName} starts{" "}
+                {formatLongDate(
+                  subscription.scheduledChangeEffectiveAt ?? nextStartIso,
+                  timezone,
+                )}
+                . Your {subscription.tierName} plan remains active until then.
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-[10px] border border-hairline bg-mist px-4 py-3 text-[12.5px] leading-[19px] text-body">
+              Active subscription · Your {subscription.tierName} plan is active
+              for {currentPeriodLabel}.
+            </div>
+          )}
+
+          {/* Top 2-Column Workspace Cards — items-start so each card matches its Figma height */}
+          <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
+            {/* Left Card: Plan & Usage */}
+            <section className={cardClass}>
+              <h2 className="text-[17px] font-medium leading-[24px] text-ink">
+                {subscription.tierName}
+                {isCancelling ? " · Cancels at period end" : ""}
+              </h2>
+              <p className="mt-3 text-[26px] font-medium leading-[32px] tracking-[-0.01em] text-ink">
+                {formatPhp(subscription.priceCents)} / month
+              </p>
+              <p className="mt-2 text-[12.5px] text-muted">
+                Current period: {currentPeriodLabel} · Monthly billing
+              </p>
+
+              <div className="mt-3.5">
+                <span
+                  className={cn(
+                    "inline-flex items-center rounded-full px-3 py-1 text-[12px] font-medium",
+                    statusPillClass,
+                  )}
+                >
+                  {statusPillLabel}
+                </span>
+              </div>
+
+              {/* Usage Meters */}
+              <div className="mt-5 space-y-4">
+                {/* Staff accounts */}
+                <div>
+                  <p className="text-[13px] font-medium text-ink">
+                    Staff accounts · {usage.totalStaffSeatsUsed} of {staffLimit}
+                  </p>
+                  <div className="mt-2 h-[6px] w-full overflow-hidden rounded-full bg-hairline">
+                    <div
+                      className="h-full rounded-full bg-burnt transition-all"
+                      style={{ width: `${staffPct}%` }}
+                    />
+                  </div>
+                  <p className="mt-2 text-[12px] leading-[17px] text-muted">
+                    {usage.activeStaffCount} active{" "}
+                    {usage.activeStaffCount === 1 ? "account" : "accounts"} +{" "}
+                    {usage.pendingInvitationsCount} pending{" "}
+                    {usage.pendingInvitationsCount === 1
+                      ? "invitation"
+                      : "invitations"}
+                    . Pending invitations reserve a seat.
+                  </p>
+                </div>
+
+                {/* Branches */}
+                <div>
+                  <p className="text-[13px] font-medium text-ink">
+                    Branches · {usage.branchesCount} of {branchLimit}
+                  </p>
+                  <div className="mt-2 h-[6px] w-full overflow-hidden rounded-full bg-hairline">
+                    <div
+                      className={cn(
+                        "h-full rounded-full transition-all",
+                        branchAtLimit ? "bg-ink" : "bg-burnt",
+                      )}
+                      style={{ width: `${branchPct}%` }}
+                    />
+                  </div>
+                  <p className="mt-2 text-[12px] leading-[17px] text-muted">
+                    {branchAtLimit
+                      ? subscription.tierCode === "enterprise"
+                        ? "At plan branch limit."
+                        : "At limit · Upgrade to Enterprise to add another branch."
+                      : `${branchLimit - usage.branchesCount} branch ${branchLimit - usage.branchesCount === 1 ? "slot" : "slots"} available.`}
+                  </p>
+                </div>
+
+                {/* Appointments */}
+                <div>
+                  <p className="text-[13px] font-medium text-ink">
+                    Appointments this period ·{" "}
+                    {usage.appointmentsThisPeriod.toLocaleString()} of{" "}
+                    {apptLimit.toLocaleString()}
+                  </p>
+                  <div className="mt-2 h-[6px] w-full overflow-hidden rounded-full bg-hairline">
+                    <div
+                      className="h-full rounded-full bg-sky transition-all"
+                      style={{ width: `${apptPct}%` }}
+                    />
+                  </div>
+                  <p className="mt-2 text-[12px] leading-[17px] text-muted">
+                    {isCancelling || isEnded
+                      ? "Last billing period usage · New usage starts after a paid plan is active."
+                      : `${currentPeriodNoYear} · Resets ${nextResetDateLabel} at 00:00 (${timezone}).`}
+                  </p>
+                </div>
+              </div>
+
+              {canEdit && (
+                <div className="mt-5 flex flex-wrap items-center justify-end gap-3">
+                  {branchAtLimit && subscription.tierCode !== "enterprise" && (
+                    <button
+                      type="button"
+                      onClick={() => setWhyBranchOpen(true)}
+                      className="inline-flex h-[44px] min-w-[186px] items-center justify-center rounded-[8px] border border-line bg-white px-5 text-[13px] font-medium text-ink transition-colors hover:bg-mist"
+                    >
+                      Why can&apos;t I add a branch?
+                    </button>
+                  )}
+                  {isEnded ? (
+                    <button
+                      type="button"
+                      onClick={() => setReactivateOpen(true)}
+                      className="inline-flex h-[44px] min-w-[164px] items-center justify-center rounded-[8px] bg-burnt px-6 text-[13px] font-semibold text-on-burnt transition-colors hover:bg-burnt-dark"
+                    >
+                      Reactivate subscription
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleOpenChangePlan}
+                      className="inline-flex h-[44px] min-w-[136px] items-center justify-center rounded-[8px] bg-burnt px-6 text-[13px] font-semibold text-on-burnt transition-colors hover:bg-burnt-dark"
+                    >
+                      Change plan
+                    </button>
+                  )}
+                </div>
+              )}
+            </section>
+
+            {/* Right Card: Next Invoice / Subscription Ending */}
+            <section className={cardClass}>
+              <h2 className="text-[17px] font-medium leading-[24px] text-ink">
+                {isCancelling || isEnded
+                  ? "Subscription ending"
+                  : "Next invoice"}
+              </h2>
+              <p className="mt-3 text-[24px] font-medium leading-[30px] tracking-[-0.01em] text-ink">
+                {isCancelling || isEnded
+                  ? "No scheduled renewal"
+                  : nextInvoiceDateLabel}
+              </p>
+
+              <div className="mt-3">
+                {isCancelling || isEnded ? (
+                  <span className="inline-flex items-center rounded-full bg-warn-bg px-3 py-1 text-[12px] font-medium text-warn-fg">
+                    No renewal
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center rounded-full bg-info-bg px-3 py-1 text-[12px] font-medium text-info">
+                    Not issued
+                  </span>
+                )}
+              </div>
+
+              {!isCancelling && !isEnded && (
+                <dl className="mt-5 space-y-3 text-[13px]">
+                  <div className="grid grid-cols-2 gap-4">
+                    <dt className="text-muted">Billing period</dt>
+                    <dd className="font-medium text-ink">
+                      {nextInvoicePeriodLabel}
+                    </dd>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <dt className="text-muted">
+                      {nextPlanName} monthly plan
+                    </dt>
+                    <dd className="font-medium text-ink">
+                      {formatPhp(nextPlanPriceCents)}
+                    </dd>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <dt className="text-muted">Add-ons</dt>
+                    <dd className="font-medium text-ink">₱0</dd>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <dt className="text-muted">Tax</dt>
+                    <dd className="font-medium text-ink">
+                      Included in the estimate
+                    </dd>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <dt className="text-muted">Next invoice total</dt>
+                    <dd className="font-semibold text-ink">
+                      {formatPhp(nextPlanPriceCents)}
+                    </dd>
+                  </div>
+                </dl>
+              )}
+
+              <div className="mt-4 rounded-[10px] bg-mist px-4 py-3 text-[12.5px] leading-[19px] text-body">
+                This is an estimate. Payment is due only after an invoice is
+                issued. No payment is requested today.
+              </div>
+
+              <div className="mt-4 space-y-2">
+                <p className="text-[13px] font-medium text-ink">
+                  Payment method: Invoice / bank transfer
+                </p>
+                <p className="text-[12.5px] leading-[19px] text-muted">
+                  Pay within 7 days of issue. Include the invoice number as your
+                  transfer reference. No card is stored.
+                </p>
+              </div>
+
+              {canEdit && (
+                <div className="mt-4 flex flex-wrap items-center justify-end gap-4">
+                  <button
+                    type="button"
+                    onClick={handleOpenBillingDetails}
+                    className="inline-flex h-[34px] items-center justify-center rounded-[6px] border-[1.5px] border-burnt bg-white px-3.5 text-[12.5px] font-semibold text-burnt transition-colors hover:bg-burnt/5"
+                  >
+                    Billing Details
+                  </button>
+                  {latestInvoice && (
+                    <button
+                      type="button"
+                      onClick={() => setViewingInvoice(latestInvoice)}
+                      className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-muted transition-colors hover:text-ink"
+                    >
+                      <span>View Latest Invoice</span>
+                      <Icon name="arrow-right" weight="medium" className="size-3.5" />
+                    </button>
+                  )}
+                </div>
+              )}
+
+              <div className="mt-5 flex flex-wrap items-center justify-between gap-2 text-[12px] text-muted">
+                <p>
+                  Invoice and reminder recipient:{" "}
+                  <span>{billingProfile.billingEmail}</span>
+                  {billingProfile.ccEmail
+                    ? ` · CC: ${billingProfile.ccEmail}`
+                    : ""}
+                </p>
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={handleOpenDeliveryPrefs}
+                    className="font-medium text-burnt hover:underline"
+                  >
+                    Delivery &amp; alerts
+                  </button>
+                )}
+              </div>
+            </section>
+          </div>
+
+          {/* Included Features Section */}
+          <section className={cardClass}>
+            <h2 className="text-[17px] font-medium leading-[24px] text-ink">
+              Included in {subscription.tierName}
+            </h2>
+            <p className="mt-1.5 text-[12.5px] text-muted">
+              Everything included with your {subscription.tierName} plan.
+            </p>
+
+            <div className="mt-4 grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              {includedFeatures.map((feature) => (
+                <div
+                  key={feature.key}
+                  className="flex items-start gap-3 rounded-[10px] bg-mist px-4 py-3.5"
+                >
+                  <span className="mt-0.5 flex size-[18px] shrink-0 items-center justify-center rounded-full bg-burnt text-on-burnt">
+                    <Icon name="check" weight="bold" className="size-2.5" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[13.5px] font-medium leading-[19px] text-ink">
+                      {feature.title}
+                    </p>
+                    <p className="mt-1 text-[12px] leading-[17px] text-muted">
+                      {feature.description}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Billing History Table */}
+          <section className={cardClass}>
+            <h2 className="text-[17px] font-medium leading-[24px] text-ink">
+              Billing history
+            </h2>
+
+            {!viewingInvoice && (
+              <>
+                <div role="status">
+                  {downloadingInvoice && (
+                    <p className="mt-2 text-sm text-muted">Preparing PDF for {invoiceDownload.invoiceNumber}…</p>
+                  )}
+                </div>
+                {invoiceDownloadError && (
+                  <p role="alert" className="mt-2 text-sm text-danger">{invoiceDownloadError}</p>
+                )}
+              </>
+            )}
+
+            {invoices.length === 0 ? (
+              <div className="mt-4 rounded-[10px] border border-dashed border-line bg-mist px-6 py-10 text-center">
+                <p className="text-sm font-semibold text-ink">
+                  No invoices yet
+                </p>
+                <p className="mt-1 text-xs text-muted">
+                  Subscription invoices and bank transfer payment records will
+                  appear here once issued.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="mt-4 overflow-x-auto overflow-y-hidden">
+                  <table className="w-full min-w-[680px] border-collapse text-left text-[13px]">
+                    <thead>
+                      <tr className="text-[12.5px] text-muted">
+                        <th className="pb-4 pr-4 font-normal">Invoice</th>
+                        <th className="pb-4 px-3 font-normal">
+                          Billing period
+                        </th>
+                        <th className="pb-4 px-3 font-normal">Issued</th>
+                        <th className="pb-4 px-3 font-normal">Paid</th>
+                        <th className="pb-4 px-3 font-normal">Amount</th>
+                        <th className="pb-4 px-3 font-normal">Status</th>
+                        <th className="pb-4 pl-3 text-right font-normal">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pagedInvoices.map((inv) => {
+                        const statusLabel =
+                          inv.status.charAt(0).toUpperCase() +
+                          inv.status.slice(1);
+                        const isPaid = inv.status === "paid";
+                        const isOverdue = inv.status === "overdue";
+
+                        return (
+                          <tr key={inv.id} className="text-ink">
+                            <td className="py-4 pr-4 font-normal">
+                              <button
+                                type="button"
+                                onClick={() => setViewingInvoice(inv)}
+                                className="hover:text-burnt hover:underline"
+                              >
+                                {inv.invoiceNumber}
+                              </button>
+                            </td>
+                            <td className="py-4 px-3 text-body">
+                              {formatPeriodRange(
+                                inv.billingPeriodStart,
+                                inv.billingPeriodEnd,
+                                timezone,
+                                true,
+                              )}
+                            </td>
+                            <td className="py-4 px-3 text-body">
+                              {formatShortDate(inv.issuedAt, timezone)}
+                            </td>
+                            <td className="py-4 px-3 text-body">
+                              {inv.paidAt
+                                ? formatShortDate(inv.paidAt, timezone)
+                                : "—"}
+                            </td>
+                            <td className="py-4 px-3 font-normal">
+                              {formatPhp(inv.totalCents)}
+                            </td>
+                            <td className="py-4 px-3">
+                              <span
+                                className={cn(
+                                  "inline-flex items-center rounded-full px-3.5 py-1 text-[12px] font-medium",
+                                  isPaid
+                                    ? "bg-wash text-success"
+                                    : isOverdue
+                                      ? "bg-danger-bg text-danger-dark"
+                                      : "bg-mist text-body",
+                                )}
+                              >
+                                {statusLabel}
+                              </span>
+                            </td>
+                            <td className="py-4 pl-3 text-right">
+                              <InvoiceRowActions
+                                invoiceNumber={inv.invoiceNumber}
+                                downloading={downloadingInvoice}
+                                onView={() => setViewingInvoice(inv)}
+                                onDownload={() => handleDownloadInvoicePdf(inv)}
+                                onSubmitPayment={
+                                  canEdit && (inv.status === "unpaid" || isOverdue)
+                                    ? () => handleOpenSubmitPayment(inv)
+                                    : undefined
+                                }
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination Footer */}
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 pt-2 text-[12px] text-muted">
+                  <p>
+                    Showing {pagedInvoices.length}{" "}
+                    {pagedInvoices.length === 1 ? "invoice" : "invoices"} ·
+                    Amounts in PHP
+                  </p>
+                  <div className="flex w-full items-center gap-3 sm:w-auto">
+                    <button
+                      type="button"
+                      disabled={safePage <= 1}
+                      onClick={() => setInvoicePage((p) => Math.max(1, p - 1))}
+                      className="inline-flex h-10 min-w-0 flex-1 sm:min-w-[110px] sm:flex-none items-center justify-center rounded-[8px] border border-line bg-white px-4 text-[13px] font-medium text-ink transition-colors hover:bg-mist disabled:opacity-40"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      type="button"
+                      disabled={safePage >= totalPages}
+                      onClick={() =>
+                        setInvoicePage((p) => Math.min(totalPages, p + 1))
+                      }
+                      className="inline-flex h-10 min-w-0 flex-1 sm:min-w-[110px] sm:flex-none items-center justify-center rounded-[8px] border border-line bg-white px-4 text-[13px] font-medium text-ink transition-colors hover:bg-mist disabled:opacity-40"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </section>
+
+          {/* Bottom Metadata & Subscription Cancellation Link */}
+          <div className="flex flex-wrap items-center justify-between gap-3 px-1 pb-4 text-[12px] text-muted">
+            <p>
+              Billing details · Last saved{" "}
+              {formatLastSaved(billingProfile.updatedAt, timezone)}
+            </p>
+            {canEdit && !isCancelling && !isEnded && (
+              <button
+                type="button"
+                onClick={handleOpenCancelStep1}
+                className="font-medium text-danger-dark hover:underline"
+              >
+                Cancel subscription
+              </button>
+            )}
+          </div>
+        </PageContent>
+      </div>
+
+      {/* Modals */}
+      <ComparePlansModal
+        open={compareOpen}
+        onClose={() => setCompareOpen(false)}
+        tiers={tiers}
+        currentTierCode={subscription.tierCode}
+        canEdit={canEdit}
+        onStartChangePlan={handleOpenChangePlan}
+      />
+
+      <ChangePlanModal
+        key={`change-plan-${changePlanKey}`}
+        open={changePlanOpen}
+        onClose={() => setChangePlanOpen(false)}
+        tiers={tiers}
+        subscription={subscription}
+        usage={usage}
+        timezone={timezone}
+        submitting={submitting}
+        error={modalError}
+        onConfirmPlanChange={handleConfirmPlanChange}
+      />
+
+      <WhyCannotAddBranchModal
+        open={whyBranchOpen}
+        onClose={() => setWhyBranchOpen(false)}
+        currentTierName={subscription.tierName}
+        currentBranchLimit={branchLimit}
+        enterpriseBranchLimit={enterpriseTier?.limits.branches ?? 3}
+        canEdit={canEdit}
+        onUpgradeClick={handleOpenChangePlan}
+      />
+
+      <CancelSubscriptionModal
+        key={`cancel-step1-${cancelStep1Key}`}
+        open={cancelStep1Open}
+        onClose={() => setCancelStep1Open(false)}
+        subscription={subscription}
+        basicTier={basicTier}
+        usage={usage}
+        timezone={timezone}
+        onProceedToFinalConfirm={(reason) => {
+          setPendingCancelReason(reason);
+          setCancelStep1Open(false);
+          setCancelStep2Open(true);
+        }}
+      />
+
+      <CancelFinalConfirmModal
+        open={cancelStep2Open}
+        onClose={() => setCancelStep2Open(false)}
+        onConfirm={handleFinalCancelConfirm}
+        planName={subscription.tierName}
+        periodEndLabel={periodEndLabel}
+        submitting={submitting}
+      />
+
+      <ConvertTrialModal
+        open={convertTrialOpen}
+        onClose={() => setConvertTrialOpen(false)}
+        subscription={subscription}
+        timezone={timezone}
+        submitting={submitting}
+        onConfirm={handleConfirmTrialConversion}
+      />
+
+      <ReactivateSubscriptionModal
+        open={reactivateOpen}
+        onClose={() => setReactivateOpen(false)}
+        subscription={subscription}
+        submitting={submitting}
+        onRequestReactivation={handleRequestReactivation}
+      />
+
+      <ReactivationRequestedModal
+        open={reactivationRequestedOpen}
+        onClose={() => setReactivationRequestedOpen(false)}
+        onViewPaymentInstructions={() => {
+          setReactivationRequestedOpen(false);
+          const target =
+            invoices.find((i) => i.id === reactivationInvoiceId) ??
+            latestUnpaidInvoice;
+          if (target) setViewingInvoice(target);
+        }}
+      />
+
+      <BillingDetailsModal
+        key={`billing-details-${billingDetailsKey}`}
+        open={billingDetailsOpen}
+        onClose={() => setBillingDetailsOpen(false)}
+        profile={billingProfile}
+        businessDefaults={data.businessDefaults}
+        submitting={submitting}
+        error={modalError}
+        onSave={handleSaveBillingDetails}
+      />
+
+      <InvoiceDeliveryPreferencesModal
+        key={`delivery-prefs-${deliveryPrefsKey}`}
+        open={deliveryPrefsOpen}
+        onClose={() => setDeliveryPrefsOpen(false)}
+        initialCcEmail={billingProfile.ccEmail}
+        renewalRemindersEnabled={subscription.renewalRemindersEnabled}
+        renewalReminderDays={subscription.renewalReminderDays}
+        submitting={submitting}
+        error={modalError}
+        onSave={handleSaveDeliveryPrefs}
+      />
+
+      <SubscriptionInvoiceModal
+        open={Boolean(viewingInvoice)}
+        onClose={() => setViewingInvoice(null)}
+        invoice={viewingInvoice}
+        timezone={timezone}
+        canEdit={canEdit}
+        downloading={downloadingInvoice}
+        downloadError={invoiceDownload?.invoiceId === viewingInvoice?.id ? invoiceDownloadError : undefined}
+        onDownloadPdf={handleDownloadInvoicePdf}
+        onOpenSubmitPayment={handleOpenSubmitPayment}
+      />
+
+      <SubmitPaymentDetailsModal
+        key={`submit-payment-${submitPaymentKey}`}
+        open={Boolean(submitPaymentInvoice)}
+        onClose={() => setSubmitPaymentInvoice(null)}
+        invoice={submitPaymentInvoice}
+        submitting={submitting}
+        error={modalError}
+        onSubmit={handleSubmitPaymentDetails}
+      />
+
+      <OutcomeModal
+        open={Boolean(outcomeModal)}
+        onClose={() => setOutcomeModal(null)}
+        title={outcomeModal?.title ?? ""}
+        description={outcomeModal?.description ?? ""}
+      />
+    </div>
+  );
+}
