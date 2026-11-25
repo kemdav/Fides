@@ -22,9 +22,14 @@ import { AdminButton } from "@/components/admin/admin-button";
 import {
   PageContent,
   PageHeading,
+  StatusPill,
   Surface,
 } from "@/components/admin/primitives";
 import { ColorPickerModal } from "./color-picker-modal";
+import {
+  suggestLogoPalettes,
+  type LogoPaletteSuggestion,
+} from "./logo-palette";
 import { ConnectDomainModal, WaitingDnsModal } from "./dns-modals";
 import { ChangeAddressModal, AddressUpdatedModal } from "./address-modals";
 import {
@@ -172,13 +177,8 @@ const fieldInput =
 const fieldTextarea =
   "w-full min-w-0 rounded-lg border border-outline bg-white px-3 py-2.5 text-sm text-ink placeholder:text-glyph focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/30 transition-shadow leading-relaxed disabled:bg-mist disabled:text-muted disabled:cursor-not-allowed";
 
-const sectionEyebrow =
-  "text-[11px] font-bold uppercase tracking-[0.06em] text-burnt block";
-
-const sectionTitle =
-  "text-lg font-semibold tracking-tight text-ink mt-1 leading-snug";
-
-const sectionSubtitle = "text-xs text-muted mt-0.5";
+const sectionTitle = "text-base font-semibold leading-6 text-ink";
+const sectionSubtitle = "mt-1 text-xs leading-relaxed text-muted";
 
 interface CustomSelectOption {
   value: string;
@@ -418,6 +418,10 @@ export function WebsiteSettingsView({
   const [linkCopiedToast, setLinkCopiedToast] = React.useState(false);
   const [uploadError, setUploadError] = React.useState<string | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = React.useState(false);
+  const [logoSuggestion, setLogoSuggestion] = React.useState<{
+    logoUrl: string;
+    palettes: LogoPaletteSuggestion[] | null;
+  } | null>(null);
   const [isUploadingCover, setIsUploadingCover] = React.useState(false);
   const [isUploadingSocial, setIsUploadingSocial] = React.useState(false);
   const [isSavingDraft, setIsSavingDraft] = React.useState(false);
@@ -427,6 +431,7 @@ export function WebsiteSettingsView({
   const [isPublishing, setIsPublishing] = React.useState(false);
   const [publishError, setPublishError] = React.useState<string | null>(null);
 
+  const pendingLogoUpload = React.useRef<File | null>(null);
   const logoInputRef = React.useRef<HTMLInputElement | null>(null);
   const coverInputRef = React.useRef<HTMLInputElement | null>(null);
   const socialInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -476,8 +481,11 @@ export function WebsiteSettingsView({
       return;
     }
 
-    if (assetType === "logo") setIsUploadingLogo(true);
-    else if (assetType === "cover") setIsUploadingCover(true);
+    if (assetType === "logo") {
+      if (isUploadingLogo) return;
+      pendingLogoUpload.current = file;
+      setIsUploadingLogo(true);
+    } else if (assetType === "cover") setIsUploadingCover(true);
     else setIsUploadingSocial(true);
     setUploadError(null);
 
@@ -487,9 +495,13 @@ export function WebsiteSettingsView({
       formData.append("assetType", assetType);
 
       const res = await uploadTenantMediaAction(formData, tenantId);
+      if (assetType === "logo" && pendingLogoUpload.current !== file) return;
       if (res.success && res.data) {
         if (assetType === "logo") {
+          const palettes = await suggestLogoPalettes(file);
+          if (pendingLogoUpload.current !== file) return;
           handleChange("logoUrl", res.data.url);
+          setLogoSuggestion({ logoUrl: res.data.url, palettes });
         } else if (assetType === "cover") {
           handleChange("coverPhotoName", res.data.filename);
           handleChange("coverPhotoUrl", res.data.url);
@@ -501,12 +513,15 @@ export function WebsiteSettingsView({
         setUploadError(res.error || "Upload failed");
       }
     } catch (err: unknown) {
+      if (assetType === "logo" && pendingLogoUpload.current !== file) return;
       setUploadError(
         err instanceof Error ? err.message : "Failed to upload file",
       );
     } finally {
-      if (assetType === "logo") setIsUploadingLogo(false);
-      else if (assetType === "cover") setIsUploadingCover(false);
+      if (assetType === "logo") {
+        pendingLogoUpload.current = null;
+        setIsUploadingLogo(false);
+      } else if (assetType === "cover") setIsUploadingCover(false);
       else setIsUploadingSocial(false);
       event.target.value = "";
     }
@@ -592,11 +607,17 @@ export function WebsiteSettingsView({
 
   const handleDiscard = async () => {
     if (!canEdit) return;
+    pendingLogoUpload.current = null;
+    setLogoSuggestion(null);
     setForm(savedSettings);
     setHasSavedDraft(false);
     await discardWebsiteDraftAction(tenantId);
     setIsDiscardOpen(false);
   };
+
+  const currentLogoSuggestion =
+    logoSuggestion?.logoUrl === form.logoUrl ? logoSuggestion : null;
+  const suggestedPalettes = currentLogoSuggestion?.palettes;
 
   const displayedPreviewServices =
     previewServices.length > 0 ? previewServices : FALLBACK_PREVIEW_SERVICES;
@@ -670,14 +691,15 @@ export function WebsiteSettingsView({
             title="Website Settings"
             description="Set your logo, colors and homepage content. Preview your changes before publishing."
             actions={
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                <span className="inline-flex items-center gap-1.5 rounded-md bg-wash px-2.5 py-1 text-xs font-semibold leading-[18px] text-success whitespace-nowrap">
-                  <span className="w-1.5 h-1.5 rounded-full bg-success" />
+              <div className="flex flex-wrap items-center gap-2">
+                <StatusPill tone="success" className="gap-1.5">
+                  <span className="size-1.5 rounded-full bg-success" />
                   Website is live
-                </span>
+                </StatusPill>
                 <AdminButton
                   variant="outline"
                   size="sm"
+                  className="gap-2"
                   onClick={() => setIsLivePreviewOpen(true)}
                 >
                   <EyeIcon className="w-3.5 h-3.5" />
@@ -731,8 +753,7 @@ export function WebsiteSettingsView({
                 {/* 01 Brand identity */}
                 <Surface className="space-y-5">
                   <div>
-                    <span className={sectionEyebrow}>01 · BRAND IDENTITY</span>
-                    <h2 className={sectionTitle}>Brand identity</h2>
+                    <h2 className={sectionTitle}>Brand Identity</h2>
                     <p className={sectionSubtitle}>
                       Visible across your website.
                     </p>
@@ -750,7 +771,7 @@ export function WebsiteSettingsView({
                         type="file"
                         accept="image/png,image/jpeg,image/webp,image/svg+xml"
                         className="hidden"
-                        disabled={!canEdit}
+                        disabled={!canEdit || isUploadingLogo}
                         onChange={(e) => handleFileUpload(e, "logo")}
                       />
                       <div className="w-16 h-16 rounded-xl bg-powder border border-hairline flex items-center justify-center font-display text-2xl font-bold text-burnt shadow-sm overflow-hidden relative">
@@ -776,7 +797,11 @@ export function WebsiteSettingsView({
                           onClick={() => logoInputRef.current?.click()}
                           className="text-xs font-semibold text-burnt hover:text-burnt-dark underline whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
-                          {isUploadingLogo ? "Uploading..." : "Replace logo"}
+                          {isUploadingLogo
+                            ? "Uploading..."
+                            : form.logoUrl
+                              ? "Replace logo"
+                              : "Upload logo"}
                         </button>
                         <button
                           type="button"
@@ -836,6 +861,72 @@ export function WebsiteSettingsView({
                     <span className="block text-xs font-semibold text-ink mb-2">
                       Website color palette
                     </span>
+                    <div
+                      role="status"
+                      className={suggestedPalettes ? "sr-only" : undefined}
+                    >
+                      {canEdit && !isUploadingLogo && currentLogoSuggestion && (
+                        suggestedPalettes ? (
+                          "Three palettes are ready to preview."
+                        ) : (
+                          <p className="mb-3 text-xs text-muted">
+                            No palette could be generated from this logo.
+                          </p>
+                        )
+                      )}
+                    </div>
+                    {canEdit && !isUploadingLogo && suggestedPalettes && (
+                      <fieldset className="mb-4 min-w-0">
+                        <legend className="mb-2 text-xs font-semibold text-ink">
+                          Suggested from your logo
+                        </legend>
+                        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,8rem),1fr))] gap-2">
+                          {suggestedPalettes.map(({ name, colors }) => {
+                            const swatches = [
+                              { label: "Main", color: colors.mainColor, width: "60%" },
+                              { label: "Secondary", color: colors.secondaryColor, width: "30%" },
+                              { label: "Accent", color: colors.accentColor, width: "10%" },
+                            ];
+                            const isApplied =
+                              colors.mainColor.toUpperCase() === form.mainColor.toUpperCase() &&
+                              colors.secondaryColor.toUpperCase() === form.secondaryColor.toUpperCase() &&
+                              colors.accentColor.toUpperCase() === form.accentColor.toUpperCase();
+
+                            return (
+                              <button
+                                key={name}
+                                type="button"
+                                aria-pressed={isApplied}
+                                onClick={() =>
+                                  setForm((previous) => ({ ...previous, ...colors }))
+                                }
+                                className="flex min-w-0 flex-col gap-2 rounded-[10px] border border-hairline bg-white p-3 text-left transition-colors hover:border-outline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 aria-pressed:border-burnt aria-pressed:bg-wash"
+                              >
+                                <span className="text-xs font-semibold text-ink">
+                                  {name}
+                                </span>
+                                <span className="flex h-7 w-full overflow-hidden rounded-md border border-black/10">
+                                  {swatches.map(({ label, color, width }) => (
+                                    <span
+                                      key={label}
+                                      title={label + " " + color}
+                                      style={{ backgroundColor: color, width }}
+                                    >
+                                      <span className="sr-only">
+                                        {label} {color}
+                                      </span>
+                                    </span>
+                                  ))}
+                                </span>
+                                <span aria-hidden="true" className="text-xs font-semibold text-burnt">
+                                  {isApplied ? "In use" : "Use palette"}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </fieldset>
+                    )}
                     <div className="grid grid-cols-[repeat(auto-fit,minmax(145px,1fr))] gap-3">
                       {(["main", "secondary", "accent"] as ColorType[]).map(
                         (type) => {
@@ -923,10 +1014,7 @@ export function WebsiteSettingsView({
                 {/* 02 Homepage content */}
                 <Surface className="space-y-5">
                   <div>
-                    <span className={sectionEyebrow}>
-                      02 · HOMEPAGE CONTENT
-                    </span>
-                    <h2 className={sectionTitle}>Make it feel like you</h2>
+                    <h2 className={sectionTitle}>Homepage Content</h2>
                     <p className={sectionSubtitle}>
                       Set the headline, supporting message, and hero imagery on
                       your storefront.
@@ -1050,9 +1138,7 @@ export function WebsiteSettingsView({
                   <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
                     <div className="flex items-center gap-2">
                       <Icon name="settings" className="size-4 text-glyph" />
-                      <span className="text-xs font-semibold text-ink">
-                        Website preview
-                      </span>
+                      <h2 className={sectionTitle}>Website Preview</h2>
                     </div>
                     <div className="flex items-center gap-2">
                       {/* Device switcher */}
@@ -1315,10 +1401,7 @@ export function WebsiteSettingsView({
               <div className="min-w-0 space-y-5">
                 <Surface className="space-y-5">
                   <div>
-                    <span className={sectionEyebrow}>01 · PUBLIC PROFILE</span>
-                    <h2 className={sectionTitle}>
-                      Help customers get to know you
-                    </h2>
+                    <h2 className={sectionTitle}>Public Profile</h2>
                     <p className={sectionSubtitle}>
                       These details appear on your About &amp; contact page.
                     </p>
@@ -1369,10 +1452,7 @@ export function WebsiteSettingsView({
 
                 <Surface className="space-y-5">
                   <div>
-                    <span className={sectionEyebrow}>
-                      02 · CUSTOMER CONTACT
-                    </span>
-                    <h2 className={sectionTitle}>Make it easy to reach you</h2>
+                    <h2 className={sectionTitle}>Customer Contact</h2>
                     <p className={sectionSubtitle}>
                       Use contact details your customers can access.
                     </p>
@@ -1430,10 +1510,7 @@ export function WebsiteSettingsView({
               <div className="min-w-0 space-y-5">
                 <Surface className="space-y-5">
                   <div>
-                    <span className={sectionEyebrow}>03 · LOCATION</span>
-                    <h2 className={sectionTitle}>
-                      Where customers can find you
-                    </h2>
+                    <h2 className={sectionTitle}>Location</h2>
                     <p className={sectionSubtitle}>
                       Shown with your contact details on the website.
                     </p>
@@ -1488,8 +1565,7 @@ export function WebsiteSettingsView({
 
                 <Surface className="space-y-5">
                   <div>
-                    <span className={sectionEyebrow}>04 · OPENING HOURS</span>
-                    <h2 className={sectionTitle}>Set clear expectations</h2>
+                    <h2 className={sectionTitle}>Opening Hours</h2>
                     <p className={sectionSubtitle}>
                       These are display hours. Appointment availability follows
                       Booking settings.
@@ -1550,10 +1626,7 @@ export function WebsiteSettingsView({
                 <Surface className="space-y-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <span className={sectionEyebrow}>
-                        01 · WEBSITE ADDRESS
-                      </span>
-                      <h2 className={sectionTitle}>Your home on the web</h2>
+                      <h2 className={sectionTitle}>Website Address</h2>
                       <p className={sectionSubtitle}>
                         Share this address with customers so they can book
                         directly.
@@ -1620,8 +1693,7 @@ export function WebsiteSettingsView({
 
                 <Surface className="space-y-5">
                   <div>
-                    <span className={sectionEyebrow}>02 · CUSTOM DOMAIN</span>
-                    <h2 className={sectionTitle}>Bring your own domain</h2>
+                    <h2 className={sectionTitle}>Custom Domain</h2>
                     <p className={sectionSubtitle}>
                       Connect a domain you already own. Keep the Fides address
                       as a fallback.
@@ -1668,10 +1740,7 @@ export function WebsiteSettingsView({
               <div className="xl:col-span-5 min-w-0 space-y-4">
                 <Surface className="space-y-4">
                   <div>
-                    <span className={sectionEyebrow}>CUSTOMER LINK</span>
-                    <h3 className={sectionTitle}>
-                      One link. A simple way to book.
-                    </h3>
+                    <h2 className={sectionTitle}>Customer Link</h2>
                   </div>
                   <div className="rounded-lg border border-hairline bg-mist p-4 space-y-1">
                     <span className="text-sm font-bold text-ink block break-words">
@@ -1714,10 +1783,7 @@ export function WebsiteSettingsView({
               <div className="xl:col-span-7 min-w-0 space-y-5">
                 <Surface className="space-y-5">
                   <div>
-                    <span className={sectionEyebrow}>01 · SEARCH LISTING</span>
-                    <h2 className={sectionTitle}>
-                      Help the right customers find you
-                    </h2>
+                    <h2 className={sectionTitle}>Search Listing</h2>
                   </div>
                   <div>
                     <div className="flex flex-wrap items-center justify-between gap-1 mb-1.5">
@@ -1781,10 +1847,7 @@ export function WebsiteSettingsView({
 
                 <Surface className="space-y-5">
                   <div>
-                    <span className={sectionEyebrow}>02 · SOCIAL SHARING</span>
-                    <h2 className={sectionTitle}>
-                      Look good when your link is shared
-                    </h2>
+                    <h2 className={sectionTitle}>Social Sharing</h2>
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-ink mb-1.5">
@@ -1874,7 +1937,7 @@ export function WebsiteSettingsView({
               {/* Right: Previews */}
               <div className="xl:col-span-5 xl:sticky xl:top-6 min-w-0 space-y-4">
                 <Surface className="space-y-3">
-                  <span className={sectionEyebrow}>SEARCH ENGINE RESULT</span>
+                  <h2 className={sectionTitle}>Search Preview</h2>
                   <div className="text-sm text-ink font-medium break-words">
                     {form.businessName}
                   </div>
