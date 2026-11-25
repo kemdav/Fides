@@ -6,7 +6,7 @@ export type AdminButtonVariant = "primary" | "outline" | "outline-accent" | "dan
 export type AdminButtonSize = "xs" | "sm" | "md";
 
 const variantClasses: Record<AdminButtonVariant, string> = {
-  primary: "bg-burnt text-white hover:bg-burnt-dark",
+  primary: "bg-burnt text-on-burnt hover:bg-burnt-dark",
   outline: "border-2 border-outline text-ink hover:bg-mist",
   "outline-accent": "border border-burnt text-burnt hover:bg-burnt/10",
   danger: "bg-danger text-white hover:bg-danger-dark",

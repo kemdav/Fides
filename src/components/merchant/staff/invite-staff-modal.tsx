@@ -140,6 +140,7 @@ export function InviteStaffModal({ onClose, onSent, tenantId, canInviteAdmins, s
               value={selectedServices}
               onChange={setSelectedServices}
               options={services.map(({ id, name }) => ({ value: id, label: name }))}
+              disabled={sending}
             />}
             <p id="invite-services-help" className="text-xs text-muted">The Services page displays these assignments.</p>
           </div>

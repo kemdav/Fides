@@ -65,7 +65,7 @@ export function BookingSettingsSavedModal({
           <button
             type="button"
             onClick={onClose}
-            className="min-w-[140px] rounded-lg bg-[#C35000] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#A64400] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C35000]/40"
+            className="min-w-[140px] rounded-lg bg-burnt px-6 py-2.5 text-sm font-semibold text-on-burnt transition-colors hover:bg-burnt-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
           >
             Done
           </button>
@@ -147,7 +147,7 @@ export function ConfirmDiscardModal({
           <button
             type="button"
             onClick={onKeepEditing}
-            className="rounded-lg border border-[#D9DDE3] bg-white px-4 py-2.5 text-sm font-semibold text-[#334155] transition-colors hover:bg-[#F8FAFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C35000]/40"
+            className="rounded-lg border border-[#D9DDE3] bg-white px-4 py-2.5 text-sm font-semibold text-[#334155] transition-colors hover:bg-[#F8FAFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
           >
             Keep editing
           </button>

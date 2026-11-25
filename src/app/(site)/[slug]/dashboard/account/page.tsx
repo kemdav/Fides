@@ -33,7 +33,7 @@ export default async function MerchantAccountPage({ params }: { params: Promise<
       <MerchantSidebar businessName={tenant.name} userName={name} userEmail={email} userRole={membership.role} basePath={`/${tenant.slug}`} />
       <div className="min-w-0 flex-1 lg:overflow-y-auto">
         <PageContent>
-          <PageHeading eyebrow={tenant.name} title="My account" description="View the account signed in to this workspace." />
+          <PageHeading title="My Account" description="View the account signed in to this workspace." />
           <Surface className="w-full max-w-2xl border border-hairline">
             <div className="flex items-center gap-4">
               <span aria-hidden="true" className="grid size-14 shrink-0 place-items-center rounded-full bg-burnt/10 text-lg font-semibold text-burnt-dark">

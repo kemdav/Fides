@@ -8,27 +8,16 @@ import { AdminButton } from "@/components/admin/admin-button";
 import { CalendarPicker } from "@/components/ui/calendar-picker";
 import { Listbox } from "@/components/ui/listbox";
 import { createAppointmentBookingAction } from "@/app/actions/appointments";
+import { getEligibleBookingStaff } from "@/lib/merchant/booking-staff-eligibility";
+import type {
+  AppointmentServiceOption,
+  AppointmentStaffOption,
+} from "@/types/appointments";
 
+export type { AppointmentServiceOption, AppointmentStaffOption };
 export { Listbox } from "@/components/ui/listbox";
 
 // ─── static option lists ─────────────────────────────────────────────────────
-
-const SERVICE_OPTIONS = [
-  { value: "Signature haircut",      label: "Signature haircut – 60 min · ₱450",   price: 450,  duration: 60 },
-  { value: "Balayage & gloss",       label: "Balayage & gloss – 90 min · ₱1,500",  price: 1500, duration: 90 },
-  { value: "Botanical spa manicure", label: "Botanical spa manicure – 45 min · ₱950", price: 950, duration: 45 },
-  { value: "Facial treatment",       label: "Facial treatment – 60 min · ₱900",    price: 900,  duration: 60 },
-  { value: "Wellness massage",       label: "Wellness massage – 60 min · ₱1,200",  price: 1200, duration: 60 },
-];
-
-const STAFF_OPTIONS = [
-  "Any available",
-  "Sofia Cruz",
-  "Miguel Tan",
-  "Lia Ramos",
-  "Elena Cruz",
-  "Marco Reyes",
-];
 
 const RESOURCE_OPTIONS: Record<string, string[]> = {
   "Signature haircut":        ["Chair A", "Chair B", "Chair C"],
@@ -206,6 +195,8 @@ export interface NewAppointmentResult {
 interface Props {
   isOpen: boolean;
   tenantId?: string;
+  services?: AppointmentServiceOption[];
+  staff?: AppointmentStaffOption[];
   onClose: () => void;
   onCreated: (result: NewAppointmentResult) => void;
   showToast: (msg: string) => void;
@@ -223,6 +214,8 @@ interface SelectedCustomer {
 export function NewAppointmentModal({
   isOpen,
   tenantId,
+  services = [],
+  staff = [],
   onClose,
   onCreated,
   showToast,
@@ -244,8 +237,8 @@ export function NewAppointmentModal({
   const [step1Error, setStep1Error]       = React.useState<string | null>(null);
 
   // step 2
-  const [serviceName, setServiceName]       = React.useState("");
-  const [staffName, setStaffName]           = React.useState("");
+  const [serviceId, setServiceId]           = React.useState("");
+  const [requestedStaffId, setRequestedStaffId] = React.useState("");
   const [resource, setResource]             = React.useState("");
   const [addon, setAddon]                   = React.useState("None selected");
   const [date, setDate]                     = React.useState(new Date().toISOString().slice(0, 10));
@@ -254,21 +247,51 @@ export function NewAppointmentModal({
   const [conflictWarning, setConflictWarning] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting]     = React.useState(false);
 
-  // derived
-  const selectedService = SERVICE_OPTIONS.find((s) => s.value === serviceName);
-  const servicePrice    = selectedService?.price    ?? 0;
-  const serviceDuration = selectedService?.duration ?? 60;
-  const resourceOptions = serviceName ? (RESOURCE_OPTIONS[serviceName] ?? ["Chair A"]) : [];
+  const selectedService = services.find((service) => service.id === serviceId);
+  const servicePrice    = selectedService ? Math.round(selectedService.priceCents / 100) : 0;
+  const serviceDuration = selectedService?.durationMinutes ?? 60;
+  const resourceOptions = selectedService
+    ? (RESOURCE_OPTIONS[selectedService.name] ?? ["Chair A", "Chair B"])
+    : [];
   const displayCustomer = customerType === "existing" ? customerSearch.trim() : customerName.trim();
   const sourceLabel     = bookingSource === "Walk-in" ? "Walk-In" : "Online";
   const endTime         = time ? addMinutes(time, serviceDuration)      : null;
   const bufferEnd       = time ? addMinutes(time, serviceDuration + 10) : null;
 
+  const eligibleStaff = getEligibleBookingStaff(selectedService, staff);
+  const selectedStaff = eligibleStaff.find((member) => member.id === requestedStaffId);
+  const staffId = eligibleStaff.length > 0 && requestedStaffId
+    ? (selectedStaff?.id ?? "any")
+    : "";
+  const noEligibleStaff = Boolean(selectedService) && eligibleStaff.length === 0;
+  const staffDropdownOptions = [
+    { value: "any", label: "Any available" },
+    ...eligibleStaff.map((member) => ({ value: member.id, label: member.fullName })),
+  ];
+  const serviceDropdownOptions = services.map((service) => {
+    const price = Math.round(service.priceCents / 100).toLocaleString("en-PH");
+    return {
+      value: service.id,
+      label: `${service.name} – ${service.durationMinutes} min · ₱${price}`,
+    };
+  });
+
+  const handleServiceChange = (id: string) => {
+    const nextService = services.find((service) => service.id === id);
+    if (requestedStaffId && requestedStaffId !== "any"
+      && !getEligibleBookingStaff(nextService, staff).some((member) => member.id === requestedStaffId)) {
+      setRequestedStaffId("any");
+    }
+    setServiceId(id);
+    setStep2Error(null);
+    setConflictWarning(null);
+  };
+
   React.useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setResource(resourceOptions[0] ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [serviceName]);
+  }, [serviceId]);
 
   React.useEffect(() => {
     if (!isOpen) {
@@ -280,7 +303,7 @@ export function NewAppointmentModal({
       setCustomerEmail(""); setCustomerPhone("");
       setBookingSource(bookingMode === "walk-in" ? "Walk-in" : "Phone"); setNotes("");
       setStep1Error(null);
-      setServiceName(""); setStaffName("");
+      setServiceId(""); setRequestedStaffId("");
       setResource(""); setAddon("None selected");
       setDate(new Date().toISOString().slice(0, 10));
       setTime("");
@@ -319,14 +342,13 @@ export function NewAppointmentModal({
 
   const handleSubmit = async () => {
     setStep2Error(null); setConflictWarning(null);
-    if (!serviceName) { setStep2Error("Please select a service or package."); return; }
-    if (!staffName)   { setStep2Error("Please select a staff member."); return; }
+    if (!selectedService) { setStep2Error("Please select a service or package."); return; }
+    if (!staffId)     { setStep2Error("Please select a staff member."); return; }
     if (!resource)    { setStep2Error("Please select a required resource."); return; }
     if (!date)        { setStep2Error("Please select an appointment date."); return; }
     if (!time)        { setStep2Error("Please select an available start time."); return; }
 
     const resolvedName  = customerType === "existing" ? customerSearch.trim() : customerName.trim();
-    const resolvedStaff = staffName === "Any available" ? undefined : staffName;
     const sourceValue   = bookingSource === "Walk-in" ? "walk_in" as const : "online" as const;
 
     setIsSubmitting(true);
@@ -335,7 +357,10 @@ export function NewAppointmentModal({
         customerName:  resolvedName,
         customerEmail: customerEmail.trim() || undefined,
         customerPhone: customerPhone.trim() || undefined,
-        serviceName, staffName: resolvedStaff,
+        serviceName:   selectedService.name,
+        serviceId:     selectedService.id,
+        staffName:     selectedStaff?.fullName,
+        staffId:       selectedStaff?.id,
         date, time, source: sourceValue,
         notes: notes.trim() || undefined,
         tenantIdParam: tenantId,
@@ -576,27 +601,28 @@ export function NewAppointmentModal({
                     id="service-select"
                     label="Service or package"
                     required
-                    value={serviceName}
-                    onChange={(v) => { setServiceName(v); setStep2Error(null); setConflictWarning(null); }}
-                    options={SERVICE_OPTIONS.map((s) => ({ value: s.value, label: s.label }))}
+                    value={serviceId}
+                    onChange={handleServiceChange}
+                    options={serviceDropdownOptions}
                     placeholder="Select an option"
                   />
                   <Listbox
                     id="staff-select"
                     label="Staff"
                     required
-                    value={staffName}
-                    onChange={(v) => { setStaffName(v); setStep2Error(null); setConflictWarning(null); }}
-                    options={STAFF_OPTIONS.map((s) => ({ value: s, label: s }))}
-                    placeholder="Select an option"
+                    value={staffId}
+                    onChange={(v) => { setRequestedStaffId(v); setStep2Error(null); setConflictWarning(null); }}
+                    options={staffDropdownOptions}
+                    disabled={!selectedService || noEligibleStaff}
+                    placeholder={noEligibleStaff ? "No eligible staff" : "Select an option"}
                   />
                 </div>
 
                 {/* Eligibility hint */}
-                {serviceName && staffName && staffName !== "Any available" && (
+                {selectedService && selectedStaff && (
                   <p className="text-xs text-muted">
-                    Only staff qualified for {serviceName.toLowerCase()} are shown.{" "}
-                    <span className="font-medium text-body">{staffName}</span> is available for the full slot.
+                    Only staff qualified for {selectedService.name.toLowerCase()} are shown.{" "}
+                    <span className="font-medium text-body">{selectedStaff.fullName}</span> is available for the full slot.
                   </p>
                 )}
 
@@ -680,7 +706,7 @@ export function NewAppointmentModal({
               </div>
 
               {/* Slot verification note */}
-              {!conflictWarning && serviceName && staffName && date && time && (
+              {!conflictWarning && selectedService && staffId && date && time && (
                 <p className="text-xs text-muted flex items-center gap-1.5">
                   <svg viewBox="0 0 14 14" fill="none" className="size-3.5 text-success shrink-0" aria-hidden>
                     <path d="M2 7l3.5 3.5L12 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -717,7 +743,7 @@ export function NewAppointmentModal({
               </AdminButton>
             ) : (
               <AdminButton variant="primary" size="sm" type="button"
-                disabled={isSubmitting || !serviceName || !staffName || !date || !time}
+                disabled={isSubmitting || !selectedService || !staffId || !date || !time}
                 onClick={handleSubmit}
               >
                 {isSubmitting ? "Creating..." : "Create Appointment"}

@@ -9,6 +9,8 @@ export type TenantData = {
   status: string;
   logo_url: string | null;
   brand_color: string | null;
+  secondary_color: string | null;
+  accent_color: string | null;
   address: string | null;
   phone: string | null;
   email: string | null;
@@ -37,6 +39,8 @@ export async function getTenantBySlug(slug: string): Promise<TenantData | null> 
       status,
       logo_url,
       brand_color,
+      secondary_color,
+      accent_color,
       address,
       phone,
       tenant_settings (
@@ -82,6 +86,8 @@ export async function getTenantBySlug(slug: string): Promise<TenantData | null> 
     status: data.status,
     logo_url: data.logo_url ?? null,
     brand_color: data.brand_color ?? null,
+    secondary_color: data.secondary_color ?? null,
+    accent_color: data.accent_color ?? null,
     address: fullAddress,
     phone: settings?.phone_number || data.phone || null,
     email: settings?.business_email || null,

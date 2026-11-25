@@ -6,7 +6,6 @@ import { PageContent, StatusPill, Surface } from "@/components/admin/primitives"
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { StaffAvatar } from "@/components/merchant/staff/staff-avatar";
-import { colorLuminance, normalizeBrandColor } from "@/lib/brand-colors";
 import { getStaffProfile, staffDateKey } from "@/lib/merchant/staff-profile";
 
 export const metadata = { title: "Staff Profile" };
@@ -22,7 +21,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ s
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect(`/login?redirect=${encodeURIComponent(`${rosterPath}/${staffId}`)}`);
 
-  const { data: tenant } = await supabase.from("tenants").select("id, name, timezone, accent_color").eq("slug", slug).maybeSingle();
+  const { data: tenant } = await supabase.from("tenants").select("id, name, timezone").eq("slug", slug).maybeSingle();
   if (!tenant) notFound();
 
   const { data: membership } = await supabase.from("tenant_memberships").select("role")
@@ -35,11 +34,6 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ s
   ]);
   if (!profile) notFound();
   const { managedStaff, services, workWeek, commissionRule, timezone } = profile;
-  const fidesOrange = "#c35000";
-  const accent = normalizeBrandColor(tenant.accent_color, fidesOrange);
-  const accentLuminance = colorLuminance(accent);
-  const profileAccent = accentLuminance >= 0.06 && 1.05 / (accentLuminance + 0.05) >= 4.5
-    ? accent : fidesOrange;
   const dateLabel = new Intl.DateTimeFormat("en-PH", { timeZone: "UTC", month: "short", day: "numeric" });
   const weekday = new Intl.DateTimeFormat("en-PH", { timeZone: "UTC", weekday: "short" });
   const time = new Intl.DateTimeFormat("en-PH", { timeZone: timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
@@ -73,11 +67,10 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ s
           </header>
 
           <Surface className="overflow-hidden border border-hairline !p-0">
-            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-hairline p-4 sm:p-6"
-              style={{ backgroundColor: `color-mix(in srgb, ${profileAccent} 16%, white)` }}>
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-hairline bg-sky/25 p-4 sm:p-6">
               <div className="flex min-w-0 items-center gap-4">
                 <StaffAvatar name={managedStaff.fullName} imageUrl={managedStaff.imageUrl} size={56}
-                  colors={{ background: profileAccent, foreground: "#ffffff" }} />
+                  colors={{ background: "var(--color-burnt)", foreground: "var(--color-on-burnt)" }} />
                 <div className="min-w-0">
                   <h2 className="break-words text-2xl font-semibold">{managedStaff.fullName}</h2>
                   <div className="mt-1.5">
@@ -98,7 +91,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ s
           </Surface>
 
           <Surface className="space-y-5 border border-hairline">
-            <h2 className="text-lg font-semibold">Staff details</h2>
+            <h2 className="text-lg font-semibold">Staff Details</h2>
             <div className="grid gap-5 lg:grid-cols-2">
               <dl className="space-y-4 rounded-lg border border-hairline p-4">
                 <div>
@@ -111,7 +104,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ s
                 </div>
               </dl>
               <div className="space-y-3 rounded-lg border border-hairline p-4">
-                <h3 className="text-sm font-semibold">Assigned services</h3>
+                <h3 className="text-sm font-semibold">Assigned Services</h3>
                 {services.length ? (
                   <ul className="flex flex-wrap gap-2">
                     {services.map((service) => (
@@ -126,7 +119,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ s
           <Surface className="space-y-4 border border-hairline">
             <div id="staff-working-hours" className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold">Working hours &amp; breaks</h2>
+                <h2 className="text-lg font-semibold">Working Hours &amp; Breaks</h2>
                 <p className="mt-1 text-xs text-muted">{dateLabel.formatRange(firstDay, lastDay)} · {timezone}</p>
               </div>
               <StaffSchedulePreview tenantId={tenant.id} staffId={staffId} name={managedStaff.fullName}
@@ -136,7 +129,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ s
               {workWeek.map(({ date, dayEnd, onLeave, blocks }) => (
                 <li key={date} className="flex min-w-0 flex-col gap-1.5">
                   <h3 className="text-xs font-semibold text-ink"><time dateTime={date}>{weekday.format(new Date(`${date}T00:00:00Z`))}</time></h3>
-                  <div className="min-h-20 flex-1 space-y-1 rounded-lg bg-mist p-2">
+                  <div className="min-h-20 flex-1 space-y-1 rounded-lg bg-sky/20 p-2">
                     {onLeave || blocks.length === 0 ? (
                       <p className="px-1 py-1 text-xs text-muted">{onLeave ? "On leave" : "Day off"}</p>
                     ) : blocks.map((block, index) => (
