@@ -3,6 +3,8 @@ import Link from "next/link";
 import { buttonClasses, CheckIcon, type CheckIconTone } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
+const planBadgeColors = "bg-powder text-info";
+
 export type Plan = {
   name: string;
   price: string;
@@ -15,6 +17,7 @@ export type Plan = {
   background: string;
   divider: string;
   icon: string;
+  filledIcon?: string;
   checkTone: CheckIconTone;
   featured?: boolean;
 };
@@ -30,8 +33,7 @@ export function PlanCard({
   const selected = selection?.selected;
   const selectionClasses = selection && cn(
     "relative isolate min-w-0 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-10 has-[:focus-visible]:outline-burnt",
-    selected && "before:pointer-events-none before:absolute before:-inset-2 before:-z-10 before:rounded-[34px] before:shadow-lg before:shadow-ink/25",
-    selected && (featured ? "before:bg-ink" : "before:bg-sky"),
+    selected && "before:pointer-events-none before:absolute before:-inset-2 before:-z-10 before:rounded-[34px] before:bg-sky before:shadow-lg before:shadow-ink/25",
   );
 
   const card = (
@@ -39,7 +41,7 @@ export function PlanCard({
       className={cn(
         "group relative flex w-full max-w-[391px] flex-col",
         selection ? "h-full rounded-[24px] px-4 pb-6 pt-5 sm:px-5" : "px-[35px] pb-[51px] pt-10 xl:min-h-[927px]",
-        !featured && selectionClasses,
+        selectionClasses,
         featured
           ? "text-white"
           : !selection && "text-ink transition-[translate] duration-500 ease-out hover:-translate-y-2 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
@@ -69,19 +71,24 @@ export function PlanCard({
           className={cn(
             "flex shrink-0 items-center justify-center rounded-[10px] border",
             selection ? "size-8" : "size-10",
-            featured ? "border-mist" : "border-burnt/60"
+            featured ? "border-mist" : "border-burnt/60",
+            selected && (featured ? "bg-powder/20" : "bg-powder"),
           )}
         >
-          <Image src={plan.icon} alt="" width={20} height={20} aria-hidden />
+          <Image src={selected ? plan.filledIcon ?? plan.icon : plan.icon} alt="" width={20} height={20} aria-hidden />
         </span>
-        <h3 className={cn("font-semibold", selection ? "text-lg/6" : "text-2xl/7")}>{plan.name}</h3>
+        <div className="min-w-0">
+          <h3 className={cn("font-semibold", selection ? "text-lg/6" : "text-2xl/7")}>{plan.name}</h3>
+          {featured && selection && (
+            <span className={cn("mt-1 inline-flex rounded-full px-2.5 py-0.5 text-xs/4 font-semibold", planBadgeColors)}>
+              Most Popular
+            </span>
+          )}
+        </div>
       </header>
 
-      {featured && (
-        <span className={cn(
-          "absolute font-semibold text-info",
-          selection ? "right-1 top-5 w-[26%] text-center text-xs/4" : "right-[9px] top-[53px] -translate-y-1/2 text-base/6",
-        )}>
+      {featured && !selection && (
+        <span className="absolute right-[9px] top-[53px] -translate-y-1/2 text-base/6 font-semibold text-info">
           Most Popular
         </span>
       )}
@@ -125,7 +132,9 @@ export function PlanCard({
 
       <div className="relative mt-auto flex justify-center pt-8">
         {selection ? (
-          <span className={buttonClasses({ variant: selected ? "solid" : "accent", size: "pill", className: "w-full" })}>
+          <span className={selected
+            ? cn("inline-flex w-full items-center justify-center rounded-[32px] px-[18px] py-[14px] text-lg/7 font-semibold", planBadgeColors)
+            : buttonClasses({ variant: "accent", size: "pill", className: "w-full" })}>
             {selected ? "Selected" : "Choose plan"}
           </span>
         ) : (
@@ -137,17 +146,10 @@ export function PlanCard({
     </article>
   );
 
-  if (!featured) return card;
+  if (!featured || selection) return card;
 
   return (
-    <div className={cn(
-      "w-full max-w-[422px] rounded-[30px] drop-shadow-[0_3px_2px_rgb(9_16_29/0.24)]",
-      selected
-        ? "after:pointer-events-none after:absolute after:inset-0 after:-z-[1] after:rounded-[30px] after:bg-sky"
-        : "bg-sky",
-      selection ? "flex p-2.5" : "py-[15px] pl-[14px]",
-      selectionClasses,
-    )}>
+    <div className="w-full max-w-[422px] rounded-[30px] bg-sky py-[15px] pl-[14px] drop-shadow-[0_3px_2px_rgb(9_16_29/0.24)]">
       {card}
     </div>
   );

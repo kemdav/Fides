@@ -8,6 +8,7 @@ const appearance = {
     background: "/images/landing/plan-starter-bg.svg",
     divider: "/images/landing/plan-divider-starter.svg",
     icon: "/images/landing/icon-psychiatry.svg",
+    filledIcon: "/images/landing/icon-psychiatry-filled.svg",
     checkTone: "success",
   },
   professional: {
@@ -15,6 +16,7 @@ const appearance = {
     background: "/images/landing/plan-pro-bg.svg",
     divider: "/images/landing/plan-divider-pro.svg",
     icon: "/images/landing/icon-crown.svg",
+    filledIcon: "/images/landing/icon-crown-filled.svg",
     checkTone: "powder",
     featured: true,
   },
@@ -25,7 +27,7 @@ const appearance = {
     icon: "/images/landing/icon-apartment.svg",
     checkTone: "deep",
   },
-} satisfies Record<PlanOptionCode, Pick<Plan, "cta" | "background" | "divider" | "icon" | "checkTone" | "featured">>;
+} satisfies Record<PlanOptionCode, Pick<Plan, "cta" | "background" | "divider" | "icon" | "filledIcon" | "checkTone" | "featured">>;
 
 export const plans: (Plan & { code: PlanOptionCode })[] = PLAN_OPTIONS.map((plan) => ({
   ...plan,

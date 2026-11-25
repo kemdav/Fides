@@ -1031,7 +1031,7 @@ function AccountStep({
 
 function StepActions({ onBack }: { onBack?: () => void }) {
   return (
-    <div className="mt-6 flex flex-col-reverse items-stretch gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-end">
+    <div className="mt-6 flex flex-col-reverse items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
       {onBack ? (
         <button type="button" onClick={onBack} className={secondaryButton}>
           Back
@@ -1376,13 +1376,12 @@ function BusinessStep({
             htmlFor="streetAddress"
             error={errors.streetAddress}
             className="sm:col-span-6"
-            hint="Unit/Floor/Building No., Street Name, Subdivision/Village"
           >
             <TextInput
               id="streetAddress"
               autoComplete="address-line1"
               invalid={!!errors.streetAddress}
-              placeholder="Unit 4B, Acacia Street, Greenfield Village"
+              placeholder="Unit/Floor/Building No., Street Name, Subdivision/Village"
               value={values.streetAddress}
               onChange={(e) => set("streetAddress", e.target.value)}
               aria-describedby={
