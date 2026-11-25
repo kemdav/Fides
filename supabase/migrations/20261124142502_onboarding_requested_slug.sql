@@ -5,3 +5,6 @@ alter table public.application_businesses
 create unique index if not exists application_businesses_requested_slug_key
   on public.application_businesses (requested_slug)
   where requested_slug is not null;
+
+alter table public.account_applications
+  alter column phone drop not null;

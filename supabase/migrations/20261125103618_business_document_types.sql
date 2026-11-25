@@ -1,5 +1,38 @@
+begin;
+
+-- Identity verification catalog and legacy missing-document lookup.
+insert into public.document_types (code, label, description, category, is_required, sort_order)
+values ('government_id_back', 'Government-Issued ID (Back)', 'Back of the business owner''s government-issued ID.', 'identity', true, 1)
+on conflict (code) do nothing;
+
+create or replace function public.missing_required_documents(_application_id uuid)
+returns table (code text, label text)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select t.code, t.label
+  from public.document_types t
+  where t.is_required
+    and (t.code <> 'government_id_back' or exists (
+      select 1 from public.account_applications a
+      where a.id = _application_id and a.submitted_at >= t.created_at
+    ))
+    and not exists (
+      select 1 from public.application_documents d
+      where d.application_id = _application_id
+        and d.document_type = t.code
+        and d.storage_path is not null
+    )
+  order by t.sort_order, t.code;
+$$;
+
+revoke all on function public.missing_required_documents(uuid) from public, anon, authenticated;
+grant execute on function public.missing_required_documents(uuid) to service_role;
+
 -- Register accepted business document keys so application document rows retain their catalog foreign key.
--- Applicability is evaluated from the applicant's business type and declared activities.
+-- Applicability is evaluated from the applicant's selected business type.
 insert into public.document_types (code, label, description, category, is_required, sort_order)
 values
   ('community_tax', 'Community Tax Certificate', 'Upload your CTC or cedula.', 'business', false, 10),
@@ -51,3 +84,5 @@ values
   ('pcab_license', 'PCAB Contractor License', 'Upload the applicable construction contractor license.', 'business', false, 56),
   ('construction_safety', 'DOLE Construction Safety and Health Program', 'Combine the approvals for your applicable projects in one PDF.', 'business', false, 57)
 on conflict (code) do nothing;
+
+commit;
