@@ -4,6 +4,7 @@ import { FIELD_CLASS, TEXTAREA_CLASS, websiteAddress, type StepFields } from "./
 export function StepSearchSharing({ data, onChange }: StepFields) {
   return (
     <div className="space-y-5">
+      <h2 className="text-base font-semibold leading-6 text-ink">Search listing</h2>
       <label className="block space-y-1.5 text-sm font-semibold">
         <span>Page title</span>
         <input value={data.pageTitle} maxLength={100} placeholder={data.businessName || "Your business name"} className={FIELD_CLASS} onChange={(event) => onChange({ pageTitle: event.target.value })} />
@@ -14,7 +15,7 @@ export function StepSearchSharing({ data, onChange }: StepFields) {
       </label>
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" role="switch" className="size-4 accent-burnt" checked={data.allowIndexing} onChange={(event) => onChange({ allowIndexing: event.target.checked })} /> Allow search engines to index your website</label>
       <div className="space-y-3 border-t border-hairline pt-4">
-        <h2 className="text-sm font-semibold">Social preview</h2>
+        <h2 className="text-base font-semibold leading-6 text-ink">Social sharing</h2>
         <label className="block space-y-1.5 text-sm font-semibold">
           <span>Social title</span>
           <input value={data.socialTitle} maxLength={100} placeholder={data.pageTitle || data.businessName || "Your website title"} className={FIELD_CLASS} onChange={(event) => onChange({ socialTitle: event.target.value })} />

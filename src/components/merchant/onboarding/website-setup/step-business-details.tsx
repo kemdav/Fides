@@ -1,3 +1,4 @@
+import { Listbox } from "@/components/admin/listbox";
 import { FIELD_CLASS, TEXTAREA_CLASS, type StepFields } from "./setup-data";
 
 const fields = [
@@ -16,6 +17,11 @@ const fields = [
 const categories = ["Beauty & wellness", "Healthcare", "Fitness", "Professional services", "Other"];
 
 export function StepBusinessDetails({ data, onChange }: StepFields) {
+  const options = categories.map((category) => ({ value: category, label: category }));
+  if (data.businessCategory && !categories.includes(data.businessCategory)) {
+    options.unshift({ value: data.businessCategory, label: data.businessCategory });
+  }
+
   function renderField(field: typeof fields[number]) {
     return (
       <label key={field.key} className="block min-w-0 space-y-1.5 text-sm font-semibold">
@@ -26,23 +32,32 @@ export function StepBusinessDetails({ data, onChange }: StepFields) {
   }
 
   return (
-    <div className="space-y-5">
-      <label className="block space-y-1.5 text-sm font-semibold">
-        <span>Business category</span>
-        <select className={FIELD_CLASS} value={data.businessCategory} onChange={(event) => onChange({ businessCategory: event.target.value })}>
-          {!categories.includes(data.businessCategory) && <option>{data.businessCategory}</option>}
-          {categories.map((category) => <option key={category}>{category}</option>)}
-        </select>
-      </label>
+    <div className="@container space-y-5">
+      <h2 className="text-base font-semibold leading-6 text-ink">Public profile</h2>
+      <Listbox
+        id="website-setup-category"
+        label="Business category"
+        value={data.businessCategory}
+        options={options}
+        onChange={(businessCategory) => onChange({ businessCategory })}
+        placeholder="Choose a category"
+      />
       <label className="block space-y-1.5 text-sm font-semibold">
         <span>About your business</span>
         <textarea className={TEXTAREA_CLASS} rows={3} maxLength={1000} value={data.about} placeholder="Tell customers a little about you and your team." onChange={(event) => onChange({ about: event.target.value })} />
       </label>
-      <div className="grid gap-4 sm:grid-cols-2">{fields.slice(0, 6).map(renderField)}</div>
+      <section className="@container space-y-3 border-t border-hairline pt-4">
+        <h2 className="text-base font-semibold leading-6 text-ink">Customer contact</h2>
+        <div className="grid gap-4 @sm:grid-cols-2">{fields.slice(0, 3).map(renderField)}</div>
+      </section>
+      <section className="@container space-y-3 border-t border-hairline pt-4">
+        <h2 className="text-base font-semibold leading-6 text-ink">Location</h2>
+        <div className="grid gap-4 @sm:grid-cols-2">{fields.slice(3, 6).map(renderField)}</div>
+      </section>
       <fieldset className="space-y-4 border-t border-hairline pt-4">
         <legend className="pr-2 text-sm font-semibold">Opening hours <span className="font-normal text-muted">(optional)</span></legend>
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" role="switch" className="size-4 accent-burnt" checked={data.showOpeningHours} onChange={(event) => onChange({ showOpeningHours: event.target.checked })} /> Show opening hours</label>
-        <div className="grid gap-4 sm:grid-cols-2">{fields.slice(6).map(renderField)}</div>
+        <div className="grid gap-4 @sm:grid-cols-2">{fields.slice(6).map(renderField)}</div>
       </fieldset>
     </div>
   );

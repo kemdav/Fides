@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { notFound, redirect } from "next/navigation";
+import { workspaceRoleFromLabel } from "@/lib/merchant/workspace-roles";
 import { getStorefrontServices } from "@/lib/storefront";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database.types";
@@ -31,16 +32,13 @@ export async function loadWebsiteWorkspace(slug: string, returnTo: string) {
     supabase.from("tenant_memberships").select("role").eq("tenant_id", tenant.id).eq("profile_id", user.id).maybeSingle(),
     supabase.from("profiles").select("tenant_id, role").eq("id", user.id).maybeSingle(),
   ]);
-  if ((membership?.role ?? (profile?.tenant_id === tenant.id ? profile.role : undefined)) !== "owner") notFound();
+  const role = membership?.role ?? (profile?.tenant_id === tenant.id ? workspaceRoleFromLabel(profile.role) : undefined);
+  if (role !== "owner") notFound();
 
-  const [websitePublished, catalog] = await Promise.all([
-    getWebsitePublished(supabase, tenant.id),
-    getStorefrontServices(tenant.id),
-  ]);
+  const catalog = await getStorefrontServices(tenant.id);
   return {
     user,
     tenantId: tenant.id,
-    websitePublished,
     services: catalog.slice(0, 3).map(({ id, name, durationMinutes, priceCents }) => ({ id, name, durationMinutes, priceCents })),
   };
 }

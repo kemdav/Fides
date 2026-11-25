@@ -18,7 +18,7 @@ export type SetupDraft = {
   searchReviewed: boolean;
 };
 
-export const STEP_LABELS = ["Welcome", "Brand identity", "Homepage", "Business details", "Website address", "Search & sharing", "Preview & publish"] as const;
+export const STEP_LABELS = ["Welcome", "Brand identity", "Homepage content", "Business information", "Website address", "Search & sharing", "Preview & publish"] as const;
 export const FIELD_CLASS = "h-11 w-full min-w-0 rounded-lg border border-outline bg-white px-3 text-sm text-ink outline-none placeholder:text-muted focus:border-burnt focus:ring-2 focus:ring-burnt/25";
 export const TEXTAREA_CLASS = "w-full rounded-lg border border-outline bg-white px-3 py-2.5 text-sm text-ink outline-none placeholder:text-muted focus:border-burnt focus:ring-2 focus:ring-burnt/25";
 

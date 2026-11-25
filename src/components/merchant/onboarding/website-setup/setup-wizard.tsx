@@ -5,13 +5,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AdminButton } from "@/components/admin/admin-button";
 import { Icon } from "@/components/admin/icon";
-import { PageContent, Surface } from "@/components/admin/primitives";
+import { Surface } from "@/components/admin/primitives";
+import { LivePreviewModal } from "@/components/merchant/website-settings/live-preview-modal";
 import type { WebsiteSettingsData } from "@/components/merchant/website-settings/types";
 import type { CompletionItem } from "./completion-checklist";
 import { LiveSitePreview } from "./live-site-preview";
 import { SetupDialog } from "./setup-dialog";
 import { SetupProgress } from "./setup-progress";
-import { mockCheckAddress, settingsForPublish, stepIssue, websiteAddress, type PreviewService, type SetupStep, type SettingsPatch, type VerificationState } from "./setup-data";
+import { STEP_LABELS, mockCheckAddress, settingsForPublish, stepIssue, websiteAddress, type PreviewService, type SetupStep, type SettingsPatch, type VerificationState } from "./setup-data";
 import { StepWelcome } from "./step-welcome";
 import { StepBrandIdentity } from "./step-brand-identity";
 import { StepHomepage } from "./step-homepage";
@@ -19,16 +20,17 @@ import { StepBusinessDetails } from "./step-business-details";
 import { StepWebsiteAddress } from "./step-website-address";
 import { StepSearchSharing } from "./step-search-sharing";
 import { StepPreviewPublish } from "./step-preview-publish";
+import { previewFonts } from "./typography-select";
 import { useWebsiteDraft } from "./use-website-draft";
 
-const stepCopy = [
-  ["Let's get your website ready", "Give customers a place to discover your business and book online."],
-  ["Make it yours", "A consistent name, logo, and palette help customers recognize your business."],
-  ["Say hello to your customers", "Your homepage gives visitors a first impression and a clear way to book."],
-  ["Help customers find and reach you", "Accurate contact details and hours help customers plan their visit."],
-  ["Your link to share", "A memorable address makes it easier to share your website with customers."],
-  ["Look good on Google and social", "Clear titles and descriptions help people understand your website when they find or share it."],
-  ["See it, then go live", "Review your website on both devices and complete the checklist before publishing."],
+const stepDescriptions = [
+  "Give customers a place to discover your business and book online.",
+  "Set the logo, display name, typography, and colors used across your website.",
+  "Choose the headline, cover photo, and information customers see first.",
+  "Add your public profile, contact details, location, and opening hours.",
+  "Choose the address customers use to find and share your website.",
+  "Set how your website appears in search results and on social media.",
+  "Review your website on desktop and mobile before publishing.",
 ] as const;
 const required: { step: SetupStep; label: string }[] = [
   { step: 1, label: "Brand identity" },
@@ -53,9 +55,10 @@ export function SetupWizard({ userId, services, entryStep, verification = "ready
   const [busy, setBusy] = React.useState(false);
   const [modal, setModal] = React.useState<"preview" | "exit" | "review" | "published" | null>(null);
   const heading = React.useRef<HTMLHeadingElement>(null);
+  const workspace = React.useRef<HTMLDivElement>(null);
   const { data, step } = draft;
   const simulated = !onPublish;
-  const setupFinished = draft.published !== null;
+  const setupFinished = !simulated && draft.published !== null;
 
   React.useEffect(() => {
     if (!ready || setupFinished || draft === savedDraft) return;
@@ -65,6 +68,7 @@ export function SetupWizard({ userId, services, entryStep, verification = "ready
 
   React.useEffect(() => {
     if (!ready || setupFinished) return;
+    workspace.current?.scrollTo(0, 0);
     window.scrollTo(0, 0);
     heading.current?.focus({ preventScroll: true });
   }, [step, ready, setupFinished]);
@@ -80,12 +84,14 @@ export function SetupWizard({ userId, services, entryStep, verification = "ready
     return [
       ...required.map(({ label, step }) => ({ label, step, issue: stepIssue(step, value, draft.confirmedSubdomain) })),
       { label: "At least one active service", href: `${dashboardPath}/services`, issue: services.length ? undefined : "Add at least one service to publish" },
-      ...(stepIssue(5, value, draft.confirmedSubdomain) ? [{ label: "Search & sharing", step: 5 as const, issue: stepIssue(5, value, draft.confirmedSubdomain) }] : []),
+      { label: "Search & sharing", step: 5, issue: stepIssue(5, value, draft.confirmedSubdomain) },
     ];
   }
 
   const items = checklist(data);
-  const completed = items.slice(0, required.length).filter((item) => !item.issue).length + Number(draft.searchReviewed) + Number(setupFinished);
+  const completedSteps = required.filter((_, index) => !items[index].issue).map(({ step }) => step);
+  if (draft.searchReviewed) completedSteps.push(5);
+  if (draft.published) completedSteps.push(6);
   const publishBlocked = items.some((item) => item.issue) || verification !== "ready";
 
   const patch: SettingsPatch = (values) => {
@@ -170,78 +176,86 @@ export function SetupWizard({ userId, services, entryStep, verification = "ready
   const preview = () => setModal("preview");
 
   return (
-    <div className="flex min-h-dvh flex-col bg-powder text-ink">
-      <header className="sticky top-0 z-30 border-b border-hairline bg-white/95 shadow-xs backdrop-blur">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap items-center justify-between gap-2 py-3">
-            <div className="flex items-center gap-3">
-              <span className="font-display text-2xl leading-none text-burnt">Fides</span>
-              <span className="border-l border-line pl-3 text-sm font-semibold text-body">Website setup</span>
-            </div>
-            <AdminButton size="xs" variant="outline" disabled={busy} onClick={() => void finishLater()}>Finish later</AdminButton>
+    <div className="flex min-h-dvh flex-col bg-powder text-ink lg:h-dvh lg:flex-row lg:overflow-hidden">
+      <aside aria-label="Website setup" className="shrink-0 border-b border-hairline bg-white lg:flex lg:w-[15.5rem] lg:flex-col lg:overflow-y-auto lg:border-r lg:border-b-0">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-5 lg:pt-6 lg:pb-5">
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 lg:flex-col lg:gap-1">
+            <span className="font-display text-2xl leading-tight text-burnt lg:text-[28px]">Fides</span>
+            <span className="text-sm font-semibold text-body">Website setup</span>
           </div>
-          <div className="border-t border-hairline py-3"><SetupProgress step={step} completed={completed} /></div>
+          <AdminButton size="xs" variant="outline" className="lg:hidden" disabled={busy} onClick={() => void finishLater()}>Finish later</AdminButton>
         </div>
-      </header>
+        <div className="border-t border-hairline px-4 py-3 sm:px-6 lg:mx-4 lg:px-0 lg:py-4">
+          <SetupProgress step={step} completedSteps={completedSteps} onStep={goTo} disabled={busy} />
+        </div>
+        <div className="mt-auto hidden border-t border-hairline p-4 lg:block">
+          <AdminButton size="xs" variant="outline" className="w-full" disabled={busy} onClick={() => void finishLater()}>Finish later</AdminButton>
+        </div>
+      </aside>
 
-      <div className="mx-auto w-full max-w-6xl flex-1">
-        <PageContent>
-          <div className={`grid min-w-0 items-start gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.88fr)] lg:gap-10 ${step === 0 ? "lg:py-6" : ""}`}>
-            <div className="min-w-0 space-y-5">
-              <div className="space-y-2.5">
-                {step === 0 && <p className="text-sm font-semibold text-burnt">Your first booking website</p>}
-                <h1 ref={heading} tabIndex={-1} className={`font-display leading-[1.08] outline-none ${step === 0 ? "text-4xl sm:text-5xl" : "text-3xl sm:text-4xl"}`}>{stepCopy[step][0]}</h1>
-                <p className="max-w-lg text-sm leading-relaxed text-body sm:text-base">{stepCopy[step][1]}</p>
-              </div>
-              {step === 0 ? (
-                <div className="space-y-5">
-                  <StepWelcome />
-                  <AdminButton size="sm" disabled={busy} onClick={advance}>Start setup</AdminButton>
-                </div>
-              ) : (
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div ref={workspace} className="min-h-0 flex-1 lg:overflow-y-auto">
+          <main className="space-y-5 p-4 sm:p-6 lg:space-y-6 lg:p-8">
+            <div className="space-y-1">
+              <h1 ref={heading} tabIndex={-1} className="font-display text-[28px] leading-[38px] outline-none sm:text-[32px] sm:leading-[42px]">
+                {step === 0 ? "Let's get your website ready" : STEP_LABELS[step]}
+              </h1>
+              <p className="max-w-[780px] text-sm leading-[21px] text-muted">{stepDescriptions[step]}</p>
+            </div>
+
+            <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,7fr)_minmax(0,6fr)] 2xl:gap-6">
+              <div className="min-w-0 space-y-4">
                 <Surface className="space-y-5 border border-hairline">
+                  {step === 0 && (
+                    <>
+                      <StepWelcome />
+                      <AdminButton size="sm" disabled={busy} onClick={advance}>Start setup</AdminButton>
+                    </>
+                  )}
                   {step === 1 && <StepBrandIdentity {...stepProps} />}
                   {step === 2 && <StepHomepage {...stepProps} />}
                   {step === 3 && <StepBusinessDetails {...stepProps} />}
                   {step === 4 && <StepWebsiteAddress {...stepProps} confirmedSubdomain={draft.confirmedSubdomain} onConfirm={confirmSubdomain} checkAddress={checkAddress} />}
                   {step === 5 && <StepSearchSharing {...stepProps} />}
-                  {step === 6 && <StepPreviewPublish items={items} onStep={goTo} verification={verification} onPreview={preview} />}
+                  {step === 6 && <StepPreviewPublish items={items} onStep={goTo} verification={verification} />}
                   {stepError && <p role="alert" className="rounded-lg bg-danger-bg px-3 py-2 text-sm text-danger-dark">{stepError}</p>}
                 </Surface>
-              )}
+              </div>
+              <aside aria-label="Live website preview" className="min-w-0 lg:sticky lg:top-6">
+                <LiveSitePreview data={data} services={services} onExpand={preview} />
+              </aside>
             </div>
-            <aside aria-label="Live website preview" className="min-w-0 rounded-2xl bg-burnt/8 p-2.5 sm:p-3.5 lg:sticky lg:top-36">
-              <LiveSitePreview data={data} services={services} onExpand={preview} />
-            </aside>
-          </div>
-        </PageContent>
-      </div>
+          </main>
+        </div>
 
-      <footer className="sticky bottom-0 z-20 mt-auto border-t border-hairline bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 sm:px-6 lg:px-8">
-          <div className="space-y-1 text-xs text-muted">
-            <p>You can change any of this later in Website settings.</p>
+        <footer className="sticky bottom-0 z-20 mt-auto flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-hairline bg-white/95 px-4 py-3 shadow-[0_-2px_12px_rgb(44_58_75/0.06)] backdrop-blur sm:px-6 lg:static lg:px-8">
+          <div className="min-w-0 space-y-1 text-xs text-muted">
             <p role="status" className={saveError ? "font-semibold text-danger" : "flex items-center gap-1 font-semibold text-success"}>
               {!saveError && <Icon name={draft === savedDraft ? "check" : "clock"} className="size-3.5" />}
-              {saveError || (draft === savedDraft ? "Saved just now" : "Saving...")}
+              {saveError || (draft === savedDraft ? "Draft saved" : "Saving draft...")}
             </p>
+            <p className="hidden sm:block">You can change these details later in Website Settings.</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {step > 0 && <AdminButton size="xs" variant="outline" disabled={busy} onClick={() => goTo((step - 1) as SetupStep)}>Back</AdminButton>}
-            {step === 5 && <button type="button" onClick={skipSearch} className="rounded px-1.5 py-2 text-xs font-semibold text-body hover:text-burnt focus-visible:outline-2 focus-visible:outline-burnt">Skip for now</button>}
-            {step > 0 && step < 6 && <AdminButton size="xs" disabled={busy} onClick={advance}>Save & continue</AdminButton>}
-            {step === 6 && (
-              <AdminButton size="xs" disabled={busy || publishBlocked} onClick={() => { setReviewError(""); setModal("review"); }}>Publish</AdminButton>
-            )}
-          </div>
-        </div>
-      </footer>
+          {step > 0 && (
+            <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+              <AdminButton size="xs" variant="outline" disabled={busy} onClick={() => goTo((step - 1) as SetupStep)}>Back</AdminButton>
+              {step === 5 && <button type="button" onClick={skipSearch} className="rounded px-1.5 py-2 text-xs font-semibold text-body hover:text-burnt focus-visible:outline-2 focus-visible:outline-burnt">Skip for now</button>}
+              {step < 6 && <AdminButton size="xs" disabled={busy} onClick={advance}>Save & continue</AdminButton>}
+              {step === 6 && (
+                <AdminButton size="xs" disabled={busy || publishBlocked} onClick={() => { setReviewError(""); setModal("review"); }}>Publish</AdminButton>
+              )}
+            </div>
+          )}
+        </footer>
+      </div>
 
-      {modal === "preview" && (
-        <SetupDialog title="Full website preview" wide onClose={() => setModal(null)}>
-          <LiveSitePreview data={data} services={services} large />
-        </SetupDialog>
-      )}
+      <LivePreviewModal
+        isOpen={modal === "preview"}
+        onClose={() => setModal(null)}
+        data={data}
+        services={services}
+        fonts={previewFonts(data.typography)}
+      />
       {modal === "exit" && (
         <SetupDialog title="Draft saved" onClose={() => setModal(null)} actions={
           <>

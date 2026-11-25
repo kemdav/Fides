@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { SetupWizard } from "@/components/merchant/onboarding/website-setup/setup-wizard";
 import { readVerificationState } from "@/components/merchant/onboarding/website-setup/setup-data";
 import { loadWebsiteWorkspace } from "@/lib/merchant/website-workspace";
@@ -23,8 +22,7 @@ export default async function MerchantWebsiteOnboardingPage({ params, searchPara
   if (entryStep) query.set("step", "branding");
   if (verificationState !== "ready") query.set("verification", verificationState);
   const returnTo = query.size ? `${onboardingPath}?${query}` : onboardingPath;
-  const { user, tenantId, websitePublished, services } = await loadWebsiteWorkspace(slug, returnTo);
-  if (websitePublished !== false) redirect(dashboardPath);
+  const { user, tenantId, services } = await loadWebsiteWorkspace(slug, returnTo);
 
   return (
     <SetupWizard

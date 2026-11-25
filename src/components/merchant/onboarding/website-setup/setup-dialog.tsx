@@ -3,10 +3,9 @@
 import * as React from "react";
 import { AdminButton } from "@/components/admin/admin-button";
 
-export function SetupDialog({ title, onClose, wide = false, children, actions }: {
+export function SetupDialog({ title, onClose, children, actions }: {
   title: string;
   onClose: () => void;
-  wide?: boolean;
   children: React.ReactNode;
   actions?: React.ReactNode;
 }) {
@@ -24,7 +23,7 @@ export function SetupDialog({ title, onClose, wide = false, children, actions }:
       ref={dialog}
       aria-labelledby={titleId}
       onCancel={(event) => { event.preventDefault(); onClose(); }}
-      className={`m-auto max-h-[90dvh] w-[calc(100%-2rem)] overflow-y-auto rounded-2xl border border-hairline bg-white p-5 text-ink shadow-2xl backdrop:bg-black/40 sm:p-6 ${wide ? "max-w-4xl" : "max-w-md"}`}
+      className="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-2xl border border-hairline bg-white p-5 text-ink shadow-2xl backdrop:bg-black/40 sm:p-6"
     >
       <h2 id={titleId} className="mb-3 font-display text-2xl">{title}</h2>
       <div className="space-y-3 text-sm text-body">{children}</div>

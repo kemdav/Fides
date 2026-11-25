@@ -59,7 +59,7 @@ export function LogoUploader({ data, onChange }: StepFields) {
     <div className="space-y-3">
       <WebsiteMediaUploader label="Business logo" asset="logo" url={data.logoUrl} onUpload={({ url }) => onChange({ logoUrl: url })} onRemove={() => onChange({ logoUrl: "" })} />
       <label className="block space-y-1.5 text-sm font-semibold">
-        <span>Logo initials</span>
+        <span className="block">Logo initials</span>
         <input className={`${FIELD_CLASS} max-w-32`} maxLength={4} value={data.logoInitials} placeholder="BV" onChange={(event) => onChange({ logoInitials: event.target.value.toUpperCase() })} />
         <span className="block text-xs font-normal text-muted">Used when you skip the logo upload.</span>
       </label>
