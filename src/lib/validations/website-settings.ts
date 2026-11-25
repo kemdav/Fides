@@ -21,17 +21,26 @@ export const subdomainSchema = z
 export const customDomainSchema = z
   .string()
   .max(100, "Domain name is too long")
-  .regex(CUSTOM_DOMAIN_REGEX, "Please enter a valid domain name (e.g. www.yourbusiness.com)");
+  .regex(
+    CUSTOM_DOMAIN_REGEX,
+    "Please enter a valid domain name (e.g. www.yourbusiness.com)"
+  );
 
-export const websiteSettingsSchema = z.object({
+const baseWebsiteSettingsFields = {
   // Brand identity
   businessName: z.string().min(1, "Business name is required").max(100),
   logoInitials: z.string().min(1).max(4),
   logoUrl: z.string().optional().or(z.literal("")),
   typography: z.string().min(1).default("Ovo + Mulish"),
-  mainColor: z.string().regex(HEX_COLOR_REGEX, "Main color must be a 6-character hex code"),
-  secondaryColor: z.string().regex(HEX_COLOR_REGEX, "Secondary color must be a 6-character hex code"),
-  accentColor: z.string().regex(HEX_COLOR_REGEX, "Accent color must be a 6-character hex code"),
+  mainColor: z
+    .string()
+    .regex(HEX_COLOR_REGEX, "Main color must be a 6-character hex code"),
+  secondaryColor: z
+    .string()
+    .regex(HEX_COLOR_REGEX, "Secondary color must be a 6-character hex code"),
+  accentColor: z
+    .string()
+    .regex(HEX_COLOR_REGEX, "Accent color must be a 6-character hex code"),
 
   // Homepage content
   headline: z.string().min(1, "Headline is required").max(200),
@@ -69,6 +78,18 @@ export const websiteSettingsSchema = z.object({
   allowIndexing: z.boolean().default(true),
   socialTitle: z.string().max(100).default(""),
   socialDescription: z.string().max(300).default(""),
+  socialImageUrl: z.string().optional().or(z.literal("")),
+  socialImageName: z.string().max(100).optional().or(z.literal("")),
+};
+
+export const websiteSettingsSchema = z.object(baseWebsiteSettingsFields);
+
+export const websiteSettingsDraftSchema = z.object({
+  ...baseWebsiteSettingsFields,
+  businessEmail: z.union([
+    z.literal(""),
+    z.string().email("Please enter a valid business email"),
+  ]),
 });
 
 export const assetTypeSchema = z.enum(["logo", "cover", "social"]);

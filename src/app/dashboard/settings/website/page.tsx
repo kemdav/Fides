@@ -21,5 +21,7 @@ export default async function LegacyWebsiteSettingsRedirect() {
     .eq("id", profile.tenant_id)
     .maybeSingle();
 
-  redirect(tenant?.slug ? `/${tenant.slug}/dashboard` : "/login");
+  redirect(
+    tenant?.slug ? `/${tenant.slug}/dashboard/settings/website` : "/login",
+  );
 }

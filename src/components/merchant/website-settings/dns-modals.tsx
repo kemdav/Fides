@@ -41,7 +41,8 @@ export function ConnectDomainModal({
 
   const domain = domainName || "www.bellavita.example";
   const rootDomain = domain.replace(/^www\./, "");
-  const dynamicTxtToken = verificationToken || `fides-site-verification=${tenantId || "site"}`;
+  const dynamicTxtToken =
+    verificationToken || `fides-site-verification=${tenantId || "site"}`;
   const cnameHost = `domains.${PLATFORM_DOMAIN}`;
 
   const handleCheckDnsStatus = async () => {
@@ -54,20 +55,24 @@ export function ConnectDomainModal({
         if (res.data.status === "active") {
           setCheckResult({
             status: "active",
-            message: "Domain verified and active! Your custom domain is now connected.",
+            message:
+              "Domain verified and active! Your custom domain is now connected.",
           });
           onVerified?.();
         } else {
           setCheckResult({
             status: "pending_dns",
-            message: "DNS records pending propagation. Please allow up to 24-48 hours for your registrar changes to propagate.",
+            message:
+              "DNS records pending propagation. Please allow up to 24-48 hours for your registrar changes to propagate.",
           });
           onCheckStatus?.();
         }
       } else {
         setCheckResult({
           status: "error",
-          message: ("error" in res && res.error) || "DNS check failed. Please check your domain name.",
+          message:
+            ("error" in res && res.error) ||
+            "DNS check failed. Please check your domain name.",
         });
       }
     } catch (err: unknown) {
@@ -91,12 +96,13 @@ export function ConnectDomainModal({
         <div className="mb-4">
           <h3
             id="connect-domain-title"
-            className="text-base font-semibold text-neutral-900"
+            className="text-lg font-semibold text-neutral-900"
           >
             Connect your domain
           </h3>
           <p className="mt-1 text-xs text-neutral-500">
-            Verify ownership, then add the routing record for the website address you want to use.
+            Verify ownership, then add the routing record for the website
+            address you want to use.
           </p>
         </div>
 
@@ -112,7 +118,9 @@ export function ConnectDomainModal({
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div>
-                  <span className="text-neutral-500 font-medium">Host / Name</span>
+                  <span className="text-neutral-500 font-medium">
+                    Host / Name
+                  </span>
                   <div className="mt-1 flex items-center justify-between bg-white border border-neutral-200 rounded-lg px-3 py-2 font-mono text-neutral-800">
                     <span>@</span>
                     <button
@@ -123,7 +131,9 @@ export function ConnectDomainModal({
                       {copiedKey === "txt-host" ? (
                         <>
                           <CheckIcon className="w-3.5 h-3.5 text-emerald-600" />
-                          <span className="text-emerald-700 font-medium">Copied</span>
+                          <span className="text-emerald-700 font-medium">
+                            Copied
+                          </span>
                         </>
                       ) : (
                         <>
@@ -148,7 +158,9 @@ export function ConnectDomainModal({
                       {copiedKey === "txt-val" ? (
                         <>
                           <CheckIcon className="w-3.5 h-3.5 text-emerald-600" />
-                          <span className="text-emerald-700 font-medium">Copied</span>
+                          <span className="text-emerald-700 font-medium">
+                            Copied
+                          </span>
                         </>
                       ) : (
                         <>
@@ -172,11 +184,14 @@ export function ConnectDomainModal({
             {/* CNAME option */}
             <div className="rounded-xl border border-neutral-200 bg-neutral-50/70 p-4 space-y-3">
               <span className="inline-block text-[11px] font-semibold text-neutral-700 bg-white border border-neutral-200 px-2 py-0.5 rounded-md">
-                CNAME · For {domain.startsWith("www.") ? domain : `www.${domain}`}
+                CNAME · For{" "}
+                {domain.startsWith("www.") ? domain : `www.${domain}`}
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div>
-                  <span className="text-neutral-500 font-medium">Host / Name</span>
+                  <span className="text-neutral-500 font-medium">
+                    Host / Name
+                  </span>
                   <div className="mt-1 flex items-center justify-between bg-white border border-neutral-200 rounded-lg px-3 py-2 font-mono text-neutral-800">
                     <span>www</span>
                     <button
@@ -187,7 +202,9 @@ export function ConnectDomainModal({
                       {copiedKey === "cname-host" ? (
                         <>
                           <CheckIcon className="w-3.5 h-3.5 text-emerald-600" />
-                          <span className="text-emerald-700 font-medium">Copied</span>
+                          <span className="text-emerald-700 font-medium">
+                            Copied
+                          </span>
                         </>
                       ) : (
                         <>
@@ -204,15 +221,15 @@ export function ConnectDomainModal({
                     <span className="truncate mr-2">{cnameHost}</span>
                     <button
                       type="button"
-                      onClick={() =>
-                        copyToClipboard(cnameHost, "cname-val")
-                      }
+                      onClick={() => copyToClipboard(cnameHost, "cname-val")}
                       className="text-xs text-neutral-600 hover:text-neutral-900 flex items-center gap-1 font-sans shrink-0"
                     >
                       {copiedKey === "cname-val" ? (
                         <>
                           <CheckIcon className="w-3.5 h-3.5 text-emerald-600" />
-                          <span className="text-emerald-700 font-medium">Copied</span>
+                          <span className="text-emerald-700 font-medium">
+                            Copied
+                          </span>
                         </>
                       ) : (
                         <>
@@ -233,7 +250,9 @@ export function ConnectDomainModal({
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div>
-                  <span className="text-neutral-500 font-medium">Host / Name</span>
+                  <span className="text-neutral-500 font-medium">
+                    Host / Name
+                  </span>
                   <div className="mt-1 flex items-center justify-between bg-white border border-neutral-200 rounded-lg px-3 py-2 font-mono text-neutral-800">
                     <span>@</span>
                     <button
@@ -244,7 +263,9 @@ export function ConnectDomainModal({
                       {copiedKey === "a-host" ? (
                         <>
                           <CheckIcon className="w-3.5 h-3.5 text-emerald-600" />
-                          <span className="text-emerald-700 font-medium">Copied</span>
+                          <span className="text-emerald-700 font-medium">
+                            Copied
+                          </span>
                         </>
                       ) : (
                         <>
@@ -267,7 +288,9 @@ export function ConnectDomainModal({
                       {copiedKey === "a-val" ? (
                         <>
                           <CheckIcon className="w-3.5 h-3.5 text-emerald-600" />
-                          <span className="text-emerald-700 font-medium">Copied</span>
+                          <span className="text-emerald-700 font-medium">
+                            Copied
+                          </span>
                         </>
                       ) : (
                         <>
@@ -285,12 +308,12 @@ export function ConnectDomainModal({
           {/* Result / Pending status advisory (QA #12) */}
           {checkResult ? (
             <div
-              className={`rounded-xl border p-4 text-xs ${
+              className={`rounded-lg border p-4 text-xs ${
                 checkResult.status === "active"
                   ? "bg-emerald-50/80 border-emerald-200 text-emerald-950"
                   : checkResult.status === "pending_dns"
-                  ? "bg-amber-50/80 border-amber-200 text-amber-950"
-                  : "bg-red-50/80 border-red-200 text-red-950"
+                    ? "bg-amber-50/80 border-amber-200 text-amber-950"
+                    : "bg-red-50/80 border-red-200 text-red-950"
               }`}
             >
               <div className="flex items-center gap-2 mb-1.5 font-semibold">
@@ -303,21 +326,24 @@ export function ConnectDomainModal({
                   {checkResult.status === "active"
                     ? "Domain Verified & Active"
                     : checkResult.status === "pending_dns"
-                    ? "Pending DNS Setup"
-                    : "DNS Check Error"}
+                      ? "Pending DNS Setup"
+                      : "DNS Check Error"}
                 </span>
               </div>
-              <p className="leading-relaxed opacity-90">{checkResult.message}</p>
+              <p className="leading-relaxed opacity-90">
+                {checkResult.message}
+              </p>
             </div>
           ) : (
-            <div className="rounded-xl bg-amber-50/70 border border-amber-200/80 p-4 text-xs text-amber-900">
+            <div className="rounded-lg bg-amber-50/70 border border-amber-200/80 p-4 text-xs text-amber-900">
               <div className="flex items-center gap-2 mb-1.5 font-semibold text-amber-950">
                 <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                 <span>Pending DNS setup</span>
               </div>
               <p className="leading-relaxed text-amber-800">
-                Add the TXT record, then configure either www (CNAME) or the root domain (A record).
-                DNS changes can take time to propagate. Your Fides website address stays available.
+                Add the TXT record, then configure either www (CNAME) or the
+                root domain (A record). DNS changes can take time to propagate.
+                Your Fides website address stays available.
               </p>
             </div>
           )}
@@ -329,7 +355,7 @@ export function ConnectDomainModal({
             href="https://fides.app/help/dns"
             target="_blank"
             rel="noopener noreferrer"
-            className="px-4 py-2 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 rounded-lg shadow-2xs transition"
+            className="inline-flex items-center justify-center h-10 px-4 text-sm font-medium text-neutral-800 bg-white border border-neutral-400/80 hover:bg-neutral-50 rounded-lg transition"
           >
             Troubleshoot
           </a>
@@ -337,7 +363,7 @@ export function ConnectDomainModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 rounded-lg shadow-2xs transition"
+              className="inline-flex items-center justify-center h-10 px-4 text-sm font-medium text-neutral-800 bg-white border border-neutral-400/80 hover:bg-neutral-50 rounded-lg transition cursor-pointer"
             >
               Close
             </button>
@@ -345,7 +371,7 @@ export function ConnectDomainModal({
               type="button"
               disabled={isChecking}
               onClick={handleCheckDnsStatus}
-              className="px-4 py-2 text-sm font-medium text-white bg-[#C35000] hover:bg-[#A94400] disabled:opacity-60 rounded-lg shadow-xs transition flex items-center gap-1.5"
+              className="inline-flex items-center justify-center gap-1.5 h-10 px-5 text-sm font-semibold text-white bg-burnt hover:opacity-90 disabled:opacity-60 rounded-lg transition cursor-pointer"
             >
               {isChecking ? (
                 <>
@@ -382,17 +408,18 @@ export function WaitingDnsModal({ isOpen, onClose }: WaitingDnsModalProps) {
         <div className="mb-4">
           <h3
             id="waiting-dns-title"
-            className="text-base font-semibold text-neutral-900"
+            className="text-lg font-semibold text-neutral-900"
           >
             Waiting for your DNS record
           </h3>
           <p className="mt-1 text-xs text-neutral-500 leading-relaxed">
-            Your domain connection is not ready yet. Review your DNS record and check again after the changes have propagated.
+            Your domain connection is not ready yet. Review your DNS record and
+            check again after the changes have propagated.
           </p>
         </div>
 
-        <div className="mt-4 rounded-xl bg-amber-50/80 border border-amber-200/80 p-3.5 space-y-1.5">
-          <span className="inline-block text-[10px] font-semibold text-amber-900 bg-amber-100/90 px-2.5 py-0.5 rounded-full">
+        <div className="mt-4 rounded-lg bg-amber-50/80 border border-amber-200/80 p-3.5 space-y-1.5">
+          <span className="inline-block text-[10px] font-semibold text-amber-900 bg-amber-100/90 px-2.5 py-0.5 rounded-md">
             Pending DNS setup
           </span>
         </div>
@@ -401,7 +428,7 @@ export function WaitingDnsModal({ isOpen, onClose }: WaitingDnsModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-medium text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 rounded-xl shadow-2xs transition"
+            className="inline-flex items-center justify-center h-10 px-4 text-sm font-medium text-neutral-800 bg-white border border-neutral-400/80 hover:bg-neutral-50 rounded-lg transition cursor-pointer"
           >
             Close
           </button>

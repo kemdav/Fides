@@ -2,21 +2,54 @@
 
 import * as React from "react";
 import Image from "next/image";
-import { WebsiteSettingsData } from "./types";
+import { WebsiteSettingsData, PreviewServiceItem } from "./types";
 import { XIcon, ArrowRightIcon } from "./icons";
+
+const FALLBACK_SERVICES: PreviewServiceItem[] = [
+  {
+    id: "fallback-1",
+    name: "Signature haircut",
+    durationMinutes: 45,
+    priceCents: 65000,
+  },
+  {
+    id: "fallback-2",
+    name: "Wellness massage",
+    durationMinutes: 60,
+    priceCents: 120000,
+  },
+  {
+    id: "fallback-3",
+    name: "Facial treatment",
+    durationMinutes: 50,
+    priceCents: 95000,
+  },
+];
 
 interface LivePreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   data: WebsiteSettingsData;
+  services?: PreviewServiceItem[];
 }
 
 export function LivePreviewModal({
   isOpen,
   onClose,
   data,
+  services = [],
 }: LivePreviewModalProps) {
   if (!isOpen) return null;
+
+  const displayedServices =
+    services.length > 0 ? services.slice(0, 3) : FALLBACK_SERVICES;
+
+  const locationText = [data.streetAddress, data.cityProvince]
+    .filter(Boolean)
+    .join(", ");
+  const contactText = [data.businessEmail, data.phoneNumber]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -36,6 +69,7 @@ export function LivePreviewModal({
           </div>
 
           <button
+            type="button"
             onClick={onClose}
             className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium text-neutral-300 hover:text-white hover:bg-neutral-800 transition"
           >
@@ -58,10 +92,20 @@ export function LivePreviewModal({
           <header className="px-6 sm:px-12 py-5 flex items-center justify-between border-b border-black/5 bg-white/40 backdrop-blur-xs sticky top-0 z-10">
             <div className="flex items-center gap-3">
               <div
-                className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-xs"
+                className="relative w-9 h-9 rounded-full overflow-hidden flex items-center justify-center text-xs font-bold text-white shadow-xs shrink-0"
                 style={{ backgroundColor: data.accentColor || "#CC5000" }}
               >
-                {data.logoInitials || "BV"}
+                {data.logoUrl ? (
+                  <Image
+                    src={data.logoUrl}
+                    alt={`${data.businessName || "Business"} logo`}
+                    fill
+                    unoptimized
+                    className="object-cover"
+                  />
+                ) : (
+                  data.logoInitials || "BV"
+                )}
               </div>
               <div>
                 <span className="text-base font-semibold tracking-tight text-neutral-900">
@@ -76,7 +120,9 @@ export function LivePreviewModal({
             <nav className="flex items-center gap-6">
               <div className="hidden sm:flex items-center gap-5 text-xs font-medium text-neutral-700">
                 <span className="cursor-pointer hover:text-black">Home</span>
-                <span className="cursor-pointer hover:text-black">Services</span>
+                <span className="cursor-pointer hover:text-black">
+                  Services
+                </span>
                 <span className="cursor-pointer hover:text-black">Contact</span>
               </div>
               <button
@@ -143,56 +189,33 @@ export function LivePreviewModal({
                   Find your moment of care
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-sans">
-                  <div className="rounded-xl bg-white/85 p-5 shadow-xs border border-black/5 flex flex-col justify-between">
-                    <div>
-                      <h3 className="font-semibold text-sm text-neutral-900">
-                        Signature haircut
-                      </h3>
-                      <p className="text-xs text-neutral-500 mt-1">
-                        45 min · ₱650
-                      </p>
-                    </div>
-                    <span
-                      className="mt-4 inline-flex items-center gap-1 text-xs font-semibold"
-                      style={{ color: data.accentColor || "#CC5000" }}
-                    >
-                      View service <ArrowRightIcon className="w-3.5 h-3.5" />
-                    </span>
-                  </div>
-
-                  <div className="rounded-xl bg-white/85 p-5 shadow-xs border border-black/5 flex flex-col justify-between">
-                    <div>
-                      <h3 className="font-semibold text-sm text-neutral-900">
-                        Wellness massage
-                      </h3>
-                      <p className="text-xs text-neutral-500 mt-1">
-                        60 min · ₱1,200
-                      </p>
-                    </div>
-                    <span
-                      className="mt-4 inline-flex items-center gap-1 text-xs font-semibold"
-                      style={{ color: data.accentColor || "#CC5000" }}
-                    >
-                      View service <ArrowRightIcon className="w-3.5 h-3.5" />
-                    </span>
-                  </div>
-
-                  <div className="rounded-xl bg-white/85 p-5 shadow-xs border border-black/5 flex flex-col justify-between">
-                    <div>
-                      <h3 className="font-semibold text-sm text-neutral-900">
-                        Facial treatment
-                      </h3>
-                      <p className="text-xs text-neutral-500 mt-1">
-                        50 min · ₱950
-                      </p>
-                    </div>
-                    <span
-                      className="mt-4 inline-flex items-center gap-1 text-xs font-semibold"
-                      style={{ color: data.accentColor || "#CC5000" }}
-                    >
-                      View service <ArrowRightIcon className="w-3.5 h-3.5" />
-                    </span>
-                  </div>
+                  {displayedServices.map((svc) => {
+                    const formattedPrice = `₱${Math.round(
+                      svc.priceCents / 100,
+                    ).toLocaleString("en-PH")}`;
+                    return (
+                      <div
+                        key={svc.id}
+                        className="rounded-xl bg-white/85 p-5 shadow-xs border border-black/5 flex flex-col justify-between"
+                      >
+                        <div>
+                          <h3 className="font-semibold text-sm text-neutral-900">
+                            {svc.name}
+                          </h3>
+                          <p className="text-xs text-neutral-500 mt-1">
+                            {svc.durationMinutes} min · {formattedPrice}
+                          </p>
+                        </div>
+                        <span
+                          className="mt-4 inline-flex items-center gap-1 text-xs font-semibold"
+                          style={{ color: data.accentColor || "#CC5000" }}
+                        >
+                          View service{" "}
+                          <ArrowRightIcon className="w-3.5 h-3.5" />
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </section>
@@ -202,22 +225,22 @@ export function LivePreviewModal({
           {data.showContactDetails && (
             <section className="px-6 sm:px-12 py-8 border-t border-black/5 text-xs text-neutral-600 font-sans">
               <div className="max-w-4xl flex flex-wrap gap-8 items-center justify-between">
-                <div>
-                  <span className="font-semibold text-neutral-900 block mb-0.5">
-                    Location
-                  </span>
-                  <span>
-                    {data.streetAddress}, {data.cityProvince}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-semibold text-neutral-900 block mb-0.5">
-                    Contact
-                  </span>
-                  <span>
-                    {data.businessEmail} · {data.phoneNumber}
-                  </span>
-                </div>
+                {locationText && (
+                  <div>
+                    <span className="font-semibold text-neutral-900 block mb-0.5">
+                      Location
+                    </span>
+                    <span>{locationText}</span>
+                  </div>
+                )}
+                {contactText && (
+                  <div>
+                    <span className="font-semibold text-neutral-900 block mb-0.5">
+                      Contact
+                    </span>
+                    <span>{contactText}</span>
+                  </div>
+                )}
                 {data.showOpeningHours && (
                   <div>
                     <span className="font-semibold text-neutral-900 block mb-0.5">
