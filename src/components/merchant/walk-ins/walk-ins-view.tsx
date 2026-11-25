@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import { AdminButton } from "@/components/admin/admin-button";
+import { MetricCard } from "@/components/admin/metric-card";
+import { PageContent, PageHeading } from "@/components/admin/primitives";
 import { createClient } from "@/lib/supabase/client";
 import {
   getWalkInWorkspaceAction,
@@ -177,112 +179,59 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
   };
 
   const { kpis } = data;
-  const staffRatio = Math.min(
-    100,
-    Math.round((kpis.availableStaffCount / kpis.totalActiveStaff) * 100),
-  );
-  const waitRatio = Math.min(100, kpis.waitingNow * 25);
-  const servedRatio = Math.min(100, kpis.walkInsServedToday * 10);
-  const avgWaitRatio = Math.min(
-    100,
-    Math.round((kpis.typicalWaitingMinutes / 60) * 100),
-  );
 
   return (
-    <div className="min-h-full space-y-6 px-4 py-6 sm:px-8">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="font-display text-[32px] leading-tight text-body">
-            Walk-Ins &amp; Waiting List
-          </h1>
-          <p className="mt-1 text-sm text-muted">
-            Welcome every walk-in. Fill available slots without displacing
-            existing bookings.
-          </p>
-        </div>
+    <PageContent>
+      <PageHeading
+        title="Walk-Ins & Waiting List"
+        description="Welcome every walk-in. Fill available slots without displacing existing bookings."
+        actions={
+          <AdminButton
+            variant="primary"
+            size="sm"
+            onClick={() => {
+              setDefaultModalStaffId("any");
+              setWalkInOpen(true);
+            }}
+            className="shrink-0 shadow-xs"
+          >
+            + Add walk-in
+          </AdminButton>
+        }
+      />
 
-        <AdminButton
-          variant="primary"
-          size="sm"
-          onClick={() => {
-            setDefaultModalStaffId("any");
-            setWalkInOpen(true);
-          }}
-          className="shrink-0 shadow-xs"
-        >
-          + Add walk-in
-        </AdminButton>
-      </div>
-
-      {/* 4 KPI Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {/* Waiting now */}
-        <div className="rounded-xl bg-burnt p-5 text-on-burnt shadow-xs">
-          <p className="text-xs font-medium text-on-burnt">Waiting now</p>
-          <p className="mt-3 text-3xl font-semibold">{kpis.waitingNow}</p>
-          <p className="mt-2 text-xs text-on-burnt">First come, first served</p>
-          <div className="mt-4 h-1 w-full rounded-full bg-on-burnt/25">
-            <div
-              className="h-1 rounded-full bg-on-burnt transition-all"
-              style={{
-                width: `${Math.max(waitRatio, kpis.waitingNow > 0 ? 20 : 0)}%`,
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Available staff */}
-        <div className="rounded-xl border border-hairline bg-white p-5 shadow-xs">
-          <p className="text-xs font-medium text-muted">Available staff</p>
-          <p className="mt-3 text-3xl font-semibold text-ink">
-            {kpis.availableStaffCount}
-          </p>
-          <p className="mt-2 truncate text-xs text-muted">
-            {kpis.availableStaffSummary}
-          </p>
-          <div className="mt-4 h-1 w-full rounded-full bg-sky/40">
-            <div
-              className="h-1 rounded-full bg-burnt transition-all"
-              style={{ width: `${staffRatio}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Walk-ins served today */}
-        <div className="rounded-xl border border-hairline bg-white p-5 shadow-xs">
-          <p className="text-xs font-medium text-muted">
-            Walk-ins served today
-          </p>
-          <p className="mt-3 text-3xl font-semibold text-ink">
-            {kpis.walkInsServedToday}
-          </p>
-          <p className="mt-2 text-xs text-muted">
-            No scheduled bookings displaced
-          </p>
-          <div className="mt-4 h-1 w-full rounded-full bg-sky/40">
-            <div
-              className="h-1 rounded-full bg-burnt transition-all"
-              style={{ width: `${servedRatio}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Typical waiting time */}
-        <div className="rounded-xl border border-hairline bg-white p-5 shadow-xs">
-          <p className="text-xs font-medium text-muted">Typical waiting time</p>
-          <p className="mt-3 text-3xl font-semibold text-ink">
-            {kpis.typicalWaitingMinutes} min
-          </p>
-          <p className="mt-2 text-xs text-muted">Based on the current queue</p>
-          <div className="mt-4 h-1 w-full rounded-full bg-sky/40">
-            <div
-              className="h-1 rounded-full bg-burnt transition-all"
-              style={{ width: `${avgWaitRatio}%` }}
-            />
-          </div>
-        </div>
-      </div>
+      <section aria-label="Walk-in metrics" className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          label="Waiting now"
+          value={kpis.waitingNow}
+          caption="First come, first served"
+          icon="users"
+          progress={100}
+          featured
+        />
+        <MetricCard
+          label="Available staff"
+          value={kpis.availableStaffCount}
+          caption={kpis.availableStaffSummary}
+          icon="calendar"
+          progress={100}
+        />
+        <MetricCard
+          label="Walk-ins served today"
+          value={kpis.walkInsServedToday}
+          caption="No scheduled bookings displaced"
+          icon="check"
+          progress={100}
+        />
+        <MetricCard
+          label="Typical waiting time"
+          value={kpis.typicalWaitingMinutes}
+          valueSuffix=" min"
+          caption="Based on the current queue"
+          icon="clock"
+          progress={100}
+        />
+      </section>
 
       {/* Active Waiting Lists Table */}
       <section className="rounded-xl border border-hairline bg-white p-5 shadow-xs">
@@ -573,6 +522,6 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
           {toast}
         </div>
       )}
-    </div>
+    </PageContent>
   );
 }

@@ -401,7 +401,7 @@ export function BookingSettingsView({
           </header>
 
           {/* Timezone Info Banner */}
-          <div className="flex flex-col justify-between gap-3 rounded-xl border border-[#E7E9EE] bg-sky/25 px-4 py-3.5 sm:flex-row sm:items-center sm:px-5">
+          <div className="flex flex-col justify-between gap-3 rounded-xl border border-[#E7E9EE] bg-on-burnt px-4 py-3.5 sm:flex-row sm:items-center sm:px-5">
             <div className="space-y-0.5">
               <p className="text-sm font-semibold text-[#1E293B]">
                 Business timezone: {meta.timeZone}

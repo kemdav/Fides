@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MerchantSidebar } from "@/components/merchant/merchant-sidebar";
 import { AdminButton } from "@/components/admin/admin-button";
+import { MetricCard } from "@/components/admin/metric-card";
 import { Surface } from "@/components/admin/primitives";
 import {
   cancelCustomerInviteAction,
@@ -283,20 +284,6 @@ export function CustomersRegistryView({
   };
 
   const { meta, stats } = data;
-  const newRatio =
-    stats.totalCustomers > 0
-      ? Math.min(
-          100,
-          Math.round((stats.newThisMonth / stats.totalCustomers) * 100),
-        )
-      : 0;
-  const inviteRatio =
-    stats.totalCustomers > 0
-      ? Math.min(
-          100,
-          Math.round((stats.invitesPending / stats.totalCustomers) * 100),
-        )
-      : 0;
 
   return (
     <div className="flex min-h-dvh flex-col bg-powder text-[#1E293B] lg:flex-row">
@@ -339,80 +326,37 @@ export function CustomersRegistryView({
           </div>
         )}
 
-        {/* 4 KPI Cards */}
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-xl bg-burnt p-5 text-on-burnt shadow-sm shadow-burnt/20">
-            <p className="text-xs font-semibold text-on-burnt">
-              Total customers
-            </p>
-            <p className="mt-3 text-3xl font-bold tracking-tight">
-              {stats.totalCustomers}
-            </p>
-            <p className="mt-1 text-xs text-on-burnt">
-              Registered and walk-in clients
-            </p>
-            <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-on-burnt/25">
-              <div className="h-full w-3/4 rounded-full bg-on-burnt" />
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-[#ECEAE0] bg-white p-5 shadow-[0_3px_14px_rgb(44_58_75/0.04)]">
-            <p className="text-xs font-semibold text-[#1E293B]">
-              New this month
-            </p>
-            <p className="mt-3 text-3xl font-bold tracking-tight text-[#1E293B]">
-              {stats.newThisMonth}
-            </p>
-            <p className="mt-1 text-xs text-[#64748B]">
-              Across all booking sources
-            </p>
-            <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-sky/40">
-              <div
-                className="h-full rounded-full bg-burnt"
-                style={{
-                  width: `${Math.max(newRatio, stats.newThisMonth > 0 ? 15 : 0)}%`,
-                }}
-              />
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-[#ECEAE0] bg-white p-5 shadow-[0_3px_14px_rgb(44_58_75/0.04)]">
-            <p className="text-xs font-semibold text-[#1E293B]">
-              Returning customers
-            </p>
-            <p className="mt-3 text-3xl font-bold tracking-tight text-[#1E293B]">
-              {stats.returningPercentage}%
-            </p>
-            <p className="mt-1 text-xs text-[#64748B]">
-              Customers with more than one visit
-            </p>
-            <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-sky/40">
-              <div
-                className="h-full rounded-full bg-burnt"
-                style={{ width: `${stats.returningPercentage}%` }}
-              />
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-[#ECEAE0] bg-white p-5 shadow-[0_3px_14px_rgb(44_58_75/0.04)]">
-            <p className="text-xs font-semibold text-[#1E293B]">
-              Invites pending
-            </p>
-            <p className="mt-3 text-3xl font-bold tracking-tight text-[#1E293B]">
-              {stats.invitesPending}
-            </p>
-            <p className="mt-1 text-xs text-[#64748B]">
-              Walk-in registration invitations
-            </p>
-            <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-sky/40">
-              <div
-                className="h-full rounded-full bg-burnt"
-                style={{
-                  width: `${Math.max(inviteRatio, stats.invitesPending > 0 ? 15 : 0)}%`,
-                }}
-              />
-            </div>
-          </div>
+        <section aria-label="Customer metrics" className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+          <MetricCard
+            label="Total customers"
+            value={stats.totalCustomers}
+            caption="Registered and walk-in clients"
+            icon="users"
+            progress={100}
+            featured
+          />
+          <MetricCard
+            label="New this month"
+            value={stats.newThisMonth}
+            caption="Across all booking sources"
+            icon="calendar"
+            progress={100}
+          />
+          <MetricCard
+            label="Returning customers"
+            value={stats.returningPercentage}
+            valueSuffix="%"
+            caption="Customers with more than one visit"
+            icon="chart"
+            progress={100}
+          />
+          <MetricCard
+            label="Invites pending"
+            value={stats.invitesPending}
+            caption="Walk-in registration invitations"
+            icon="bell"
+            progress={100}
+          />
         </section>
 
         {/* Registry Table Card */}
