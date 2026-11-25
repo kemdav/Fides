@@ -686,14 +686,6 @@ export function RegisterFlow({
             >
               <Icon name="arrow-left" className="size-5" /> Back to Home
             </Link>
-            {requestAccount && (
-              <Link
-                href="/reset-request?mode=application"
-                className="inline-flex min-h-11 items-center text-base font-semibold text-burnt hover:underline"
-              >
-                Track an existing application
-              </Link>
-            )}
           </nav>
         )}
         <div

@@ -145,16 +145,18 @@ type ActionEmail = {
   heading: string;
   preheader: string;
   body: string[];
-  action: { label: string; url: string } | { code: string; boxed?: boolean };
+  action?: { label: string; url: string } | { code: string; boxed?: boolean };
   note?: string;
   details?: EmailDetailSection[];
-  steps: { text: string; link?: { label: string; url: string } }[];
+  steps?: { text: string; link?: { label: string; url: string } }[];
+  nextMessage?: string;
   closing: string;
   footer?: string;
 };
 
 function renderActionEmail(input: ActionEmail) {
-  const { label, heading, preheader, body, action, note, details = [], steps, closing } = input;
+  const { label, heading, preheader, body, action, note, details = [], steps = [], nextMessage, closing } = input;
+  const nextMessageTypography = "font-size:15px;line-height:24px;color:#374151;";
   const brandName = input.brandName ?? "Fides";
   const brand = emailColor(input.colors?.brand ?? null, "#ffffeb");
   const secondary = emailColor(input.colors?.secondary ?? null, "#09101d");
@@ -175,7 +177,9 @@ function renderActionEmail(input: ActionEmail) {
   );
   const greeting = input.name ? `Hi ${input.name},` : null;
   const merchant = escapeHtml(brandName);
-  const actionUrl = "url" in action ? escapeHtml(action.url) : null;
+  const linkAction = action && "url" in action ? action : null;
+  const codeAction = action && "code" in action ? action : null;
+  const actionUrl = linkAction ? escapeHtml(linkAction.url) : null;
 
   const useMerchantFonts = input.typography === "Playfair + Inter";
   const { body: font, heading: serif } = useMerchantFonts ? merchantEmailFonts : systemEmailFonts;
@@ -188,26 +192,28 @@ function renderActionEmail(input: ActionEmail) {
       <td valign="top" style="padding:2px 0 ${last ? 0 : 14}px;font-family:${font};font-size:14px;line-height:21px;color:#374151;">${content}</td>
     </tr>`;
 
-  const codeMarkup = "code" in action && (action.boxed
+  const codeMarkup = !codeAction ? "" : codeAction.boxed
     ? `<table role="presentation" align="center" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto;">
-         <tr>${Array.from(action.code, (digit) =>
+         <tr>${Array.from(codeAction.code, (digit) =>
            `<td align="center" valign="middle" width="36" height="36" style="width:36px;height:36px;border:1px solid ${outline};border-radius:6px;background-color:${panel};color:${strong};font-family:Courier,monospace;font-size:26px;line-height:36px;font-weight:700;text-align:center;">${escapeHtml(digit)}</td>`
          ).join('<td width="6" style="width:6px;font-size:0;line-height:0;">&nbsp;</td>')}</tr>
        </table>`
-    : `<p style="display:inline-block;margin:0;padding:14px 24px;border:1px solid ${outline};border-radius:8px;background-color:${panel};font-family:Courier,monospace;font-size:26px;letter-spacing:6px;font-weight:700;color:${strong};">${escapeHtml(action.code)}</p>`);
+    : `<p style="display:inline-block;margin:0;padding:14px 24px;border:1px solid ${outline};border-radius:8px;background-color:${panel};font-family:Courier,monospace;font-size:26px;letter-spacing:6px;font-weight:700;color:${strong};">${escapeHtml(codeAction.code)}</p>`;
 
   return {
     subject: input.subject,
     text: [
       ...(greeting ? [greeting, ""] : []),
       ...body.flatMap((paragraph) => [paragraph, ""]),
-      ...("url" in action ? [action.label, action.url] : [`Code: ${action.code}`]),
-      "",
+      ...(linkAction ? [linkAction.label, linkAction.url, ""] : codeAction ? [`Code: ${codeAction.code}`, ""] : []),
       ...(note ? [note, ""] : []),
       ...details.flatMap(({ title, rows }) => [title, ...rows.map(([key, value]) => `${key}: ${value}`), ""]),
-      "What happens next:",
-      ...steps.flatMap(({ text, link }, index) => [`${index + 1}. ${text}`, ...(link ? [link.url] : [])]),
-      "",
+      ...(steps.length ? [
+        "What happens next:",
+        ...steps.flatMap(({ text, link }, index) => [`${index + 1}. ${text}`, ...(link ? [link.url] : [])]),
+        "",
+      ] : []),
+      ...(nextMessage ? [nextMessage, ""] : []),
       closing,
       "",
       input.footer ?? "Powered by Fides",
@@ -275,15 +281,15 @@ function renderActionEmail(input: ActionEmail) {
               <h1 class="h1" style="margin:0 0 14px;font-family:${serif};font-size:26px;line-height:34px;font-weight:normal;color:${headingColor};">${escapeHtml(heading)}</h1>
               ${greeting ? `<p style="margin:0 0 6px;font-size:15px;line-height:24px;color:#374151;">${escapeHtml(greeting)}</p>` : ""}
               ${body.map((paragraph, index) => `<p style="margin:0 0 ${index === body.length - 1 ? 26 : 12}px;font-size:15px;line-height:24px;color:#374151;">${escapeHtml(paragraph)}</p>`).join("")}
-              ${"url" in action ? `
+              ${linkAction ? `
               <table class="btn-table" role="presentation" cellspacing="0" cellpadding="0" border="0">
                 <tr>
                   <td bgcolor="${strong}" style="border-radius:8px;background-color:${strong};">
-                    <a class="btn" href="${actionUrl}" target="_blank" style="display:inline-block;padding:14px 28px;font-family:${font};font-size:15px;line-height:20px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:8px;">${escapeHtml(action.label)}</a>
+                    <a class="btn" href="${actionUrl}" target="_blank" style="display:inline-block;padding:14px 28px;font-family:${font};font-size:15px;line-height:20px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:8px;">${escapeHtml(linkAction.label)}</a>
                   </td>
                 </tr>
               </table>` : codeMarkup}
-              ${note ? `<p style="font-size:13px;line-height:20px;color:#6b7280;${"code" in action && action.boxed ? "margin:10px 0 0;text-align:center;" : "margin:14px 0 0;"}">${escapeHtml(note)}</p>` : ""}
+              ${note ? `<p style="font-size:13px;line-height:20px;color:#6b7280;${codeAction?.boxed ? "margin:10px 0 0;text-align:center;" : "margin:14px 0 0;"}">${escapeHtml(note)}</p>` : ""}
             </td>
           </tr>
 
@@ -303,6 +309,7 @@ function renderActionEmail(input: ActionEmail) {
             </td>
           </tr>`).join("")}
 
+          ${steps.length ? `
           <!-- What happens next -->
           <tr>
             <td class="px" style="padding:24px 32px 0;">
@@ -325,12 +332,15 @@ function renderActionEmail(input: ActionEmail) {
             </td>
           </tr>
 
+          ` : ""}
+
           <!-- Fallback link + safety note -->
           <tr>
             <td class="px" style="padding:24px 32px 32px;font-family:${font};">
               ${actionUrl ? `<p style="margin:0 0 4px;font-size:12px;line-height:18px;color:#6b7280;">Button not working? Paste this link into your browser:</p>
               <p style="margin:0 0 18px;font-size:12px;line-height:18px;word-break:break-all;overflow-wrap:anywhere;"><a href="${actionUrl}" style="color:${strong};text-decoration:underline;">${actionUrl}</a></p>` : ""}
-              <p style="margin:0;font-size:12px;line-height:18px;color:#6b7280;">${escapeHtml(closing)}</p>
+              ${nextMessage ? `<p style="margin:0 0 12px;${nextMessageTypography}">${escapeHtml(nextMessage)}</p>` : ""}
+              <p style="margin:0;${nextMessage ? nextMessageTypography : "font-size:12px;line-height:18px;color:#6b7280;"}">${escapeHtml(closing)}</p>
             </td>
           </tr>
 
@@ -399,10 +409,6 @@ export async function sendSubmissionEmail(input: {
       heading: "Account request submitted",
       preheader: "We received your Fides account request.",
       body: [`We received the account request and verification documents for ${input.businessName}.`],
-      action: {
-        label: "Track application",
-        url: `${publicEnv.siteUrl.replace(/\/$/, "")}/request-account/status/${encodeURIComponent(input.referenceCode)}`,
-      },
       note: `Application reference: ${input.referenceCode}`,
       details: [
         { title: "Account details", rows: accountRows },
@@ -428,10 +434,7 @@ export async function sendSubmissionEmail(input: {
           ["Billing cycle", input.billingCycle],
         ] },
       ],
-      steps: [
-        { text: "Save your application reference so you can check your status." },
-        { text: "Our team will review your application and email you when a decision is made." },
-      ],
+      nextMessage: "Our team will review your application and email you when a decision is made.",
       closing: "Thank you for choosing Fides.",
       footer: `© ${new Date().getUTCFullYear()} Fides. All rights reserved.`,
     }),
