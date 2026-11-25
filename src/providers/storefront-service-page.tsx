@@ -1,12 +1,11 @@
 "use client";
 
-import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Button,
   CheckIcon,
-  Input,
 } from "@/components/ui";
 import {
   StorefrontFooter,
@@ -27,16 +26,6 @@ export type BookingStaffOption = {
   id: string;
   fullName: string;
   title: string | null;
-};
-
-export type BookingDetails = {
-  serviceId: string;
-  serviceName: string;
-  duration: string;
-  price: string;
-  staffName: string;
-  date: string;
-  time: string;
 };
 
 const BOOKING_STEPS = ["Service", "Staff", "Date & time", "Review"];
@@ -163,17 +152,7 @@ export function StorefrontServicePage({
 
   function continueToAccount() {
     if (!selectedService || !selectedDate || !selectedTime) return;
-
-    const params = new URLSearchParams({
-      service: selectedService.id,
-      serviceName: selectedService.name,
-      duration: selectedService.duration,
-      price: selectedService.price,
-      staffName: selectedStaff?.fullName ?? "Any available staff member",
-      date: selectedDate,
-      time: selectedTime,
-    });
-    router.push(`/${slug}/book/account?${params.toString()}`);
+    router.push("/login");
   }
 
   return (
@@ -528,180 +507,6 @@ export function StorefrontServicePage({
                 </Button>
               )}
             </div>
-          </section>
-        </div>
-      </main>
-    </StorefrontShell>
-  );
-}
-
-export function StorefrontBookingAccountPage({
-  slug,
-  booking,
-}: {
-  slug: string;
-  booking: BookingDetails;
-}) {
-  const tenant = useTenant();
-  const [mode, setMode] = useState<"create" | "signin">("create");
-  const [notice, setNotice] = useState<string | null>(null);
-
-  function submitPreview(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setNotice(
-      "Customer account access is not connected yet. Nothing was submitted."
-    );
-  }
-
-  const bookingHref = `/${slug}/book?service=${encodeURIComponent(
-    booking.serviceId
-  )}`;
-
-  return (
-    <StorefrontShell slug={slug}>
-      <main className="flex-1 bg-powder">
-        <div className="mx-auto grid w-full max-w-[1080px] gap-6 px-5 py-8 sm:px-8 sm:py-12 lg:grid-cols-[1.1fr_0.9fr] lg:px-10">
-          <section className="rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-8">
-            <Link
-              href={bookingHref}
-              className="inline-flex items-center gap-2 text-sm font-semibold text-burnt hover:underline"
-            >
-              <span aria-hidden>←</span> Change booking
-            </Link>
-            <p className="mt-8 text-sm font-semibold uppercase tracking-wide text-burnt">
-              Your appointment
-            </p>
-            <h1 className="mt-2 font-display text-3xl text-ink">
-              One last step
-            </h1>
-            <p className="mt-2 text-sm/6 text-muted">
-              Create a customer account or sign in to continue with{" "}
-              {tenant.businessName}.
-            </p>
-            <dl className="mt-6 divide-y divide-line rounded-xl border border-line px-4">
-              <div className="py-4">
-                <dt className="text-xs font-semibold uppercase tracking-wide text-muted">
-                  Service
-                </dt>
-                <dd className="mt-1 font-semibold text-ink">
-                  {booking.serviceName || "Service"}
-                </dd>
-                <dd className="mt-1 text-sm text-muted">
-                  {booking.duration} · {booking.price}
-                </dd>
-              </div>
-              <div className="py-4">
-                <dt className="text-xs font-semibold uppercase tracking-wide text-muted">
-                  Staff
-                </dt>
-                <dd className="mt-1 text-sm font-semibold text-ink">
-                  {booking.staffName || "Any available staff member"}
-                </dd>
-              </div>
-              <div className="py-4">
-                <dt className="text-xs font-semibold uppercase tracking-wide text-muted">
-                  Preferred date and time
-                </dt>
-                <dd className="mt-1 text-sm font-semibold text-ink">
-                  {formatSelectedDate(booking.date)} · {booking.time}
-                </dd>
-              </div>
-            </dl>
-            <p className="mt-4 rounded-lg bg-wash px-4 py-3 text-sm/6 text-muted">
-              This is a front-end preview. Appointment availability is not
-              confirmed and no booking has been submitted.
-            </p>
-          </section>
-
-          <section className="rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-8">
-            <h2 className="font-display text-2xl text-ink">
-              Customer account
-            </h2>
-            <div className="mt-5 grid grid-cols-2 rounded-lg bg-wash p-1">
-              <button
-                type="button"
-                aria-pressed={mode === "create"}
-                onClick={() => {
-                  setMode("create");
-                  setNotice(null);
-                }}
-                className={`rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
-                  mode === "create"
-                    ? "bg-white text-burnt shadow-sm"
-                    : "text-muted hover:text-ink"
-                }`}
-              >
-                Create account
-              </button>
-              <button
-                type="button"
-                aria-pressed={mode === "signin"}
-                onClick={() => {
-                  setMode("signin");
-                  setNotice(null);
-                }}
-                className={`rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
-                  mode === "signin"
-                    ? "bg-white text-burnt shadow-sm"
-                    : "text-muted hover:text-ink"
-                }`}
-              >
-                Sign in
-              </button>
-            </div>
-
-            <form onSubmit={submitPreview} className="mt-5 flex flex-col gap-4">
-              {mode === "create" ? (
-                <label className="flex flex-col gap-1.5 text-sm font-semibold text-ink">
-                  Full name
-                  <Input
-                    name="fullName"
-                    autoComplete="name"
-                    placeholder="Your name"
-                    required
-                  />
-                </label>
-              ) : null}
-              <label className="flex flex-col gap-1.5 text-sm font-semibold text-ink">
-                Email address
-                <Input
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="you@example.com"
-                  required
-                />
-              </label>
-              <label className="flex flex-col gap-1.5 text-sm font-semibold text-ink">
-                Password
-                <Input
-                  name="password"
-                  type="password"
-                  autoComplete={
-                    mode === "create" ? "new-password" : "current-password"
-                  }
-                  placeholder="Enter your password"
-                  required
-                />
-              </label>
-              {mode === "create" ? (
-                <p className="text-xs/5 text-muted">
-                  Account creation is a visual preview and will not save your
-                  information.
-                </p>
-              ) : null}
-              {notice ? (
-                <p
-                  role="status"
-                  className="rounded-lg bg-info-bg p-3 text-sm text-info"
-                >
-                  {notice}
-                </p>
-              ) : null}
-              <Button type="submit" variant="brand" size="lg" className="w-full">
-                {mode === "create" ? "Create account" : "Sign in"}
-              </Button>
-            </form>
           </section>
         </div>
       </main>
