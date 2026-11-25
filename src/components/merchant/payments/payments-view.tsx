@@ -344,12 +344,21 @@ export function PaymentsView({
     triggerCsvDownload(csv, filename);
   };
 
+  const handleCloseDropdown = React.useCallback(() => {
+    setDropdownAnchor(null);
+    setDropdownTargetItem(null);
+  }, []);
+
   const handleOpenDropdown = (
     e: React.MouseEvent<HTMLElement>,
     item: UnsettledAppointmentDTO | PaymentRecordDTO,
     type: "unsettled" | "history"
   ) => {
     e.stopPropagation();
+    if (dropdownAnchor === e.currentTarget) {
+      handleCloseDropdown();
+      return;
+    }
     setDropdownAnchor(e.currentTarget);
     setDropdownTargetItem({ type, item });
   };
@@ -895,10 +904,7 @@ export function PaymentsView({
       {/* Portal-Rendered Dropdown Menu */}
       <PaymentPortalDropdown
         isOpen={Boolean(dropdownAnchor)}
-        onClose={() => {
-          setDropdownAnchor(null);
-          setDropdownTargetItem(null);
-        }}
+        onClose={handleCloseDropdown}
         anchorEl={dropdownAnchor}
         items={dropdownItems}
       />
