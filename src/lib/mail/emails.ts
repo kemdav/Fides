@@ -1,7 +1,7 @@
 import "server-only";
 import { normalizeBrandColor as emailColor, colorLuminance as emailLuminance, readableForeground as emailForeground } from "@/lib/brand-colors";
 import { publicEnv } from "@/lib/env";
-import { formatPeso } from "@/lib/registration/options";
+import { formatPeso, ID_TYPES } from "@/lib/registration/options";
 import { sendMail } from "./mailer";
 
 const systemEmailFonts = {
@@ -128,6 +128,11 @@ function renderStaffMessage(input: StaffMessageRecipient & { url: URL } & (
   });
 }
 
+type EmailDetailSection = {
+  title: string;
+  rows: readonly (readonly [label: string, value: string])[];
+};
+
 type ActionEmail = {
   brandName?: string;
   header?: "fides-wordmark";
@@ -142,13 +147,14 @@ type ActionEmail = {
   body: string[];
   action: { label: string; url: string } | { code: string; boxed?: boolean };
   note?: string;
+  details?: EmailDetailSection[];
   steps: { text: string; link?: { label: string; url: string } }[];
   closing: string;
   footer?: string;
 };
 
 function renderActionEmail(input: ActionEmail) {
-  const { label, heading, preheader, body, action, note, steps, closing } = input;
+  const { label, heading, preheader, body, action, note, details = [], steps, closing } = input;
   const brandName = input.brandName ?? "Fides";
   const brand = emailColor(input.colors?.brand ?? null, "#ffffeb");
   const secondary = emailColor(input.colors?.secondary ?? null, "#09101d");
@@ -198,6 +204,7 @@ function renderActionEmail(input: ActionEmail) {
       ...("url" in action ? [action.label, action.url] : [`Code: ${action.code}`]),
       "",
       ...(note ? [note, ""] : []),
+      ...details.flatMap(({ title, rows }) => [title, ...rows.map(([key, value]) => `${key}: ${value}`), ""]),
       "What happens next:",
       ...steps.flatMap(({ text, link }, index) => [`${index + 1}. ${text}`, ...(link ? [link.url] : [])]),
       "",
@@ -280,6 +287,22 @@ function renderActionEmail(input: ActionEmail) {
             </td>
           </tr>
 
+          ${details.map(({ title, rows }) => `
+          <tr>
+            <td class="px" style="padding:16px 32px 0;font-family:${font};">
+              <table width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid ${outline};border-radius:10px;">
+                <caption style="padding:10px 0;text-align:left;font-size:15px;font-weight:700;color:${headingColor};">${escapeHtml(title)}</caption>
+                ${rows.map(([key, value], index) => {
+                  const border = index ? `border-top:1px solid ${line};` : "";
+                  return `<tr>
+                    <th scope="row" width="40%" valign="top" style="${border}padding:9px 12px;text-align:left;font-size:13px;line-height:19px;font-weight:600;color:#374151;">${escapeHtml(key)}</th>
+                    <td valign="top" style="${border}padding:9px 12px;font-size:13px;line-height:19px;color:${headingColor};overflow-wrap:anywhere;word-break:break-word;">${escapeHtml(value)}</td>
+                  </tr>`;
+                }).join("")}
+              </table>
+            </td>
+          </tr>`).join("")}
+
           <!-- What happens next -->
           <tr>
             <td class="px" style="padding:24px 32px 0;">
@@ -335,14 +358,42 @@ export function loginUrl(): string {
 export async function sendSubmissionEmail(input: {
   to: string;
   ownerName: string;
+  accountName: string;
+  phone?: string;
+  dateOfBirth: string;
+  idType: string;
   businessName: string;
+  businessType: string;
+  establishedYear: string;
+  streetAddress: string;
+  barangay: string;
+  city: string;
+  province: string;
+  zipCode: string;
+  requestedSlug?: string;
+  planName: string;
+  planPrice: number;
+  billingCycle: string;
   referenceCode: string;
 }) {
+  const accountRows: EmailDetailSection["rows"] = [
+    ["Business email", input.to],
+    ...(input.accountName !== input.ownerName ? [["Account name", input.accountName] as const] : []),
+    ...(input.phone ? [["Contact phone", input.phone] as const] : []),
+    ["Terms of Service and Privacy Policy", "Accepted"],
+    ["Accuracy and consent", "Confirmed"],
+  ];
+  const date = new Date(`${input.dateOfBirth}T00:00:00Z`);
+  const dateOfBirth = Number.isNaN(date.getTime()) ? input.dateOfBirth : date.toLocaleDateString("en-US", {
+    month: "long", day: "numeric", year: "numeric", timeZone: "UTC",
+  });
   return sendMail({
     to: input.to,
+    allowTestRecipientRedirect: false,
     ...renderActionEmail({
       name: input.ownerName,
       header: "fides-wordmark",
+      wordmarkAccent: true,
       label: "Account application",
       subject: "Your Fides account request has been submitted",
       heading: "Account request submitted",
@@ -353,11 +404,36 @@ export async function sendSubmissionEmail(input: {
         url: `${publicEnv.siteUrl.replace(/\/$/, "")}/request-account/status/${encodeURIComponent(input.referenceCode)}`,
       },
       note: `Application reference: ${input.referenceCode}`,
+      details: [
+        { title: "Account details", rows: accountRows },
+        { title: "Identity verification", rows: [
+          ["Owner’s legal name", input.ownerName],
+          ["Date of birth", dateOfBirth],
+          ["ID type", ID_TYPES.find(({ value }) => value === input.idType)?.label ?? input.idType],
+        ] },
+        { title: "Business information", rows: [
+          ["Business name", input.businessName],
+          ["Business type", input.businessType],
+          ["Established year", input.establishedYear],
+          ["Street address", input.streetAddress],
+          ["Barangay", input.barangay],
+          ["City", input.city],
+          ["Province", input.province],
+          ["ZIP code", input.zipCode],
+          ...(input.requestedSlug ? [["Requested subdomain", input.requestedSlug] as const] : []),
+        ] },
+        { title: "Subscription package", rows: [
+          ["Plan", input.planName],
+          ["Price", formatPeso(input.planPrice)],
+          ["Billing cycle", input.billingCycle],
+        ] },
+      ],
       steps: [
         { text: "Save your application reference so you can check your status." },
         { text: "Our team will review your application and email you when a decision is made." },
       ],
       closing: "Thank you for choosing Fides.",
+      footer: `© ${new Date().getUTCFullYear()} Fides. All rights reserved.`,
     }),
   });
 }

@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
+import { ApplicationReceivedDialog } from "@/components/landing/application-received-dialog";
 import { Cta } from "@/components/landing/cta";
 import { Features } from "@/components/landing/features";
 import { Footer } from "@/components/landing/footer";
@@ -47,6 +49,9 @@ export default function Home() {
         <Cta />
       </main>
       <Footer />
+      <Suspense fallback={null}>
+        <ApplicationReceivedDialog />
+      </Suspense>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: structuredData }} />
     </div>
   );

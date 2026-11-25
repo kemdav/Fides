@@ -101,7 +101,7 @@ const base = z.object({
       return dob <= limit;
     }, "The business owner must be at least 18 years old.")
     .refine((value) => new Date(value).getFullYear() >= 1900, "Enter a valid date of birth."),
-  idType: z.enum(ID_TYPES.map((item) => item.value) as [string, ...string[]], {
+  idType: z.enum(ID_TYPES.map((item) => item.value), {
     error: "Select an ID type.",
   }),
 

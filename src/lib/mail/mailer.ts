@@ -75,7 +75,7 @@ function applySandboxRedirect(message: MailMessage, transport: MailTransport): {
   const env = getServerEnv();
   const to = recipients(message.to);
   const usingTestSender = transport === "resend" && (env.MAIL_FROM_EMAIL ?? RESEND_TEST_SENDER) === RESEND_TEST_SENDER;
-  if (usingTestSender && env.MAIL_TEST_RECIPIENT) {
+  if (message.allowTestRecipientRedirect !== false && usingTestSender && env.MAIL_TEST_RECIPIENT) {
     console.warn(`[mail] Sandbox sender in use: redirecting "${message.subject}" for ${to.join(", ")} to ${env.MAIL_TEST_RECIPIENT}.`);
     return { to: [env.MAIL_TEST_RECIPIENT], subject: `[to: ${to.join(", ")}] ${message.subject}` };
   }

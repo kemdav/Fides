@@ -11,12 +11,13 @@ import {
   calendarDateKey,
 } from "@/components/ui/calendar-picker";
 import { Listbox } from "@/components/ui/listbox";
-import { StaffSuccessDialog } from "@/components/merchant/staff/staff-confirmation-dialog";
+import { StaffConfirmationDialog, StaffSuccessDialog } from "@/components/merchant/staff/staff-confirmation-dialog";
 import { Card as BaseCard } from "@/components/ui";
 import { MascotLoadingDialog } from "@/components/ui/mascot-loading-dialog";
 import {
   applicationDocumentsFor,
   BUSINESS_TYPES,
+  BUSINESS_LOGO_REQUIRED,
   FILE_LIMITS,
   IDENTITY_DOCUMENT_SLOTS,
   documentByteLimit,
@@ -154,6 +155,25 @@ const secondaryButton = adminButtonClasses({
   className: "gap-2 disabled:cursor-not-allowed disabled:hover:bg-transparent",
 });
 
+const draftUpdatedEvent = "fides-registration-draft-updated";
+
+function subscribeToDrafts(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  window.addEventListener(draftUpdatedEvent, onChange);
+  return () => {
+    window.removeEventListener("storage", onChange);
+    window.removeEventListener(draftUpdatedEvent, onChange);
+  };
+}
+
+function readDraft(key: string) {
+  try {
+    return window.localStorage.getItem(key) ?? window.sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
 export function RegisterFlow({
   requestAccount = false,
 }: {
@@ -176,8 +196,12 @@ export function RegisterFlow({
     null,
   );
   const [submitting, setSubmitting] = useState(false);
+  const [submissionComplete, setSubmissionComplete] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [draftNote, setDraftNote] = useState<string | null>(null);
+  const [draftSaved, setDraftSaved] = useState(false);
+  const [draftPromptDismissed, setDraftPromptDismissed] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const [draftError, setDraftError] = useState<string | null>(null);
   const [uploads, setUploads] = useState<Uploads>({});
   const [uploading, setUploading] = useState(false);
   const [sendingCode, setSendingCode] = useState(false);
@@ -193,7 +217,7 @@ export function RegisterFlow({
   } | null>(null);
   const mainRef = useRef<HTMLElement>(null);
   const previousStep = useRef(step);
-  const busy = uploading || submitting || sendingCode;
+  const busy = uploading || submitting || sendingCode || submissionComplete;
   const email = values.email.trim().toLowerCase();
   const emailProof =
     verifiedEmail?.email === email ? verifiedEmail.proof : null;
@@ -228,28 +252,42 @@ export function RegisterFlow({
     );
   }
 
-  const hasDraft = useSyncExternalStore(
-    () => () => {},
-    () => window.sessionStorage.getItem(draftKey) !== null,
-    () => false,
+  const savedDraft = useSyncExternalStore(
+    subscribeToDrafts,
+    () => readDraft(draftKey),
+    () => null,
   );
 
   function restoreDraft() {
+    setDraftPromptDismissed(true);
+    setDraftError(null);
+    setDraftRestored(false);
     try {
-      const saved = window.sessionStorage.getItem(draftKey);
-      if (saved) {
-        const draft = JSON.parse(saved) as Partial<Values> & { fullName?: string; phone?: string };
-        delete draft.fullName;
-        delete draft.phone;
-        setValues((current) => ({
-          ...current,
-          ...draft,
-          password: "",
-          confirmPassword: "",
-        }));
-      }
+      const draft: unknown = savedDraft && JSON.parse(savedDraft);
+      if (!draft || typeof draft !== "object" || Array.isArray(draft)) throw new Error();
+      const fields = draft as Record<string, unknown>;
+      const restored = Object.fromEntries(Object.entries(initialValues).flatMap(([key, fallback]) => {
+        if (key === "password" || key === "confirmPassword" || key === "confirmAccuracy") return [];
+        const value = fields[key];
+        const valid = fallback === null ? value === null || typeof value === "string" : typeof value === typeof fallback;
+        return valid ? [[key, value]] : [];
+      })) as Partial<Values>;
+      setValues({ ...initialValues, ...restored });
+      setErrors({});
+      setDocErrors({});
+      Object.values(docs).forEach(releaseObjectUrl);
+      releaseObjectUrl(logo);
+      setDocs({});
+      setUploads({});
+      setLogo(null);
+      setLogoError(null);
+      setVerifiedEmail(null);
+      setEmailChallenge(null);
+      setCompletedSteps([]);
+      setFurthest(0);
+      setDraftRestored(true);
     } catch {
-      window.sessionStorage.removeItem(draftKey);
+      setDraftError("This draft could not be restored. You can continue with a new application.");
     }
   }
 
@@ -311,6 +349,7 @@ export function RegisterFlow({
       found = { ...found, confirmPassword: "Passwords do not match." };
     }
     if (step === 1) found = { ...found, ...missingIdentityDocuments() };
+    if (step === 2 && !logo) found.logo = BUSINESS_LOGO_REQUIRED;
     if (step === 3) {
       const missing: Errors = {};
       const identityMissing = missingIdentityDocuments();
@@ -469,13 +508,19 @@ export function RegisterFlow({
   }
 
   function saveDraft() {
-    const { password: _password, confirmPassword: _confirm, ...safe } = values;
+    const { password: _password, confirmPassword: _confirm, confirmAccuracy: _consent, ...safe } = values;
     void _password;
     void _confirm;
-    window.sessionStorage.setItem(draftKey, JSON.stringify(safe));
-    setDraftNote(
-      "Draft saved on this device. Passwords and files are not included.",
-    );
+    void _consent;
+    setDraftError(null);
+    try {
+      window.localStorage.setItem(draftKey, JSON.stringify(safe));
+      window.dispatchEvent(new Event(draftUpdatedEvent));
+      setDraftPromptDismissed(true);
+      setDraftSaved(true);
+    } catch {
+      setDraftError("The draft could not be saved. Check that your browser allows local storage and try again.");
+    }
   }
 
   async function submit() {
@@ -517,6 +562,13 @@ export function RegisterFlow({
       return;
     }
 
+    if (!logo) {
+      setErrors({ logo: BUSINESS_LOGO_REQUIRED });
+      setStep(2);
+      focusFirstError();
+      return;
+    }
+
     const missingDocs = requiredDocuments.filter((doc) => !docs[doc.key]);
     if (missingDocs.length > 0) {
       const onIdentity = IDENTITY_DOCUMENT_SLOTS.some(({ key }) => !docs[key]);
@@ -553,7 +605,7 @@ export function RegisterFlow({
       const body = new FormData();
       body.set("payload", JSON.stringify(parsed.data));
       body.set("emailProof", emailProof);
-      if (logo) body.set("logo", logo);
+      body.set("logo", logo);
       body.set("uploadedDocuments", JSON.stringify(receipts));
       const response = await fetch("/api/applications", {
         method: "POST",
@@ -562,7 +614,6 @@ export function RegisterFlow({
       const result = (await response.json().catch(() => ({}))) as {
         error?: string;
         documentKey?: DocumentKey;
-        referenceCode?: string;
         emailVerificationRequired?: boolean;
       };
       if (!response.ok) {
@@ -588,12 +639,15 @@ export function RegisterFlow({
         }
         return;
       }
-      window.sessionStorage.removeItem(draftKey);
-      router.push(
-        requestAccount && result.referenceCode
-          ? `/request-account/status/${encodeURIComponent(result.referenceCode)}`
-          : "/login?registered=1",
-      );
+      try {
+        window.localStorage.removeItem(draftKey);
+        window.sessionStorage.removeItem(draftKey);
+        window.dispatchEvent(new Event(draftUpdatedEvent));
+      } catch {
+        // Storage restrictions must not interrupt a completed submission.
+      }
+      setSubmissionComplete(true);
+      router.replace("/?application=received");
     } catch {
       setSubmitError(
         "We could not reach the server. Check your connection and try again.",
@@ -683,16 +737,7 @@ export function RegisterFlow({
                 />
               ) : (
                 <>
-                  {hasDraft && (
-                    <button
-                      type="button"
-                      onClick={restoreDraft}
-                      disabled={sendingCode}
-                      className="mb-4 w-full rounded-lg bg-[#faece3] px-4 py-2.5 text-base font-semibold text-burnt hover:bg-[#f6dfd0] disabled:opacity-50"
-                    >
-                      Restore your saved draft
-                    </button>
-                  )}
+                  {draftError && <p role="alert" className="mb-4 text-sm text-danger">{draftError}</p>}
                   <AccountStep
                     values={values}
                     errors={errors}
@@ -724,9 +769,9 @@ export function RegisterFlow({
               errors={errors}
               set={set}
               logo={logo}
-              logoError={logoError}
+              logoError={logoError ?? errors.logo ?? null}
               onLogo={(file) => {
-                const problem = validateFile(
+                const problem = file.size === 0 ? "The logo file is empty. Choose another image." : validateFile(
                   file,
                   FILE_LIMITS.logoTypes,
                   FILE_LIMITS.logoBytes,
@@ -736,6 +781,7 @@ export function RegisterFlow({
                 if (!problem) {
                   releaseObjectUrl(logo);
                   setLogo(file);
+                  setErrors((current) => ({ ...current, logo: undefined }));
                 }
               }}
               onBack={back}
@@ -775,7 +821,7 @@ export function RegisterFlow({
               docs={docs}
               submitting={submitting}
               submitError={submitError}
-              draftNote={draftNote}
+              draftError={draftError}
               onPreview={(file, title) => setPreview({ file, title })}
               onEdit={(index) => {
                 if (!busy) goTo(index);
@@ -792,7 +838,38 @@ export function RegisterFlow({
         title={preview?.title ?? ""}
         onClose={() => setPreview(null)}
       />
-      {sendingCode ? (
+      {step === 0 && savedDraft && !draftPromptDismissed && !navigationLocked && !sentEmail && !preview && (
+        <StaffConfirmationDialog
+          title="Your progress was saved"
+          description="You have an application draft saved on this device. Restore it to pick up where you left off."
+          onClose={() => setDraftPromptDismissed(true)}
+        >
+          <button type="button" className={secondaryButton} onClick={() => setDraftPromptDismissed(true)}>
+            Continue without draft
+          </button>
+          <button type="button" className={primaryButton} onClick={restoreDraft}>
+            Restore draft
+          </button>
+        </StaffConfirmationDialog>
+      )}
+      {draftSaved && (
+        <StaffSuccessDialog
+          title="Draft saved"
+          description="Re-enter your password and attach your files again when you return."
+          onClose={() => setDraftSaved(false)}
+        />
+      )}
+      {draftRestored && (
+        <StaffSuccessDialog
+          title="Draft restored"
+          description="Re-enter your password and attach your files again as you continue."
+          onClose={() => {
+            setDraftRestored(false);
+            requestAnimationFrame(() => mainRef.current?.querySelector<HTMLInputElement>("#password")?.focus());
+          }}
+        />
+      )}
+      {submitting ? <MascotLoadingDialog label="Submitting your application" /> : sendingCode ? (
         <MascotLoadingDialog />
       ) : (
         sentEmail && (
@@ -1232,7 +1309,9 @@ function BusinessStep({
             )}
           </div>
           <div className="flex min-w-0 flex-col items-start gap-2">
-            <p className="text-base font-semibold text-ink">Business Logo</p>
+            <p id="business-logo-label" className="text-base font-semibold text-ink">
+              Business Logo <span className="text-danger" aria-hidden="true">*</span>
+            </p>
             <p className="text-sm text-subtle">
               Recommended: square JPG or PNG, at least 400×400 px. Max 2 MB.
             </p>
@@ -1240,6 +1319,10 @@ function BusinessStep({
               {logo ? "Replace Logo" : "Upload Logo"}
               <input
                 type="file"
+                required={!logo}
+                aria-labelledby="business-logo-label"
+                aria-invalid={!!logoError}
+                aria-describedby={logoError ? "business-logo-error" : undefined}
                 accept="image/png,image/jpeg,image/webp"
                 className="sr-only"
                 onChange={(event) => {
@@ -1250,7 +1333,7 @@ function BusinessStep({
               />
             </label>
             {logoError ? (
-              <p role="alert" className="text-sm text-danger">
+              <p id="business-logo-error" role="alert" className="text-sm text-danger">
                 {logoError}
               </p>
             ) : null}
@@ -1612,7 +1695,7 @@ function SummaryStep({
   docs,
   submitting,
   submitError,
-  draftNote,
+  draftError,
   onPreview,
   onEdit,
   onBack,
@@ -1623,7 +1706,7 @@ function SummaryStep({
   docs: DocMap;
   submitting: boolean;
   submitError: string | null;
-  draftNote: string | null;
+  draftError: string | null;
   onPreview: (file: File, title: string) => void;
   onEdit: (step: number) => void;
   onBack: () => void;
@@ -1793,12 +1876,12 @@ function SummaryStep({
             disabled={submitting}
             className={cn(primaryButton, "w-full sm:ml-auto sm:w-auto")}
           >
-            {submitting ? "Submitting?" : "Confirm Application"}
+            Confirm Application
           </button>
         </div>
-        {draftNote ? (
-          <p role="status" className="mt-3 text-center text-sm text-success">
-            {draftNote}
+        {draftError ? (
+          <p role="alert" className="mt-3 text-sm text-danger">
+            {draftError}
           </p>
         ) : null}
       </section>

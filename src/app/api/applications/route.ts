@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { DocumentUploadError, ServiceError, submitApplication, type DocumentUploads } from "@/lib/applications/service";
-import { applicationDocumentsFor, documentFieldName } from "@/lib/registration/options";
+import { applicationDocumentsFor, BUSINESS_LOGO_REQUIRED, documentFieldName } from "@/lib/registration/options";
 import { loadStagedDocuments } from "@/lib/applications/staged-documents";
 import { hasRegistrationEmailProof } from "@/lib/auth/registration-email";
 import { registrationSchema } from "@/lib/registration/schema";
@@ -34,10 +34,13 @@ export async function POST(request: Request) {
     }
 
     const logo = form.get("logo");
+    if (!(logo instanceof File) || logo.size === 0) {
+      return NextResponse.json({ error: BUSINESS_LOGO_REQUIRED }, { status: 400 });
+    }
     const requiredDocuments = applicationDocumentsFor(parsed.data.businessType);
     if (form.has("uploadedDocuments")) {
       const staged = await loadStagedDocuments(form.get("uploadedDocuments"), requiredDocuments);
-      const result = await submitApplication(parsed.data, logo instanceof File && logo.size > 0 ? logo : null, staged.documents);
+      const result = await submitApplication(parsed.data, logo, staged.documents);
       await staged.cleanup();
       return NextResponse.json(result, { status: 201 });
     }
@@ -46,7 +49,7 @@ export async function POST(request: Request) {
       const file = form.get(documentFieldName(doc.key));
       if (file instanceof File && file.size > 0) documents[doc.key] = file;
     }
-    const result = await submitApplication(parsed.data, logo instanceof File && logo.size > 0 ? logo : null, documents);
+    const result = await submitApplication(parsed.data, logo, documents);
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
     if (error instanceof DocumentUploadError) {

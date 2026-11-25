@@ -13,6 +13,7 @@ import {
   FILE_LIMITS,
   GOVERNMENT_ID_SLOT,
   ID_TYPES,
+  ID_TYPE_STORAGE_VALUES,
   applicationDocumentsFor,
   type DocumentKey,
 } from "@/lib/registration/options";
@@ -138,7 +139,7 @@ export async function checkRequestedSlug(raw: string) {
 
 export async function submitApplication(
   data: RegistrationInput,
-  logo: File | null,
+  logo: File,
   documents: DocumentUploads
 ): Promise<{ referenceCode: string }> {
   const fullName = data.fullName ?? data.ownerLegalName;
@@ -147,13 +148,11 @@ export async function submitApplication(
     if (!availability.available) throw new ServiceError(availability.reason, 409);
   }
 
-  if (logo) {
-    if (!(FILE_LIMITS.logoTypes as readonly string[]).includes(logo.type)) {
-      throw new ServiceError("The business logo must be a JPG, PNG, or WebP image.", 400);
-    }
-    if (logo.size > FILE_LIMITS.logoBytes) {
-      throw new ServiceError("The business logo must be 2 MB or smaller.", 400);
-    }
+  if (!(FILE_LIMITS.logoTypes as readonly string[]).includes(logo.type)) {
+    throw new ServiceError("The business logo must be a JPG, PNG, or WebP image.", 400);
+  }
+  if (logo.size > FILE_LIMITS.logoBytes) {
+    throw new ServiceError("The business logo must be 2 MB or smaller.", 400);
   }
 
   // Every document is required. Validate them all before anything is created.
@@ -163,7 +162,7 @@ export async function submitApplication(
 
   const { data: plan } = await admin
     .from("subscription_plans")
-    .select("code, is_active")
+    .select("code, is_active, name, price_php, billing_cycle")
     .eq("code", data.planCode)
     .maybeSingle();
   if (!plan || !plan.is_active) throw new ServiceError("The selected subscription package is not available.", 400);
@@ -245,21 +244,18 @@ export async function submitApplication(
       application_id: application.id,
       owner_legal_name: data.ownerLegalName,
       date_of_birth: data.dateOfBirth,
-      id_type: data.idType,
+      id_type: ID_TYPE_STORAGE_VALUES[data.idType],
       id_document_path: governmentIdPath,
     });
     if (identityError) fail(identityError, "Could not save the identity details");
 
-    let logoUrl: string | null = null;
-    if (logo) {
-      const extension = logo.type === "image/png" ? "png" : logo.type === "image/webp" ? "webp" : "jpg";
-      logoPath = `${application.id}/logo.${extension}`;
-      const { error: uploadError } = await admin.storage
-        .from(LOGO_BUCKET)
-        .upload(logoPath, Buffer.from(await logo.arrayBuffer()), { contentType: logo.type, upsert: true });
-      if (uploadError) fail(uploadError, "Could not upload the business logo");
-      logoUrl = admin.storage.from(LOGO_BUCKET).getPublicUrl(logoPath).data.publicUrl;
-    }
+    const extension = logo.type === "image/png" ? "png" : logo.type === "image/webp" ? "webp" : "jpg";
+    logoPath = `${application.id}/logo.${extension}`;
+    const { error: uploadError } = await admin.storage
+      .from(LOGO_BUCKET)
+      .upload(logoPath, Buffer.from(await logo.arrayBuffer()), { contentType: logo.type, upsert: true });
+    if (uploadError) fail(uploadError, "Could not upload the business logo");
+    const logoUrl = admin.storage.from(LOGO_BUCKET).getPublicUrl(logoPath).data.publicUrl;
 
     const { error: businessError } = await admin.from("application_businesses").insert({
       application_id: application.id,
@@ -300,7 +296,22 @@ export async function submitApplication(
       await sendSubmissionEmail({
         to: data.email,
         ownerName: data.ownerLegalName,
+        accountName: fullName,
+        phone: data.phone,
+        dateOfBirth: data.dateOfBirth,
+        idType: data.idType,
         businessName: data.businessName,
+        businessType: data.businessType,
+        establishedYear: data.establishedYear,
+        streetAddress: data.streetAddress,
+        barangay: data.barangay,
+        city: data.city,
+        province: data.province,
+        zipCode: data.zipCode,
+        requestedSlug: data.requestedSlug,
+        planName: plan.name,
+        planPrice: Number(plan.price_php),
+        billingCycle: plan.billing_cycle,
         referenceCode: application.reference_code,
       });
     } catch (mailError) {
@@ -459,7 +470,7 @@ export async function loadAdminSnapshot(): Promise<AdminSnapshot> {
     submittedAt: app.submitted_at,
     reviewedAt: app.reviewed_at,
     status: app.status as SubmissionStatus,
-    idType: ID_TYPES.find((item) => item.value === identity?.id_type)?.label ?? identity?.id_type ?? "—",
+    idType: ID_TYPES.find(({ value }) => value === identity?.id_type || ID_TYPE_STORAGE_VALUES[value] === identity?.id_type)?.label ?? identity?.id_type ?? "—",
     documents: buildDocumentList(documentsByApplication.get(app.id) ?? []),
     note: app.review_notes ? [app.review_notes] : undefined,
     decidedAt: app.status === "pending" ? null : (app.decided_at ?? app.approved_at ?? app.reviewed_at),

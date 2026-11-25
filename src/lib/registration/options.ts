@@ -4,6 +4,7 @@ export { type BusinessDocumentKey } from "./document-requirements";
 
 export const TRIAL_DAYS = 30;
 export const REGISTRATION_CODE_LENGTH = 6;
+export const BUSINESS_LOGO_REQUIRED = "Upload a business logo to continue.";
 
 export const ID_TYPES = [
   { value: "passport", label: "Passport" },
@@ -14,6 +15,15 @@ export const ID_TYPES = [
 ] as const;
 
 export type IdType = (typeof ID_TYPES)[number]["value"];
+
+// The application_identities check constraint uses space-separated ID codes.
+export const ID_TYPE_STORAGE_VALUES: Record<IdType, string> = {
+  passport: "passport",
+  drivers_license: "drivers license",
+  national_id: "national id",
+  sss_gsis: "sss gsis",
+  philhealth: "philhealth",
+};
 
 export const BUSINESS_TYPES = [
   "Salon & Spa",
