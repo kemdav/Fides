@@ -403,10 +403,10 @@ export function BookingSettingsView({
           {/* Timezone Info Banner */}
           <div className="flex flex-col justify-between gap-3 rounded-xl border border-[#E7E9EE] bg-on-burnt px-4 py-3.5 sm:flex-row sm:items-center sm:px-5">
             <div className="space-y-0.5">
-              <p className="text-sm font-semibold text-[#1E293B]">
+              <p className="text-sm font-semibold text-powder">
                 Business timezone: {meta.timeZone}
               </p>
-              <p className="text-xs leading-relaxed text-[#64748B]">
+              <p className="text-xs leading-relaxed text-powder">
                 Booking slots and cancellation/rescheduling cutoffs use this
                 timezone. Buffer times are durations.
               </p>

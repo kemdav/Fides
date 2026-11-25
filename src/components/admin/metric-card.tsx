@@ -6,10 +6,10 @@ import { interactiveRing } from "./primitives";
 
 type MetricCardProps = {
   label: string;
-  value: number;
+  value: number | string;
   caption: string;
   icon: IconName;
-  progress: number;
+  progress?: number;
   featured?: boolean;
   badge?: ReactNode;
   miniChart?: boolean;
@@ -53,8 +53,11 @@ export function MetricCard({
         />
         <p className="truncate text-sm font-semibold leading-5">{label}</p>
       </div>
-      <div className="flex h-9 items-center gap-2">
-        <p className="text-[32px] font-semibold leading-9">
+      <div className={cn("flex items-center gap-2", typeof value === "number" ? "h-9" : "min-h-9")}>
+        <p className={cn(
+          "font-semibold",
+          typeof value === "number" ? "text-[32px] leading-9" : "break-all text-xl leading-7 sm:text-2xl 2xl:text-[28px]",
+        )}>
           {valuePrefix}{value.toLocaleString()}{valueSuffix}
         </p>
         {badge}
@@ -96,18 +99,14 @@ export function MetricCard({
           >
             {caption}
           </p>
-          <div
-            className="mt-auto flex h-[5px] overflow-hidden rounded-[3px] bg-mist"
-            aria-hidden
-          >
-            <div
-              className={cn(
-                "h-[5px] rounded-[3px]",
-                featured ? "bg-on-burnt" : "bg-burnt",
-              )}
-              style={{ width: `${progress}%` }}
-            />
-          </div>
+          {progress !== undefined && (
+            <div className="mt-auto flex h-[5px] overflow-hidden rounded-[3px] bg-mist" aria-hidden>
+              <div
+                className={cn("h-[5px] rounded-[3px]", featured ? "bg-on-burnt" : "bg-burnt")}
+                style={{ width: progress + "%" }}
+              />
+            </div>
+          )}
         </>
       )}
     </>

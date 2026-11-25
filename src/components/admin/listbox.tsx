@@ -17,6 +17,7 @@ function ChevronSvg({ open }: { open: boolean }) {
 interface BaseListboxProps {
   id: string;
   label: string;
+  hideLabel?: boolean;
   required?: boolean;
   describedBy?: string;
   disabled?: boolean;
@@ -31,7 +32,7 @@ type ListboxProps = BaseListboxProps & (
 );
 
 export function Listbox(props: ListboxProps) {
-  const { id, label, required, value, options, placeholder, describedBy, disabled, placement = "below" } = props;
+  const { id, label, hideLabel, required, value, options, placeholder, describedBy, disabled, placement = "below" } = props;
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
@@ -85,7 +86,7 @@ export function Listbox(props: ListboxProps) {
 
   return (
     <div>
-      <label htmlFor={id} className="mb-2 block text-sm font-semibold leading-5 text-ink">
+      <label htmlFor={id} className={hideLabel ? "sr-only" : "mb-2 block text-sm font-semibold leading-5 text-ink"}>
         {label}{required && <span className="text-burnt"> *</span>}
       </label>
       <div ref={ref} className="relative" onKeyDown={handleKeyDown}>

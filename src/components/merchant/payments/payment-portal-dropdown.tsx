@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
+import { cn } from "@/lib/utils";
 
 export interface DropdownMenuItem {
   label: string;
@@ -17,129 +18,100 @@ interface PaymentPortalDropdownProps {
   items: DropdownMenuItem[];
 }
 
-export function PaymentPortalDropdown({
-  isOpen,
-  onClose,
-  anchorEl,
-  items,
-}: PaymentPortalDropdownProps) {
-  const [mounted, setMounted] = React.useState(false);
-  const [coords, setCoords] = React.useState<{ top: number; left: number; openUpward: boolean }>({
-    top: 0,
-    left: 0,
-    openUpward: false,
-  });
+export function PaymentPortalDropdown({ isOpen, onClose, anchorEl, items }: PaymentPortalDropdownProps) {
+  const menuRef = React.useRef<HTMLDivElement>(null);
+  const visibleItems = items.filter((item) => !item.disabled);
 
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
+  React.useLayoutEffect(() => {
+    const menu = menuRef.current;
+    if (!isOpen || !anchorEl || !menu) return;
 
-  // Calculate position relative to viewport with flip safety
+    const anchor = anchorEl.getBoundingClientRect();
+    const { width, height } = menu.getBoundingClientRect();
+    const below = anchor.bottom + 4;
+    const top = below + height > window.innerHeight - 8 ? anchor.top - height - 4 : below;
+    const left = Math.min(anchor.right - width, window.innerWidth - width - 8);
+    menu.style.top = Math.max(8, top) + "px";
+    menu.style.left = Math.max(8, left) + "px";
+    menu.style.visibility = "visible";
+    menu.querySelector("button")?.focus({ preventScroll: true });
+  }, [isOpen, anchorEl, visibleItems.length]);
+
   React.useEffect(() => {
     if (!isOpen || !anchorEl) return;
 
-    const updatePosition = () => {
-      const rect = anchorEl.getBoundingClientRect();
-      const menuHeight = items.length * 36 + 16;
-      const menuWidth = 176; // w-44
-
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const openUpward = spaceBelow < menuHeight && rect.top > menuHeight;
-
-      let top = openUpward ? rect.top - menuHeight : rect.bottom + 4;
-      let left = rect.right - menuWidth;
-
-      // Bound checking
-      if (left < 8) left = 8;
-      if (left + menuWidth > window.innerWidth - 8) {
-        left = window.innerWidth - menuWidth - 8;
-      }
-
-      setCoords({ top, left, openUpward });
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (!anchorEl.contains(target) && !menuRef.current?.contains(target)) onClose();
     };
 
-    updatePosition();
-
-    const handleScrollOrResize = () => {
-      onClose();
-    };
-
-    window.addEventListener("scroll", handleScrollOrResize, true);
-    window.addEventListener("resize", handleScrollOrResize);
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    window.addEventListener("scroll", onClose, true);
+    window.addEventListener("resize", onClose);
     return () => {
-      window.removeEventListener("scroll", handleScrollOrResize, true);
-      window.removeEventListener("resize", handleScrollOrResize);
-    };
-  }, [isOpen, anchorEl, items.length, onClose]);
-
-  // Handle outside click & Escape
-  React.useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-
-    const handlePointerDown = (e: MouseEvent | TouchEvent) => {
-      const target = e.target as Node;
-      if (anchorEl && anchorEl.contains(target)) return;
-      onClose();
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("touchstart", handlePointerDown);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("touchstart", handlePointerDown);
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      window.removeEventListener("scroll", onClose, true);
+      window.removeEventListener("resize", onClose);
     };
   }, [isOpen, anchorEl, onClose]);
 
-  if (!mounted || !isOpen || !anchorEl) return null;
+  if (!isOpen || !anchorEl || visibleItems.length === 0) return null;
+
+  const closeToAnchor = () => {
+    anchorEl.focus({ preventScroll: true });
+    onClose();
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Escape" || event.key === "Tab") {
+      if (event.key === "Escape") event.preventDefault();
+      closeToAnchor();
+      return;
+    }
+
+    const buttons = Array.from(event.currentTarget.querySelectorAll("button"));
+    const current = buttons.indexOf(event.target as HTMLButtonElement);
+    const last = buttons.length - 1;
+    let next: number;
+    switch (event.key) {
+      case "ArrowDown": next = current === last ? 0 : current + 1; break;
+      case "ArrowUp": next = current <= 0 ? last : current - 1; break;
+      case "Home": next = 0; break;
+      case "End": next = last; break;
+      default: return;
+    }
+    event.preventDefault();
+    buttons[next]?.focus({ preventScroll: true });
+  };
 
   return createPortal(
     <div
+      ref={menuRef}
       role="menu"
-      aria-orientation="vertical"
-      style={{
-        position: "fixed",
-        top: `${coords.top}px`,
-        left: `${coords.left}px`,
-        zIndex: 9999,
-      }}
-      className="w-44 rounded-xl border border-[#E2E8F0] bg-white py-1.5 shadow-xl animate-in fade-in-50 zoom-in-95 duration-100"
-      onClick={(e) => e.stopPropagation()}
+      aria-label="Payment actions"
+      onKeyDown={handleKeyDown}
+      className="invisible fixed z-50 w-44 rounded-[10px] border border-hairline bg-white py-1 shadow-lg"
     >
-      {items.map((item, idx) => {
-        if (item.disabled) return null;
-
-        const isDanger = item.tone === "danger";
-        const isPrimary = item.tone === "primary";
-
-        return (
-          <button
-            key={idx}
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              item.onClick();
-              onClose();
-            }}
-            className={`flex w-full items-center px-3.5 py-2 text-left text-xs font-semibold transition-colors ${
-              isDanger
-                ? "text-[#DC2626] hover:bg-[#FEF2F2]"
-                : isPrimary
-                ? "text-[#C35000] hover:bg-[#FFF7ED]"
-                : "text-[#1E293B] hover:bg-[#F8FAFC]"
-            }`}
-          >
-            {item.label}
-          </button>
-        );
-      })}
+      {visibleItems.map((item) => (
+        <button
+          key={item.label}
+          type="button"
+          role="menuitem"
+          tabIndex={-1}
+          onClick={() => {
+            closeToAnchor();
+            item.onClick();
+          }}
+          className={cn(
+            "w-full px-4 py-2 text-left text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-burnt/40",
+            item.tone === "danger" ? "text-danger-dark hover:bg-danger-bg" : "hover:bg-mist",
+            item.tone === "primary" && "text-burnt-dark",
+          )}
+        >
+          {item.label}
+        </button>
+      ))}
     </div>,
-    document.body
+    document.body,
   );
 }
