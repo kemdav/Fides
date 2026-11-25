@@ -2079,7 +2079,7 @@ export type AccountApplicationRow = {
   user_id: string;
   full_name: string;
   email: string;
-  phone: string;
+  phone: string | null;
   status: ApplicationStatus;
   plan_code: string;
   terms_accepted_at: string;

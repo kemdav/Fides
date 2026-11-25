@@ -76,6 +76,7 @@ import {
   TextInput,
   useObjectUrl,
   validateFile,
+  SummaryRow as Row,
 } from "./parts";
 
 type DocMap = Partial<Record<DocumentKey, File>>;
@@ -89,9 +90,7 @@ type UploadState = {
 type Uploads = Partial<Record<DocumentKey, UploadState>>;
 
 type Values = {
-  fullName: string;
   email: string;
-  phone: string;
   password: string;
   confirmPassword: string;
   acceptTerms: boolean;
@@ -112,9 +111,7 @@ type Values = {
 };
 
 const initialValues: Values = {
-  fullName: "",
   email: "",
-  phone: "",
   password: "",
   confirmPassword: "",
   acceptTerms: false,
@@ -240,13 +237,17 @@ export function RegisterFlow({
   function restoreDraft() {
     try {
       const saved = window.sessionStorage.getItem(draftKey);
-      if (saved)
+      if (saved) {
+        const draft = JSON.parse(saved) as Partial<Values> & { fullName?: string; phone?: string };
+        delete draft.fullName;
+        delete draft.phone;
         setValues((current) => ({
           ...current,
-          ...(JSON.parse(saved) as Partial<Values>),
+          ...draft,
           password: "",
           confirmPassword: "",
         }));
+      }
     } catch {
       window.sessionStorage.removeItem(draftKey);
     }
@@ -501,9 +502,7 @@ export function RegisterFlow({
           ? 1
           : ["planCode"].includes(field)
             ? 4
-            : ["fullName", "phone"].includes(field)
-              ? 5
-              : 2;
+            : 2;
       setErrors({ [field]: issue.message });
       setSubmitError(issue.message);
       setStep(target);
@@ -646,17 +645,15 @@ export function RegisterFlow({
         <div
           className={cn(
             "flex w-full flex-1 flex-col",
-            step === 4
+            step === 4 || step === 5
               ? "max-w-[1100px]"
-              : step === 5
-                ? "max-w-[820px]"
-                : step === 3
-                  ? "max-w-[900px]"
-                  : step === 0
-                    ? "max-w-lg"
-                    : step === 1
-                      ? "max-w-[760px]"
-                      : "max-w-[744px]",
+              : step === 3
+                ? "max-w-[900px]"
+                : step === 0
+                  ? "max-w-lg"
+                  : step === 1
+                    ? "max-w-[760px]"
+                    : "max-w-[744px]",
           )}
         >
           {step === 0 && (
@@ -785,6 +782,7 @@ export function RegisterFlow({
               submitting={submitting}
               submitError={submitError}
               draftNote={draftNote}
+              onPreview={(file, title) => setPreview({ file, title })}
               onEdit={(index) => {
                 if (!busy) goTo(index);
               }}
@@ -995,7 +993,7 @@ function AccountStep({
               }
               checked={values.acceptTerms}
               onChange={(e) => set("acceptTerms", e.target.checked)}
-              className="mt-0.5 size-4 shrink-0 accent-burnt"
+              className="mt-1 size-4 shrink-0 accent-burnt"
             />
             <span>
               I agree to the{" "}
@@ -1528,6 +1526,7 @@ function PlanStep({
     >
       <Heading
         title="Select your subscription package"
+        className="mb-10 sm:mb-12"
         subtitle="The Professional plan is pre-selected. You can change your plan anytime after launch."
       />
       <PlanCardGrid
@@ -1566,23 +1565,28 @@ function PlanStep({
 function SummaryCard({
   title,
   icon,
+  className,
   onEdit,
   children,
 }: {
   title: string;
   icon: IconName;
+  className?: string;
   onEdit: () => void;
   children: React.ReactNode;
 }) {
   return (
-    <section className="overflow-hidden rounded-xl border border-line bg-white shadow-[0_3px_14px_rgb(44_58_75/0.05)]">
-      <header className="flex items-center justify-between gap-3 border-b border-line px-5 py-3">
+    <section className={cn("min-w-0 overflow-hidden rounded-xl border border-line bg-white", className)}>
+      <header className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-5">
         <h2 className="flex items-center gap-3 text-base font-semibold text-ink">
-          <Icon name={icon} className="size-5 text-glyph" />
+          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-mist">
+            <Icon name={icon} weight="fill" className="size-5 text-muted" />
+          </span>
           {title}
         </h2>
         <button
           type="button"
+          aria-label={`Edit ${title}`}
           onClick={onEdit}
           className={adminButtonClasses({
             variant: "outline-accent",
@@ -1592,31 +1596,32 @@ function SummaryCard({
           Edit
         </button>
       </header>
-      <div className="flex flex-col gap-2 px-5 py-4">{children}</div>
+      <div className="flex flex-col gap-3 px-4 py-4 sm:px-5">{children}</div>
     </section>
   );
 }
 
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex items-start justify-between gap-6 text-base">
-      <span className="text-subtle">{label}</span>
-      <span className="min-w-0 break-words text-right font-medium text-ink">
-        {value}
-      </span>
-    </div>
-  );
-}
+function FileRow({ label, file, onPreview }: { label: string; file?: File | null; onPreview: () => void }) {
+  if (!file) {
+    return (
+      <div className="flex min-w-0 items-center gap-3 rounded-lg border border-line px-3 py-2 text-sm">
+        <Icon name="file" weight="fill" className="size-5 text-glyph" />
+        <span className="min-w-0 flex-1 font-medium text-ink">{label}</span>
+        <span className="shrink-0 text-xs font-semibold text-danger">Missing</span>
+      </div>
+    );
+  }
 
-function FileRow({ name, size }: { name: string; size: number }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg bg-[#eceff6] px-3 py-2.5 text-sm text-body">
-      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-burnt text-white">
-        <Icon name="check" className="size-3" />
+    <button type="button" onClick={onPreview} aria-label={`Preview ${label}: ${file.name}`} title={file.name}
+      className="flex min-h-12 w-full min-w-0 items-center gap-3 rounded-lg border border-line px-3 py-2 text-left hover:border-burnt/40 hover:bg-mist focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-burnt">
+      <Icon name="file" weight="fill" className="size-5 text-glyph" />
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold leading-5 text-ink">{label}</span>
+        <span className="block truncate text-xs leading-5 text-muted">{file.name} · {formatBytes(file.size)}</span>
       </span>
-      <span className="min-w-0 flex-1 truncate">{name}</span>
-      <span className="shrink-0 text-subtle">{formatBytes(size)}</span>
-    </div>
+      <Icon name="eye" weight="fill" className="size-4 text-muted" />
+    </button>
   );
 }
 
@@ -1629,6 +1634,7 @@ function SummaryStep({
   submitting,
   submitError,
   draftNote,
+  onPreview,
   onEdit,
   onBack,
   onSaveDraft,
@@ -1639,6 +1645,7 @@ function SummaryStep({
   submitting: boolean;
   submitError: string | null;
   draftNote: string | null;
+  onPreview: (file: File, title: string) => void;
   onEdit: (step: number) => void;
   onBack: () => void;
   onSaveDraft: () => void;
@@ -1654,10 +1661,12 @@ function SummaryStep({
         year: "numeric",
       })
     : "—";
+  const businessDocuments = businessDocumentsFor(values.businessType);
+  const missingDocuments = businessDocuments.filter(({ key }) => !docs[key]).length;
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-6">
+      <div className="mx-auto flex max-w-xl flex-col items-center gap-2 py-3 text-center sm:py-5">
         <h1
           tabIndex={-1}
           className="font-display text-[28px] leading-[38px] text-ink focus:outline-none sm:text-[32px] sm:leading-[42px]"
@@ -1665,169 +1674,121 @@ function SummaryStep({
           Application Summary
         </h1>
         <p className="text-base text-muted">
-          Review all details carefully before submitting. Once confirmed, your
-          application will be sent for review (1–2 business days).
+          Review your details and documents before submitting your application.
         </p>
       </div>
 
-      <SummaryCard
-        title="Account Details"
-        icon="users"
-        onEdit={() => onEdit(0)}
-      >
-        <Row label="Email Address" value={values.email} />
-        <Row label="Password" value="Set securely" />
-        <fieldset
-          disabled={submitting}
-          className="mt-2 grid gap-4 border-t border-line pt-4 sm:grid-cols-2"
+      <div className="grid gap-4 md:grid-cols-2">
+        <SummaryCard
+          title="Account Details"
+          icon={STEPS[0].icon}
+          onEdit={() => onEdit(0)}
         >
-          <Field
-            label="Contact name"
-            htmlFor="fullName"
-            error={errors.fullName}
-          >
-            <TextInput
-              id="fullName"
-              invalid={!!errors.fullName}
-              autoComplete="name"
-              placeholder="Maria Santos"
-              value={values.fullName}
-              onChange={(event) => set("fullName", event.target.value)}
-            />
-          </Field>
-          <Field
-            label="Contact phone"
-            htmlFor="phone"
-            error={errors.phone}
-            hint="Use 09XXXXXXXXX (11 digits) or +63 9XX XXX XXXX."
-          >
-            <TextInput
-              id="phone"
-              type="tel"
-              inputMode="tel"
-              maxLength={17}
-              invalid={!!errors.phone}
-              aria-describedby={errors.phone ? "phone-error" : "phone-hint"}
-              autoComplete="tel"
-              placeholder="+63 917 000 0000"
-              value={values.phone}
-              onChange={(event) =>
-                set("phone", event.target.value.replace(/[^\d+\s()-]/g, ""))
-              }
-            />
-          </Field>
-        </fieldset>
-      </SummaryCard>
+          <Row label="Email Address" value={values.email} />
+          <Row label="Password" value="Set securely" />
+        </SummaryCard>
 
-      <SummaryCard
-        title="Identity Verification"
-        icon="shield"
-        onEdit={() => onEdit(1)}
-      >
-        <Row label="Owner Name" value={values.ownerLegalName} />
-        <Row label="Date of Birth" value={dob} />
-        <Row label="ID Type" value={idLabel} />
-        {IDENTITY_DOCUMENT_SLOTS.map(({ key, title }) => {
-          const file = docs[key];
-          return (
-            <div key={key} className="space-y-1">
-              <p className="text-sm text-muted">{title}</p>
-              {file ? (
-                <FileRow name={file.name} size={file.size} />
-              ) : (
-                <p
-                  role="alert"
-                  className="rounded-lg bg-danger-bg px-3 py-2 text-sm text-danger-dark"
-                >
-                  Upload this file in Identity Verification.
-                </p>
-              )}
-            </div>
-          );
-        })}
-      </SummaryCard>
+        <SummaryCard
+          title="Subscription Package"
+          icon="card"
+          onEdit={() => onEdit(4)}
+        >
+          <SelectedPlanSummary code={values.planCode} />
+        </SummaryCard>
 
-      <SummaryCard
-        title="Business Information"
-        icon="grid"
-        onEdit={() => onEdit(2)}
-      >
-        <Row label="Business Name" value={values.businessName} />
-        {values.requestedSlug && (
-          <Row label="Requested subdomain" value={values.requestedSlug} />
-        )}
-        <Row label="Category" value={values.businessType} />
-        <Row label="Established" value={values.establishedYear} />
-        <Row
-          label="Address"
-          value={
-            <>
-              {formatRegistrationStreetAddress(
-                values.streetAddress,
-                values.barangay ??
-                  barangayFromStreetAddress(values.streetAddress),
-              )}
-              <br />
-              {values.city}, {values.province} {registrationZipCode(values)}
-            </>
-          }
-        />
-        {logo ? (
-          <FileRow name={logo.name} size={logo.size} />
-        ) : (
-          <p className="text-sm text-subtle">No business logo selected.</p>
-        )}
-      </SummaryCard>
+        <SummaryCard
+          title="Identity Verification"
+          icon="shield"
+          onEdit={() => onEdit(1)}
+        >
+          <Row label="Owner Name" value={values.ownerLegalName} />
+          <Row label="Date of Birth" value={dob} />
+          <Row label="ID Type" value={idLabel} />
+          <div className="mt-1 grid gap-2 border-t border-line pt-3">
+            {IDENTITY_DOCUMENT_SLOTS.map(({ key, title }) => {
+              const file = docs[key];
+              return <FileRow key={key} label={title} file={file} onPreview={() => file && onPreview(file, title)} />;
+            })}
+          </div>
+        </SummaryCard>
 
-      <SummaryCard
-        title="Document Requirements"
-        icon="document"
-        onEdit={() => onEdit(3)}
-      >
-        {businessDocumentsFor(values.businessType).map((slot) => {
-          const file = docs[slot.key];
-          return file ? (
-            <div key={slot.key} className="flex flex-col gap-1">
-              <p className="text-sm text-subtle">{slot.title}</p>
-              <FileRow name={file.name} size={file.size} />
-            </div>
-          ) : (
-            <p
-              key={slot.key}
-              role="alert"
-              className="rounded-lg bg-danger-bg px-3 py-2 text-sm text-danger-dark"
-            >
-              {slot.title} is missing. Go back to upload it before submitting.
+        <SummaryCard
+          title="Business Information"
+          icon="grid"
+          onEdit={() => onEdit(2)}
+        >
+          <Row label="Business Name" value={values.businessName} />
+          {values.requestedSlug && (
+            <Row label="Requested subdomain" value={values.requestedSlug} />
+          )}
+          <Row label="Category" value={values.businessType} />
+          <Row label="Established" value={values.establishedYear} />
+          <Row
+            label="Address"
+            value={
+              <>
+                {formatRegistrationStreetAddress(
+                  values.streetAddress,
+                  values.barangay ??
+                    barangayFromStreetAddress(values.streetAddress),
+                )}
+                <br />
+                {values.city}, {values.province} {registrationZipCode(values)}
+              </>
+            }
+          />
+          <div className="mt-1 border-t border-line pt-3">
+            {logo ? (
+              <FileRow label="Business Logo" file={logo} onPreview={() => onPreview(logo, "Business Logo")} />
+            ) : (
+              <Row label="Business Logo" value="No logo added" />
+            )}
+          </div>
+        </SummaryCard>
+
+        <SummaryCard
+          title="Document Requirements"
+          icon="document"
+          className="md:col-span-2"
+          onEdit={() => onEdit(3)}
+        >
+          {missingDocuments > 0 && (
+            <p className="rounded-lg bg-danger-bg px-3 py-2 text-sm text-danger-dark">
+              {missingDocuments} {missingDocuments === 1 ? "document is" : "documents are"} missing. Select Edit to upload them.
             </p>
-          );
-        })}
-      </SummaryCard>
+          )}
+          <ul className="grid gap-2 md:grid-cols-2">
+            {businessDocuments.map(({ key, title }) => {
+              const file = docs[key];
+              return (
+                <li key={key} className="min-w-0">
+                  <FileRow label={title} file={file} onPreview={() => file && onPreview(file, title)} />
+                </li>
+              );
+            })}
+          </ul>
+        </SummaryCard>
+      </div>
 
-      <SummaryCard
-        title="Subscription Package"
-        icon="card"
-        onEdit={() => onEdit(4)}
-      >
-        <SelectedPlanSummary code={values.planCode} />
-      </SummaryCard>
-
-      <section className="rounded-xl border border-line bg-white p-5 shadow-[0_3px_14px_rgb(44_58_75/0.05)]">
-        <p className="text-sm font-semibold tracking-wide text-muted">
-          ACCURACY &amp; CONSENT
-        </p>
-        <label className="mt-3 flex cursor-pointer items-start gap-3 text-base text-body">
+      <section className="rounded-xl border border-line bg-white p-4 sm:p-5">
+        <h2 className="text-base font-semibold text-ink">Accuracy &amp; Consent</h2>
+        <label className="mt-3 flex cursor-pointer items-start gap-3 text-base leading-6 text-body">
           <input
             type="checkbox"
+            aria-invalid={!!errors.confirmAccuracy}
+            aria-describedby={errors.confirmAccuracy ? "confirmAccuracy-error" : undefined}
             checked={values.confirmAccuracy}
             onChange={(event) => set("confirmAccuracy", event.target.checked)}
-            className="mt-0.5 size-4 shrink-0 accent-burnt"
+            className="mt-1 size-4 shrink-0 accent-burnt"
           />
-          I confirm that all information and documents provided are accurate and
-          complete. I understand that submitting false information may result in
-          rejection of my application.
+          <span>
+            I confirm that all information and documents provided are accurate and
+            complete. I understand that submitting false information may result in
+            rejection of my application.
+          </span>
         </label>
         {errors.confirmAccuracy ? (
-          <p role="alert" className="mt-2 text-sm text-danger">
+          <p id="confirmAccuracy-error" role="alert" className="mt-2 text-sm text-danger">
             {errors.confirmAccuracy}
           </p>
         ) : null}
@@ -1845,30 +1806,20 @@ function SummaryStep({
           </p>
         ) : null}
 
-        <button
-          type="button"
-          onClick={onSubmit}
-          disabled={submitting}
-          className={cn(primaryButton, "mt-5 w-full")}
-        >
-          {submitting ? "Submitting…" : "Confirm Application"}
-        </button>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <button
-            type="button"
-            onClick={onBack}
-            disabled={submitting}
-            className={cn(secondaryButton, "w-full")}
-          >
-            <Icon name="arrow-left" className="size-4" /> Back
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          <button type="button" onClick={onBack} disabled={submitting} className={secondaryButton}>
+            Back
+          </button>
+          <button type="button" onClick={onSaveDraft} disabled={submitting} className={secondaryButton}>
+            Save Draft
           </button>
           <button
             type="button"
-            onClick={onSaveDraft}
+            onClick={onSubmit}
             disabled={submitting}
-            className={cn(secondaryButton, "w-full")}
+            className={cn(primaryButton, "w-full sm:ml-auto sm:w-auto")}
           >
-            Save Draft
+            {submitting ? "Submitting?" : "Confirm Application"}
           </button>
         </div>
         {draftNote ? (

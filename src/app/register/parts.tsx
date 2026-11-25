@@ -100,7 +100,7 @@ export function Sidebar({
           <header className="mb-14 self-end text-left">
             <Link
               href="/"
-              className="inline-block rounded-sm font-display text-[clamp(2rem,3vw,2.75rem)] leading-tight text-burnt focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-burnt"
+              className="inline-block rounded-sm font-display text-[clamp(2.25rem,3.5vw,3.125rem)] leading-tight text-burnt focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-burnt"
             >
               Fides
             </Link>
@@ -408,5 +408,16 @@ export function SecureFooter({
       <Icon name="shield" weight="fill" className="mt-0.5 size-5 text-muted" />
       <span>{children}</span>
     </p>
+  );
+}
+
+export function SummaryRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-start gap-3 text-sm leading-5 sm:gap-5">
+      <span className="text-muted">{label}</span>
+      <span className="min-w-0 [overflow-wrap:anywhere] text-right font-medium text-ink">
+        {value}
+      </span>
+    </div>
   );
 }

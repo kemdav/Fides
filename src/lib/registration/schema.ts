@@ -68,7 +68,7 @@ const text = (label: string, max = 120) =>
 const currentYear = new Date().getFullYear();
 
 const base = z.object({
-  fullName: text("Full name", 100).min(2, "Full name must be at least 2 characters."),
+  fullName: text("Full name", 100).min(2, "Full name must be at least 2 characters.").optional(),
   email: z.string().trim().toLowerCase().min(1, "Business email is required.").email("Enter a valid email address."),
   phone: z
     .string()
@@ -77,7 +77,8 @@ const base = z.object({
       const problem = phoneProblem(value);
       if (problem) ctx.addIssue({ code: "custom", message: problem });
     })
-    .transform((value) => (phoneProblem(value) ? value : normalizePhone(value))),
+    .transform(normalizePhone)
+    .optional(),
   password: z
     .string()
     .min(1, "Password is required.")

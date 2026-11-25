@@ -141,6 +141,7 @@ export async function submitApplication(
   logo: File | null,
   documents: DocumentUploads
 ): Promise<{ referenceCode: string }> {
+  const fullName = data.fullName ?? data.ownerLegalName;
   if (data.requestedSlug) {
     const availability = await checkRequestedSlug(data.requestedSlug);
     if (!availability.available) throw new ServiceError(availability.reason, 409);
@@ -178,7 +179,7 @@ export async function submitApplication(
     email: data.email,
     password: data.password,
     email_confirm: true,
-    user_metadata: { full_name: data.fullName },
+    user_metadata: { full_name: fullName },
     app_metadata: { role: "owner" },
   });
 
@@ -201,9 +202,9 @@ export async function submitApplication(
       .insert({
         reference_code: `FID-${randomBytes(16).toString("hex").toUpperCase()}`,
         user_id: userId,
-        full_name: data.fullName,
+        full_name: fullName,
         email: data.email,
-        phone: data.phone,
+        phone: data.phone ?? null,
         status: "pending",
         plan_code: data.planCode,
         terms_accepted_at: now,
@@ -288,10 +289,10 @@ export async function submitApplication(
       category: "verification",
       before: "None",
       after: "Pending",
-      reason: `${data.fullName} submitted a new account application with ${documentRows.length} documents.${
+      reason: `${fullName} submitted a new account application with ${documentRows.length} documents.${
         previousRejections ? ` This email was rejected ${previousRejections} time${previousRejections === 1 ? "" : "s"} before.` : ""
       }`,
-      actor: data.fullName,
+      actor: fullName,
     });
 
     // Everything is saved: confirm by email. A mail failure must never undo a valid submission.
@@ -453,7 +454,7 @@ export async function loadAdminSnapshot(): Promise<AdminSnapshot> {
     owner: identity?.owner_legal_name ?? app.full_name,
     location: business ? `${business.city}, ${business.province}` : "—",
     email: app.email,
-    phone: app.phone,
+    phone: app.phone ?? "—",
     plan: planMap.get(app.plan_code)?.name ?? app.plan_code,
     submittedAt: app.submitted_at,
     reviewedAt: app.reviewed_at,

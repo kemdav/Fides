@@ -10,6 +10,7 @@ export const iconBodies: Record<string, { regular: string; fill?: string }> = {
     regular: '<path d="M4 12h16m0 0-6-6m6 6-6 6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="stroke-width:var(--icon-stroke,1.5)"/>',
   },
   "eye": {
+    fill: '<path fill="currentColor" fill-rule="evenodd" d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Zm10 4a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0-1.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/>',
     regular: '<g stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="stroke-width:var(--icon-stroke,1.5)"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></g>',
   },
   "eye-off": {
@@ -41,6 +42,7 @@ export const iconBodies: Record<string, { regular: string; fill?: string }> = {
     "regular": "<g fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"stroke-width:var(--icon-stroke,1.5)\"><path d=\"M4 20V10M10 20V4M16 20v-7M22 20H2\"/></g>"
   },
   "document": {
+    fill: '<path fill="currentColor" fill-rule="evenodd" d="M6.5 2.5h6.75V7a2 2 0 0 0 2 2h3.25v10.5a2 2 0 0 1-2 2h-10a2 2 0 0 1-2-2v-15a2 2 0 0 1 2-2Zm2 9a.75.75 0 0 0 0 1.5H15a.75.75 0 0 0 0-1.5H8.5Zm0 4a.75.75 0 0 0 0 1.5H15a.75.75 0 0 0 0-1.5H8.5ZM14.75 3l3.75 4.5h-3.25a.5.5 0 0 1-.5-.5V3Z"/>',
     "regular": "<g fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"stroke-width:var(--icon-stroke,1.5)\"><path d=\"M6 3h8l4 4v14H6z\"/><path d=\"M14 3v5h5M9 12h6M9 16h6\"/></g>"
   },
   "check": {
