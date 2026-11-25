@@ -178,29 +178,14 @@ export function MerchantSidebar({
         >
           {visibleItems.map((item) => renderItem(item))}
         </nav>
-        {role === "owner" && (
-          <>
-            <p className="mt-2 text-xs leading-[18px] tracking-[1.3px] text-neutral-400">
-              CONFIGURATION
-            </p>
-            <nav
-              aria-label="Merchant configuration"
-              className="flex w-full flex-col gap-[clamp(1px,0.4vh,5px)]"
-            >
-              {renderItem({
-                label: "Website settings",
-                icon: "settings",
-                suffix: "/settings/website",
-              })}
-              {renderItem({
-                label: "Booking settings",
-                icon: "book-settings",
-                suffix: "/settings/booking",
-              })}
-              {renderItem({ label: "Subscription", icon: "card" })}
-            </nav>
-          </>
-        )}
+        {role === "owner" && <>
+        <p className="mt-2 text-xs leading-[18px] tracking-[1.3px] text-neutral-400">CONFIGURATION</p>
+        <nav aria-label="Merchant configuration" className="flex w-full flex-col gap-[clamp(1px,0.4vh,5px)]">
+          {renderItem({ label: "Website settings", icon: "settings", suffix: "/settings/website" })}
+          {renderItem({ label: "Booking settings", icon: "book-settings", suffix: "/settings/booking" })}
+          {renderItem({ label: "Subscription", icon: "card", suffix: "/settings/subscription" })}
+        </nav>
+        </>}
         <div className="flex-1" />
         <div className="shrink-0 border-t border-hairline pt-3">
           <Link
