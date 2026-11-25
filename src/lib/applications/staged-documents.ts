@@ -2,7 +2,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ALL_DOCUMENTS, DOCUMENT_BUCKET, FILE_LIMITS, documentByteLimit } from "@/lib/registration/options";
+import { ALL_DOCUMENTS, DOCUMENT_BUCKET, FILE_LIMITS, documentByteLimit, type DocumentKey } from "@/lib/registration/options";
 import { DocumentUploadError, ServiceError, type DocumentUploads } from "./service";
 
 const fileNameSchema = z.string().min(1).max(255);
@@ -25,23 +25,27 @@ export async function signDocumentUpload(raw: unknown) {
   return { path, url: data.signedUrl };
 }
 
-export async function loadStagedDocuments(raw: FormDataEntryValue | null) {
+export async function loadStagedDocuments(raw: FormDataEntryValue | null, requiredDocuments: readonly { key: DocumentKey; title: string }[]) {
   let manifest: unknown;
   try {
     manifest = JSON.parse(typeof raw === "string" ? raw : "");
   } catch {
     throw new ServiceError("Invalid verification upload details.");
   }
-  const parsed = z.record(z.enum(keys), z.object({ path: pathSchema, name: fileNameSchema })).safeParse(manifest);
+  const parsed = z.partialRecord(z.enum(keys), z.object({ path: pathSchema, name: fileNameSchema })).safeParse(manifest);
   if (!parsed.success) throw new ServiceError("Upload all required verification documents.");
 
+  const uploads = requiredDocuments.map(({ key, title }) => {
+    const receipt = parsed.data[key];
+    if (!receipt) throw new DocumentUploadError(key, `Upload ${title} before submitting.`);
+    const { path, name } = receipt;
+    if (!path.endsWith(`/${key}`)) throw new ServiceError(`Invalid upload for ${title}.`);
+    return { key, title, path, name };
+  });
   const bucket = createAdminClient().storage.from(DOCUMENT_BUCKET);
   const documents: DocumentUploads = {};
   const paths: string[] = [];
-
-  for (const { key, title } of ALL_DOCUMENTS) {
-    const { path, name } = parsed.data[key];
-    if (!path.endsWith(`/${key}`)) throw new ServiceError(`Invalid upload for ${title}.`);
+  for (const { key, title, path, name } of uploads) {
     const { data, error } = await bucket.download(path);
     if (error || !data) throw new DocumentUploadError(key, `Upload ${title} again.`);
     documents[key] = new File([data], name, { type: data.type });

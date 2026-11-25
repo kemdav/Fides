@@ -131,18 +131,20 @@ export function FilePreviewDialog({ file, title, onClose }: { file: File | null;
 export function DocumentCard({
   title,
   hint,
-  required,
   file,
   error,
+  uploaded,
+  progress,
   onFile,
   onRemove,
   onPreview,
 }: {
   title: string;
   hint: string;
-  required: boolean;
   file: File | null;
   error?: string;
+  uploaded: boolean;
+  progress?: number;
   /** Called with a validated file; returns an error message when it is rejected. */
   onFile: (file: File) => string | null;
   onRemove: () => void;
@@ -153,59 +155,56 @@ export function DocumentCard({
   const picker = useFileInput((picked) => setLocalError(onFile(picked)));
   const errorId = useId();
 
+  const added = !!file && !message;
+  const fileAction = "grid size-11 shrink-0 place-items-center rounded-md text-muted hover:bg-white focus-visible:outline-2 focus-visible:outline-burnt";
+
   return (
     <div
       className={cn(
-        "flex flex-col gap-3 rounded-2xl border bg-white p-5 shadow-[0_8px_24px_-12px_rgb(44_58_75/0.15)]",
-        message ? "border-danger" : file ? "border-success/40" : "border-line"
+        "group flex min-w-0 flex-col gap-4 rounded-[20px] border-2 bg-white p-5 transition-colors motion-reduce:transition-none",
+        message ? "border-danger" : added ? "border-success" : "border-line hover:border-burnt/50",
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <span className={cn("flex size-9 items-center justify-center rounded-lg", file ? "bg-wash text-success" : "bg-mist text-glyph")}>
-          <Icon name="file" className="size-5" />
+      <div className="flex items-center gap-3">
+        <span className={cn("grid h-14 w-10 shrink-0 place-items-center rounded-md transition-colors", added
+          ? "bg-wash text-success"
+          : "bg-mist text-glyph group-hover:bg-burnt/15 group-hover:text-burnt")}>
+          <Icon name="file" weight="fill" className="size-7" />
         </span>
-        <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold tracking-wide", required ? "bg-danger-bg text-danger" : "bg-mist text-muted")}>
-          {required ? "REQUIRED" : "OPTIONAL"}
-        </span>
-      </div>
-      <div>
-        <p className="text-base font-semibold text-ink">{title}</p>
-        <p className="text-sm text-subtle">{hint}</p>
+        <div className="min-w-0 flex-1">
+          <p className="text-base font-semibold text-ink">{title}</p>
+          <p className="text-sm text-subtle">{hint}</p>
+        </div>
       </div>
 
       {picker.input(`Upload ${title}`)}
 
       {file ? (
-        <div className="rounded-lg border border-success/60 bg-wash p-3">
-          <div className="flex items-start gap-2.5">
-            <Icon name="check" weight="bold" className="mt-0.5 size-5 text-success" />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-base font-semibold text-success-deep" title={file.name}>
-                {file.name}
-              </p>
-              <p className="text-sm text-success">
-                {formatBytes(file.size)} · {fileKind(file)}
-              </p>
-            </div>
-          </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <button type="button" onClick={() => onPreview(file)} className="h-11 rounded-lg border border-success/50 bg-white px-3 text-sm font-semibold text-success-deep hover:bg-success/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success/40">
-              Preview
-            </button>
-            <button type="button" onClick={picker.open} className="h-11 rounded-lg border border-ink/60 bg-white px-3 text-sm font-semibold text-ink hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40">
-              Replace
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setLocalError(null);
-                onRemove();
-              }}
-              className="h-11 rounded-lg px-2 text-sm font-semibold text-danger hover:bg-danger-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/40"
-            >
-              Remove
-            </button>
-          </div>
+        <div className="mt-auto flex h-14 min-w-0 shrink-0 items-center gap-1 rounded-lg border border-line bg-hairline p-1">
+          <button type="button" onClick={() => onPreview(file)} aria-label={`Preview ${file.name}`}
+            title={`Preview ${file.name}`}
+            className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-md px-2 text-left hover:bg-white focus-visible:outline-2 focus-visible:outline-burnt">
+            <span className="grid size-7 shrink-0 place-items-center rounded-md bg-wash text-success">
+              <Icon name="eye" className="size-4" />
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-semibold text-ink">{file.name}</span>
+              <span className={cn("block truncate text-xs", uploaded ? "text-success-deep" : "text-muted")}>
+                {uploaded ? "Uploaded ? " : ""}{formatBytes(file.size)}
+              </span>
+            </span>
+          </button>
+          <button type="button" onClick={picker.open} aria-label={`Replace ${title}`} title="Replace file" className={fileAction}>
+            <Icon name="upload" className="size-4" />
+          </button>
+          <button type="button" aria-label={`Remove ${title}`} title="Remove file"
+            onClick={() => {
+              setLocalError(null);
+              onRemove();
+            }}
+            className={cn(fileAction, "hover:text-danger")}>
+            <Icon name="trash" className="size-4" />
+          </button>
         </div>
       ) : (
         <button
@@ -214,13 +213,17 @@ export function DocumentCard({
           aria-describedby={message ? errorId : undefined}
           data-invalid={message ? "true" : undefined}
           className={cn(
-            "flex h-12 w-full items-center justify-center gap-2 rounded-lg border bg-white text-base font-semibold transition-colors hover:border-burnt hover:bg-burnt/5 hover:text-burnt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40",
-            message ? "border-danger text-danger" : "border-outline/50 text-muted"
+            "mt-auto flex h-14 w-full shrink-0 items-center justify-center gap-2 rounded-lg border bg-white text-base font-semibold transition-colors group-hover:border-burnt group-hover:bg-burnt group-hover:text-white focus-visible:border-burnt focus-visible:bg-burnt focus-visible:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40",
+            message ? "border-danger text-danger" : "border-outline/50 text-muted",
           )}
         >
           <Icon name="upload" className="size-5" />
           Upload File
         </button>
+      )}
+
+      {progress !== undefined && (
+        <progress aria-label={`${title} upload progress`} value={progress} max={100} className="h-2 w-full accent-burnt" />
       )}
 
       {message ? (

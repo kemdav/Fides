@@ -1,3 +1,7 @@
+import { BUSINESS_DOCUMENTS, businessDocumentsFor, type BusinessDocumentKey } from "./document-requirements";
+
+export { type BusinessDocumentKey } from "./document-requirements";
+
 export const TRIAL_DAYS = 30;
 export const REGISTRATION_CODE_LENGTH = 6;
 
@@ -20,6 +24,19 @@ export const BUSINESS_TYPES = [
   "Physical Therapy & Wellness",
   "Fitness & Training Studio",
   "Specialist Consultation",
+  "Massage & Day Spa",
+  "Tattoo & Body Piercing",
+  "Aesthetic, Dermatology & Laser Clinic",
+  "Professional & Corporate Consulting",
+  "Manpower, Staffing & Cleaning",
+  "Private Security Agency",
+  "Travel Agency & Tour Operator",
+  "Transport, Logistics & Courier",
+  "IT, BPO & Digital Services",
+  "Catering Services",
+  "Event Styling",
+  "Repair, Maintenance & HVAC",
+  "Construction & Engineering Contractor",
   "Other Service Provider",
 ] as const;
 
@@ -36,27 +53,18 @@ export const IDENTITY_DOCUMENT_SLOTS = [
   { key: "government_id_back", side: "Back", title: "Government-Issued ID (Back)", hint: "Back of the same government-issued ID.", required: true },
 ] as const;
 
-/** Business documents shown on the "Document Requirements" step. All are required. */
-export const DOCUMENT_SLOTS = [
-  { key: "dti_sec_registration", title: "DTI or SEC Registration", hint: "Sole proprietor or Corporation registration.", required: true },
-  { key: "mayors_permit", title: "Mayor's / Business Permit", hint: "Current permit issued by your local government.", required: true },
-  { key: "bir_registration", title: "BIR Certificate of Registration", hint: "BIR Form 2303 for your business.", required: true },
-  { key: "barangay_clearance", title: "Barangay Clearance", hint: "Issued by the barangay where you operate.", required: true },
-  { key: "proof_of_address", title: "Proof of Business Address", hint: "Lease contract or recent utility bill.", required: true },
-  { key: "other_permit", title: "Other Permits or Licenses", hint: "Sanitary, professional, or industry licenses.", required: true },
-] as const;
-
-export type BusinessDocumentKey = (typeof DOCUMENT_SLOTS)[number]["key"];
 export type IdentityDocumentKey = (typeof IDENTITY_DOCUMENT_SLOTS)[number]["key"];
 export type DocumentKey = BusinessDocumentKey | IdentityDocumentKey;
 
-/** Every document an application must contain, in display order. */
+/** Catalog of recognized upload keys, including legacy documents. */
 export const ALL_DOCUMENTS: ReadonlyArray<{ key: DocumentKey; title: string; hint: string; required: boolean }> = [
   ...IDENTITY_DOCUMENT_SLOTS,
-  ...DOCUMENT_SLOTS,
+  ...BUSINESS_DOCUMENTS,
 ];
 
-export const REQUIRED_DOCUMENT_KEYS: readonly DocumentKey[] = ALL_DOCUMENTS.filter((doc) => doc.required).map((doc) => doc.key);
+export function applicationDocumentsFor(businessType: string) {
+  return [...IDENTITY_DOCUMENT_SLOTS, ...businessDocumentsFor(businessType)];
+}
 
 export function documentTitle(key: string): string {
   return ALL_DOCUMENTS.find((doc) => doc.key === key)?.title ?? key;

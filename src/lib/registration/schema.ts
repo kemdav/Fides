@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ID_TYPES, PLAN_OPTIONS } from "./options";
+import { BUSINESS_TYPES, ID_TYPES, PLAN_OPTIONS } from "./options";
 import { slugSchema } from "@/lib/account-request/schema";
 
 export type PasswordChecks = {
@@ -105,7 +105,7 @@ const base = z.object({
   }),
 
   businessName: text("Business name", 120).min(2, "Business name must be at least 2 characters."),
-  businessType: text("Business type", 80),
+  businessType: z.enum(BUSINESS_TYPES, { error: "Select a business type." }),
   requestedSlug: slugSchema.optional(),
   establishedYear: z
     .string()

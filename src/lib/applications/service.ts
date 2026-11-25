@@ -13,7 +13,7 @@ import {
   FILE_LIMITS,
   GOVERNMENT_ID_SLOT,
   ID_TYPES,
-  REQUIRED_DOCUMENT_KEYS,
+  applicationDocumentsFor,
   type DocumentKey,
 } from "@/lib/registration/options";
 import type { RegistrationInput } from "@/lib/registration/schema";
@@ -98,10 +98,9 @@ function sniffDocument(bytes: Buffer): Pick<PreparedDocument, "mime" | "extensio
   return null;
 }
 
-async function prepareDocuments(documents: DocumentUploads): Promise<PreparedDocument[]> {
+async function prepareDocuments(documents: DocumentUploads, data: RegistrationInput): Promise<PreparedDocument[]> {
   const prepared: PreparedDocument[] = [];
-  for (const key of REQUIRED_DOCUMENT_KEYS) {
-    const title = ALL_DOCUMENTS.find((doc) => doc.key === key)?.title ?? key;
+  for (const { key, title } of applicationDocumentsFor(data.businessType)) {
     const file = documents[key];
     if (!file || file.size === 0) throw new DocumentUploadError(key, `${title} is required. Please upload this document.`);
     const limit = documentByteLimit(key);
@@ -157,7 +156,7 @@ export async function submitApplication(
   }
 
   // Every document is required. Validate them all before anything is created.
-  const preparedDocuments = await prepareDocuments(documents);
+  const preparedDocuments = await prepareDocuments(documents, data);
 
   const admin = createAdminClient();
 
@@ -372,8 +371,9 @@ function mimeLabel(mime: string | null): string {
 /** One entry per required document, in display order, flagged as uploaded or missing. */
 function buildDocumentList(rows: ApplicationDocumentRow[]): SubmissionDocument[] {
   const byType = new Map(rows.map((row) => [row.document_type, row]));
-  // Older submissions predate the back-ID requirement.
-  const list: SubmissionDocument[] = ALL_DOCUMENTS.filter((doc) => doc.key !== "government_id_back" || byType.has(doc.key)).map((doc) => {
+  const legacyKeys: readonly DocumentKey[] = ["government_id", "dti_sec_registration", "mayors_permit", "bir_registration", "barangay_clearance", "proof_of_address", "other_permit"];
+  const legacy = !byType.has("community_tax");
+  const list: SubmissionDocument[] = ALL_DOCUMENTS.filter(({ key }) => byType.has(key) || (legacy && legacyKeys.includes(key))).map((doc) => {
     const row = byType.get(doc.key);
     const uploaded = !!row?.storage_path;
     return {

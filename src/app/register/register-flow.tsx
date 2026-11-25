@@ -15,9 +15,8 @@ import { StaffSuccessDialog } from "@/components/merchant/staff/staff-confirmati
 import { Card as BaseCard } from "@/components/ui";
 import { MascotLoadingDialog } from "@/components/ui/mascot-loading-dialog";
 import {
-  ALL_DOCUMENTS,
+  applicationDocumentsFor,
   BUSINESS_TYPES,
-  DOCUMENT_SLOTS,
   FILE_LIMITS,
   IDENTITY_DOCUMENT_SLOTS,
   documentByteLimit,
@@ -27,6 +26,7 @@ import {
   type IdentityDocumentKey,
   type DocumentKey,
 } from "@/lib/registration/options";
+import { businessDocumentsFor } from "@/lib/registration/document-requirements";
 import {
   accountStepSchema,
   businessStepSchema,
@@ -218,6 +218,7 @@ export function RegisterFlow({
     zipCode: registrationZipCode(values),
     requestedSlug: requestAccount ? values.requestedSlug : undefined,
   };
+  const requiredDocuments = applicationDocumentsFor(values.businessType);
 
   function missingIdentityDocuments(): Errors {
     return Object.fromEntries(
@@ -277,6 +278,11 @@ export function RegisterFlow({
       }
       return updated;
     });
+    if (key === "businessType") {
+      setDocErrors({});
+      setCompletedSteps((current) => current.filter((index) => index !== 3));
+      setFurthest((current) => Math.min(current, 3));
+    }
     setErrors((current) =>
       current[key] ? { ...current, [key]: undefined } : current,
     );
@@ -313,7 +319,7 @@ export function RegisterFlow({
         focusFirstError();
         return false;
       }
-      for (const slot of DOCUMENT_SLOTS) {
+      for (const slot of requiredDocuments) {
         if (!docs[slot.key])
           missing[slot.key] =
             `${slot.title} is required. Please upload a PDF, JPG or PNG file (max ${documentSizeMb} MB).`;
@@ -322,7 +328,7 @@ export function RegisterFlow({
       const count = Object.keys(missing).length;
       found = count
         ? {
-            documents: `${count} required ${count === 1 ? "document is" : "documents are"} still missing. Please upload every document marked REQUIRED.`,
+            documents: `${count} required ${count === 1 ? "document is" : "documents are"} still missing.`,
           }
         : {};
     }
@@ -414,7 +420,7 @@ export function RegisterFlow({
     setUploading(true);
     try {
       const results = await Promise.all(
-        ALL_DOCUMENTS.map(async ({ key }) => {
+        requiredDocuments.map(async ({ key }) => {
           const file = docs[key];
           if (!file) return false;
           if (uploads[key]?.file === file && uploads[key]?.receipt) return true;
@@ -444,6 +450,12 @@ export function RegisterFlow({
           }
         }),
       );
+      const failedIdentity = requiredDocuments.find(({ key }, index) =>
+        !results[index] && IDENTITY_DOCUMENT_SLOTS.some((slot) => slot.key === key),
+      );
+      if (failedIdentity) {
+        setErrors({ documents: `Could not upload ${failedIdentity.title}. Select Continue to retry.` });
+      }
       return results.every(Boolean);
     } finally {
       setUploading(false);
@@ -506,7 +518,7 @@ export function RegisterFlow({
       return;
     }
 
-    const missingDocs = ALL_DOCUMENTS.filter((doc) => !docs[doc.key]);
+    const missingDocs = requiredDocuments.filter((doc) => !docs[doc.key]);
     if (missingDocs.length > 0) {
       const onIdentity = IDENTITY_DOCUMENT_SLOTS.some(({ key }) => !docs[key]);
       const message = `Please upload all required documents before submitting (missing: ${missingDocs.map((doc) => doc.title).join(", ")}).`;
@@ -527,7 +539,7 @@ export function RegisterFlow({
     }
 
     const receipts: Partial<Record<DocumentKey, UploadReceipt>> = {};
-    for (const { key, title } of ALL_DOCUMENTS) {
+    for (const { key, title } of requiredDocuments) {
       const upload = uploads[key];
       if (!upload?.receipt || upload.file !== docs[key]) {
         setErrors({ documents: `Upload ${title} before submitting.` });
@@ -741,6 +753,7 @@ export function RegisterFlow({
           )}
           {step === 3 && (
             <DocumentsStep
+              businessType={values.businessType}
               uploads={uploads}
               uploading={uploading}
               docs={docs}
@@ -1299,6 +1312,7 @@ function BusinessStep({
             id="businessType"
             label="Business Type"
             required
+            searchable
             size="large"
             value={values.businessType}
             options={BUSINESS_TYPES.map((type) => ({
@@ -1402,6 +1416,7 @@ function BusinessStep({
 }
 
 function DocumentsStep({
+  businessType,
   uploads,
   uploading,
   docs,
@@ -1413,6 +1428,7 @@ function DocumentsStep({
   onBack,
   onNext,
 }: {
+  businessType: string;
   uploads: Uploads;
   uploading: boolean;
   docs: DocMap;
@@ -1428,12 +1444,6 @@ function DocumentsStep({
   onBack: () => void;
   onNext: () => void;
 }) {
-  const files = ALL_DOCUMENTS.flatMap(({ key, title }) => {
-    const file = docs[key];
-    if (!file) return [];
-    const upload = uploads[key];
-    return [{ key, title, upload: upload?.file === file ? upload : undefined }];
-  });
   return (
     <form
       noValidate
@@ -1444,7 +1454,7 @@ function DocumentsStep({
     >
       <Heading
         title="Upload your business documents"
-        subtitle="These documents help us verify your business before your application is reviewed. Review begins after your final submission on the last step."
+        subtitle={`All documents listed below are required for your selected business type (${businessType}).`}
       />
       {summaryError ? (
         <p
@@ -1454,48 +1464,25 @@ function DocumentsStep({
           {summaryError}
         </p>
       ) : null}
-      <ul
-        className="mb-4 grid gap-2 text-base empty:hidden"
-        aria-label="Verification upload progress"
-      >
-        {files.map(({ key, title, upload }) => (
-          <li
-            key={key}
-            className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white p-3"
-          >
-            <span>{title}</span>
-            {upload?.error ? (
-              <span role="alert" className="text-danger">
-                {upload.error}
-              </span>
-            ) : upload?.receipt ? (
-              <span className="text-success">Uploaded</span>
-            ) : uploading ? (
-              <progress
-                aria-label={`${title} upload progress`}
-                value={upload?.percent ?? 0}
-                max={100}
-              />
-            ) : (
-              <span className="text-muted">Ready to upload</span>
-            )}
-          </li>
-        ))}
-      </ul>
       <fieldset disabled={uploading} className="grid gap-5 md:grid-cols-2">
-        {DOCUMENT_SLOTS.map((slot) => (
-          <DocumentCard
-            key={slot.key}
-            title={slot.title}
-            hint={slot.hint}
-            required={slot.required}
-            file={docs[slot.key] ?? null}
-            error={docErrors[slot.key]}
-            onFile={(file) => onFile(slot.key, slot.title, file)}
-            onRemove={() => onRemove(slot.key)}
-            onPreview={(file) => onPreview(file, slot.title)}
-          />
-        ))}
+        {businessDocumentsFor(businessType).map((slot) => {
+          const file = docs[slot.key] ?? null;
+          const upload = uploads[slot.key]?.file === file ? uploads[slot.key] : undefined;
+          return (
+            <DocumentCard
+              key={slot.key}
+              title={slot.title}
+              hint={slot.hint}
+              file={file}
+              error={docErrors[slot.key] ?? upload?.error}
+              uploaded={!!upload?.receipt}
+              progress={uploading && !upload?.receipt && !upload?.error ? upload?.percent : undefined}
+              onFile={(file) => onFile(slot.key, slot.title, file)}
+              onRemove={() => onRemove(slot.key)}
+              onPreview={(file) => onPreview(file, slot.title)}
+            />
+          );
+        })}
       </fieldset>
       <div className="mt-6 flex flex-col gap-4">
         <InfoNote>
@@ -1797,7 +1784,7 @@ function SummaryStep({
         icon="document"
         onEdit={() => onEdit(3)}
       >
-        {DOCUMENT_SLOTS.map((slot) => {
+        {businessDocumentsFor(values.businessType).map((slot) => {
           const file = docs[slot.key];
           return file ? (
             <div key={slot.key} className="flex flex-col gap-1">

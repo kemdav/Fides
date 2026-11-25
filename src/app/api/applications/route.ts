@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { DocumentUploadError, ServiceError, submitApplication, type DocumentUploads } from "@/lib/applications/service";
-import { ALL_DOCUMENTS, documentFieldName } from "@/lib/registration/options";
+import { applicationDocumentsFor, documentFieldName } from "@/lib/registration/options";
 import { loadStagedDocuments } from "@/lib/applications/staged-documents";
 import { hasRegistrationEmailProof } from "@/lib/auth/registration-email";
 import { registrationSchema } from "@/lib/registration/schema";
@@ -34,14 +34,15 @@ export async function POST(request: Request) {
     }
 
     const logo = form.get("logo");
+    const requiredDocuments = applicationDocumentsFor(parsed.data.businessType);
     if (form.has("uploadedDocuments")) {
-      const staged = await loadStagedDocuments(form.get("uploadedDocuments"));
+      const staged = await loadStagedDocuments(form.get("uploadedDocuments"), requiredDocuments);
       const result = await submitApplication(parsed.data, logo instanceof File && logo.size > 0 ? logo : null, staged.documents);
       await staged.cleanup();
       return NextResponse.json(result, { status: 201 });
     }
     const documents: DocumentUploads = {};
-    for (const doc of ALL_DOCUMENTS) {
+    for (const doc of requiredDocuments) {
       const file = form.get(documentFieldName(doc.key));
       if (file instanceof File && file.size > 0) documents[doc.key] = file;
     }
