@@ -29,6 +29,7 @@
   /* figma brand orange is #cc5500; nudged to #c35000 so white text and orange text both pass wcag aa (4.7:1) */
   --color-burnt: #c35000;
   --color-burnt-dark: #994000;
+  --color-on-burnt: #fff;
   --color-sky: #add8e6;
 
   --color-ink: #09101d;

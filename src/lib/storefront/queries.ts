@@ -31,6 +31,13 @@ export interface StorefrontTenant {
   instagram: string | null;
   tagline: string | null;
   businessCategory: string;
+  typography: string;
+  pageTitle: string | null;
+  metaDescription: string | null;
+  allowIndexing: boolean;
+  socialTitle: string | null;
+  socialDescription: string | null;
+  socialImageUrl: string | null;
 }
 
 export interface StorefrontServiceCategory {
@@ -120,7 +127,14 @@ export async function getStorefrontTenant(
         show_contact_details,
         instagram,
         tagline,
-        business_category
+        business_category,
+        typography,
+        page_title,
+        meta_description,
+        allow_indexing,
+        social_title,
+        social_description,
+        social_image_url
       )
     `)
     .eq("slug", slug.toLowerCase().trim())
@@ -132,13 +146,16 @@ export async function getStorefrontTenant(
     ? data.tenant_settings[0]
     : data.tenant_settings;
 
-  const fullAddress = [
-    settings?.street_address,
-    settings?.city_province,
-    settings?.postal_code,
-  ]
-    .filter(Boolean)
-    .join(", ") || data.address || null;
+  const fullAddress =
+    [
+      settings?.street_address,
+      settings?.city_province,
+      settings?.postal_code,
+    ]
+      .filter(Boolean)
+      .join(", ") ||
+    data.address ||
+    null;
 
   return {
     id: data.id,
@@ -165,6 +182,13 @@ export async function getStorefrontTenant(
     instagram: settings?.instagram ?? null,
     tagline: settings?.tagline ?? null,
     businessCategory: settings?.business_category ?? "general",
+    typography: settings?.typography ?? "Ovo + Mulish",
+    pageTitle: settings?.page_title ?? null,
+    metaDescription: settings?.meta_description ?? null,
+    allowIndexing: settings?.allow_indexing ?? true,
+    socialTitle: settings?.social_title ?? null,
+    socialDescription: settings?.social_description ?? null,
+    socialImageUrl: settings?.social_image_url ?? null,
   };
 }
 
@@ -194,6 +218,7 @@ export async function getStorefrontServices(
     `)
     .eq("tenant_id", tenantId)
     .eq("active", true)
+    .eq("is_archived", false)
     .order("created_at", { ascending: true });
 
   if (error || !data) return [];
