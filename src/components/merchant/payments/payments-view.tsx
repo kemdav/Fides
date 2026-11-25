@@ -3,8 +3,12 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { MerchantSidebar } from "@/components/merchant/merchant-sidebar";
+import { AdminButton } from "@/components/admin/admin-button";
 import { Icon } from "@/components/admin/icon";
-import { formatPeso, normalizePaymentMethod } from "@/lib/payments";
+import { MetricCard } from "@/components/admin/metric-card";
+import { PageContent, PageHeading, Surface } from "@/components/admin/primitives";
+import { formatPeso } from "@/lib/payments";
+import { cn } from "@/lib/utils";
 import { generateBirSalesBookCsv, triggerCsvDownload } from "@/lib/payments-export";
 import {
   recordPaymentAction,
@@ -12,6 +16,7 @@ import {
   refundPaymentAction,
 } from "@/app/actions/payments";
 import { DailyCollectionsBarChart, MethodDonutChart } from "./payment-charts";
+import { PaymentLedgerTable } from "./payment-ledger-table";
 import { PaymentPortalDropdown, type DropdownMenuItem } from "./payment-portal-dropdown";
 import {
   ActionCompletedModal,
@@ -22,7 +27,6 @@ import {
   RecordPaymentModal,
   RefundPaymentConfirmationModal,
   SelectAppointmentModal,
-  StatusBadge,
   VoidPaymentConfirmationModal,
 } from "./payment-modals";
 import type {
@@ -36,6 +40,65 @@ import type {
   UnsettledAppointmentDTO,
 } from "@/types/payments";
 import type { WorkspaceRole } from "@/lib/merchant/workspace-roles";
+
+const ledgerTabs = [
+  { id: "unsettled", label: "Unsettled Appointments" },
+  { id: "history", label: "Payment History" },
+] as const;
+
+type LedgerTab = (typeof ledgerTabs)[number]["id"];
+
+const historyStatusOptions = [
+  { value: "all", label: "All statuses" },
+  { value: "paid", label: "Paid" },
+  { value: "partial", label: "Partial" },
+  { value: "voided", label: "Voided" },
+  { value: "refunded", label: "Refunded" },
+] as const;
+
+const unsettledStatusOptions = [
+  { value: "all", label: "All statuses" },
+  { value: "unpaid", label: "Unpaid" },
+  { value: "partial", label: "Partial" },
+] as const;
+
+const methodOptions = [
+  { value: "all", label: "All methods" },
+  { value: "cash", label: "Cash" },
+  { value: "ewallet", label: "E-wallet (GCash / Maya)" },
+  { value: "card", label: "Card" },
+] as const;
+
+function PaymentFilterSection<T extends string>({ title, options, value, onChange, open }: {
+  title: string;
+  options: ReadonlyArray<{ value: T; label: string }>;
+  value: T;
+  onChange: (value: T) => void;
+  open: boolean;
+}) {
+  return (
+    <details open={open} className="group border-b border-hairline last:border-b-0">
+      <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-subtle hover:bg-mist focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-burnt [&::-webkit-details-marker]:hidden">
+        {title}
+        <span aria-hidden="true" className="group-open:hidden">+</span>
+        <span aria-hidden="true" className="hidden group-open:inline">−</span>
+      </summary>
+      <div className="pb-2" role="group" aria-label={title}>
+        {options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            aria-pressed={option.value === value}
+            onClick={() => onChange(option.value)}
+            className="block w-full break-words px-4 py-2 text-left text-sm text-body hover:bg-mist focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-burnt aria-pressed:font-semibold aria-pressed:text-burnt"
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </details>
+  );
+}
 
 interface PaymentsViewProps {
   initialData: PaymentsDashboardDTO;
@@ -59,21 +122,22 @@ export function PaymentsView({
   const router = useRouter();
 
   // Active Ledger Tab
-  const [activeTab, setActiveTab] = React.useState<"unsettled" | "history">("history");
-
-  // Timeframe for collections bar chart
-  const [timeframe, setTimeframe] = React.useState<"7" | "14" | "30">("7");
+  const [activeTab, setActiveTab] = React.useState<LedgerTab>("history");
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = React.useState("");
   const [filterMethod, setFilterMethod] = React.useState<"all" | PaymentMethod>("all");
-  const [filterStatus, setFilterStatus] = React.useState<"all" | PaymentRecordStatus | "unpaid">("all");
+  const [historyStatus, setHistoryStatus] = React.useState<"all" | PaymentRecordStatus>("all");
+  const [unsettledStatus, setUnsettledStatus] = React.useState<"all" | UnsettledAppointmentDTO["paymentStatus"]>("all");
   const [filterMenuOpen, setFilterMenuOpen] = React.useState(false);
+  const filterPanelId = React.useId();
+  const filterRef = React.useRef<HTMLDivElement>(null);
+  const filterButtonRef = React.useRef<HTMLButtonElement>(null);
 
   // Portal Dropdown state for table row action
   const [dropdownAnchor, setDropdownAnchor] = React.useState<HTMLElement | null>(null);
   const [dropdownTargetItem, setDropdownTargetItem] = React.useState<{
-    type: "unsettled" | "history";
+    type: LedgerTab;
     item: UnsettledAppointmentDTO | PaymentRecordDTO;
   } | null>(null);
 
@@ -111,25 +175,37 @@ export function PaymentsView({
 
   const { dailyCollections, methodBreakdown } = initialData;
 
-  // Local state initialized from initialData
+  const [lastDashboardData, setLastDashboardData] = React.useState(initialData);
   const [history, setHistory] = React.useState<PaymentRecordDTO[]>(initialData.paymentHistory);
   const [unsettled, setUnsettled] = React.useState<UnsettledAppointmentDTO[]>(initialData.unsettledAppointments);
   const [currentKpis, setCurrentKpis] = React.useState<PaymentKpiSummaryDTO>(initialData.kpis);
 
-  // Sync state if initialData changes (e.g. from background revalidation)
-  React.useEffect(() => {
+  if (lastDashboardData !== initialData) {
+    setLastDashboardData(initialData);
     setHistory(initialData.paymentHistory);
     setUnsettled(initialData.unsettledAppointments);
     setCurrentKpis(initialData.kpis);
-  }, [initialData]);
+  }
 
-  // Select chart series based on timeframe
-  const activeDailySeries =
-    timeframe === "7"
-      ? dailyCollections.sevenDays
-      : timeframe === "14"
-      ? dailyCollections.fourteenDays
-      : dailyCollections.thirtyDays;
+  React.useEffect(() => {
+    if (!filterMenuOpen) return;
+
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (!filterRef.current?.contains(event.target as Node)) setFilterMenuOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || !filterRef.current?.contains(event.target as Node)) return;
+      setFilterMenuOpen(false);
+      filterButtonRef.current?.focus();
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [filterMenuOpen]);
 
   // Filtered Unsettled Appointments
   const filteredUnsettled = React.useMemo(() => {
@@ -142,11 +218,11 @@ export function PaymentsView({
         apt.staffName.toLowerCase().includes(q);
 
       const matchesStatus =
-        filterStatus === "all" || apt.paymentStatus === filterStatus;
+        unsettledStatus === "all" || apt.paymentStatus === unsettledStatus;
 
       return matchesSearch && matchesStatus;
     });
-  }, [unsettled, searchQuery, filterStatus]);
+  }, [unsettled, searchQuery, unsettledStatus]);
 
   // Filtered Payment History
   const filteredHistory = React.useMemo(() => {
@@ -163,22 +239,27 @@ export function PaymentsView({
         filterMethod === "all" || rec.method === filterMethod;
 
       const matchesStatus =
-        filterStatus === "all" || rec.status === filterStatus;
+        historyStatus === "all" || rec.status === historyStatus;
 
       return matchesSearch && matchesMethod && matchesStatus;
     });
-  }, [history, searchQuery, filterMethod, filterStatus]);
+  }, [history, searchQuery, filterMethod, historyStatus]);
 
   /* ------------------------------------------------------------- Handlers */
 
-  const handleStartRecordPayment = (apt?: UnsettledAppointmentDTO) => {
+  const showReceipt = React.useCallback((record: PaymentRecordDTO) => {
+    setReceiptRecord(record);
+    setShowReceiptModal(true);
+  }, []);
+
+  const handleStartRecordPayment = React.useCallback((apt?: UnsettledAppointmentDTO) => {
     if (apt) {
       setSelectedAptForRecord(apt);
       setShowRecordModal(true);
     } else {
       setShowSelectAptModal(true);
     }
-  };
+  }, []);
 
   const handleSelectAptFromModal = (apt: UnsettledAppointmentDTO) => {
     setSelectedAptForRecord(apt);
@@ -204,7 +285,6 @@ export function PaymentsView({
       }
 
       const createdPayment = res.data.payment;
-      const changeCents = res.data.changeCents;
 
       // 1. Immediately prepend into local payment history
       setHistory((prev) => [createdPayment, ...prev.filter((p) => p.id !== createdPayment.id)]);
@@ -344,19 +424,37 @@ export function PaymentsView({
     triggerCsvDownload(csv, filename);
   };
 
+<<<<<<< HEAD
   const handleCloseDropdown = React.useCallback(() => {
+=======
+  const closeDropdown = React.useCallback(() => {
+>>>>>>> e0f2bf585edf876750be2af6d4b61799819c43bc
     setDropdownAnchor(null);
     setDropdownTargetItem(null);
   }, []);
 
+<<<<<<< HEAD
+=======
+  const changeTab = (tab: LedgerTab) => {
+    setActiveTab(tab);
+    setFilterMenuOpen(false);
+    closeDropdown();
+  };
+
+>>>>>>> e0f2bf585edf876750be2af6d4b61799819c43bc
   const handleOpenDropdown = (
     e: React.MouseEvent<HTMLElement>,
     item: UnsettledAppointmentDTO | PaymentRecordDTO,
-    type: "unsettled" | "history"
+    type: LedgerTab,
   ) => {
+<<<<<<< HEAD
     e.stopPropagation();
     if (dropdownAnchor === e.currentTarget) {
       handleCloseDropdown();
+=======
+    if (dropdownAnchor === e.currentTarget) {
+      closeDropdown();
+>>>>>>> e0f2bf585edf876750be2af6d4b61799819c43bc
       return;
     }
     setDropdownAnchor(e.currentTarget);
@@ -387,10 +485,7 @@ export function PaymentsView({
       const items: DropdownMenuItem[] = [
         {
           label: "View Receipt",
-          onClick: () => {
-            setReceiptRecord(rec);
-            setShowReceiptModal(true);
-          },
+          onClick: () => showReceipt(rec),
         },
       ];
 
@@ -404,8 +499,7 @@ export function PaymentsView({
             if (apt) {
               handleStartRecordPayment(apt);
             } else {
-              setReceiptRecord(rec);
-              setShowReceiptModal(true);
+              showReceipt(rec);
             }
           },
         });
@@ -435,476 +529,256 @@ export function PaymentsView({
 
       return items;
     }
-  }, [dropdownTargetItem, userRole, unsettled, slug, router]);
+  }, [dropdownTargetItem, userRole, unsettled, slug, router, handleStartRecordPayment, showReceipt]);
+
+  const isHistory = activeTab === "history";
+  const activeTitle = isHistory ? "Payment History" : "Unsettled Appointments";
+  const hasFilters = isHistory
+    ? historyStatus !== "all" || filterMethod !== "all"
+    : unsettledStatus !== "all";
+  const hasQuery = Boolean(searchQuery.trim()) || hasFilters;
+
+  function resetFilters() {
+    if (isHistory) {
+      setFilterMethod("all");
+      setHistoryStatus("all");
+    } else {
+      setUnsettledStatus("all");
+    }
+  }
+
+  const renderRowActions = (item: PaymentRecordDTO | UnsettledAppointmentDTO, kind: LedgerTab) => {
+    const expanded = dropdownTargetItem?.item === item;
+    return (
+      <button
+        type="button"
+        aria-label={"Payment actions for " + item.customerName}
+        aria-haspopup="menu"
+        aria-expanded={expanded}
+        onClick={(event) => handleOpenDropdown(event, item, kind)}
+        className={cn(
+          "mx-auto flex h-9 w-10 items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40",
+          expanded ? "bg-mist text-ink" : "text-glyph hover:bg-mist hover:text-ink",
+        )}
+      >
+        <Icon name="more" weight="fill" className="size-5" />
+      </button>
+    );
+  };
 
   return (
-    <div className="flex min-h-screen bg-[#FFFFEB]">
-      {/* Merchant Sidebar */}
-      <MerchantSidebar
-        businessName={businessName}
-        userName={userName}
-        userEmail={userEmail}
-        userRole={userRole}
-        basePath={`/${slug}`}
-      />
+    <>
+      <div className={cn("flex min-h-dvh flex-col bg-powder text-ink lg:h-dvh lg:flex-row lg:overflow-hidden", showReceiptModal && "print:hidden")}>
+        <MerchantSidebar
+          businessName={businessName}
+          userName={userName}
+          userEmail={userEmail}
+          userRole={userRole}
+          basePath={"/" + slug}
+        />
 
-      {/* Main Content Area */}
-      <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
-        {/* Page Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#1E293B]">Payments</h1>
-            <p className="text-xs text-[#64748B] mt-0.5">
-              Record appointment settlements, track balances, and review payment history.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => handleStartRecordPayment()}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#C35000] px-4 py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-[#A73F00] transition-colors shrink-0"
-          >
-            <Icon name="card" className="size-4" />
-            + Record Payment
-          </button>
-        </div>
-
-        {/* Row 1: Four KPI Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-          {/* Card 1: Collected Today (Solid Burnt-Orange) */}
-          <div className="flex flex-col justify-between rounded-xl bg-[#C35000] p-5 text-white shadow-sm min-h-[140px]">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-white/90">Collected today</span>
-              <div className="flex size-7 items-center justify-center rounded-lg bg-white/20">
-                <Icon name="card" className="size-4 text-white" />
-              </div>
-            </div>
-            <div className="my-1">
-              <span className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-                {formatPeso(currentKpis.collectedTodayCents)}
-              </span>
-            </div>
-            <p className="text-[11px] text-white/80">
-              Across {currentKpis.collectedTodayCount} paid transaction{currentKpis.collectedTodayCount === 1 ? "" : "s"}
-            </p>
-          </div>
-
-          {/* Card 2: Outstanding Balance (White) */}
-          <div className="flex flex-col justify-between rounded-xl border border-[#EDECE8] bg-white p-5 shadow-sm min-h-[140px]">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-[#64748B]">Outstanding balance</span>
-              <div className="flex size-7 items-center justify-center rounded-lg bg-[#F8FAFC]">
-                <Icon name="clock" className="size-4 text-[#64748B]" />
-              </div>
-            </div>
-            <div className="my-1">
-              <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#1E293B]">
-                {formatPeso(currentKpis.outstandingBalanceCents)}
-              </span>
-            </div>
-            <p className="text-[11px] text-[#64748B]">
-              {currentKpis.outstandingAppointmentsCount} appointment{currentKpis.outstandingAppointmentsCount === 1 ? "" : "s"} with unpaid balances
-            </p>
-          </div>
-
-          {/* Card 3: Unsettled Appointments (White, Smooth Tab Switch on Click) */}
-          <button
-            type="button"
-            onClick={() => setActiveTab("unsettled")}
-            className="flex flex-col justify-between rounded-xl border border-[#EDECE8] bg-white p-5 text-left shadow-sm min-h-[140px] hover:border-[#C35000]/40 transition-colors cursor-pointer group"
-          >
-            <div className="flex items-center justify-between w-full">
-              <span className="text-xs font-medium text-[#64748B] group-hover:text-[#C35000] transition-colors">
-                Unsettled appointments
-              </span>
-              <div className="flex size-7 items-center justify-center rounded-lg bg-[#F8FAFC] group-hover:bg-[#FFF7ED]">
-                <Icon name="calendar" className="size-4 text-[#64748B] group-hover:text-[#C35000]" />
-              </div>
-            </div>
-            <div className="my-1">
-              <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#1E293B]">
-                {currentKpis.unsettledAppointmentsCount}
-              </span>
-            </div>
-            <p className="text-[11px] text-[#64748B]">
-              Awaiting full or partial settlement <span className="text-[#C35000] underline font-medium ml-1">View</span>
-            </p>
-          </button>
-
-          {/* Card 4: Average Payment (White) */}
-          <div className="flex flex-col justify-between rounded-xl border border-[#EDECE8] bg-white p-5 shadow-sm min-h-[140px]">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-[#64748B]">Average payment</span>
-              <div className="flex size-7 items-center justify-center rounded-lg bg-[#F8FAFC]">
-                <Icon name="chart" className="size-4 text-[#64748B]" />
-              </div>
-            </div>
-            <div className="my-1">
-              <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#1E293B]">
-                {formatPeso(currentKpis.averagePaymentCents)}
-              </span>
-            </div>
-            <p className="text-[11px] text-[#64748B]">
-              Per settled transaction
-            </p>
-          </div>
-        </div>
-
-        {/* Row 2: Analytics Cards Side-by-Side */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-6">
-          <div className="lg:col-span-7">
-            <DailyCollectionsBarChart
-              data={activeDailySeries}
-              timeframe={timeframe}
-              onTimeframeChange={setTimeframe}
+        <div className="min-w-0 flex-1 lg:h-dvh lg:overflow-y-auto">
+          <PageContent>
+            <PageHeading
+              title="Payments"
+              description="Record appointment settlements, track balances, and review payment history."
+              actions={
+                <div className="flex flex-wrap items-center gap-2">
+                  <AdminButton size="sm" aria-haspopup="dialog" onClick={() => handleStartRecordPayment()}>
+                    + Record Payment
+                  </AdminButton>
+                  <AdminButton size="sm" variant="outline" onClick={handleExportCsv}>
+                    Export CSV
+                  </AdminButton>
+                </div>
+              }
             />
-          </div>
-          <div className="lg:col-span-5">
-            <MethodDonutChart breakdown={methodBreakdown} />
-          </div>
-        </div>
 
-        {/* Row 3: Main Payment Ledger Card */}
-        <div className="rounded-xl border border-[#EDECE8] bg-white shadow-sm overflow-hidden">
-          {/* Card Header Row */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-4 sm:p-5 border-b border-[#EDECE8]">
-            <div className="flex items-center gap-2.5">
-              <div className="flex size-8 items-center justify-center rounded-lg bg-[#FFF7ED] text-[#C35000]">
-                <Icon name="card" className="size-4" />
-              </div>
-              <h2 className="text-base font-bold text-[#1E293B]">Payment Ledger</h2>
+            <div className="grid grid-cols-1 gap-5 min-[440px]:grid-cols-2 xl:grid-cols-4">
+              <MetricCard
+                featured={isHistory}
+                pressed={isHistory}
+                label="Collected today"
+                value={formatPeso(currentKpis.collectedTodayCents)}
+                caption={"Across " + currentKpis.collectedTodayCount + " paid transaction" + (currentKpis.collectedTodayCount === 1 ? "" : "s")}
+                icon="card"
+                onClick={() => changeTab("history")}
+              />
+              <MetricCard
+                label="Outstanding balance"
+                value={formatPeso(currentKpis.outstandingBalanceCents)}
+                caption={currentKpis.outstandingAppointmentsCount + " with unpaid balances"}
+                icon="clock"
+              />
+              <MetricCard
+                featured={!isHistory}
+                pressed={!isHistory}
+                label="Unsettled appointments"
+                value={currentKpis.unsettledAppointmentsCount}
+                caption="Awaiting full or partial settlement"
+                icon="calendar"
+                onClick={() => changeTab("unsettled")}
+              />
+              <MetricCard
+                label="Average payment"
+                value={formatPeso(currentKpis.averagePaymentCents)}
+                caption="Per settled transaction"
+                icon="chart"
+              />
             </div>
 
-            {/* Controls: Search, Filter, Export */}
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Search Bar */}
-              <div className="relative">
-                <Icon
-                  name="search"
-                  className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#94A3B8]"
-                />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search customer, service, or ref..."
-                  className="w-48 sm:w-60 rounded-lg border border-[#E2E8F0] py-1.5 pl-8 pr-3 text-xs text-[#1E293B] placeholder:text-[#94A3B8] focus:border-[#C35000] focus:ring-1 focus:ring-[#C35000] focus:outline-none"
-                />
-              </div>
+            <Surface className="!p-0">
+              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-hairline p-4 sm:p-6">
+                <div className="flex items-center gap-2">
+                  <Icon name="card" className="size-5 text-glyph" />
+                  <h2 className="text-base font-semibold leading-6 text-ink">{activeTitle}</h2>
+                </div>
 
-              {/* Filter Popover Toggle */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setFilterMenuOpen(!filterMenuOpen)}
-                  className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold shadow-xs transition-colors ${
-                    filterMethod !== "all" || filterStatus !== "all"
-                      ? "border-[#C35000] bg-[#FFF7ED] text-[#C35000]"
-                      : "border-[#E2E8F0] bg-white text-[#334155] hover:bg-[#F8FAFC]"
-                  }`}
-                >
-                  <Icon name="settings" className="size-3.5" />
-                  Filter
-                  {(filterMethod !== "all" || filterStatus !== "all") && (
-                    <span className="size-1.5 rounded-full bg-[#C35000]" />
-                  )}
-                </button>
-
-                {filterMenuOpen && (
-                  <div
-                    className="absolute right-0 top-10 z-30 w-56 rounded-xl border border-[#E2E8F0] bg-white p-3 shadow-xl"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="mb-2.5">
-                      <label className="block text-[11px] font-semibold text-[#64748B] uppercase mb-1">
-                        Method
-                      </label>
-                      <select
-                        value={filterMethod}
-                        onChange={(e) => setFilterMethod(e.target.value as any)}
-                        className="w-full rounded-lg border border-[#E2E8F0] p-1.5 text-xs text-[#1E293B]"
+                <div className="flex w-full items-center gap-2.5 sm:w-auto">
+                  <div className="relative min-w-0 flex-1 sm:w-60">
+                    <Icon name="search" className="pointer-events-none absolute left-3 top-3.5 size-4 text-glyph" />
+                    <input
+                      type="text"
+                      aria-label={isHistory ? "Search payment history" : "Search unsettled appointments"}
+                      placeholder={isHistory ? "Search payments..." : "Search appointments..."}
+                      value={searchQuery}
+                      onChange={(event) => setSearchQuery(event.target.value)}
+                      className="h-11 w-full rounded-lg border border-hairline bg-white pl-10 pr-9 text-sm text-ink placeholder:text-glyph transition-shadow focus:outline-none focus:ring-2 focus:ring-burnt/40"
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        aria-label="Clear payment search"
+                        onClick={() => setSearchQuery("")}
+                        className="absolute right-2 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-glyph hover:bg-mist hover:text-ink"
                       >
-                        <option value="all">All Methods</option>
-                        <option value="cash">Cash</option>
-                        <option value="ewallet">E-wallet (GCash / Maya)</option>
-                        <option value="card">Card</option>
-                      </select>
-                    </div>
-
-                    <div className="mb-3">
-                      <label className="block text-[11px] font-semibold text-[#64748B] uppercase mb-1">
-                        Status
-                      </label>
-                      <select
-                        value={filterStatus}
-                        onChange={(e) => setFilterStatus(e.target.value as any)}
-                        className="w-full rounded-lg border border-[#E2E8F0] p-1.5 text-xs text-[#1E293B]"
-                      >
-                        <option value="all">All Statuses</option>
-                        <option value="paid">Paid</option>
-                        <option value="partial">Partial</option>
-                        <option value="unpaid">Unpaid</option>
-                        <option value="voided">Voided</option>
-                        <option value="refunded">Refunded</option>
-                      </select>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFilterMethod("all");
-                        setFilterStatus("all");
-                        setFilterMenuOpen(false);
-                      }}
-                      className="w-full rounded-lg border border-[#E2E8F0] py-1 text-xs font-semibold text-[#64748B] hover:bg-[#F8FAFC]"
-                    >
-                      Reset Filters
-                    </button>
+                        <Icon name="close" className="size-3.5" />
+                      </button>
+                    )}
                   </div>
-                )}
+
+                  <div ref={filterRef} className="relative shrink-0">
+                    <button
+                      ref={filterButtonRef}
+                      type="button"
+                      aria-expanded={filterMenuOpen}
+                      aria-controls={filterPanelId}
+                      onClick={() => setFilterMenuOpen((open) => !open)}
+                      className={cn(
+                        "inline-flex h-11 items-center gap-2 rounded-lg border bg-white px-3 text-sm font-semibold text-ink transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40",
+                        filterMenuOpen || hasFilters ? "border-burnt" : "border-hairline",
+                      )}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="size-3.5 text-glyph" aria-hidden>
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                      </svg>
+                      <span>Filter</span>
+                      {hasFilters && <span className="size-1.5 rounded-full bg-burnt" role="img" aria-label="Filters applied" />}
+                      <Icon name="chevron-down" className={cn("size-3.5 text-glyph transition-transform", filterMenuOpen && "rotate-180")} />
+                    </button>
+
+                    {filterMenuOpen && (
+                      <div id={filterPanelId} className="absolute right-0 z-30 mt-1 max-h-[min(60dvh,24rem)] w-56 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-[10px] border border-hairline bg-white shadow-lg">
+                        {isHistory ? (
+                          <>
+                            <PaymentFilterSection title="Status" options={historyStatusOptions} value={historyStatus} onChange={setHistoryStatus} open />
+                            <PaymentFilterSection title="Method" options={methodOptions} value={filterMethod} onChange={setFilterMethod} open={filterMethod !== "all"} />
+                          </>
+                        ) : (
+                          <PaymentFilterSection title="Status" options={unsettledStatusOptions} value={unsettledStatus} onChange={setUnsettledStatus} open />
+                        )}
+                        {hasFilters && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              resetFilters();
+                              filterButtonRef.current?.focus();
+                            }}
+                            className="block w-full px-4 py-2.5 text-left text-xs font-semibold text-burnt hover:bg-mist focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-burnt"
+                          >
+                            Reset filters
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              {/* Export CSV Button */}
-              <button
-                type="button"
-                onClick={handleExportCsv}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[#E2E8F0] bg-white px-3 py-1.5 text-xs font-semibold text-[#334155] shadow-xs hover:bg-[#F8FAFC] transition-colors"
-              >
-                <Icon name="document" className="size-3.5" />
-                Export CSV
-              </button>
-            </div>
-          </div>
+              <div className="flex flex-wrap gap-1 border-b border-hairline px-4 py-2 sm:px-6" role="group" aria-label="Ledger view">
+                {ledgerTabs.map(({ id, label }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    aria-pressed={id === activeTab}
+                    onClick={() => changeTab(id)}
+                    className={cn(
+                      "inline-flex min-h-9 items-center gap-2 rounded-md px-2.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 sm:px-3",
+                      id === activeTab ? "bg-burnt/10 text-burnt-dark" : "text-muted hover:bg-mist hover:text-ink",
+                    )}
+                  >
+                    {label}
+                    <span className="rounded bg-mist px-1.5 text-xs text-muted">
+                      {id === "history" ? history.length : unsettled.length}
+                    </span>
+                  </button>
+                ))}
+              </div>
 
-          {/* View Switcher Tabs (Segmented Buttons) */}
-          <div className="px-5 pt-3.5 pb-2 border-b border-[#EDECE8] bg-[#FDFBF7]">
-            <div className="inline-flex rounded-lg p-1 bg-[#E2E8F0]/70 gap-1">
-              <button
-                type="button"
-                onClick={() => setActiveTab("unsettled")}
-                className={`flex items-center gap-2 rounded-md px-4 py-1.5 text-xs font-bold transition-all ${
-                  activeTab === "unsettled"
-                    ? "bg-[#C35000] text-white shadow-xs"
-                    : "text-[#475569] hover:text-[#1E293B]"
-                }`}
-              >
-                <span>Unsettled Appointments</span>
-                <span
-                  className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
-                    activeTab === "unsettled"
-                      ? "bg-white/20 text-white"
-                      : "bg-[#CBD5E1] text-[#334155]"
-                  }`}
-                >
-                  {unsettled.length}
-                </span>
-              </button>
+              <PaymentLedgerTable
+                ledger={isHistory
+                  ? {
+                      tab: "history",
+                      records: filteredHistory,
+                      onViewReceipt: showReceipt,
+                      renderActions: (record) => renderRowActions(record, "history"),
+                    }
+                  : {
+                      tab: "unsettled",
+                      records: filteredUnsettled,
+                      renderActions: (appointment) => renderRowActions(appointment, "unsettled"),
+                    }}
+                emptyTitle={hasQuery
+                  ? isHistory ? "No matching payments" : "No matching appointments"
+                  : isHistory ? "No payments yet" : "No unsettled appointments"}
+                emptyDescription={hasQuery
+                  ? "Try a different search term or reset the filters to see all records."
+                  : isHistory ? "Recorded payments will appear here." : "Appointments with an outstanding balance will appear here."}
+                emptyAction={hasQuery ? (
+                  <AdminButton size="xs" onClick={() => { setSearchQuery(""); resetFilters(); }}>
+                    Reset filters
+                  </AdminButton>
+                ) : isHistory ? (
+                  <AdminButton size="xs" aria-haspopup="dialog" onClick={() => handleStartRecordPayment()}>
+                    + Record Payment
+                  </AdminButton>
+                ) : undefined}
+              />
+            </Surface>
 
-              <button
-                type="button"
-                onClick={() => setActiveTab("history")}
-                className={`flex items-center gap-2 rounded-md px-4 py-1.5 text-xs font-bold transition-all ${
-                  activeTab === "history"
-                    ? "bg-[#C35000] text-white shadow-xs"
-                    : "text-[#475569] hover:text-[#1E293B]"
-                }`}
-              >
-                <span>Payment History</span>
-                <span
-                  className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
-                    activeTab === "history"
-                      ? "bg-white/20 text-white"
-                      : "bg-[#CBD5E1] text-[#334155]"
-                  }`}
-                >
-                  {history.length}
-                </span>
-              </button>
+            <div className="grid min-w-0 gap-5 xl:grid-cols-12">
+              <div className="min-w-0 xl:col-span-7">
+                <DailyCollectionsBarChart
+                  history={history}
+                  todayKey={dailyCollections.thirtyDays.at(-1)?.dateKey}
+                />
+              </div>
+              <div className="min-w-0 xl:col-span-5">
+                <MethodDonutChart breakdown={methodBreakdown} />
+              </div>
             </div>
-          </div>
-
-          {/* Tab 1: Unsettled Appointments Table */}
-          {activeTab === "unsettled" && (
-            <div className="w-full overflow-x-auto">
-              <table className="w-full min-w-[820px] text-left text-xs">
-                <thead>
-                  <tr className="border-b border-[#EDECE8] bg-[#FCFBF7] text-[#64748B] font-semibold">
-                    <th className="py-3 px-4">Date</th>
-                    <th className="py-3 px-4">Customer & Service</th>
-                    <th className="py-3 px-4">Staff</th>
-                    <th className="py-3 px-4 text-right">Total</th>
-                    <th className="py-3 px-4 text-right">Paid</th>
-                    <th className="py-3 px-4 text-right">Balance</th>
-                    <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#EDECE8]">
-                  {filteredUnsettled.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="py-12 text-center text-xs text-[#64748B]">
-                        No unsettled appointments found.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredUnsettled.map((apt) => (
-                      <tr key={apt.appointmentId} className="hover:bg-[#FCFBF4] transition-colors">
-                        <td className="py-3 px-4 whitespace-nowrap">
-                          <p className="font-semibold text-[#1E293B]">{apt.formattedDate}</p>
-                          <p className="text-[11px] text-[#64748B]">{apt.formattedTime}</p>
-                        </td>
-                        <td className="py-3 px-4">
-                          <p className="font-semibold text-[#1E293B]">{apt.customerName}</p>
-                          <p className="text-[11px] text-[#64748B] max-w-[200px] truncate">
-                            {apt.serviceSummary}
-                          </p>
-                        </td>
-                        <td className="py-3 px-4 text-[#334155] whitespace-nowrap">
-                          {apt.staffName}
-                        </td>
-                        <td className="py-3 px-4 text-right whitespace-nowrap font-medium text-[#1E293B]">
-                          {formatPeso(apt.totalCents)}
-                        </td>
-                        <td className="py-3 px-4 text-right whitespace-nowrap font-medium text-emerald-600">
-                          {formatPeso(apt.paidCents)}
-                        </td>
-                        <td className="py-3 px-4 text-right whitespace-nowrap font-bold text-[#C35000]">
-                          {formatPeso(apt.balanceCents)}
-                        </td>
-                        <td className="py-3 px-4 whitespace-nowrap">
-                          <StatusBadge status={apt.paymentStatus} />
-                        </td>
-                        <td className="py-3 px-4 text-right whitespace-nowrap">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => handleStartRecordPayment(apt)}
-                              className="rounded-lg bg-[#C35000] px-3 py-1 text-xs font-semibold text-white shadow-xs hover:bg-[#A73F00] transition-colors"
-                            >
-                              Settle
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => handleOpenDropdown(e, apt, "unsettled")}
-                              className="inline-flex size-7 items-center justify-center rounded-lg text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#1E293B]"
-                              aria-label="Actions"
-                            >
-                              •••
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Tab 2: Payment History Table */}
-          {activeTab === "history" && (
-            <div className="w-full overflow-x-auto">
-              <table className="w-full min-w-[820px] text-left text-xs">
-                <thead>
-                  <tr className="border-b border-[#EDECE8] bg-[#FCFBF7] text-[#64748B] font-semibold">
-                    <th className="py-3 px-4">Date</th>
-                    <th className="py-3 px-4">Customer & Service</th>
-                    <th className="py-3 px-4">Method</th>
-                    <th className="py-3 px-4">Reference</th>
-                    <th className="py-3 px-4">Recorded By</th>
-                    <th className="py-3 px-4 text-right">Amount</th>
-                    <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#EDECE8]">
-                  {filteredHistory.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="py-12 text-center text-xs text-[#64748B]">
-                        No payment records found.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredHistory.map((rec) => (
-                      <tr key={rec.id} className="hover:bg-[#FCFBF4] transition-colors">
-                        <td className="py-3 px-4 whitespace-nowrap">
-                          <p className="font-semibold text-[#1E293B]">{rec.formattedDate}</p>
-                          <p className="text-[11px] text-[#64748B]">{rec.formattedTime}</p>
-                        </td>
-                        <td className="py-3 px-4">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setReceiptRecord(rec);
-                              setShowReceiptModal(true);
-                            }}
-                            className="text-left font-semibold text-[#1E293B] hover:text-[#C35000] hover:underline transition-colors"
-                          >
-                            {rec.customerName}
-                          </button>
-                          <p className="text-[11px] text-[#64748B] max-w-[200px] truncate">
-                            {rec.serviceSummary}
-                          </p>
-                        </td>
-                        <td className="py-3 px-4 whitespace-nowrap font-medium text-[#334155]">
-                          {rec.methodLabel}
-                        </td>
-                        <td className="py-3 px-4 whitespace-nowrap font-mono text-[11px] text-[#64748B]">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setReceiptRecord(rec);
-                              setShowReceiptModal(true);
-                            }}
-                            className="hover:text-[#C35000] hover:underline transition-colors"
-                          >
-                            {rec.referenceNumber || "—"}
-                          </button>
-                        </td>
-                        <td className="py-3 px-4 whitespace-nowrap text-[#334155]">
-                          {rec.recordedByName}
-                        </td>
-                        <td className="py-3 px-4 text-right whitespace-nowrap font-bold text-[#1E293B]">
-                          {formatPeso(rec.amountCents)}
-                        </td>
-                        <td className="py-3 px-4 whitespace-nowrap">
-                          <StatusBadge status={rec.status} />
-                        </td>
-                        <td className="py-3 px-4 text-right whitespace-nowrap">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setReceiptRecord(rec);
-                                setShowReceiptModal(true);
-                              }}
-                              className="rounded-lg border border-[#EDECE8] bg-white px-2.5 py-1 text-xs font-semibold text-[#334155] shadow-xs hover:bg-[#F8FAFC] hover:text-[#C35000] transition-colors"
-                            >
-                              Receipt
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => handleOpenDropdown(e, rec, "history")}
-                              className="inline-flex size-7 items-center justify-center rounded-lg text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#1E293B]"
-                              aria-label="Actions"
-                            >
-                              •••
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
+          </PageContent>
         </div>
-      </main>
+      </div>
 
       {/* Portal-Rendered Dropdown Menu */}
       <PaymentPortalDropdown
         isOpen={Boolean(dropdownAnchor)}
+<<<<<<< HEAD
         onClose={handleCloseDropdown}
+=======
+        onClose={closeDropdown}
+>>>>>>> e0f2bf585edf876750be2af6d4b61799819c43bc
         anchorEl={dropdownAnchor}
         items={dropdownItems}
       />
@@ -920,6 +794,7 @@ export function PaymentsView({
       {/* Modal 2: Record Payment Modal */}
       <RecordPaymentModal
         isOpen={showRecordModal}
+        isActive={!showConfirmPartialModal && !errorModal}
         onClose={() => setShowRecordModal(false)}
         appointment={selectedAptForRecord}
         onProceedToConfirmPartial={(input) => {
@@ -932,7 +807,7 @@ export function PaymentsView({
 
       {/* Modal 3: Confirm Partial Payment Modal */}
       <ConfirmPartialPaymentModal
-        isOpen={showConfirmPartialModal}
+        isOpen={showConfirmPartialModal && !errorModal}
         onClose={() => setShowConfirmPartialModal(false)}
         input={pendingPartialInput}
         appointment={selectedAptForRecord}
@@ -981,6 +856,7 @@ export function PaymentsView({
       {/* Modal 6: Void Payment Confirmation Modal */}
       <VoidPaymentConfirmationModal
         isOpen={showVoidModal}
+        isActive={!errorModal}
         onClose={() => setShowVoidModal(false)}
         record={voidingRecord}
         onConfirmVoid={handleConfirmVoid}
@@ -990,6 +866,7 @@ export function PaymentsView({
       {/* Modal 7: Refund Payment Confirmation Modal */}
       <RefundPaymentConfirmationModal
         isOpen={showRefundModal}
+        isActive={!errorModal}
         onClose={() => setShowRefundModal(false)}
         record={refundingRecord}
         onConfirmRefund={handleConfirmRefund}
@@ -1011,6 +888,6 @@ export function PaymentsView({
         title={errorModal?.title}
         errorMessage={errorModal?.message || "An unexpected error occurred."}
       />
-    </div>
+    </>
   );
 }

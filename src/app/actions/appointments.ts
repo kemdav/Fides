@@ -166,6 +166,8 @@ export async function createAppointmentBookingAction({
   customerPhone,
   serviceName,
   staffName,
+  serviceId: serviceIdParam,
+  staffId: staffIdParam,
   date,
   time,
   source = "online",
@@ -177,6 +179,8 @@ export async function createAppointmentBookingAction({
   customerPhone?: string;
   serviceName?: string;
   staffName?: string;
+  serviceId?: string;
+  staffId?: string;
   date?: string;
   time?: string;
   source?: BookingSourceEnum;
@@ -273,69 +277,150 @@ export async function createAppointmentBookingAction({
     }
   }
 
-  // 3. Resolve staff_id from public.staff_members
-  let staffId: string | null = null;
-  const cleanStaffName = staffName?.trim();
+  // 3. Resolve service details first (to enforce staff eligibility)
+  const cleanServiceName = serviceName?.trim() || "Signature haircut";
+  let serviceId: string | null = serviceIdParam || null;
+  let servicePriceCents = 150000; // ₱1,500 default
+  let serviceDurationMinutes = 60;
+  let resolvedServiceName = cleanServiceName;
 
-  if (cleanStaffName && cleanStaffName !== "Any available") {
-    const { data: matchedStaff } = await supabase
-      .from("staff_members")
-      .select("id")
+  if (serviceId) {
+    const { data: svc } = await supabase
+      .from("services")
+      .select("id, name, price_cents, duration_minutes")
       .eq("tenant_id", tenantId)
-      .ilike("full_name", `%${cleanStaffName}%`)
+      .eq("id", serviceId)
+      .maybeSingle();
+
+    if (svc) {
+      resolvedServiceName = svc.name;
+      servicePriceCents = svc.price_cents ?? 150000;
+      serviceDurationMinutes = svc.duration_minutes ?? 60;
+    }
+  } else {
+    const { data: matchedService } = await supabase
+      .from("services")
+      .select("id, name, price_cents, duration_minutes")
+      .eq("tenant_id", tenantId)
+      .ilike("name", `%${cleanServiceName}%`)
       .limit(1)
       .maybeSingle();
 
-    if (matchedStaff) staffId = matchedStaff.id;
+    if (matchedService) {
+      serviceId = matchedService.id;
+      resolvedServiceName = matchedService.name;
+      servicePriceCents = matchedService.price_cents ?? 150000;
+      serviceDurationMinutes = matchedService.duration_minutes ?? 60;
+    }
   }
 
-  if (!staffId) {
-    const { data: fallbackStaff } = await supabase
-      .from("staff_members")
-      .select("id")
+  // 4. Fetch staff_service_skills for this service (QA #1)
+  let eligibleStaffIds: string[] = [];
+  if (serviceId) {
+    const { data: skills } = await supabase
+      .from("staff_service_skills")
+      .select("staff_id")
       .eq("tenant_id", tenantId)
-      .limit(1)
-      .maybeSingle();
+      .eq("service_id", serviceId);
 
-    if (fallbackStaff) {
-      staffId = fallbackStaff.id;
-    } else {
-      // Create initial staff member for this tenant if none exist
-      const { data: newStaff } = await supabase
+    eligibleStaffIds = (skills || []).map((s) => s.staff_id);
+  }
+
+  // 5. Resolve staff_id and enforce eligibility
+  let staffId: string | null = null;
+  let resolvedStaffName: string | null = null;
+  const cleanStaffName = staffName?.trim();
+  const isSpecificStaff = Boolean(
+    staffIdParam || (cleanStaffName && cleanStaffName !== "Any available")
+  );
+
+  if (isSpecificStaff) {
+    let matchedStaff: { id: string; full_name: string } | null = null;
+
+    if (staffIdParam) {
+      const { data: sm } = await supabase
         .from("staff_members")
-        .insert({
-          tenant_id: tenantId,
-          full_name: cleanStaffName || "Lead Specialist",
-          active: true,
-        })
-        .select("id")
-        .single();
-      staffId = newStaff?.id ?? null;
+        .select("id, full_name")
+        .eq("tenant_id", tenantId)
+        .eq("id", staffIdParam)
+        .maybeSingle();
+      matchedStaff = sm;
+    } else if (cleanStaffName && cleanStaffName !== "Any available") {
+      const { data: sm } = await supabase
+        .from("staff_members")
+        .select("id, full_name")
+        .eq("tenant_id", tenantId)
+        .ilike("full_name", `%${cleanStaffName}%`)
+        .limit(1)
+        .maybeSingle();
+      matchedStaff = sm;
+    }
+
+    if (!matchedStaff) {
+      return { success: false, error: "Selected staff member not found." };
+    }
+
+    // QA #1 Guard: If service has configured staff skills, reject ineligible staff
+    if (eligibleStaffIds.length > 0 && !eligibleStaffIds.includes(matchedStaff.id)) {
+      return {
+        success: false,
+        error: "Selected staff member is not eligible for this service.",
+      };
+    }
+
+    staffId = matchedStaff.id;
+    resolvedStaffName = matchedStaff.full_name;
+  } else {
+    // "Any available" or unspecified: pick qualified staff if skills are defined
+    if (eligibleStaffIds.length > 0) {
+      const { data: qualifiedStaff } = await supabase
+        .from("staff_members")
+        .select("id, full_name")
+        .eq("tenant_id", tenantId)
+        .eq("active", true)
+        .in("id", eligibleStaffIds)
+        .order("full_name", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (qualifiedStaff) {
+        staffId = qualifiedStaff.id;
+        resolvedStaffName = qualifiedStaff.full_name;
+      }
+    }
+
+    if (!staffId) {
+      const { data: fallbackStaff } = await supabase
+        .from("staff_members")
+        .select("id, full_name")
+        .eq("tenant_id", tenantId)
+        .eq("active", true)
+        .order("full_name", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (fallbackStaff) {
+        staffId = fallbackStaff.id;
+        resolvedStaffName = fallbackStaff.full_name;
+      } else {
+        // Create initial staff member for this tenant if none exist
+        const { data: newStaff } = await supabase
+          .from("staff_members")
+          .insert({
+            tenant_id: tenantId,
+            full_name: cleanStaffName || "Lead Specialist",
+            active: true,
+          })
+          .select("id, full_name")
+          .single();
+        staffId = newStaff?.id ?? null;
+        resolvedStaffName = newStaff?.full_name ?? "Lead Specialist";
+      }
     }
   }
 
   if (!staffId) {
     return { success: false, error: "Could not assign a staff member for this booking." };
-  }
-
-  // 4. Resolve service details
-  const cleanServiceName = serviceName?.trim() || "Signature haircut";
-  let serviceId: string | null = null;
-  let servicePriceCents = 150000; // ₱1,500 default
-  let serviceDurationMinutes = 60;
-
-  const { data: matchedService } = await supabase
-    .from("services")
-    .select("id, price_cents, duration_minutes")
-    .eq("tenant_id", tenantId)
-    .ilike("name", `%${cleanServiceName}%`)
-    .limit(1)
-    .maybeSingle();
-
-  if (matchedService) {
-    serviceId = matchedService.id;
-    servicePriceCents = matchedService.price_cents ?? 150000;
-    serviceDurationMinutes = matchedService.duration_minutes ?? 60;
   }
 
   // 5. Calculate starts_at and ends_at in Asia/Manila (UTC+08:00)
@@ -390,8 +475,8 @@ export async function createAppointmentBookingAction({
       starts_at: apptRow.starts_at,
       status: apptRow.status,
       customerName: cleanCustomerName,
-      serviceName: cleanServiceName,
-      staffName: cleanStaffName || "Specialist",
+      serviceName: resolvedServiceName,
+      staffName: resolvedStaffName || cleanStaffName || "Specialist",
     },
   };
 }

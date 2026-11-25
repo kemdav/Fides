@@ -604,7 +604,9 @@ type DatabaseCore = {
           active: boolean;
           created_at: string;
           description: string | null;
+          duration_minutes: number;
           id: string;
+          is_archived: boolean;
           name: string;
           price_cents: number;
           slug: string;
@@ -616,7 +618,9 @@ type DatabaseCore = {
           active?: boolean;
           created_at?: string;
           description?: string | null;
+          duration_minutes?: number;
           id?: string;
+          is_archived?: boolean;
           name: string;
           price_cents?: number;
           slug: string;
@@ -627,7 +631,9 @@ type DatabaseCore = {
           active?: boolean;
           created_at?: string;
           description?: string | null;
+          duration_minutes?: number;
           id?: string;
+          is_archived?: boolean;
           name?: string;
           price_cents?: number;
           slug?: string;
@@ -1062,8 +1068,10 @@ type DatabaseCore = {
         Row: {
           active: boolean;
           created_at: string;
+          description: string | null;
           duration_minutes: number;
           id: string;
+          is_archived: boolean;
           name: string;
           price_cents: number;
           tenant_id: string;
@@ -1073,8 +1081,10 @@ type DatabaseCore = {
         Insert: {
           active?: boolean;
           created_at?: string;
+          description?: string | null;
           duration_minutes?: number;
           id?: string;
+          is_archived?: boolean;
           name: string;
           price_cents?: number;
           tenant_id: string;
@@ -1083,8 +1093,10 @@ type DatabaseCore = {
         Update: {
           active?: boolean;
           created_at?: string;
+          description?: string | null;
           duration_minutes?: number;
           id?: string;
+          is_archived?: boolean;
           name?: string;
           price_cents?: number;
           tenant_id?: string;
@@ -1193,6 +1205,7 @@ type DatabaseCore = {
           duration_minutes: number;
           embedding: string | null;
           id: string;
+          is_archived: boolean;
           name: string;
           price_cents: number;
           slug: string;
@@ -1209,6 +1222,7 @@ type DatabaseCore = {
           duration_minutes: number;
           embedding?: string | null;
           id?: string;
+          is_archived?: boolean;
           name: string;
           price_cents?: number;
           slug: string;
@@ -1224,6 +1238,7 @@ type DatabaseCore = {
           duration_minutes?: number;
           embedding?: string | null;
           id?: string;
+          is_archived?: boolean;
           name?: string;
           price_cents?: number;
           slug?: string;
@@ -1626,6 +1641,8 @@ type DatabaseCore = {
           show_opening_hours: boolean;
           slot_interval_minutes: number;
           social_description: string | null;
+          social_image_name: string | null;
+          social_image_url: string | null;
           social_title: string | null;
           street_address: string | null;
           supporting_message: string | null;
@@ -1678,6 +1695,8 @@ type DatabaseCore = {
           show_opening_hours?: boolean;
           slot_interval_minutes?: number;
           social_description?: string | null;
+          social_image_name?: string | null;
+          social_image_url?: string | null;
           social_title?: string | null;
           street_address?: string | null;
           supporting_message?: string | null;
@@ -1729,6 +1748,8 @@ type DatabaseCore = {
           show_opening_hours?: boolean;
           slot_interval_minutes?: number;
           social_description?: string | null;
+          social_image_name?: string | null;
+          social_image_url?: string | null;
           social_title?: string | null;
           street_address?: string | null;
           supporting_message?: string | null;

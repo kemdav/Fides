@@ -4,7 +4,13 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MerchantSidebar } from "@/components/merchant/merchant-sidebar";
-import { Surface } from "@/components/admin/primitives";
+import { AdminButton } from "@/components/admin/admin-button";
+import { Icon } from "@/components/admin/icon";
+import { MetricCard } from "@/components/admin/metric-card";
+import { StatusPill, Surface } from "@/components/admin/primitives";
+import { RowActionMenu, type RowActionMenuItem } from "@/components/admin/row-action-menu";
+import { EmptyState } from "@/components/ui/empty-state";
+import { cn } from "@/lib/utils";
 import {
   cancelCustomerInviteAction,
   createCustomerAction,
@@ -30,41 +36,30 @@ import { formatPesoCents, formatShortDate } from "./customer-formatters";
 
 const PAGE_SIZE = 10;
 
+const customerFilters: { value: CustomerFilterOption; label: string }[] = [
+  { value: "all", label: "All active customers" },
+  { value: "registered", label: "Registered accounts" },
+  { value: "walk_in", label: "Walk-in records" },
+  { value: "invite_sent", label: "Invite sent" },
+  { value: "invite_not_sent", label: "Invite not sent" },
+  { value: "invite_expired", label: "Invite expired" },
+  { value: "archived", label: "Archived records" },
+];
+
 function AccountBadges({ item }: { item: CustomerRegistryItem }) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className="flex flex-wrap items-center justify-center gap-1.5">
       {item.accountType === "registered" ? (
-        <span className="inline-flex items-center rounded-full bg-[#DCFCE7] px-2.5 py-0.5 text-[11px] font-semibold text-[#15803D]">
-          Registered account
-        </span>
+        <StatusPill tone="success">Registered account</StatusPill>
       ) : (
         <>
-          <span className="inline-flex items-center rounded-full bg-[#FFEDD5] px-2.5 py-0.5 text-[11px] font-semibold text-[#C2410C]">
-            Walk-in record
-          </span>
-          {item.inviteStatus === "invite_sent" && (
-            <span className="inline-flex items-center rounded-full border border-[#D97706] bg-[#FFFBEB] px-2.5 py-0.5 text-[11px] font-semibold text-[#B45309]">
-              Invite sent
-            </span>
-          )}
-          {item.inviteStatus === "invite_not_sent" && (
-            <span className="inline-flex items-center rounded-full border border-[#6366F1] bg-[#EEF2FF] px-2.5 py-0.5 text-[11px] font-semibold text-[#4338CA]">
-              Invite not sent
-            </span>
-          )}
-          {item.inviteStatus === "invite_expired" && (
-            <span className="inline-flex items-center rounded-full border border-[#EF4444] bg-[#FEF2F2] px-2.5 py-0.5 text-[11px] font-semibold text-[#DC2626]">
-              Invite expired
-            </span>
-          )}
+          <StatusPill tone="neutral">Walk-in record</StatusPill>
+          {item.inviteStatus === "invite_sent" && <StatusPill tone="warning">Invite sent</StatusPill>}
+          {item.inviteStatus === "invite_not_sent" && <StatusPill tone="info">Invite not sent</StatusPill>}
+          {item.inviteStatus === "invite_expired" && <StatusPill tone="danger">Invite expired</StatusPill>}
         </>
       )}
-
-      {item.archivedAt && (
-        <span className="inline-flex items-center rounded-full bg-[#E2E8F0] px-2.5 py-0.5 text-[11px] font-semibold text-[#475569]">
-          Archived
-        </span>
-      )}
+      {item.archivedAt && <StatusPill tone="neutral">Archived</StatusPill>}
     </div>
   );
 }
@@ -85,7 +80,12 @@ export function CustomersRegistryView({
   const [filter, setFilter] = React.useState<CustomerFilterOption>("all");
   const [page, setPage] = React.useState(1);
 
-  const [openMenuId, setOpenMenuId] = React.useState<string | null>(null);
+  const [filterOpen, setFilterOpen] = React.useState(false);
+  const filterId = React.useId();
+  const filterRef = React.useRef<HTMLDivElement>(null);
+  const filterTriggerRef = React.useRef<HTMLButtonElement>(null);
+  const searchRef = React.useRef<HTMLInputElement>(null);
+  const [activeMenu, setActiveMenu] = React.useState<{ customerId: string; anchorEl: HTMLButtonElement } | null>(null);
   const [showAddModal, setShowAddModal] = React.useState(false);
   const [editingCustomer, setEditingCustomer] =
     React.useState<CustomerRegistryItem | null>(null);
@@ -113,11 +113,28 @@ export function CustomersRegistryView({
   }, [data.meta.tenantId]);
 
   React.useEffect(() => {
-    if (!openMenuId) return;
-    const handleOutsideClick = () => setOpenMenuId(null);
-    window.addEventListener("click", handleOutsideClick);
-    return () => window.removeEventListener("click", handleOutsideClick);
-  }, [openMenuId]);
+    if (!filterOpen) return;
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (!filterRef.current?.contains(event.target as Node)) setFilterOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    return () => document.removeEventListener("pointerdown", closeOnOutsideClick);
+  }, [filterOpen]);
+
+  const closeMenu = React.useCallback(() => setActiveMenu(null), []);
+
+  function changeSearch(value: string) {
+    setSearch(value);
+    setPage(1);
+    closeMenu();
+  }
+
+  function changeFilter(value: CustomerFilterOption) {
+    setFilter(value);
+    setPage(1);
+    setFilterOpen(false);
+    closeMenu();
+  }
 
   const filteredCustomers = React.useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -281,24 +298,48 @@ export function CustomersRegistryView({
     }
   };
 
+  const menuCustomer = pageItems.find((item) => item.id === activeMenu?.customerId);
+  const menuItems: RowActionMenuItem[] = [];
+  if (menuCustomer) {
+    menuItems.push(
+      { label: "View profile", onClick: () => router.push(basePath + "/dashboard/customers/" + menuCustomer.id) },
+      { label: "Edit customer", onClick: () => setEditingCustomer(menuCustomer) },
+    );
+
+    if (menuCustomer.accountType === "walk_in" && menuCustomer.email && !menuCustomer.archivedAt) {
+      if (menuCustomer.inviteStatus === "invite_sent") {
+        menuItems.push(
+          { label: "Resend invite", tone: "primary", onClick: () => setResendingCustomer(menuCustomer) },
+          { label: "Cancel invite", tone: "warning", onClick: () => setCancelingCustomer(menuCustomer) },
+        );
+      } else {
+        menuItems.push({
+          label: "Send account invite",
+          tone: "primary",
+          onClick: () => void handleSendInvite(menuCustomer),
+        });
+      }
+    }
+
+    menuItems.push(menuCustomer.archivedAt ? {
+      label: "Restore customer",
+      tone: "success",
+      dividerBefore: true,
+      onClick: () => void handleArchiveToggle(menuCustomer, false),
+    } : {
+      label: "Archive customer",
+      tone: "danger",
+      dividerBefore: true,
+      onClick: () => setArchivingCustomer(menuCustomer),
+    });
+  }
+
+  const hasFilters = Boolean(search.trim()) || filter !== "all";
+
   const { meta, stats } = data;
-  const newRatio =
-    stats.totalCustomers > 0
-      ? Math.min(
-          100,
-          Math.round((stats.newThisMonth / stats.totalCustomers) * 100),
-        )
-      : 0;
-  const inviteRatio =
-    stats.totalCustomers > 0
-      ? Math.min(
-          100,
-          Math.round((stats.invitesPending / stats.totalCustomers) * 100),
-        )
-      : 0;
 
   return (
-    <div className="flex min-h-dvh flex-col bg-[#FCFAE8] text-[#1E293B] lg:flex-row">
+    <div className="flex min-h-dvh flex-col bg-powder text-[#1E293B] lg:flex-row">
       <MerchantSidebar
         businessName={meta.businessName}
         userName={meta.userName}
@@ -318,14 +359,15 @@ export function CustomersRegistryView({
               One customer registry for online bookings and in-person visits.
             </p>
           </div>
-          <button
-            type="button"
+          <AdminButton
+            variant="primary"
+            size="sm"
             onClick={() => setShowAddModal(true)}
-            className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#C35000] px-4 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-[#A64400]"
+            className="gap-2 shadow-xs"
           >
             <span className="text-base leading-none">+</span>
             <span>Add Customer</span>
-          </button>
+          </AdminButton>
         </header>
 
         {errorBanner && (
@@ -337,363 +379,251 @@ export function CustomersRegistryView({
           </div>
         )}
 
-        {/* 4 KPI Cards */}
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-xl bg-[#C35000] p-5 text-white shadow-[0_3px_14px_rgb(195_80_0/0.18)]">
-            <p className="text-xs font-semibold text-white/90">
-              Total customers
-            </p>
-            <p className="mt-3 text-3xl font-bold tracking-tight">
-              {stats.totalCustomers}
-            </p>
-            <p className="mt-1 text-xs text-white/80">
-              Registered and walk-in clients
-            </p>
-            <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-white/25">
-              <div className="h-full w-3/4 rounded-full bg-white" />
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-[#ECEAE0] bg-white p-5 shadow-[0_3px_14px_rgb(44_58_75/0.04)]">
-            <p className="text-xs font-semibold text-[#1E293B]">
-              New this month
-            </p>
-            <p className="mt-3 text-3xl font-bold tracking-tight text-[#1E293B]">
-              {stats.newThisMonth}
-            </p>
-            <p className="mt-1 text-xs text-[#64748B]">
-              Across all booking sources
-            </p>
-            <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-[#F1F3F5]">
-              <div
-                className="h-full rounded-full bg-[#C35000]"
-                style={{
-                  width: `${Math.max(newRatio, stats.newThisMonth > 0 ? 15 : 0)}%`,
-                }}
-              />
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-[#ECEAE0] bg-white p-5 shadow-[0_3px_14px_rgb(44_58_75/0.04)]">
-            <p className="text-xs font-semibold text-[#1E293B]">
-              Returning customers
-            </p>
-            <p className="mt-3 text-3xl font-bold tracking-tight text-[#1E293B]">
-              {stats.returningPercentage}%
-            </p>
-            <p className="mt-1 text-xs text-[#64748B]">
-              Customers with more than one visit
-            </p>
-            <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-[#F1F3F5]">
-              <div
-                className="h-full rounded-full bg-[#C35000]"
-                style={{ width: `${stats.returningPercentage}%` }}
-              />
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-[#ECEAE0] bg-white p-5 shadow-[0_3px_14px_rgb(44_58_75/0.04)]">
-            <p className="text-xs font-semibold text-[#1E293B]">
-              Invites pending
-            </p>
-            <p className="mt-3 text-3xl font-bold tracking-tight text-[#1E293B]">
-              {stats.invitesPending}
-            </p>
-            <p className="mt-1 text-xs text-[#64748B]">
-              Walk-in registration invitations
-            </p>
-            <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-[#F1F3F5]">
-              <div
-                className="h-full rounded-full bg-[#C35000]"
-                style={{
-                  width: `${Math.max(inviteRatio, stats.invitesPending > 0 ? 15 : 0)}%`,
-                }}
-              />
-            </div>
-          </div>
+        <section aria-label="Customer metrics" className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+          <MetricCard
+            label="Total customers"
+            value={stats.totalCustomers}
+            caption="Registered and walk-in clients"
+            icon="users"
+            progress={100}
+            featured
+          />
+          <MetricCard
+            label="New this month"
+            value={stats.newThisMonth}
+            caption="Across all booking sources"
+            icon="calendar"
+            progress={100}
+          />
+          <MetricCard
+            label="Returning customers"
+            value={stats.returningPercentage}
+            valueSuffix="%"
+            caption="Customers with more than one visit"
+            icon="chart"
+            progress={100}
+          />
+          <MetricCard
+            label="Invites pending"
+            value={stats.invitesPending}
+            caption="Walk-in registration invitations"
+            icon="bell"
+            progress={100}
+          />
         </section>
 
-        {/* Registry Table Card */}
-        <Surface className="rounded-xl border border-[#ECEAE0] bg-white p-0">
-          {/* Toolbar */}
-          <div className="flex flex-col justify-between gap-3 border-b border-[#F1EFE7] px-5 py-4 sm:flex-row sm:items-center sm:px-6">
-            <h2 className="text-sm font-semibold text-[#1E293B]">
-              Customer Registry
-            </h2>
+        <Surface className="!p-0">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-hairline p-4 sm:p-6">
+            <div className="flex items-center gap-2">
+              <Icon name="users" className="size-5 text-glyph" />
+              <h2 className="text-base font-semibold leading-6 text-ink">Customer Registry</h2>
+            </div>
 
-            <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
-              <div className="relative">
-                <svg
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#94A3B8]"
-                  aria-hidden="true"
-                >
-                  <circle cx="9" cy="9" r="6" />
-                  <path d="M13.5 13.5L17 17" strokeLinecap="round" />
-                </svg>
-                <input
-                  type="search"
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setPage(1);
-                  }}
-                  placeholder="Search name, email, or phone"
-                  className="h-9 w-full rounded-lg border border-[#D9DDE3] bg-white pl-9 pr-3 text-xs text-[#1E293B] placeholder:text-[#94A3B8] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20 sm:w-[250px]"
+            <div className="flex w-full items-center gap-2.5 sm:w-auto">
+              <div className="relative min-w-0 flex-1 sm:w-60">
+                <Icon
+                  name="search"
+                  className="pointer-events-none absolute left-3 top-3.5 size-4 text-glyph"
                 />
+                <input
+                  ref={searchRef}
+                  type="text"
+                  aria-label="Search customers"
+                  value={search}
+                  onChange={(event) => changeSearch(event.target.value)}
+                  placeholder="Search name, email, or phone"
+                  className="h-11 w-full rounded-lg border border-hairline bg-white pl-10 pr-9 text-sm text-ink placeholder:text-glyph transition-shadow focus:outline-none focus:ring-2 focus:ring-burnt/40"
+                />
+                {search && (
+                  <button
+                    type="button"
+                    aria-label="Clear customer search"
+                    onClick={() => {
+                      changeSearch("");
+                      searchRef.current?.focus();
+                    }}
+                    className="absolute right-2 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-glyph hover:bg-mist hover:text-ink focus-visible:outline-2 focus-visible:outline-burnt"
+                  >
+                    <Icon name="close" className="size-3.5" />
+                  </button>
+                )}
               </div>
 
-              <select
-                aria-label="Filter customers"
-                value={filter}
-                onChange={(e) => {
-                  setFilter(e.target.value as CustomerFilterOption);
-                  setPage(1);
+              <div
+                ref={filterRef}
+                className="relative shrink-0"
+                onKeyDown={(event) => {
+                  if (!filterOpen || event.key !== "Escape") return;
+                  event.preventDefault();
+                  setFilterOpen(false);
+                  filterTriggerRef.current?.focus();
                 }}
-                className="h-9 rounded-lg border border-[#D9DDE3] bg-white px-3 text-xs font-medium text-[#334155] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
               >
-                <option value="all">Filter: All active</option>
-                <option value="registered">Registered accounts</option>
-                <option value="walk_in">Walk-in records</option>
-                <option value="invite_sent">Invite sent</option>
-                <option value="invite_not_sent">Invite not sent</option>
-                <option value="invite_expired">Invite expired</option>
-                <option value="archived">Archived records</option>
-              </select>
+                <button
+                  ref={filterTriggerRef}
+                  type="button"
+                  aria-label="Filter customers"
+                  aria-expanded={filterOpen}
+                  aria-controls={filterOpen ? filterId : undefined}
+                  onClick={() => setFilterOpen((open) => !open)}
+                  className={cn(
+                    "inline-flex h-11 items-center gap-2 rounded-lg border bg-white px-3 text-sm font-semibold text-ink transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40",
+                    filterOpen || filter !== "all" ? "border-burnt" : "border-hairline",
+                  )}
+                >
+                  <svg aria-hidden="true" className="size-3.5 text-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                  </svg>
+                  <span>Filter</span>
+                  {filter !== "all" && <span role="img" aria-label="Filter applied" className="size-1.5 rounded-full bg-burnt" />}
+                  <Icon name="chevron-down" className={cn("size-3.5 text-glyph transition-transform", filterOpen && "rotate-180")} />
+                </button>
+
+                {filterOpen && (
+                  <div
+                    id={filterId}
+                    role="group"
+                    aria-label="Customer account filter"
+                    className="absolute right-0 z-30 mt-1 max-h-[min(60dvh,24rem)] w-56 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-[10px] border border-hairline bg-white py-1 shadow-lg"
+                  >
+                    {customerFilters.map(({ value, label }) => (
+                      <button
+                        key={value}
+                        type="button"
+                        aria-pressed={filter === value}
+                        onClick={() => {
+                          changeFilter(value);
+                          filterTriggerRef.current?.focus();
+                        }}
+                        className="block w-full px-4 py-2 text-left text-sm text-body hover:bg-mist focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-burnt aria-pressed:font-semibold aria-pressed:text-burnt"
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[780px] border-collapse text-left">
-              <thead>
-                <tr className="border-b border-[#F1EFE7] text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">
-                  <th className="px-6 py-3.5">Customer</th>
-                  <th className="px-4 py-3.5">Contact</th>
-                  <th className="px-4 py-3.5">Account</th>
-                  <th className="px-4 py-3.5">Last Visit</th>
-                  <th className="px-4 py-3.5 text-right">Total Visit</th>
-                  <th className="px-4 py-3.5 text-right">Lifetime Spend</th>
-                  <th className="px-6 py-3.5 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#F4F2EA] text-xs">
-                {pageItems.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      className="px-6 py-12 text-center text-sm text-[#64748B]"
-                    >
-                      No customer records match your current search or filter.
-                    </td>
+          {pageItems.length > 0 ? (
+            <div role="region" aria-label="Customer table" tabIndex={0} className="w-full overflow-x-auto">
+              <table className="w-full min-w-[760px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-hairline bg-mist text-[11px] font-semibold uppercase tracking-wide text-subtle">
+                    <th scope="col" className="px-5 py-3">Customer</th>
+                    <th scope="col" className="px-5 py-3">Contact</th>
+                    <th scope="col" className="px-5 py-3 text-center">Account</th>
+                    <th scope="col" className="whitespace-nowrap px-5 py-3">Last visit</th>
+                    <th scope="col" className="whitespace-nowrap px-5 py-3 text-right">Total visits</th>
+                    <th scope="col" className="whitespace-nowrap px-5 py-3 text-right">Lifetime spend</th>
+                    <th scope="col" className="px-5 py-3 text-center">Actions</th>
                   </tr>
-                ) : (
-                  pageItems.map((item, idx) => {
-                    const profileHref = `${basePath}/dashboard/customers/${item.id}`;
-                    const openUpward =
-                      pageItems.length >= 3 && idx >= pageItems.length - 2;
-                    return (
-                      <tr
-                        key={item.id}
-                        className="transition-colors hover:bg-[#FCFBF4]"
-                      >
-                        <td className="px-6 py-4">
-                          <Link
-                            href={profileHref}
-                            className="font-semibold text-[#1E293B] hover:text-[#C35000]"
-                          >
-                            {item.fullName}
-                          </Link>
-                          {item.notesCount > 0 && (
-                            <p className="mt-0.5 text-[11px] text-[#94A3B8]">
-                              {item.notesCount}{" "}
-                              {item.notesCount === 1
-                                ? "internal note"
-                                : "internal notes"}
-                            </p>
-                          )}
-                        </td>
-                        <td className="px-4 py-4">
-                          <p
-                            className={
-                              item.email
-                                ? "text-[#1E293B]"
-                                : "italic text-[#94A3B8]"
-                            }
-                          >
-                            {item.email ?? "No email added"}
+                </thead>
+                <tbody className="divide-y divide-hairline">
+                  {pageItems.map((item) => (
+                    <tr key={item.id} className="transition-colors hover:bg-mist">
+                      <td className="min-w-36 px-5 py-3.5">
+                        <Link
+                          href={basePath + "/dashboard/customers/" + item.id}
+                          className="font-semibold text-ink underline-offset-2 hover:text-burnt hover:underline focus-visible:outline-2 focus-visible:outline-burnt"
+                        >
+                          {item.fullName}
+                        </Link>
+                        {item.notesCount > 0 && (
+                          <p className="mt-0.5 text-xs text-muted">
+                            {item.notesCount} {item.notesCount === 1 ? "internal note" : "internal notes"}
                           </p>
-                          <p className="mt-0.5 text-[11px] text-[#64748B]">
-                            {item.phone ?? "No phone added"}
-                          </p>
-                        </td>
-                        <td className="px-4 py-4">
-                          <AccountBadges item={item} />
-                        </td>
-                        <td className="px-4 py-4 text-[#334155]">
-                          {formatShortDate(item.lastVisitAt)}
-                        </td>
-                        <td className="px-4 py-4 text-right font-medium text-[#1E293B]">
-                          {item.totalVisits}
-                        </td>
-                        <td className="px-4 py-4 text-right font-semibold text-[#1E293B]">
-                          {formatPesoCents(item.lifetimeSpendCents)}
-                        </td>
-                        <td className="relative px-6 py-4 text-right">
-                          <button
-                            type="button"
-                            aria-label={`Actions for ${item.fullName}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenMenuId(
-                                openMenuId === item.id ? null : item.id,
-                              );
-                            }}
-                            className="inline-flex size-8 items-center justify-center rounded-lg text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#1E293B]"
-                          >
-                            •••
-                          </button>
-
-                          {openMenuId === item.id && (
-                            <div
-                              onClick={(e) => e.stopPropagation()}
-                              className={`absolute right-6 z-30 w-44 rounded-xl border border-[#E2E8F0] bg-white py-1.5 text-left shadow-lg ${
-                                openUpward ? "bottom-12" : "top-12"
-                              }`}
-                            >
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setOpenMenuId(null);
-                                  router.push(profileHref);
-                                }}
-                                className="block w-full px-3.5 py-2 text-xs font-medium text-[#1E293B] hover:bg-[#F8FAFC]"
-                              >
-                                View profile
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setOpenMenuId(null);
-                                  setEditingCustomer(item);
-                                }}
-                                className="block w-full px-3.5 py-2 text-xs font-medium text-[#1E293B] hover:bg-[#F8FAFC]"
-                              >
-                                Edit customer
-                              </button>
-                              {item.accountType === "walk_in" &&
-                                item.email &&
-                                !item.archivedAt && (
-                                  <>
-                                    {item.inviteStatus === "invite_sent" ? (
-                                      <>
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            setOpenMenuId(null);
-                                            setResendingCustomer(item);
-                                          }}
-                                          className="block w-full px-3.5 py-2 text-xs font-medium text-[#C35000] hover:bg-[#FFF7ED]"
-                                        >
-                                          Resend invite
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            setOpenMenuId(null);
-                                            setCancelingCustomer(item);
-                                          }}
-                                          className="block w-full px-3.5 py-2 text-xs font-medium text-[#B45309] hover:bg-[#FFFBEB]"
-                                        >
-                                          Cancel invite
-                                        </button>
-                                      </>
-                                    ) : (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setOpenMenuId(null);
-                                          void handleSendInvite(item);
-                                        }}
-                                        className="block w-full px-3.5 py-2 text-xs font-medium text-[#C35000] hover:bg-[#FFF7ED]"
-                                      >
-                                        Send account invite
-                                      </button>
-                                    )}
-                                  </>
-                                )}
-                              <div className="my-1 border-t border-[#F1F5F9]" />
-                              {item.archivedAt ? (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setOpenMenuId(null);
-                                    void handleArchiveToggle(item, false);
-                                  }}
-                                  className="block w-full px-3.5 py-2 text-xs font-medium text-[#15803D] hover:bg-[#F0FDF4]"
-                                >
-                                  Restore customer
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setOpenMenuId(null);
-                                    setArchivingCustomer(item);
-                                  }}
-                                  className="block w-full px-3.5 py-2 text-xs font-medium text-[#DC2626] hover:bg-[#FEF2F2]"
-                                >
-                                  Archive customer
-                                </button>
-                              )}
-                            </div>
+                        )}
+                      </td>
+                      <td className="min-w-40 max-w-64 px-5 py-3.5">
+                        <p className={item.email ? "break-words text-body" : "italic text-muted"}>
+                          {item.email ?? "No email added"}
+                        </p>
+                        <p className="mt-0.5 text-xs text-muted">{item.phone ?? "No phone added"}</p>
+                      </td>
+                      <td className="min-w-40 px-5 py-3.5">
+                        <AccountBadges item={item} />
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-3.5 text-muted">
+                        {formatShortDate(item.lastVisitAt)}
+                      </td>
+                      <td className="px-5 py-3.5 text-right font-medium tabular-nums text-body">
+                        {item.totalVisits}
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-3.5 text-right font-semibold tabular-nums text-ink">
+                        {formatPesoCents(item.lifetimeSpendCents)}
+                      </td>
+                      <td className="px-5 py-3.5 text-center align-middle">
+                        <button
+                          type="button"
+                          aria-label={"Actions for " + item.fullName}
+                          aria-haspopup="menu"
+                          aria-expanded={activeMenu?.customerId === item.id}
+                          onClick={(event) => {
+                            const anchorEl = event.currentTarget;
+                            setActiveMenu((current) => current?.customerId === item.id ? null : { customerId: item.id, anchorEl });
+                          }}
+                          className={cn(
+                            "mx-auto flex h-9 w-10 items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40",
+                            activeMenu?.customerId === item.id ? "bg-mist text-ink" : "text-glyph hover:bg-mist hover:text-ink",
                           )}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                        >
+                          <Icon name="more" weight="fill" className="size-5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="px-5 py-6 text-center sm:py-8">
+              <EmptyState
+                compact
+                title={hasFilters ? "No matching customers" : "No customers yet"}
+                description={hasFilters
+                  ? "Try a different search or reset the filters to see all active customers."
+                  : "Add a customer to keep their contact details and visit history in one place."}
+              />
+              {hasFilters ? (
+                <AdminButton size="xs" onClick={() => {
+                  changeSearch("");
+                  changeFilter("all");
+                }}>
+                  Reset filters
+                </AdminButton>
+              ) : (
+                <AdminButton size="xs" onClick={() => setShowAddModal(true)}>+ Add Customer</AdminButton>
+              )}
+            </div>
+          )}
 
-          {/* Pagination Footer */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#F1EFE7] px-6 py-3.5 text-xs text-[#64748B]">
-            <span>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-hairline p-4 text-sm text-muted sm:px-6">
+            <span role="status">
               {filteredCustomers.length === 0
                 ? "Showing 0 of 0"
-                : `Showing ${startIndex + 1}–${Math.min(
-                    startIndex + PAGE_SIZE,
-                    filteredCustomers.length,
-                  )} of ${filteredCustomers.length}`}
+                : "Showing " + (startIndex + 1) + "–" + Math.min(startIndex + PAGE_SIZE, filteredCustomers.length) + " of " + filteredCustomers.length}
             </span>
-
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                disabled={safePage <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="h-8 rounded-lg border border-[#D9DDE3] bg-white px-3 text-xs font-semibold text-[#334155] hover:bg-[#F8FAFC] disabled:opacity-40"
-              >
+            <nav aria-label="Customer pagination" className="flex flex-wrap items-center gap-2.5">
+              <AdminButton size="xs" variant="outline" disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>
                 Previous
-              </button>
-              <span>
-                Page {safePage} of {totalPages}
-              </span>
-              <button
-                type="button"
-                disabled={safePage >= totalPages}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                className="h-8 rounded-lg border border-[#D9DDE3] bg-white px-3 text-xs font-semibold text-[#334155] hover:bg-[#F8FAFC] disabled:opacity-40"
-              >
+              </AdminButton>
+              <span className="text-xs tabular-nums">Page {safePage} of {totalPages}</span>
+              <AdminButton size="xs" variant="outline" disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)}>
                 Next
-              </button>
-            </div>
+              </AdminButton>
+            </nav>
           </div>
         </Surface>
+
+        <RowActionMenu
+          label="Customer actions"
+          isOpen={Boolean(menuCustomer)}
+          anchorEl={activeMenu?.anchorEl ?? null}
+          onClose={closeMenu}
+          items={menuItems}
+        />
       </main>
 
       {/* Modals */}

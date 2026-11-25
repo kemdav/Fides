@@ -15,7 +15,9 @@ export type ModalProps = {
   children?: React.ReactNode;
   className?: string;
   unstyled?: boolean;
+  dismissOnBackdrop?: boolean;
   labelledBy?: string;
+  describedBy?: string;
 };
 
 /**
@@ -33,7 +35,9 @@ export function Modal({
   children,
   className,
   unstyled = false,
+  dismissOnBackdrop = false,
   labelledBy,
+  describedBy,
 }: ModalProps) {
   const dialogRef = React.useRef<HTMLDialogElement>(null);
 
@@ -62,7 +66,11 @@ export function Modal({
     <dialog
       ref={dialogRef}
       aria-labelledby={labelledBy}
+      aria-describedby={describedBy}
       onClose={onClose}
+      onClick={(event) => {
+        if (dismissOnBackdrop && event.target === event.currentTarget) onClose();
+      }}
       onCancel={(event) => {
         event.preventDefault();
         onClose();

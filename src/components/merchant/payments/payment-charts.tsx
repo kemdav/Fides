@@ -1,111 +1,257 @@
 "use client";
 
 import * as React from "react";
+import { fieldOutlineClasses } from "@/components/admin/fields";
+import { Icon } from "@/components/admin/icon";
+import { Listbox } from "@/components/admin/listbox";
+import { Surface } from "@/components/admin/primitives";
+import { getManilaDateKey, getManilaTodayKey, MANILA_TIMEZONE } from "@/lib/date-utils";
 import { formatPeso } from "@/lib/payments";
-import type { DailyCollectionPointDTO, MethodBreakdownItemDTO } from "@/types/payments";
+import { cn } from "@/lib/utils";
+import type { DailyCollectionPointDTO, MethodBreakdownItemDTO, PaymentRecordDTO } from "@/types/payments";
 
-/* -------------------------------------------------- Daily Collections Chart */
+type Timeframe = "today" | "week" | "month" | "year";
 
-interface DailyCollectionsBarChartProps {
-  data: DailyCollectionPointDTO[];
-  timeframe: "7" | "14" | "30";
-  onTimeframeChange: (tf: "7" | "14" | "30") => void;
+const timeframeOptions: { value: Timeframe; label: string }[] = [
+  { value: "today", label: "Today" },
+  { value: "week", label: "Week" },
+  { value: "month", label: "Month" },
+  { value: "year", label: "Year" },
+];
+
+const dayLabel = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short", day: "numeric" });
+const fullDate = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" });
+const monthLabel = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short" });
+const fullMonth = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "long", year: "numeric" });
+const weekdayLabel = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short" });
+const hourLabel = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", hour: "numeric", hour12: true });
+const manilaHour = new Intl.DateTimeFormat("en-GB", { timeZone: MANILA_TIMEZONE, hour: "2-digit", hourCycle: "h23" });
+
+type CollectionPoint = DailyCollectionPointDTO & { tickLabel?: string };
+
+// Compose the separator explicitly so server and browser ICU versions render the same label.
+function formatWeekLabel(start: Date, lastDay: Date): string {
+  const year = lastDay.getUTCFullYear();
+  if (start.getUTCFullYear() !== year) {
+    return `${fullDate.format(start)} – ${fullDate.format(lastDay)}`;
+  }
+
+  const lastDayLabel = start.getUTCMonth() === lastDay.getUTCMonth()
+    ? lastDay.getUTCDate()
+    : dayLabel.format(lastDay);
+  return `${dayLabel.format(start)} – ${lastDayLabel}, ${year}`;
+}
+
+/** Use UTC dates for Manila calendar arithmetic. Transaction timestamps are bucketed in Manila time. */
+function getPeriod(todayKey: string, timeframe: Timeframe, offset: number) {
+  const anchor = new Date(todayKey + "T00:00:00Z");
+  const year = anchor.getUTCFullYear();
+  const month = anchor.getUTCMonth();
+  const addDays = (date: Date, days: number) =>
+    new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + days));
+
+  if (timeframe === "today") {
+    const start = addDays(anchor, -offset);
+    return { start, end: addDays(start, 1), label: fullDate.format(start) };
+  }
+
+  if (timeframe === "week") {
+    const daysSinceMonday = (anchor.getUTCDay() + 6) % 7;
+    const start = addDays(anchor, -daysSinceMonday - offset * 7);
+    return { start, end: addDays(start, 7), label: formatWeekLabel(start, addDays(start, 6)) };
+  }
+
+  if (timeframe === "month") {
+    const start = new Date(Date.UTC(year, month - offset, 1));
+    return { start, end: new Date(Date.UTC(year, month - offset + 1, 1)), label: fullMonth.format(start) };
+  }
+
+  return {
+    start: new Date(Date.UTC(year - offset, 0, 1)),
+    end: new Date(Date.UTC(year - offset + 1, 0, 1)),
+    label: String(year - offset),
+  };
+}
+
+function makeBuckets(start: Date, end: Date, timeframe: Timeframe): CollectionPoint[] {
+  const points: CollectionPoint[] = [];
+  for (const cursor = new Date(start); cursor < end;) {
+    const key = cursor.toISOString().slice(0, 10);
+    let dateKey = key;
+    let label = dayLabel.format(cursor);
+    let tickLabel: string | undefined;
+
+    if (timeframe === "today") {
+      const hour = cursor.getUTCHours();
+      dateKey = key + "T" + String(hour).padStart(2, "0");
+      label = hourLabel.format(cursor);
+      if (hour % 4 === 0) tickLabel = label;
+      cursor.setUTCHours(hour + 1);
+    } else if (timeframe === "year") {
+      label = fullMonth.format(cursor);
+      tickLabel = monthLabel.format(cursor);
+      cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+    } else {
+      const day = cursor.getUTCDate();
+      if (timeframe === "week") tickLabel = weekdayLabel.format(cursor);
+      else if (day === 1 || day % 7 === 0) tickLabel = String(day);
+      cursor.setUTCDate(day + 1);
+    }
+
+    points.push({ dateKey, label, tickLabel, grossCents: 0, netCents: 0, count: 0 });
+  }
+  return points;
 }
 
 export function DailyCollectionsBarChart({
-  data,
-  timeframe,
-  onTimeframeChange,
-}: DailyCollectionsBarChartProps) {
-  const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null);
+  history,
+  todayKey = getManilaTodayKey(),
+}: {
+  history: PaymentRecordDTO[];
+  todayKey?: string;
+}) {
+  const [period, setPeriod] = React.useState<{ timeframe: Timeframe; offset: number }>({ timeframe: "week", offset: 0 });
+  const [hoveredKey, setHoveredKey] = React.useState<string | null>(null);
+  const timeframeId = React.useId();
+  const rangeId = React.useId();
+  const { timeframe, offset } = period;
+  const { start, end, label } = getPeriod(todayKey, timeframe, offset);
 
-  const maxGross = Math.max(...data.map((d) => d.grossCents), 10000);
-  const chartHeight = 180;
-  const barAreaHeight = 140;
+  const datedPayments = React.useMemo(() => {
+    return history.flatMap((payment) => {
+      if (payment.status === "voided" || payment.status === "refunded") return [];
+      const timestamp = new Date(payment.paidAt);
+      if (!Number.isFinite(timestamp.getTime())) return [];
+      return [{
+        day: getManilaDateKey(timestamp),
+        hour: manilaHour.format(timestamp),
+        amountCents: payment.amountCents,
+        netCents: payment.netCents,
+      }];
+    });
+  }, [history]);
+
+  const data = makeBuckets(start, end, timeframe);
+  const buckets = new Map(data.map((point) => [point.dateKey, point]));
+  for (const payment of datedPayments) {
+    const key = timeframe === "today"
+      ? payment.day + "T" + payment.hour
+      : timeframe === "year"
+        ? payment.day.slice(0, 7) + "-01"
+        : payment.day;
+    const point = buckets.get(key);
+    if (point) {
+      point.grossCents += payment.amountCents;
+      point.netCents += payment.netCents;
+      point.count += 1;
+    }
+  }
+
+  const hoveredIndex = data.findIndex((point) => point.dateKey === hoveredKey);
+  const hovered = data[hoveredIndex];
+  const maxGross = Math.max(...data.map((point) => point.grossCents), 10000);
+
+  function shiftPeriod(direction: -1 | 1) {
+    setHoveredKey(null);
+    setPeriod((current) => ({ ...current, offset: Math.max(0, current.offset + direction) }));
+  }
+
+  function changeTimeframe(value: string) {
+    const next = timeframeOptions.find((option) => option.value === value);
+    if (next) {
+      setHoveredKey(null);
+      setPeriod({ timeframe: next.value, offset: 0 });
+    }
+  }
 
   return (
-    <div className="flex h-full flex-col justify-between rounded-xl border border-[#EDECE8] bg-white p-5 shadow-sm">
-      {/* Chart Header */}
-      <div className="flex items-center justify-between pb-4">
+    <Surface className="flex h-full min-w-0 flex-col justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
         <div>
-          <h3 className="text-base font-semibold text-[#1E293B]">Daily Net Collections</h3>
-          <p className="text-xs text-[#64748B]">Revenue trends across settled appointments</p>
+          <h2 className="text-base font-semibold leading-6 text-ink">Collections</h2>
+          <p id={rangeId} className="text-sm text-muted" aria-live="polite">{label}</p>
         </div>
-        <div className="relative">
-          <select
-            value={timeframe}
-            onChange={(e) => onTimeframeChange(e.target.value as "7" | "14" | "30")}
-            className="cursor-pointer rounded-lg border border-[#E2E8F0] bg-white px-3 py-1.5 text-xs font-semibold text-[#334155] shadow-xs hover:border-[#CBD5E1] focus:border-[#C35000] focus:ring-1 focus:ring-[#C35000] focus:outline-none"
-            aria-label="Select timeframe for collections chart"
+
+        <div className="flex items-center justify-between gap-1.5" role="group" aria-label="Collections period">
+          <button
+            type="button"
+            aria-label="Previous period"
+            onClick={() => shiftPeriod(1)}
+            className={fieldOutlineClasses + " flex size-11 shrink-0 items-center justify-center text-glyph hover:bg-mist"}
           >
-            <option value="7">Last 7 days</option>
-            <option value="14">Last 14 days</option>
-            <option value="30">Last 30 days</option>
-          </select>
+            <Icon name="chevron-down" className="size-4 rotate-90" />
+          </button>
+          <div className="w-28">
+            <Listbox
+              id={timeframeId}
+              label="Collections timeframe"
+              hideLabel
+              describedBy={rangeId}
+              value={timeframe}
+              options={timeframeOptions}
+              onChange={changeTimeframe}
+            />
+          </div>
+          <button
+            type="button"
+            aria-label="Next period"
+            disabled={offset === 0}
+            onClick={() => shiftPeriod(-1)}
+            className={fieldOutlineClasses + " flex size-11 shrink-0 items-center justify-center text-glyph enabled:hover:bg-mist disabled:opacity-40"}
+          >
+            <Icon name="chevron-down" className="size-4 -rotate-90" />
+          </button>
         </div>
       </div>
 
-      {/* SVG Bar Chart */}
       <div className="relative my-2 w-full">
-        {/* Tooltip */}
-        {hoveredIndex !== null && data[hoveredIndex] && (
+        {hovered && (
           <div
-            className="pointer-events-none absolute -top-12 z-20 -translate-x-1/2 rounded-lg bg-[#0F172A] px-3 py-1.5 text-xs text-white shadow-lg transition-all"
-            style={{
-              left: `${((hoveredIndex + 0.5) / data.length) * 100}%`,
-            }}
+            aria-hidden
+            className="pointer-events-none absolute -top-12 z-20 w-44 -translate-x-1/2 rounded-lg bg-ink px-3 py-1.5 text-xs text-white shadow-lg"
+            style={{ left: "clamp(5.5rem, " + ((hoveredIndex + 0.5) / data.length) * 100 + "%, calc(100% - 5.5rem))" }}
           >
-            <p className="font-semibold">{data[hoveredIndex].label}</p>
-            <p className="text-emerald-400">Gross: {formatPeso(data[hoveredIndex].grossCents)}</p>
-            <p className="text-neutral-300">Net: {formatPeso(data[hoveredIndex].netCents)}</p>
+            <p className="font-semibold">{hovered.label}</p>
+            <p className="text-emerald-400">Gross: {formatPeso(hovered.grossCents)}</p>
+            <p className="text-neutral-300">Net: {formatPeso(hovered.netCents)}</p>
             <p className="text-[10px] text-neutral-400">
-              {data[hoveredIndex].count} transaction{data[hoveredIndex].count === 1 ? "" : "s"}
+              {hovered.count} transaction{hovered.count === 1 ? "" : "s"}
             </p>
           </div>
         )}
 
-        <div className="flex h-[180px] w-full items-end gap-1.5 sm:gap-3">
-          {data.map((point, index) => {
-            const heightPercent = Math.max((point.grossCents / maxGross) * 100, 3);
-            const isHovered = hoveredIndex === index;
-
-            return (
-              <div
-                key={point.dateKey}
-                className="group relative flex flex-1 flex-col items-center justify-end h-full cursor-pointer"
-                onMouseEnter={() => setHoveredIndex(index)}
-                onMouseLeave={() => setHoveredIndex(null)}
-              >
-                {/* Subtle vertical bar */}
-                <div className="w-full flex justify-center items-end" style={{ height: `${barAreaHeight}px` }}>
-                  <div
-                    className={`w-full max-w-[28px] rounded-t-md transition-all duration-200 ${
-                      isHovered
-                        ? "bg-[#A73F00] shadow-md scale-y-105"
-                        : point.grossCents > 0
-                        ? "bg-[#C35000] hover:bg-[#B34500]"
-                        : "bg-[#F1F5F9]"
-                    }`}
-                    style={{
-                      height: point.grossCents > 0 ? `${heightPercent}%` : "4px",
-                    }}
-                  />
-                </div>
-                {/* Date Label */}
-                <span className="mt-2 text-[10px] sm:text-[11px] font-medium text-[#64748B] truncate w-full text-center">
-                  {point.label.split(" ")[1] || point.label}
-                </span>
+        <div className="flex h-44 w-full items-end gap-0.5 sm:gap-1.5" role="group" aria-label="Gross collections">
+          {data.map((point) => (
+            <div
+              key={point.dateKey}
+              role="img"
+              aria-label={point.label + ", gross " + formatPeso(point.grossCents) + ", net " + formatPeso(point.netCents)}
+              className="flex h-full min-w-0 flex-1 flex-col items-center justify-end"
+              onMouseEnter={() => setHoveredKey(point.dateKey)}
+              onMouseLeave={() => setHoveredKey(null)}
+            >
+              <div className="flex h-36 w-full items-end justify-center">
+                <div
+                  className={cn(
+                    "w-full max-w-7 rounded-t-md transition-colors",
+                    point.grossCents > 0 ? "bg-burnt" : "bg-mist",
+                    hoveredKey === point.dateKey && "bg-burnt-dark",
+                  )}
+                  style={{ height: point.grossCents > 0 ? Math.max((point.grossCents / maxGross) * 100, 3) + "%" : "4px" }}
+                />
               </div>
-            );
-          })}
+              <span aria-hidden className="mt-2 block h-4 text-center text-[10px] font-medium text-muted sm:text-[11px]">
+                {point.tickLabel}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Footer Note */}
-      <p className="border-t border-[#F1F5F9] pt-3 text-[11px] text-[#94A3B8]">
-        Net collections reflect recorded payments in Philippine pesos (Asia/Manila) and feed into BIR quarterly sales summaries.
+      <p className="border-t border-hairline pt-3 text-[11px] text-subtle">
+        Collections are shown in Philippine pesos using Asia/Manila time.
       </p>
-    </div>
+    </Surface>
   );
 }
 
@@ -115,121 +261,78 @@ interface MethodDonutChartProps {
   breakdown: MethodBreakdownItemDTO[];
 }
 
-const METHOD_COLORS = {
-  cash: "#C35000", // Burnt orange
-  ewallet: "#2B4C7E", // Deep slate blue
-  card: "#0D9488", // Teal
+const methodColors: Record<MethodBreakdownItemDTO["method"], string> = {
+  cash: "var(--color-burnt)",
+  ewallet: "var(--color-sky)",
+  card: "var(--color-body)",
 };
 
 export function MethodDonutChart({ breakdown }: MethodDonutChartProps) {
   const totalCents = breakdown.reduce((sum, item) => sum + item.amountCents, 0);
-
-  // SVG Donut calculation
-  const size = 160;
-  const strokeWidth = 26;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-
-  let accumulatedPercent = 0;
+  const arcs = [];
+  let offset = 0;
+  for (const item of breakdown) {
+    const length = totalCents > 0 ? (item.amountCents / totalCents) * 100 : 0;
+    arcs.push({ method: item.method, length, offset });
+    offset += length;
+  }
 
   return (
-    <div className="flex h-full flex-col justify-between rounded-xl border border-[#EDECE8] bg-white p-5 shadow-sm">
-      {/* Header */}
+    <Surface className="flex h-full min-w-0 flex-col gap-6">
       <div>
-        <h3 className="text-base font-semibold text-[#1E293B]">Collections by Method</h3>
-        <p className="text-xs text-[#64748B]">Breakdown across settlement channels</p>
+        <h2 className="text-base font-semibold leading-6 text-ink">Collections by method</h2>
+        <p className="text-sm text-muted">Breakdown across settlement channels</p>
       </div>
 
-      {/* Body: Donut on Left, Legend on Right */}
-      <div className="my-auto flex flex-col items-center justify-center gap-6 sm:flex-row sm:justify-around py-2">
-        {/* SVG Donut */}
-        <div className="relative flex size-[160px] items-center justify-center">
-          <svg className="size-full -rotate-90" viewBox={`0 0 ${size} ${size}`}>
-            {/* Background ring */}
-            <circle
-              cx={size / 2}
-              cy={size / 2}
-              r={radius}
-              fill="transparent"
-              stroke="#F1F5F9"
-              strokeWidth={strokeWidth}
-            />
-
-            {/* Slices */}
-            {totalCents > 0 ? (
-              breakdown.map((item) => {
-                const strokeDasharray = `${(item.percentage / 100) * circumference} ${circumference}`;
-                const strokeDashoffset = -((accumulatedPercent / 100) * circumference);
-                accumulatedPercent += item.percentage;
-
-                const color = METHOD_COLORS[item.method] || "#94A3B8";
-
-                return (
-                  <circle
-                    key={item.method}
-                    cx={size / 2}
-                    cy={size / 2}
-                    r={radius}
-                    fill="transparent"
-                    stroke={color}
-                    strokeWidth={strokeWidth}
-                    strokeDasharray={strokeDasharray}
-                    strokeDashoffset={strokeDashoffset}
-                    className="transition-all duration-300"
-                  />
-                );
-              })
-            ) : (
+      <div className="my-auto flex flex-wrap items-center gap-8">
+        <div className="relative mx-auto size-40 shrink-0">
+          <svg aria-hidden="true" className="size-full -rotate-90" viewBox="0 0 160 160">
+            <circle cx="80" cy="80" r="70" fill="none" stroke="var(--color-mist)" strokeWidth="20" />
+            {arcs.map(({ method, length, offset }) => length > 0 && (
               <circle
-                cx={size / 2}
-                cy={size / 2}
-                r={radius}
-                fill="transparent"
-                stroke="#E2E8F0"
-                strokeWidth={strokeWidth}
+                key={method}
+                cx="80"
+                cy="80"
+                r="70"
+                fill="none"
+                stroke={methodColors[method]}
+                strokeWidth="20"
+                pathLength="100"
+                strokeDasharray={length + " " + Math.max(0, 100 - length)}
+                strokeDashoffset={-offset}
               />
-            )}
+            ))}
           </svg>
 
-          {/* Central Total Text */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-            <span className="text-xs font-medium text-[#64748B]">Total</span>
-            <span className="text-sm font-bold text-[#1E293B] max-w-[100px] truncate">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-center">
+            <span className="text-xs font-medium text-muted">Total</span>
+            <span className="max-w-28 break-all font-display text-xl leading-6 text-ink">
               {formatPeso(totalCents)}
             </span>
           </div>
         </div>
 
-        {/* Legend List */}
-        <div className="flex flex-col gap-2.5 min-w-[150px]">
-          {breakdown.map((item) => {
-            const color = METHOD_COLORS[item.method] || "#94A3B8";
-            return (
-              <div key={item.method} className="flex items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="size-3 rounded-full shrink-0"
-                    style={{ backgroundColor: color }}
-                  />
-                  <span className="font-medium text-[#334155]">{item.label}</span>
-                </div>
-                <div className="text-right">
-                  <span className="font-semibold text-[#1E293B] block">
-                    {formatPeso(item.amountCents)}
-                  </span>
-                  <span className="text-[11px] text-[#64748B] block">
-                    {item.percentage.toFixed(1)}% ({item.count})
-                  </span>
-                </div>
+        <ul className="min-w-0 flex-[1_1_12rem] divide-y divide-hairline rounded-lg border border-hairline">
+          {breakdown.map((item) => (
+            <li key={item.method} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 px-3 py-3 sm:px-4">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <span
+                  aria-hidden="true"
+                  className="size-2.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: methodColors[item.method] }}
+                />
+                <span className="min-w-0 break-words text-sm font-medium leading-5 text-ink">{item.label}</span>
               </div>
-            );
-          })}
-        </div>
+              <div className="max-w-32 text-right tabular-nums">
+                <p className="break-all text-sm font-semibold leading-5 text-ink">{formatPeso(item.amountCents)}</p>
+                <p className="text-xs leading-5 text-muted">
+                  {item.percentage.toFixed(1)}% · {item.count} {item.count === 1 ? "payment" : "payments"}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ul>
       </div>
-
-      <div className="border-t border-[#F1F5F9] pt-3 text-[11px] text-[#94A3B8]">
-        Updates automatically upon recording cash, e-wallet, or card transactions.
-      </div>
-    </div>
+    </Surface>
   );
 }

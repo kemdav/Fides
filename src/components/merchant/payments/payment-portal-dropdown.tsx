@@ -1,8 +1,8 @@
 "use client";
 
-import * as React from "react";
-import { createPortal } from "react-dom";
+import { RowActionMenu, type RowActionMenuProps } from "@/components/admin/row-action-menu";
 
+<<<<<<< HEAD
 export interface DropdownMenuItem {
   label: string;
   onClick: () => void;
@@ -162,4 +162,10 @@ export function PaymentPortalDropdown({
     </div>,
     document.body
   );
+=======
+export type { RowActionMenuItem as DropdownMenuItem } from "@/components/admin/row-action-menu";
+
+export function PaymentPortalDropdown(props: Omit<RowActionMenuProps, "label">) {
+  return <RowActionMenu {...props} label="Payment actions" />;
+>>>>>>> e0f2bf585edf876750be2af6d4b61799819c43bc
 }
