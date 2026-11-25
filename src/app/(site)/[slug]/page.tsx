@@ -102,7 +102,10 @@ export default async function StorefrontPage({ params }: StorefrontPageProps) {
   const services =
     featuredServices.length > 0
       ? featuredServices.map((s) => toStorefrontServiceCard(s, slug))
-      : ALL_SERVICES.slice(0, 3);
+      : ALL_SERVICES.slice(0, 3).map((service) => ({
+          ...service,
+          href: `/${slug}/book?service=${encodeURIComponent(service.name)}`,
+        }));
 
   const heroHeading = tenant.headline || "A little time for yourself.";
   const heroSubtitle =
@@ -148,7 +151,7 @@ export default async function StorefrontPage({ params }: StorefrontPageProps) {
         activeHref={`/${slug}`}
         contactHref={`/${slug}/contact`}
         homeHref={`/${slug}`}
-        bookHref={`/${slug}/services`}
+        bookHref={`/${slug}/book`}
       />
 
       <main className="flex-1">
@@ -156,7 +159,7 @@ export default async function StorefrontPage({ params }: StorefrontPageProps) {
           heading={heroHeading}
           subtitle={heroSubtitle}
           ctaLabel="Book An Appointment"
-          ctaHref={`/${slug}/services`}
+          ctaHref={`/${slug}/book`}
           imageSrc={heroImageSrc}
           imageAlt={`${businessName} booking on a mobile phone`}
         />
@@ -182,7 +185,7 @@ export default async function StorefrontPage({ params }: StorefrontPageProps) {
         navLinks={nav}
         activeHref={`/${slug}`}
         contactHref={`/${slug}/contact`}
-        bookHref={`/${slug}/services`}
+        bookHref={`/${slug}/book`}
       />
     </div>
   );

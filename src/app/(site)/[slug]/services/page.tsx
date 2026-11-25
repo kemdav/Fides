@@ -71,7 +71,10 @@ export default async function ServicesPage({ params }: ServicesPageProps) {
   const services =
     dbServices.length > 0
       ? dbServices.map((s) => toStorefrontServiceCard(s, slug))
-      : ALL_SERVICES;
+      : ALL_SERVICES.map((service) => ({
+          ...service,
+          href: `/${slug}/book?service=${encodeURIComponent(service.name)}`,
+        }));
 
   return (
     <>
@@ -81,7 +84,7 @@ export default async function ServicesPage({ params }: ServicesPageProps) {
         activeHref={`/${slug}/services`}
         contactHref={`/${slug}/contact`}
         homeHref={`/${slug}`}
-        bookHref={`/${slug}/services`}
+        bookHref={`/${slug}/book`}
       />
 
       <main className="flex flex-1 bg-powder">
@@ -96,7 +99,7 @@ export default async function ServicesPage({ params }: ServicesPageProps) {
         navLinks={nav}
         activeHref={`/${slug}/services`}
         contactHref={`/${slug}/contact`}
-        bookHref={`/${slug}/services`}
+        bookHref={`/${slug}/book`}
       />
     </>
   );
