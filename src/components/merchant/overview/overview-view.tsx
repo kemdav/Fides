@@ -27,6 +27,7 @@ import {
   type WalkInResult,
 } from "@/components/merchant/walk-in-modal";
 import { EmptyState } from "@/components/ui/empty-state";
+import { WebsiteSetupPrompt } from "@/components/merchant/onboarding/website-setup/website-setup-prompt";
 import type { AppointmentServiceOption, AppointmentStaffOption } from "@/types/appointments";
 
 export interface AppointmentRow {
@@ -61,6 +62,7 @@ export interface OverviewViewProps {
   userEmail?: string;
   userRole?: WorkspaceRole;
   tenantId?: string;
+  websiteSetupUserId?: string;
   bookingOptions?: { services: AppointmentServiceOption[]; staff: AppointmentStaffOption[] };
   todayCount?: number;
   confirmedCount?: number;
@@ -112,6 +114,7 @@ export function OverviewView({
   userEmail = "Maria Santos",
   userRole,
   tenantId,
+  websiteSetupUserId,
   bookingOptions,
   todayCount = 0,
   confirmedCount = 0,
@@ -441,6 +444,8 @@ export function OverviewView({
               </div>
             }
           />
+
+          {tenantId && websiteSetupUserId && <WebsiteSetupPrompt tenantId={tenantId} userId={websiteSetupUserId} basePath={basePath} />}
 
           {/* KPI Metric Cards (QA #1: Real loaded counts and amounts) */}
           <div className="grid grid-cols-2 gap-5 xl:grid-cols-4">
