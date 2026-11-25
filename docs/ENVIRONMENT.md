@@ -31,6 +31,8 @@ ADMIN_ACCOUNTS='[{"id":"admin-1","username":"admin@example.com","displayName":"A
 2. Run `node scripts/hash-admin-password.mjs "<password>"` and paste the output as `passwordHash`.
 3. Give every admin a different `id` and password. Restart the server.
 
+Quick local setup: run `npm run setup:admin`. It adds `ADMIN_SESSION_SECRET` and one admin (`admin@fides.local`, random password printed once) to `.env.local` when they are missing, and skips them if they exist. Use `-- --username you@example.com` to pick the username.
+
 Admins sign in at `/admin/login`. The first time you pull the branch that introduced this, add `ADMIN_ACCOUNTS`
 to your own `.env.local` or admin login will say the credentials are wrong.
 

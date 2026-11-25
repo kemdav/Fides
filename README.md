@@ -30,6 +30,7 @@ Requires Node 20+, Docker (Supabase and Redis run in containers) and the Supabas
 ```bash
 npm install
 cp .env.example .env.local        # then fill in real values (see docs/ENVIRONMENT.md)
+npm run setup:admin               # adds ADMIN_SESSION_SECRET and a local admin login to .env.local
 
 docker compose up -d redis        # local Redis for rate limiting (host port 6380)
 supabase start                    # local Supabase stack

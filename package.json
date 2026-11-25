@@ -2,6 +2,7 @@
   "name": "fides",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "Fides - multi-tenant SaaS appointment scheduling and operations platform.",
   "scripts": {
     "dev": "next dev",
@@ -11,6 +12,7 @@
     "typecheck:strict": "tsc --noEmit --noUncheckedIndexedAccess",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "node --experimental-strip-types --test src/lib/__tests__/*.test.ts",
+    "setup:admin": "node scripts/setup-admin-env.mjs",
     "email:test": "node scripts/send-test-email.mjs",
     "email:check": "node scripts/check-email-setup.mjs"
   },
