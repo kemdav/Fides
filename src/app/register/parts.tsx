@@ -100,11 +100,11 @@ export function Sidebar({
           <header className="mb-14 self-end text-left">
             <Link
               href="/"
-              className="inline-block rounded-sm font-display text-[clamp(2.25rem,3.5vw,3.125rem)] leading-tight text-burnt focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-burnt"
+              className="inline-block rounded-sm font-display text-[clamp(2.5rem,4vw,3.5rem)] leading-none text-burnt focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-burnt"
             >
               Fides
             </Link>
-            <p className="mt-2 text-base leading-6 text-burnt-dark">
+            <p className="mt-1 text-base leading-6 text-burnt-dark">
               Manage and grow your service business
             </p>
           </header>

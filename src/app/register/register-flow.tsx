@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { sendRegistrationCodeAction } from "@/app/actions/registration-email";
 import { adminButtonClasses } from "@/components/admin/admin-button";
-import { Icon, type IconName } from "@/components/admin/icon";
+import { Icon } from "@/components/admin/icon";
 import {
   CalendarPicker,
   calendarDateKey,
@@ -120,7 +120,7 @@ const initialValues: Values = {
   idType: "passport",
   businessName: "",
   requestedSlug: "",
-  businessType: BUSINESS_TYPES[0],
+  businessType: "",
   establishedYear: "",
   streetAddress: "",
   barangay: null,
@@ -726,12 +726,6 @@ export function RegisterFlow({
               logo={logo}
               logoError={logoError}
               onLogo={(file) => {
-                if (!file) {
-                  releaseObjectUrl(logo);
-                  setLogo(null);
-                  setLogoError(null);
-                  return;
-                }
                 const problem = validateFile(
                   file,
                   FILE_LIMITS.logoTypes,
@@ -1120,7 +1114,7 @@ function IdentityStep({
               onChange={(value) => set("dateOfBirth", value)}
               min="1900-01-01"
               max={calendarDateKey(latest)}
-              locale="en-GB"
+              locale="en-US"
               showWeekdays={false}
               invalid={!!errors.dateOfBirth}
               describedBy={errors.dateOfBirth ? "dateOfBirth-error" : undefined}
@@ -1187,7 +1181,7 @@ function BusinessStep({
   requestAccount: boolean;
   logo: File | null;
   logoError: string | null;
-  onLogo: (file: File | null) => void;
+  onLogo: (file: File) => void;
   onBack: () => void;
   onNext: () => void;
 }) {
@@ -1242,29 +1236,19 @@ function BusinessStep({
             <p className="text-sm text-subtle">
               Recommended: square JPG or PNG, at least 400×400 px. Max 2 MB.
             </p>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-              <label className="inline-flex h-12 w-40 cursor-pointer items-center justify-center rounded-md border border-outline/70 px-3 text-base font-semibold text-muted transition-colors hover:border-burnt hover:text-burnt focus-within:ring-2 focus-within:ring-burnt/40">
-                {logo ? "Replace Logo" : "Upload Logo"}
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  className="sr-only"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (file) onLogo(file);
-                    event.target.value = "";
-                  }}
-                />
-              </label>
-              <button
-                type="button"
-                onClick={() => onLogo(null)}
-                disabled={!logo}
-                className={cn(secondaryButton, !logo && "invisible")}
-              >
-                Remove logo
-              </button>
-            </div>
+            <label className="inline-flex h-12 w-40 cursor-pointer items-center justify-center rounded-md border border-outline/70 px-3 text-base font-semibold text-muted transition-colors hover:border-burnt hover:text-burnt focus-within:ring-2 focus-within:ring-burnt/40">
+              {logo ? "Replace Logo" : "Upload Logo"}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="sr-only"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) onLogo(file);
+                  event.target.value = "";
+                }}
+              />
+            </label>
             {logoError ? (
               <p role="alert" className="text-sm text-danger">
                 {logoError}
@@ -1452,7 +1436,9 @@ function DocumentsStep({
     >
       <Heading
         title="Upload your business documents"
-        subtitle={`All documents listed below are required for your selected business type (${businessType}).`}
+        subtitle={businessType
+          ? `All documents listed below are required for your selected business type (${businessType}).`
+          : "Select a business type in Step 3 to see the full list of required documents."}
       />
       {summaryError ? (
         <p
@@ -1564,13 +1550,11 @@ function PlanStep({
 
 function SummaryCard({
   title,
-  icon,
   className,
   onEdit,
   children,
 }: {
   title: string;
-  icon: IconName;
   className?: string;
   onEdit: () => void;
   children: React.ReactNode;
@@ -1578,10 +1562,7 @@ function SummaryCard({
   return (
     <section className={cn("min-w-0 overflow-hidden rounded-xl border border-line bg-white", className)}>
       <header className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-5">
-        <h2 className="flex items-center gap-3 text-base font-semibold text-ink">
-          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-mist">
-            <Icon name={icon} weight="fill" className="size-5 text-muted" />
-          </span>
+        <h2 className="text-base font-semibold text-ink">
           {title}
         </h2>
         <button
@@ -1605,7 +1586,6 @@ function FileRow({ label, file, onPreview }: { label: string; file?: File | null
   if (!file) {
     return (
       <div className="flex min-w-0 items-center gap-3 rounded-lg border border-line px-3 py-2 text-sm">
-        <Icon name="file" weight="fill" className="size-5 text-glyph" />
         <span className="min-w-0 flex-1 font-medium text-ink">{label}</span>
         <span className="shrink-0 text-xs font-semibold text-danger">Missing</span>
       </div>
@@ -1615,12 +1595,11 @@ function FileRow({ label, file, onPreview }: { label: string; file?: File | null
   return (
     <button type="button" onClick={onPreview} aria-label={`Preview ${label}: ${file.name}`} title={file.name}
       className="flex min-h-12 w-full min-w-0 items-center gap-3 rounded-lg border border-line px-3 py-2 text-left hover:border-burnt/40 hover:bg-mist focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-burnt">
-      <Icon name="file" weight="fill" className="size-5 text-glyph" />
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-semibold leading-5 text-ink">{label}</span>
         <span className="block truncate text-xs leading-5 text-muted">{file.name} · {formatBytes(file.size)}</span>
       </span>
-      <Icon name="eye" weight="fill" className="size-4 text-muted" />
+      <span className="shrink-0 text-sm font-semibold text-burnt">View</span>
     </button>
   );
 }
@@ -1655,7 +1634,7 @@ function SummaryStep({
     ID_TYPES.find((item) => item.value === values.idType)?.label ??
     values.idType;
   const dob = values.dateOfBirth
-    ? new Date(`${values.dateOfBirth}T00:00:00`).toLocaleDateString("en-GB", {
+    ? new Date(`${values.dateOfBirth}T00:00:00`).toLocaleDateString("en-US", {
         day: "numeric",
         month: "long",
         year: "numeric",
@@ -1681,7 +1660,6 @@ function SummaryStep({
       <div className="grid gap-4 md:grid-cols-2">
         <SummaryCard
           title="Account Details"
-          icon={STEPS[0].icon}
           onEdit={() => onEdit(0)}
         >
           <Row label="Email Address" value={values.email} />
@@ -1690,7 +1668,6 @@ function SummaryStep({
 
         <SummaryCard
           title="Subscription Package"
-          icon="card"
           onEdit={() => onEdit(4)}
         >
           <SelectedPlanSummary code={values.planCode} />
@@ -1698,7 +1675,6 @@ function SummaryStep({
 
         <SummaryCard
           title="Identity Verification"
-          icon="shield"
           onEdit={() => onEdit(1)}
         >
           <Row label="Owner Name" value={values.ownerLegalName} />
@@ -1714,7 +1690,6 @@ function SummaryStep({
 
         <SummaryCard
           title="Business Information"
-          icon="grid"
           onEdit={() => onEdit(2)}
         >
           <Row label="Business Name" value={values.businessName} />
@@ -1748,7 +1723,6 @@ function SummaryStep({
 
         <SummaryCard
           title="Document Requirements"
-          icon="document"
           className="md:col-span-2"
           onEdit={() => onEdit(3)}
         >
