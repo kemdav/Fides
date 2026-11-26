@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { AdminLogoutButton } from "./admin-logout-button";
 import { AdminNav } from "./admin-nav";
 import { AdminTopbar } from "./admin-topbar";
 
@@ -22,6 +23,7 @@ export function AdminShell({ identity, children }: { identity: AdminIdentity; ch
           <p className="text-sm font-semibold leading-[21px]">{identity.name}</p>
           <p className="text-xs leading-[18px]">{identity.role}</p>
         </div>
+        <AdminLogoutButton />
       </aside>
 
       <AdminTopbar identity={identity} />

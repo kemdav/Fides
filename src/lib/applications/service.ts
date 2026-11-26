@@ -7,6 +7,7 @@ import { isMailConfigured } from "@/lib/mail/mailer";
 import { sendApprovalEmail, sendBillingReminderEmail, sendRejectionEmail, sendSubmissionEmail } from "@/lib/mail/emails";
 import { formatRegistrationStreetAddress } from "@/lib/registration/address";
 import { readMissingApprovalDocuments } from "./document-queries";
+import type { AdminActor } from "@/lib/admin/identity";
 import { createAdminClient, type AdminClient } from "@/lib/supabase/admin";
 import {
   ALL_DOCUMENTS,
@@ -39,7 +40,6 @@ import type {
   SubscriptionPlanRow,
 } from "@/types/database.types";
 
-const ACTOR = "Platform administrator";
 const LOGO_BUCKET = "business-logos";
 
 export class ServiceError extends Error {
@@ -72,13 +72,17 @@ async function logActivity(
     before: string;
     after: string;
     reason: string;
-    actor?: string;
+    /** the admin who made the decision */
+    actor?: AdminActor;
+    /** used when nobody is signed in, e.g. an applicant submitting */
+    actorName?: string;
   }
 ) {
   await admin.from("admin_activity_log").insert({
     application_id: entry.applicationId,
     business_name: entry.business,
-    actor: entry.actor ?? ACTOR,
+    actor: entry.actor?.displayName ?? entry.actorName ?? "System",
+    actor_id: entry.actor?.id ?? null,
     action: entry.action,
     category: entry.category,
     before_value: entry.before,
@@ -306,7 +310,7 @@ export async function submitApplication(
       reason: `${fullName} submitted a new account application with ${documentRows.length} documents.${
         previousRejections ? ` This email was rejected ${previousRejections} time${previousRejections === 1 ? "" : "s"} before.` : ""
       }`,
-      actor: fullName,
+      actorName: fullName,
     });
 
     // Everything is saved: confirm by email. A mail failure must never undo a valid submission.
@@ -615,7 +619,7 @@ async function uniqueSlug(admin: AdminClient, name: string): Promise<string> {
 
 export type DecisionResult = { message: string; warning?: string };
 
-export async function approveApplication(id: string): Promise<DecisionResult> {
+export async function approveApplication(id: string, actor: AdminActor): Promise<DecisionResult> {
   const admin = createAdminClient();
   const { app, business } = await getJoined(admin, id);
   if (app.status !== "pending") throw new ServiceError("Only pending applications can be approved.", 409);
@@ -682,7 +686,7 @@ export async function approveApplication(id: string): Promise<DecisionResult> {
       approved_at: timestamp,
       decided_at: timestamp,
       reviewed_at: timestamp,
-      reviewed_by: ACTOR,
+      reviewed_by: actor.displayName,
       review_notes: null,
       tenant_id: tenant.id,
     })
@@ -694,6 +698,7 @@ export async function approveApplication(id: string): Promise<DecisionResult> {
   }
 
   await logActivity(admin, {
+    actor,
     applicationId: id,
     business: business.business_name,
     action: "Verification completed",
@@ -744,7 +749,7 @@ export async function resendApprovalEmail(id: string): Promise<DecisionResult> {
  * Reject a pending application: email the applicant the reason (with a link to register again),
  * then erase the account, documents and images so the same email/details can be submitted afresh.
  */
-export async function rejectApplication(id: string, reason: string): Promise<DecisionResult> {
+export async function rejectApplication(id: string, reason: string, actor: AdminActor): Promise<DecisionResult> {
   const admin = createAdminClient();
   const joined = await getJoined(admin, id);
   const { app, identity, business } = joined;
@@ -780,7 +785,7 @@ export async function rejectApplication(id: string, reason: string): Promise<Dec
       rejection_reason: reason,
       submitted_at: app.submitted_at,
       rejected_at: rejectedAt,
-      rejected_by: ACTOR,
+      rejected_by: actor.displayName,
       email_sent: mailError === null,
     },
     { onConflict: "application_id" }
@@ -789,6 +794,7 @@ export async function rejectApplication(id: string, reason: string): Promise<Dec
 
   await purgeApplication(admin, joined);
   await logActivity(admin, {
+    actor,
     applicationId: null,
     business: name,
     action: "Application rejected",
@@ -902,7 +908,7 @@ export async function loadPendingSummary(): Promise<PendingSummary> {
   };
 }
 
-export async function deleteApplication(id: string): Promise<DecisionResult> {
+export async function deleteApplication(id: string, actor: AdminActor): Promise<DecisionResult> {
   const admin = createAdminClient();
   const joined = await getJoined(admin, id);
   const { app, business } = joined;
@@ -911,6 +917,7 @@ export async function deleteApplication(id: string): Promise<DecisionResult> {
   await purgeApplication(admin, joined);
 
   await logActivity(admin, {
+    actor,
     applicationId: null,
     business: name,
     action: "Account deleted",
@@ -922,7 +929,7 @@ export async function deleteApplication(id: string): Promise<DecisionResult> {
   return { message: `${name} has been deleted.` };
 }
 
-export async function setAccess(ids: string[], access: "active" | "suspended", reason: string): Promise<DecisionResult> {
+export async function setAccess(ids: string[], access: "active" | "suspended", reason: string, actor: AdminActor): Promise<DecisionResult> {
   const admin = createAdminClient();
   let changed = 0;
   for (const id of ids) {
@@ -936,6 +943,7 @@ export async function setAccess(ids: string[], access: "active" | "suspended", r
       await admin.from("tenants").update({ status: access === "suspended" ? "suspended" : "active" }).eq("id", app.tenant_id);
     }
     await logActivity(admin, {
+      actor,
       applicationId: id,
       business: business?.business_name ?? app.full_name,
       action: access === "suspended" ? "Account suspended" : "Account reactivated",
@@ -949,7 +957,7 @@ export async function setAccess(ids: string[], access: "active" | "suspended", r
   return { message: `${changed} ${changed === 1 ? "tenant" : "tenants"} ${access === "suspended" ? "suspended" : "reactivated"}.` };
 }
 
-export async function changePlan(id: string, planCode: string, reason: string): Promise<DecisionResult> {
+export async function changePlan(id: string, planCode: string, reason: string, actor: AdminActor): Promise<DecisionResult> {
   const admin = createAdminClient();
   const { app, business } = await getJoined(admin, id);
   const { data: plan } = await admin.from("subscription_plans").select("name, is_active").eq("code", planCode).maybeSingle();
@@ -961,6 +969,7 @@ export async function changePlan(id: string, planCode: string, reason: string): 
 
   const name = business?.business_name ?? app.full_name;
   await logActivity(admin, {
+    actor,
     applicationId: id,
     business: name,
     action: "Plan changed",
@@ -1011,7 +1020,7 @@ export type PlanInput = {
   locationLimit: number | null;
 };
 
-export async function savePlan(input: PlanInput): Promise<DecisionResult> {
+export async function savePlan(input: PlanInput, actor: AdminActor): Promise<DecisionResult> {
   const admin = createAdminClient();
   const name = input.name.trim();
   if (!name || !(input.price > 0)) throw new ServiceError("Enter a tier name and a price above zero.", 400);
@@ -1024,6 +1033,7 @@ export async function savePlan(input: PlanInput): Promise<DecisionResult> {
       .eq("code", input.code);
     if (error) fail(error, "Could not save the tier");
     await logActivity(admin, {
+      actor,
       applicationId: null,
       business: name,
       action: "Tier updated",
@@ -1053,6 +1063,7 @@ export async function savePlan(input: PlanInput): Promise<DecisionResult> {
   });
   if (error) fail(error, "Could not create the tier");
   await logActivity(admin, {
+    actor,
     applicationId: null,
     business: name,
     action: "Tier created",
@@ -1064,13 +1075,14 @@ export async function savePlan(input: PlanInput): Promise<DecisionResult> {
   return { message: `${name} is now in the subscription catalog.` };
 }
 
-export async function deactivatePlan(code: string): Promise<DecisionResult> {
+export async function deactivatePlan(code: string, actor: AdminActor): Promise<DecisionResult> {
   const admin = createAdminClient();
   const { data: plan } = await admin.from("subscription_plans").select("name").eq("code", code).maybeSingle();
   if (!plan) throw new ServiceError("This tier no longer exists.", 404);
   const { error } = await admin.from("subscription_plans").update({ is_active: false }).eq("code", code);
   if (error) fail(error, "Could not remove the tier");
   await logActivity(admin, {
+    actor,
     applicationId: null,
     business: plan.name,
     action: "Tier removed",

@@ -2202,11 +2202,20 @@ export type ApplicationDocumentRow = {
   updated_at: string;
 };
 
+export type PlatformAdminRow = {
+  user_id: string;
+  display_name: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 export type AdminActivityRow = {
   id: string;
   application_id: string | null;
   business_name: string;
   actor: string;
+  actor_id: string | null;
   action: string;
   category: ActivityCategory;
   before_value: string;
@@ -2245,6 +2254,7 @@ type AccountTables = {
   document_types: AccountTable<DocumentTypeRow>;
   application_documents: AccountTable<ApplicationDocumentRow>;
   admin_activity_log: AccountTable<AdminActivityRow>;
+  platform_admins: AccountTable<PlatformAdminRow>;
 };
 
 export type Database = Omit<DatabaseCore, "public"> & {

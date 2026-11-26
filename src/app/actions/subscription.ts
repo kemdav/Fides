@@ -220,7 +220,7 @@ async function resolveTenantAccess(
     .eq("profile_id", user.id)
     .maybeSingle();
 
-  const isPlatformAdmin = profile?.role === "admin";
+  const { data: isPlatformAdmin } = await supabase.rpc("is_platform_admin");
   if (!membership && !isPlatformAdmin) {
     return {
       success: false,

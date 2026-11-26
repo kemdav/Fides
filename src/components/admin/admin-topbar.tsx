@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { AdminLogoutButton } from "./admin-logout-button";
 import { AdminNav } from "./admin-nav";
 
 type AdminIdentity = {
@@ -79,8 +80,9 @@ export function AdminTopbar({ identity }: { identity: AdminIdentity }) {
       <header className="sticky top-0 z-30 border-b border-line bg-white lg:hidden">
         <div className="flex items-center justify-between gap-3 px-4 py-2 sm:px-6">
           <p className="font-display text-4xl leading-[1.2] text-burnt">Fides.</p>
-          <div className="hidden min-w-0 md:block">
+          <div className="hidden min-w-0 items-center gap-4 md:flex">
             <Identity identity={identity} />
+            <AdminLogoutButton />
           </div>
           <button
             ref={toggleRef}
@@ -131,6 +133,9 @@ export function AdminTopbar({ identity }: { identity: AdminIdentity }) {
           <AdminNav orientation="vertical" onNavigate={() => setOpen(false)} />
           <div className="mt-auto border-t border-line pt-4">
             <Identity identity={identity} />
+            <div className="mt-3">
+              <AdminLogoutButton />
+            </div>
           </div>
         </div>
       </div>

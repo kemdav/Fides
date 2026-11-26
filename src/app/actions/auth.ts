@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { clearAdminSession } from "@/lib/admin/session";
 import { getAccountAccess } from "@/lib/applications/service";
 import { AUTH_ERROR_MESSAGES, mapAuthError } from "@/lib/auth/error-handler";
 import { limitByClient, MINUTES } from "@/lib/rate-limit";
@@ -123,7 +122,6 @@ export async function logout(formData?: FormData): Promise<void> {
   } catch {
     console.warn("Could not contact Supabase during logout.");
   } finally {
-    await clearAdminSession();
     for (const { name } of store.getAll()) {
       if (/^sb-[\w-]+-auth-token(?:-code-verifier)?(?:\.\d+)?$/.test(name)) store.delete(name);
     }

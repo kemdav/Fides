@@ -207,6 +207,11 @@ full_name = EXCLUDED.full_name,
 role = EXCLUDED.role,
 tenant_id = EXCLUDED.tenant_id;
 
+-- local platform admin for /admin/login
+INSERT INTO public.platform_admins (user_id, display_name)
+VALUES ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', 'Fides Admin')
+ON CONFLICT (user_id) DO NOTHING;
+
 INSERT INTO public.tenant_memberships (tenant_id, profile_id, role)
 VALUES
 ('11111111-1111-4111-8111-111111111111', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'owner'),
