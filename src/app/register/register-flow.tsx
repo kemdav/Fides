@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { CheckIcon } from "@/components/ui";
+import { buttonClasses, CheckIcon } from "@/components/ui";
 import {
   ALL_DOCUMENTS,
   BUSINESS_TYPES,
@@ -43,15 +43,16 @@ import {
   Field,
   InfoNote,
   MobileProgress,
-  PasswordInput,
+  PasswordField,
   SecureFooter,
   Sidebar,
   StepIcon,
   STEPS,
-  TextInput,
+  TextField,
   useObjectUrl,
   validateFile,
 } from "./parts";
+import { Icon } from "@/components/admin/icon";
 
 type DocMap = Partial<Record<BusinessDocumentKey, File>>;
 
@@ -102,10 +103,8 @@ type Errors = Partial<Record<string, string>>;
 const DRAFT_KEY = "fides-registration-draft";
 const stepSchemas = [accountStepSchema, identityStepSchema, businessStepSchema, null, planStepSchema, null] as const;
 
-const primaryButton =
-  "inline-flex h-11 items-center justify-center rounded-md bg-burnt px-5 text-sm font-semibold text-white transition-colors hover:bg-burnt-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-60";
-const secondaryButton =
-  "inline-flex h-11 items-center justify-center rounded-md border border-ink/50 bg-white px-5 text-sm font-semibold text-ink transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:opacity-60";
+const primaryButton = buttonClasses({ variant: "brand", size: "form" });
+const secondaryButton = buttonClasses({ variant: "secondary", size: "form" });
 
 export function RegisterFlow() {
   const router = useRouter();
@@ -259,7 +258,7 @@ export function RegisterFlow() {
       return;
     }
 
-    const missingDocs = ALL_DOCUMENTS.filter((doc) => (doc.key === GOVERNMENT_ID_SLOT.key ? !idFile : !docs[doc.key as BusinessDocumentKey]));
+    const missingDocs = ALL_DOCUMENTS.filter((doc) => (doc.key === GOVERNMENT_ID_SLOT.key ? !idFile : !docs[doc.key]));
     if (missingDocs.length > 0) {
       const onIdentity = missingDocs.some((doc) => doc.key === GOVERNMENT_ID_SLOT.key);
       const message = `Please upload all required documents before submitting (missing: ${missingDocs.map((doc) => doc.title).join(", ")}).`;
@@ -312,11 +311,11 @@ export function RegisterFlow() {
                 href="/"
                 className="mb-4 inline-flex w-fit items-center gap-1.5 rounded-md py-1 pr-2 text-sm font-semibold text-burnt hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
               >
-                <span aria-hidden>←</span> Back to home
+                <Icon name="arrow-left" weight="medium" className="size-4" /> Back to home
               </Link>
               <div className="my-auto">
                 {hasDraft ? (
-                  <button type="button" onClick={restoreDraft} className="mb-4 w-full rounded-lg bg-[#faece3] px-4 py-2.5 text-sm font-semibold text-burnt hover:bg-[#f6dfd0]">
+                  <button type="button" onClick={restoreDraft} className="mb-4 w-full rounded-lg bg-blush px-4 py-2.5 text-sm font-semibold text-burnt hover:bg-blush-deep">
                     Restore your saved draft
                   </button>
                 ) : null}
@@ -414,7 +413,7 @@ function Heading({ title, subtitle, center = true }: { title: string; subtitle: 
   );
 }
 
-function Card({ children }: { children: React.ReactNode }) {
+function StepCard({ children }: { children: React.ReactNode }) {
   return (
     <div className="rounded-2xl border border-line bg-white p-5 shadow-[0_8px_24px_-12px_rgb(44_58_75/0.18)] sm:p-7">{children}</div>
   );
@@ -439,13 +438,13 @@ function AccountStep({ values, errors, set, onNext }: StepProps & { onNext: () =
       <Heading title="Create Your Account" subtitle="Start your journey with Fides — it only takes a few minutes." />
       <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
         <Field label="Full Name" htmlFor="fullName" error={errors.fullName}>
-          <TextInput id="fullName" invalid={!!errors.fullName} autoComplete="name" placeholder="Maria Santos" value={values.fullName} onChange={(e) => set("fullName", e.target.value)} />
+          <TextField id="fullName" invalid={!!errors.fullName} autoComplete="name" placeholder="Maria Santos" value={values.fullName} onChange={(e) => set("fullName", e.target.value)} />
         </Field>
         <Field label="Business Email" htmlFor="email" error={errors.email}>
-          <TextInput id="email" type="email" invalid={!!errors.email} autoComplete="email" placeholder="maria@bellavita.ph" value={values.email} onChange={(e) => set("email", e.target.value)} />
+          <TextField id="email" type="email" invalid={!!errors.email} autoComplete="email" placeholder="maria@bellavita.ph" value={values.email} onChange={(e) => set("email", e.target.value)} />
         </Field>
         <Field label="Phone Number" htmlFor="phone" error={errors.phone} hint="Use 09XXXXXXXXX (11 digits) or +63 9XX XXX XXXX.">
-          <TextInput
+          <TextField
             id="phone"
             type="tel"
             inputMode="tel"
@@ -459,10 +458,10 @@ function AccountStep({ values, errors, set, onNext }: StepProps & { onNext: () =
           />
         </Field>
         <Field label="Password" htmlFor="password" error={errors.password}>
-          <PasswordInput id="password" fieldLabel="password" invalid={!!errors.password} autoComplete="new-password" placeholder="Create a password" value={values.password} onChange={(e) => set("password", e.target.value)} />
+          <PasswordField id="password" fieldLabel="password" invalid={!!errors.password} autoComplete="new-password" placeholder="Create a password" value={values.password} onChange={(e) => set("password", e.target.value)} />
         </Field>
         <Field label="Confirm Password" htmlFor="confirmPassword" error={errors.confirmPassword} className="sm:col-span-2">
-          <PasswordInput id="confirmPassword" fieldLabel="confirm password" invalid={!!errors.confirmPassword} autoComplete="new-password" placeholder="Re-enter your password" value={values.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)} />
+          <PasswordField id="confirmPassword" fieldLabel="confirm password" invalid={!!errors.confirmPassword} autoComplete="new-password" placeholder="Re-enter your password" value={values.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)} />
         </Field>
       </div>
 
@@ -506,7 +505,7 @@ function AccountStep({ values, errors, set, onNext }: StepProps & { onNext: () =
 
       <div className="mt-7 flex flex-col items-center gap-4">
         <button type="submit" className={primaryButton}>
-          Create Account →
+          Create Account <Icon name="arrow-right" weight="medium" className="size-4" />
         </button>
         <p className="text-sm text-muted">
           Already have an account?{" "}
@@ -522,10 +521,10 @@ function AccountStep({ values, errors, set, onNext }: StepProps & { onNext: () =
 
 function StepActions({
   onBack,
-  nextLabel = "Save & Continue →",
+  nextLabel = <>Save &amp; Continue <Icon name="arrow-right" weight="medium" className="size-4" /></>,
 }: {
   onBack?: () => void;
-  nextLabel?: string;
+  nextLabel?: React.ReactNode;
 }) {
   return (
     <div className="mt-6 flex flex-col-reverse items-stretch gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-end">
@@ -575,10 +574,10 @@ function IdentityStep({
         title="Verify Your Identity"
         subtitle="We need to confirm the identity of the business owner. This information is kept secure and used only for verification purposes."
       />
-      <Card>
+      <StepCard>
         <div className="grid gap-x-5 gap-y-5 sm:grid-cols-2">
           <Field caps label="Owner's Legal Full Name" htmlFor="ownerLegalName" error={errors.ownerLegalName}>
-            <TextInput id="ownerLegalName" invalid={!!errors.ownerLegalName} autoComplete="name" placeholder="Maria Santos" value={values.ownerLegalName} onChange={(e) => set("ownerLegalName", e.target.value)} />
+            <TextField id="ownerLegalName" invalid={!!errors.ownerLegalName} autoComplete="name" placeholder="Maria Santos" value={values.ownerLegalName} onChange={(e) => set("ownerLegalName", e.target.value)} />
           </Field>
           <Field caps label="Date of Birth" htmlFor="dateOfBirth" error={errors.dateOfBirth} hint="You must be at least 18 years old.">
             <DatePicker
@@ -586,6 +585,8 @@ function IdentityStep({
               value={values.dateOfBirth}
               onChange={(value) => set("dateOfBirth", value)}
               max={latest}
+              minYear={1900}
+              ariaLabel="Choose date of birth"
               invalid={!!errors.dateOfBirth}
               placeholder="Select date of birth"
               describedBy={errors.dateOfBirth ? "dateOfBirth-error" : "dateOfBirth-hint"}
@@ -627,7 +628,7 @@ function IdentityStep({
           </div>
         </div>
         <StepActions onBack={onBack} />
-      </Card>
+      </StepCard>
     </form>
   );
 }
@@ -658,14 +659,14 @@ function BusinessStep({
       }}
     >
       <Heading title="Tell us about your business" subtitle="This information powers your public booking portal on Fides." />
-      <Card>
+      <StepCard>
         <div className="flex flex-col gap-5 border-b border-line pb-6 sm:flex-row sm:items-center">
           <div className="flex size-[100px] shrink-0 items-center justify-center overflow-hidden rounded-xl border border-line bg-mist text-center">
             {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={logoUrl} alt="Business logo preview" className="size-full object-cover" />
             ) : (
-              <span className="px-2 text-[11px] text-subtle">No logo selected</span>
+              <span className="px-2 text-xs text-subtle">No logo selected</span>
             )}
           </div>
           <div className="flex min-w-0 flex-col items-start gap-2">
@@ -698,7 +699,7 @@ function BusinessStep({
 
         <div className="mt-6 grid gap-x-5 gap-y-5 sm:grid-cols-6">
           <Field label="Business Name" htmlFor="businessName" error={errors.businessName} className="sm:col-span-6">
-            <TextInput id="businessName" invalid={!!errors.businessName} placeholder="Bella Vita Salon & Spa" value={values.businessName} onChange={(e) => set("businessName", e.target.value)} />
+            <TextField id="businessName" invalid={!!errors.businessName} placeholder="Bella Vita Salon & Spa" value={values.businessName} onChange={(e) => set("businessName", e.target.value)} />
           </Field>
           <Field label="Business Type" htmlFor="businessType" error={errors.businessType} className="sm:col-span-4">
             <SelectField
@@ -711,23 +712,23 @@ function BusinessStep({
             />
           </Field>
           <Field label="Established Year" htmlFor="establishedYear" error={errors.establishedYear} className="sm:col-span-2">
-            <TextInput id="establishedYear" inputMode="numeric" maxLength={4} invalid={!!errors.establishedYear} placeholder="2020" value={values.establishedYear} onChange={(e) => set("establishedYear", e.target.value.replace(/\D/g, ""))} />
+            <TextField id="establishedYear" inputMode="numeric" maxLength={4} invalid={!!errors.establishedYear} placeholder="2020" value={values.establishedYear} onChange={(e) => set("establishedYear", e.target.value.replace(/\D/g, ""))} />
           </Field>
           <Field label="Street Address" htmlFor="streetAddress" error={errors.streetAddress} className="sm:col-span-6">
-            <TextInput id="streetAddress" autoComplete="address-line1" invalid={!!errors.streetAddress} placeholder="123 Main Street, Suite 4B" value={values.streetAddress} onChange={(e) => set("streetAddress", e.target.value)} />
+            <TextField id="streetAddress" autoComplete="address-line1" invalid={!!errors.streetAddress} placeholder="123 Main Street, Suite 4B" value={values.streetAddress} onChange={(e) => set("streetAddress", e.target.value)} />
           </Field>
           <Field label="City" htmlFor="city" error={errors.city} className="sm:col-span-2">
-            <TextInput id="city" autoComplete="address-level2" invalid={!!errors.city} placeholder="Makati City" value={values.city} onChange={(e) => set("city", e.target.value)} />
+            <TextField id="city" autoComplete="address-level2" invalid={!!errors.city} placeholder="Makati City" value={values.city} onChange={(e) => set("city", e.target.value)} />
           </Field>
           <Field label="Province / Region" htmlFor="province" error={errors.province} className="sm:col-span-2">
-            <TextInput id="province" autoComplete="address-level1" invalid={!!errors.province} placeholder="Metro Manila" value={values.province} onChange={(e) => set("province", e.target.value)} />
+            <TextField id="province" autoComplete="address-level1" invalid={!!errors.province} placeholder="Metro Manila" value={values.province} onChange={(e) => set("province", e.target.value)} />
           </Field>
           <Field label="ZIP Code" htmlFor="zipCode" error={errors.zipCode} className="sm:col-span-2">
-            <TextInput id="zipCode" autoComplete="postal-code" invalid={!!errors.zipCode} placeholder="1200" value={values.zipCode} onChange={(e) => set("zipCode", e.target.value)} />
+            <TextField id="zipCode" autoComplete="postal-code" invalid={!!errors.zipCode} placeholder="1200" value={values.zipCode} onChange={(e) => set("zipCode", e.target.value)} />
           </Field>
         </div>
         <StepActions onBack={onBack} />
-      </Card>
+      </StepCard>
       <div className="mt-5">
         <SecureFooter />
       </div>
@@ -896,10 +897,10 @@ function PlanStep({ values, errors, set, onBack, onNext }: StepProps & { onBack:
       </p>
       <div className="mt-8 flex items-center justify-between gap-3">
         <button type="button" onClick={onBack} className={cn(secondaryButton, "border-burnt text-burnt hover:bg-burnt/5")}>
-          ← Back
+          <Icon name="arrow-left" weight="medium" className="size-4" /> Back
         </button>
         <button type="submit" className={primaryButton}>
-          Continue to Summary →
+          Continue to Summary <Icon name="arrow-right" weight="medium" className="size-4" />
         </button>
       </div>
     </form>
@@ -918,7 +919,7 @@ function SummaryCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="overflow-hidden rounded-xl border border-line bg-white shadow-[0_3px_14px_rgb(44_58_75/0.05)]">
+    <section className="overflow-hidden rounded-xl border border-line bg-white shadow-card">
       <header className="flex items-center justify-between gap-3 border-b border-line px-5 py-3">
         <h2 className="flex items-center gap-3 text-sm font-semibold text-ink">
           <StepIcon name={icon} className="size-5 text-glyph" />
@@ -944,8 +945,8 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 
 function FileRow({ name, size }: { name: string; size: number }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg bg-[#eceff6] px-3 py-2.5 text-xs text-body">
-      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-burnt text-white">
+    <div className="flex items-center gap-3 rounded-lg bg-mist px-3 py-2.5 text-xs text-body">
+      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-burnt text-on-burnt">
         <StepIcon name="check" className="size-3" />
       </span>
       <span className="min-w-0 flex-1 truncate">{name} — Ready to submit</span>
@@ -990,7 +991,7 @@ function SummaryStep({
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
         <h1 className="flex items-center gap-3 font-display text-3xl text-ink sm:text-4xl">
-          <span className="flex size-9 items-center justify-center rounded-full bg-burnt font-sans text-lg font-semibold text-white">6</span>
+          <span className="flex size-9 items-center justify-center rounded-full bg-burnt font-sans text-lg font-semibold text-on-burnt">6</span>
           Application Summary
         </h1>
         <p className="text-sm text-muted">
@@ -1055,14 +1056,14 @@ function SummaryStep({
         <Row label="Plan" value={<span className="font-semibold text-burnt">{plan.name}</span>} />
         <Row label="Price" value={`${formatPeso(plan.price)} / month`} />
         <Row label="Billing Cycle" value="Monthly" />
-        <p className="flex items-center gap-2 rounded-lg bg-[#faece3] px-3 py-2.5 text-xs text-burnt">
-          <StepIcon name="check" className="size-4 rounded-full bg-burnt p-0.5 text-white" />
+        <p className="flex items-center gap-2 rounded-lg bg-blush px-3 py-2.5 text-xs text-burnt">
+          <StepIcon name="check" className="size-4 rounded-full bg-burnt p-0.5 text-on-burnt" />
           {TRIAL_DAYS}-day free trial included — no charge until trial ends
         </p>
       </SummaryCard>
 
-      <section className="rounded-xl border border-line bg-white p-5 shadow-[0_3px_14px_rgb(44_58_75/0.05)]">
-        <p className="text-[11px] font-semibold tracking-wider text-muted">ACCURACY &amp; CONSENT</p>
+      <section className="rounded-xl border border-line bg-white p-5 shadow-card">
+        <p className="text-xs font-semibold tracking-wider text-muted">ACCURACY &amp; CONSENT</p>
         <label className="mt-3 flex cursor-pointer items-start gap-3 text-sm text-body">
           <input
             type="checkbox"
@@ -1092,7 +1093,7 @@ function SummaryStep({
         </button>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <button type="button" onClick={onBack} disabled={submitting} className={cn(secondaryButton, "w-full")}>
-            ← Back
+            <Icon name="arrow-left" weight="medium" className="size-4" /> Back
           </button>
           <button type="button" onClick={onSaveDraft} disabled={submitting} className={cn(secondaryButton, "w-full")}>
             Save Draft

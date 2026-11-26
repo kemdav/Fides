@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { canManageBookings } from "@/lib/merchant/workspace-roles";
 import { createClient } from "@/lib/supabase/server";
+import { resolveTenantAccess } from "@/lib/merchant/access";
 import { combineDateAndTimeManila, resolveCustomerName } from "@/lib/date-utils";
 import { z } from "zod";
 import type { Database } from "@/types/database.types";
@@ -110,19 +111,11 @@ export async function updateAppointmentStatusAction({
     return { success: false, error: "Authentication required." };
   }
 
-  // Resolve target tenant
-  let targetTenantId = tenantIdParam;
-
-  if (!targetTenantId) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("tenant_id")
-      .eq("id", user.id)
-      .single();
-    targetTenantId = profile?.tenant_id ?? undefined;
+  const access = await resolveTenantAccess(supabase, tenantIdParam);
+  if (!access) {
+    return { success: false, error: "Access Denied: You do not have permissions for this business." };
   }
-
-  if (!targetTenantId) return { success: false, error: "No active business tenant found." };
+  const targetTenantId = access.tenantId;
   const { data: membership } = await supabase.from("tenant_memberships").select("role")
     .eq("tenant_id", targetTenantId).eq("profile_id", user.id).maybeSingle();
   if (!canManageBookings(membership?.role)) return { success: false, error: "You do not have permission to manage bookings in this workspace." };
@@ -140,9 +133,7 @@ export async function updateAppointmentStatusAction({
   };
 
   let query = supabase.from("appointments").update(updatePayload).eq("id", appointmentId);
-  if (targetTenantId) {
-    query = query.eq("tenant_id", targetTenantId);
-  }
+  query = query.eq("tenant_id", targetTenantId);
   if (expectedStatus) query = query.eq("status", expectedStatus);
 
   const { data: updated, error } = await query.select("id").maybeSingle();
@@ -241,7 +232,7 @@ export async function createAppointmentBookingAction({
     .select("slug")
     .eq("id", tenantId)
     .single();
-  const tenantSlug = tenant?.slug;
+  const tenantSlug: string | undefined = tenant?.slug;
 
   const cleanCustomerName = customerName?.trim();
   if (!cleanCustomerName) {
@@ -543,7 +534,7 @@ export async function addToWaitlistAction({
     .select("slug")
     .eq("id", tenantId)
     .single();
-  const tenantSlug = tenant?.slug;
+  const tenantSlug: string | undefined = tenant?.slug;
 
   const cleanCustomerName = customerName?.trim();
   if (!cleanCustomerName) {

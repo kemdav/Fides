@@ -2,14 +2,17 @@
   "name": "fides",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "Fides - multi-tenant SaaS appointment scheduling and operations platform.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck:strict": "tsc --noEmit --noUncheckedIndexedAccess",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "node --experimental-strip-types --test src/lib/__tests__/*.test.ts",
+    "setup:admin": "node scripts/setup-admin-env.mjs",
     "email:test": "node scripts/send-test-email.mjs",
     "email:check": "node scripts/check-email-setup.mjs"
   },
@@ -18,12 +21,13 @@
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.119.0",
     "dotenv": "^18.0.10",
-    "next": "16.3.8",
-    "nodemailer": "^10.0.13",
+    "ioredis": "^6.0.0",
+    "next": "16.4.6",
+    "nodemailer": "^10.6.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "resend": "^6.38.1",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -31,7 +35,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.3.8",
+    "eslint-config-next": "16.4.6",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

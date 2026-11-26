@@ -15,6 +15,7 @@ export function workspaceRoleFromLabel(label?: string | null): WorkspaceRole | u
     case "receptionist": return "receptionist";
     case "staff":
     case "service staff": return "staff";
+    default: return undefined;
   }
 }
 

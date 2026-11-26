@@ -35,8 +35,6 @@ export default async function AboutPage({ params }: AboutPageProps) {
   const { slug } = await params;
   const tenant = await getTenantBySlug(slug);
 
-  console.log("FETCHED TENANT:", tenant);
-
   if (!tenant || tenant.status !== "active") {
     notFound();
   }

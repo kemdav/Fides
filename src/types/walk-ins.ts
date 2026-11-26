@@ -43,7 +43,7 @@ export interface WaitlistQueueItem {
 export interface AssignableSlotOption {
   startsAt: string;
   endsAt: string;
-  label: string; // e.g. "10:45 AM → 11:45 AM"
+  label: string; // e.g. "10:45 AM – 11:45 AM"
   durationMinutes: number;
 }
 

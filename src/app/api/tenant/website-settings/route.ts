@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { TENANT_HEADER } from "@/lib/tenant/constants";
 

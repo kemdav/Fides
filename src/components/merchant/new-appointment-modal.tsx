@@ -4,8 +4,10 @@ import * as React from "react";
 import { fieldOutlineClasses } from "@/components/admin/fields";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/admin/icon";
-import { AdminButton } from "@/components/admin/admin-button";
 import { Listbox } from "@/components/admin/listbox";
+import { DatePicker, SelectField } from "@/components/ui";
+import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
 import { createAppointmentBookingAction } from "@/app/actions/appointments";
 import { getEligibleBookingStaff } from "@/lib/merchant/booking-staff-eligibility";
 import type {
@@ -35,7 +37,6 @@ const TIME_SLOTS = [
   "03:30 PM","04:00 PM","04:30 PM","05:00 PM",
 ];
 
-const CALENDAR_WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -55,20 +56,27 @@ function addMinutes(timeStr: string, mins: number): string {
   return `${String(displayH).padStart(2, "0")}:${String(nm).padStart(2, "0")} ${ap}`;
 }
 
-function formatDateDisplay(iso: string): string {
-  if (!iso) return "";
-  const [y, mo, d] = iso.split("-").map(Number);
-  return new Date(y, mo - 1, d).toLocaleDateString("en-US", {
-    month: "long", day: "numeric", year: "numeric",
-  });
-}
 
 // ─── Shared input class ───────────────────────────────────────────────────────
 
 const fieldCls =
   `${fieldOutlineClasses} h-11 w-full px-3 text-sm text-ink placeholder:text-glyph`;
 
-// ─── Calendar picker — fixed-position panel (never clipped) ──────────────────
+// ─── labelled pickers (thin wrappers over the shared dropdown and date picker) ──
+
+function PickerLabel({ id, label, required }: { id: string; label: string; required?: boolean }) {
+  return (
+    <label htmlFor={id} className="mb-2 block text-sm font-semibold leading-5 text-ink">
+      {label}
+      {required && <span className="text-burnt"> *</span>}
+    </label>
+  );
+}
+
+function todayIso(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
 
 interface CalendarPickerProps {
   id: string;
@@ -79,172 +87,21 @@ interface CalendarPickerProps {
 }
 
 export function CalendarPicker({ id, label, required, value, onChange }: CalendarPickerProps) {
-  const [open, setOpen] = React.useState(false);
-  const [month, setMonth] = React.useState<Date>(() => {
-    if (value) { const [y, mo] = value.split("-").map(Number); return new Date(y, mo - 1, 1); }
-    return new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-  });
-  const triggerRef  = React.useRef<HTMLButtonElement>(null);
-  const panelRef    = React.useRef<HTMLDivElement>(null);
-  const [panelStyle, setPanelStyle] = React.useState<React.CSSProperties>({});
-
-  // position the fixed panel under the trigger button
-  const positionPanel = React.useCallback(() => {
-    if (!triggerRef.current) return;
-    const rect = triggerRef.current.getBoundingClientRect();
-    setPanelStyle({
-      position:  "fixed",
-      top:       rect.bottom + 4,
-      left:      rect.left,
-      width:     rect.width,
-      minWidth:  260,
-      zIndex:    9999,
-    });
-  }, []);
-
-  const handleOpen = () => {
-    if (!open) positionPanel();
-    setOpen((o) => !o);
-  };
-
-  React.useEffect(() => {
-    if (!open) return;
-    const closeHandler = (e: MouseEvent) => {
-      if (
-        triggerRef.current && triggerRef.current.contains(e.target as Node)
-      ) return;
-      if (
-        panelRef.current && panelRef.current.contains(e.target as Node)
-      ) return;
-      setOpen(false);
-    };
-    document.addEventListener("mousedown", closeHandler);
-    return () => document.removeEventListener("mousedown", closeHandler);
-  }, [open]);
-
-  const monthLabel   = month.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  const firstDay     = new Date(month.getFullYear(), month.getMonth(), 1).getDay();
-  const daysInMonth  = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
-  const cells: Array<number | null> = [
-    ...Array.from({ length: firstDay }, () => null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
-  ];
-
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-sm font-semibold text-ink">
-        {label}{required && <span className="text-burnt"> *</span>}
-      </label>
-      <button
-        ref={triggerRef}
-        id={id}
-        type="button"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        onClick={handleOpen}
-        className={`${fieldOutlineClasses} flex h-11 w-full items-center justify-between px-3 text-left text-sm`}
-      >
-        <span className={value ? "text-ink" : "text-glyph"}>
-          {value ? formatDateDisplay(value) : "Select a date"}
-        </span>
-        <svg aria-hidden viewBox="0 0 24 24" className="size-4 text-glyph shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8">
-          <rect x="4" y="5.5" width="16" height="14" rx="1.5" />
-          <path d="M8 3.5v4M16 3.5v4M4 10h16" strokeLinecap="round" />
-        </svg>
-      </button>
-
-      {open && (
-        <div
-          ref={panelRef}
-          role="dialog"
-          aria-label="Choose appointment date"
-          style={panelStyle}
-          className="rounded-lg border border-outline bg-white p-3 shadow-lg"
-        >
-          <div className="mb-2 flex items-center justify-between">
-            <button type="button" aria-label="Previous month"
-              onClick={() => setMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
-              className="rounded-md px-2 py-1 text-body hover:bg-mist text-sm"
-            >‹</button>
-            <span className="text-sm font-semibold text-ink">{monthLabel}</span>
-            <button type="button" aria-label="Next month"
-              onClick={() => setMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
-              className="rounded-md px-2 py-1 text-body hover:bg-mist text-sm"
-            >›</button>
-          </div>
-          <div className="grid grid-cols-7 text-center text-[10px] font-semibold text-subtle mb-1">
-            {CALENDAR_WEEKDAYS.map((d, i) => <span key={`${d}-${i}`}>{d}</span>)}
-          </div>
-          <div className="grid grid-cols-7 gap-y-0.5 text-center">
-            {cells.map((day, index) => {
-              if (!day) return <span key={`empty-${index}`} />;
-              const iso = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-              const sel = iso === value;
-              return (
-                <button key={iso} type="button"
-                  onClick={() => { onChange(iso); setOpen(false); }}
-                  className={`mx-auto flex h-8 w-8 items-center justify-center rounded-md text-sm transition-colors ${sel ? "bg-burnt text-white font-bold" : "text-body hover:bg-mist"}`}
-                >
-                  {day}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      <PickerLabel id={id} label={label} required={required} />
+      <DatePicker id={id} value={value} onChange={onChange} min={todayIso()} placeholder="Select a date" ariaLabel="Choose appointment date" />
     </div>
   );
 }
 
-// ─── Time listbox ─────────────────────────────────────────────────────────────
+const timeOptions = TIME_SLOTS.map((slot) => ({ value: slot, label: slot }));
 
-interface TimeListboxProps {
-  id: string;
-  label: string;
-  required?: boolean;
-  value: string;
-  onChange: (v: string) => void;
-}
-
-export function TimeListbox({ id, label, required, value, onChange }: TimeListboxProps) {
-  const [open, setOpen] = React.useState(false);
-  const ref = React.useRef<HTMLDivElement>(null);
-  React.useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
+export function TimeListbox({ id, label, required, value, onChange }: { id: string; label: string; required?: boolean; value: string; onChange: (v: string) => void }) {
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-sm font-semibold text-ink">
-        {label}{required && <span className="text-burnt"> *</span>}
-      </label>
-      <div ref={ref} className="relative">
-        <button id={id} type="button" aria-haspopup="listbox" aria-expanded={open}
-          onClick={() => setOpen((o) => !o)}
-          className={`${fieldOutlineClasses} flex h-11 w-full items-center justify-between px-3 text-left text-sm`}
-        >
-          <span className={value ? "text-ink" : "text-glyph"}>{value || "Select a time"}</span>
-          <Icon name="clock" className="size-4 text-glyph" />
-        </button>
-        {open && (
-          <ul role="listbox" className="absolute inset-x-0 top-full z-30 mt-1 max-h-48 overflow-y-auto rounded-lg border border-outline bg-white py-1 shadow-md">
-            {TIME_SLOTS.map((t) => (
-              <li key={t}>
-                <button type="button" role="option" aria-selected={value === t}
-                  onClick={() => { onChange(t); setOpen(false); }}
-                  className={`w-full px-4 py-2.5 text-left text-sm transition-colors hover:bg-mist ${value === t ? "text-burnt font-semibold" : "text-ink"}`}
-                >
-                  {t}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <PickerLabel id={id} label={label} required={required} />
+      <SelectField id={id} value={value} options={timeOptions} onChange={onChange} placeholder="Select a time" />
     </div>
   );
 }
@@ -258,13 +115,11 @@ function StepperIndicator({ step }: { step: 1 | 2 }) {
       <div className="flex min-w-0 flex-1 flex-col items-center gap-1">
         <span className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ring-2 transition-colors ${
           step === 1
-            ? "bg-burnt text-white ring-burnt"
-            : "bg-burnt text-white ring-burnt"
+            ? "bg-burnt text-on-burnt ring-burnt"
+            : "bg-burnt text-on-burnt ring-burnt"
         }`}>
           {step === 2 ? (
-            <svg viewBox="0 0 14 14" fill="none" className="size-3.5" aria-hidden>
-              <path d="M2 7l3.5 3.5L12 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <Icon name="check" weight="bold" className="size-3.5" />
           ) : "1"}
         </span>
         <span className={`text-center text-[11px] font-semibold transition-colors ${step === 1 ? "text-ink" : "text-muted"}`}>
@@ -279,7 +134,7 @@ function StepperIndicator({ step }: { step: 1 | 2 }) {
       <div className="flex min-w-0 flex-1 flex-col items-center gap-1">
         <span className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ring-2 transition-colors ${
           step === 2
-            ? "bg-burnt text-white ring-burnt"
+            ? "bg-burnt text-on-burnt ring-burnt"
             : "bg-white text-muted ring-line"
         }`}>
           2
@@ -297,9 +152,7 @@ function StepperIndicator({ step }: { step: 1 | 2 }) {
 function ErrorBanner({ message }: { message: string }) {
   return (
     <div className="flex items-start gap-2 rounded-lg border border-danger/30 bg-danger-bg px-4 py-3 text-sm text-danger">
-      <svg viewBox="0 0 20 20" fill="currentColor" className="size-4 shrink-0 mt-0.5" aria-hidden>
-        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clipRule="evenodd" />
-      </svg>
+      <Icon name="alert" className="mt-0.5 size-4 shrink-0" />
       <span>{message}</span>
     </div>
   );
@@ -308,9 +161,7 @@ function ErrorBanner({ message }: { message: string }) {
 function WarningBanner({ message }: { message: string }) {
   return (
     <div className="flex items-start gap-2 rounded-lg border border-warn-fg/30 bg-warn-bg px-4 py-3 text-sm text-warn-fg">
-      <svg viewBox="0 0 20 20" fill="currentColor" className="size-4 shrink-0 mt-0.5" aria-hidden>
-        <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-      </svg>
+      <Icon name="warning" className="mt-0.5 size-4 shrink-0" />
       <span>{message} Choose an available slot to continue.</span>
     </div>
   );
@@ -515,7 +366,7 @@ export function NewAppointmentModal({
       if (!res.data) { setStep2Error("Booking was processed but no confirmation was returned. Please refresh."); return; }
 
       const created = res.data;
-      onCreated({ id: created.id, time, customer: created.customerName, service: created.serviceName, staff: created.staffName, source: sourceLabel as "Online" | "Walk-In", status: "Confirmed", startsAt: created.starts_at });
+      onCreated({ id: created.id, time, customer: created.customerName, service: created.serviceName, staff: created.staffName, source: sourceLabel, status: "Confirmed", startsAt: created.starts_at });
       showToast(`Appointment booked for ${created.customerName}`);
       router.refresh();
       onClose();
@@ -527,13 +378,14 @@ export function NewAppointmentModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-200" onClick={onClose}>
-      <div
-        role="dialog" aria-modal="true" aria-labelledby="appt-modal-title"
-        className="relative w-full max-w-lg rounded-[14px] bg-white shadow-2xl border border-line flex flex-col animate-in fade-in zoom-in-95 slide-in-from-bottom-3 duration-200"
-        style={{ maxHeight: "92dvh" }}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal
+      open
+      onClose={onClose}
+      unstyled
+      labelledBy="appt-modal-title"
+      className="relative flex w-full max-w-lg flex-col rounded-[14px] border border-line bg-white shadow-2xl"
+      style={{ maxHeight: "92dvh" }}
+    >
         {/* ── Header ───────────────────────────────────────────────────── */}
         <div className="px-6 pt-6 pb-5 border-b border-hairline shrink-0 space-y-4">
           <div className="flex items-start justify-between">
@@ -571,7 +423,7 @@ export function NewAppointmentModal({
                   {(["existing", "new"] as const).map((type) => (
                     <button key={type} type="button"
                       onClick={() => { setCustomerType(type); setStep1Error(null); }}
-                      className={`py-2.5 text-sm font-semibold transition-colors ${customerType === type ? "bg-burnt text-white" : "bg-white text-body hover:bg-mist"}`}
+                      className={`py-2.5 text-sm font-semibold transition-colors ${customerType === type ? "bg-burnt text-on-burnt" : "bg-white text-body hover:bg-mist"}`}
                     >
                       {type === "existing" ? "Existing Customer" : "New Customer"}
                     </button>
@@ -599,7 +451,7 @@ export function NewAppointmentModal({
                   </div>
                   {customerSearch.trim() && (
                     <div className={`flex items-center justify-between gap-4 rounded-lg px-3 py-3 ${
-                      selectedCustomer ? "border border-green-200 bg-green-50" : "bg-mist"
+                      selectedCustomer ? "border border-success/30 bg-success/10" : "bg-mist"
                     }`}>
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-ink">
@@ -616,8 +468,8 @@ export function NewAppointmentModal({
                         aria-pressed={Boolean(selectedCustomer)}
                         className={`flex shrink-0 items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold ${
                           selectedCustomer
-                            ? "bg-green-600 text-white"
-                            : "bg-burnt text-white hover:bg-burnt/90"
+                            ? "bg-success text-white"
+                            : "bg-burnt text-on-burnt hover:bg-burnt/90"
                         }`}
                       >
                         {selectedCustomer && <Icon name="verified" className="size-3.5" />}
@@ -626,7 +478,7 @@ export function NewAppointmentModal({
                     </div>
                   )}
                   {selectedCustomer && (
-                    <p className="flex items-center gap-1.5 text-xs font-medium text-green-700" role="status">
+                    <p className="flex items-center gap-1.5 text-xs font-medium text-success-deep" role="status">
                       <Icon name="verified" className="size-3.5" />
                       Customer selected. Continue to the next step to schedule the appointment.
                     </p>
@@ -647,7 +499,7 @@ export function NewAppointmentModal({
                       className={fieldCls}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-1.5">
                       <label htmlFor="new-customer-phone" className="block text-sm font-semibold text-ink">
                         Contact number <span className="text-burnt">*</span>
@@ -678,7 +530,7 @@ export function NewAppointmentModal({
                 <div className="grid grid-cols-2 rounded-lg border border-hairline overflow-hidden">
                   {(["Phone", "Walk-in"] as const).map((src) => (
                     <button key={src} type="button" onClick={() => setBookingSource(src)}
-                      className={`py-2.5 text-sm font-semibold transition-colors ${bookingSource === src ? "bg-burnt text-white" : "bg-white text-body hover:bg-mist"}`}
+                      className={`py-2.5 text-sm font-semibold transition-colors ${bookingSource === src ? "bg-burnt text-on-burnt" : "bg-white text-body hover:bg-mist"}`}
                     >
                       {src}
                     </button>
@@ -733,7 +585,7 @@ export function NewAppointmentModal({
                 </div>
 
                 {/* Service + Staff row */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Listbox
                     id="service-select"
                     label="Service or package"
@@ -764,7 +616,7 @@ export function NewAppointmentModal({
                 )}
 
                 {/* Resource + Add-ons row */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Listbox
                     id="resource-select"
                     label="Required resource"
@@ -794,7 +646,7 @@ export function NewAppointmentModal({
                   <h3 className="text-base font-bold text-ink">Date &amp; time</h3>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <CalendarPicker
                     id="appt-date"
                     label="Date"
@@ -845,9 +697,7 @@ export function NewAppointmentModal({
               {/* Slot verification note */}
               {!conflictWarning && selectedService && staffId && date && time && (
                 <p className="text-xs text-muted flex items-center gap-1.5">
-                  <svg viewBox="0 0 14 14" fill="none" className="size-3.5 text-success shrink-0" aria-hidden>
-                    <path d="M2 7l3.5 3.5L12 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+                  <Icon name="check" weight="bold" className="size-3.5 shrink-0 text-success" />
                   Slot checked against staff shifts, breaks, leave, closures, resource allocation, and cleanup buffer.
                 </p>
               )}
@@ -858,37 +708,36 @@ export function NewAppointmentModal({
         {/* ── Footer ───────────────────────────────────────────────────── */}
         <div className="shrink-0 px-6 py-4 border-t border-hairline flex items-center justify-between gap-3">
           {step === 2 ? (
-            <AdminButton variant="outline" size="sm" type="button"
+            <Button variant="outline" size="sm" type="button"
               onClick={() => { setStep(1); setStep2Error(null); setConflictWarning(null); }}
             >
               Back
-            </AdminButton>
+            </Button>
           ) : (
             <div />
           )}
 
           <div className="flex items-center gap-2">
-            <AdminButton variant="outline" size="sm" type="button" onClick={onClose} disabled={isSubmitting}>
+            <Button variant="outline" size="sm" type="button" onClick={onClose} disabled={isSubmitting}>
               Cancel
-            </AdminButton>
+            </Button>
 
             {step === 1 ? (
-              <AdminButton variant="primary" size="sm" type="button" onClick={handleNext}
+              <Button variant="brand" size="form" type="button" onClick={handleNext}
                 className={`transition-opacity ${(customerType === "existing" ? customerSearch.trim() : customerName.trim()) ? "" : "opacity-60"}`}
               >
                 Next: Select Service
-              </AdminButton>
+              </Button>
             ) : (
-              <AdminButton variant="primary" size="sm" type="button"
+              <Button variant="brand" size="form" type="button"
                 disabled={isSubmitting || !selectedService || !staffId || !date || !time}
                 onClick={handleSubmit}
               >
                 {isSubmitting ? "Creating..." : "Create Appointment"}
-              </AdminButton>
+              </Button>
             )}
           </div>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

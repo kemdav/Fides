@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { buttonClasses } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { MobileMenu } from "./mobile-menu";
 
 export const navLinks = [
   { label: "Home", href: "/" },
@@ -77,25 +78,20 @@ export function ProviderHeader({
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 bg-powder transition-shadow duration-300",
-        scrolled && "shadow-[0_2px_12px_rgb(0_0_0/0.08)]"
+        "sticky top-0 z-50 h-16 bg-powder transition-shadow duration-300 lg:h-[88px]",
+        scrolled && "shadow-header"
       )}
     >
-      <div
-        className={cn(
-          "mx-auto flex max-w-[1440px] items-center justify-between px-4 transition-[height] duration-300 sm:px-8 lg:px-[81px]",
-          scrolled ? "h-16 lg:h-[88px]" : "h-20 lg:h-[120px]"
-        )}
-      >
+      <div className="mx-auto flex h-full max-w-[1440px] items-center justify-between px-4 sm:px-8 lg:px-[81px]">
         <Link
           href={resolveHref("/")}
-          className="px-2 font-display text-4xl leading-[normal] text-burnt lg:px-[23px] lg:text-[40px]"
+          className="font-display text-4xl leading-none text-burnt lg:text-[40px]"
         >
           {tenantName}
         </Link>
 
-        <div className="hidden items-center gap-[59px] lg:flex">
-          <nav aria-label="Primary" className="flex items-center gap-5">
+        <div className="hidden items-center gap-10 lg:flex">
+          <nav aria-label="Primary" className="flex items-center gap-1">
             {navLinks.map((link) => {
               const active = isLinkActive(link.href);
               return (
@@ -104,25 +100,23 @@ export function ProviderHeader({
                   href={resolveHref(link.href)}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex flex-col items-center rounded-t px-4 pt-2 text-base/6 font-semibold transition-colors",
+                    "relative px-4 py-2 text-base/6 font-semibold transition-colors",
                     active ? "text-burnt-dark" : "text-muted hover:text-burnt-dark"
                   )}
                 >
                   {link.label}
-                  <span aria-hidden className="relative mt-2 h-[3px] w-full">
-                    <span className="absolute inset-x-0 bottom-0 h-px bg-line" />
-                    <span
-                      className={cn(
-                        "absolute inset-x-0 bottom-0 h-[3px] origin-center rounded-sm bg-burnt-dark transition-transform duration-300 ease-out",
-                        active ? "scale-x-100" : "scale-x-0"
-                      )}
-                    />
-                  </span>
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "absolute inset-x-4 -bottom-0.5 h-[3px] origin-center rounded-sm bg-burnt-dark transition-transform duration-300 ease-out",
+                      active ? "scale-x-100" : "scale-x-0"
+                    )}
+                  />
                 </Link>
               );
             })}
           </nav>
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-3">
             <Link
               href={resolvedContactHref}
               className={buttonClasses({ variant: "brand-outline", size: "cta" })}
@@ -168,45 +162,17 @@ export function ProviderHeader({
       </div>
 
       {open && (
-        <div
+        <MobileMenu
           id="mobile-menu"
-          className="absolute inset-x-0 top-full rounded-b-2xl border border-burnt/30 bg-powder px-4 pb-6 pt-2 shadow-[0_8px_16px_-8px_rgb(0_0_0/0.15)] sm:px-8 lg:hidden"
-        >
-          <nav aria-label="Mobile" className="flex flex-col">
-            {navLinks.map((link) => {
-              const active = isLinkActive(link.href);
-              return (
-                <Link
-                  key={link.label}
-                  href={resolveHref(link.href)}
-                  onClick={() => setOpen(false)}
-                  className={cn(
-                    "py-3 text-base/6 font-semibold hover:text-burnt-dark",
-                    active ? "text-burnt-dark" : "text-muted"
-                  )}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
-          </nav>
-          <div className="mt-4 flex gap-3">
-            <Link
-              href={resolvedContactHref}
-              onClick={() => setOpen(false)}
-              className={buttonClasses({ variant: "brand-outline", size: "cta" })}
-            >
-              Contact Us
-            </Link>
-            <Link
-              href={resolvedBookHref}
-              onClick={() => setOpen(false)}
-              className={buttonClasses({ variant: "brand", size: "cta" })}
-            >
-              Book Now
-            </Link>
-          </div>
-        </div>
+          brand={tenantName}
+          homeHref={resolveHref("/")}
+          links={navLinks.map((link) => ({ label: link.label, href: resolveHref(link.href), active: isLinkActive(link.href) }))}
+          actions={[
+            { label: "Contact Us", href: resolvedContactHref, variant: "brand-outline" },
+            { label: "Book Now", href: resolvedBookHref, variant: "brand" },
+          ]}
+          onClose={() => setOpen(false)}
+        />
       )}
     </header>
   );

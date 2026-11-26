@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
+import { Icon } from "@/components/admin/icon";
 import Image from "next/image";
-import { WebsiteSettingsData, PreviewServiceItem } from "./types";
-import { XIcon, ArrowRightIcon } from "./icons";
+import { Modal } from "@/components/ui/modal";
+import type { WebsiteSettingsData, PreviewServiceItem } from "./types";
 
 const FALLBACK_SERVICES: PreviewServiceItem[] = [
   {
@@ -69,36 +70,36 @@ export function LivePreviewModal({
     .join(" · ");
 
   return (
-    <dialog
-      ref={dialogRef}
-      aria-label="Full website preview"
-      onCancel={(event) => {
-        event.preventDefault();
-        onClose();
-      }}
-      className="m-auto max-h-[92dvh] w-[calc(100%-1.5rem)] max-w-4xl overflow-hidden rounded-2xl border border-neutral-300 bg-white p-0 shadow-2xl backdrop:bg-black/60 backdrop:backdrop-blur-sm sm:w-[calc(100%-3rem)]"
+    <Modal
+      open
+      onClose={onClose}
+      unstyled
+      labelledBy="live-preview-title"
+      className="relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-outline bg-white shadow-2xl"
     >
-      <div className="flex max-h-[92dvh] min-w-0 flex-col">
-        <div className="flex shrink-0 items-center justify-between gap-2 bg-neutral-900 px-3 py-3.5 text-white select-none sm:px-5">
-          <div className="flex min-w-0 items-center gap-3">
-            <span aria-hidden className="hidden shrink-0 gap-1.5 sm:flex">
-              <span className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
-              <span className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
-              <span className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
+      <h2 id="live-preview-title" className="sr-only">Website preview</h2>
+      <div className="flex min-h-0 flex-1 flex-col">
+        {/* Preview header bar */}
+        <div className="flex items-center justify-between px-5 py-3.5 bg-ink text-white select-none">
+          <div className="flex items-center gap-3">
+            <span className="flex gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-body" />
+              <span className="w-2.5 h-2.5 rounded-full bg-body" />
+              <span className="w-2.5 h-2.5 rounded-full bg-body" />
             </span>
-            <div className="flex min-w-0 items-center gap-1.5 rounded-md bg-neutral-800 px-2.5 py-1 font-mono text-xs text-neutral-300">
-              <span className="size-2 shrink-0 rounded-full bg-emerald-400" />
-              <span className="truncate">{data.subdomain || "your-business"}.fides.app</span>
+            <div className="px-3 py-1 rounded-md bg-ink text-xs font-mono text-outline flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-success" />
+              <span>{data.subdomain}.fides.app</span>
             </div>
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-neutral-300 transition hover:bg-neutral-800 hover:text-white focus-visible:outline-2 focus-visible:outline-white sm:px-3"
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium text-outline hover:text-white hover:bg-ink transition"
           >
             <span>Close preview</span>
-            <XIcon className="w-4 h-4" />
+            <Icon name="close" className="w-4 h-4" />
           </button>
         </div>
 
@@ -135,17 +136,17 @@ export function LivePreviewModal({
                 )}
               </div>
               <div>
-                <span className="text-base font-semibold tracking-tight text-neutral-900">
+                <span className="text-base font-semibold tracking-tight text-ink">
                   {data.businessName || "Bella Vita"}
                 </span>
-                <span className="block text-[10px] uppercase tracking-wider font-semibold text-neutral-500">
+                <span className="block text-[10px] uppercase tracking-wider font-semibold text-muted">
                   {data.businessCategory || "BEAUTY & WELLNESS"}
                 </span>
               </div>
             </div>
 
             <nav className="flex items-center gap-6">
-              <div className="hidden sm:flex items-center gap-5 text-xs font-medium text-neutral-700">
+              <div className="hidden sm:flex items-center gap-5 text-xs font-medium text-body">
                 <span className="cursor-pointer hover:text-black">Home</span>
                 <span className="cursor-pointer hover:text-black">
                   Services
@@ -171,10 +172,10 @@ export function LivePreviewModal({
               >
                 {data.businessCategory || "BEAUTY & WELLNESS"}
               </span>
-              <h1 className="text-3xl sm:text-4xl font-medium tracking-tight text-neutral-900 leading-tight">
+              <h1 className="text-3xl sm:text-4xl font-medium tracking-tight text-ink leading-tight">
                 {data.headline || "A little time for yourself."}
               </h1>
-              <p className="mt-3 text-xs sm:text-sm text-neutral-700 leading-relaxed font-sans max-w-md" style={bodyFont}>
+              <p className="mt-3 text-xs sm:text-sm text-body leading-relaxed font-sans max-w-md">
                 {data.supportingMessage ||
                   "Thoughtful care, experienced specialists, and effortless booking."}
               </p>
@@ -212,7 +213,7 @@ export function LivePreviewModal({
               style={{ backgroundColor: data.secondaryColor || "#ADD8E6" }}
             >
               <div className="max-w-4xl">
-                <h2 className="text-xl sm:text-2xl font-semibold text-neutral-900 mb-6">
+                <h2 className="text-xl sm:text-2xl font-semibold text-ink mb-6">
                   Find your moment of care
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-sans" style={bodyFont}>
@@ -226,10 +227,10 @@ export function LivePreviewModal({
                         className="rounded-xl bg-white/85 p-5 shadow-xs border border-black/5 flex flex-col justify-between"
                       >
                         <div>
-                          <h3 className="font-semibold text-sm text-neutral-900">
+                          <h3 className="font-semibold text-sm text-ink">
                             {svc.name}
                           </h3>
-                          <p className="text-xs text-neutral-500 mt-1">
+                          <p className="text-xs text-muted mt-1">
                             {svc.durationMinutes} min · {formattedPrice}
                           </p>
                         </div>
@@ -238,7 +239,7 @@ export function LivePreviewModal({
                           style={{ color: data.accentColor || "#CC5000" }}
                         >
                           View service{" "}
-                          <ArrowRightIcon className="w-3.5 h-3.5" />
+                          <Icon name="arrow-right" className="w-3.5 h-3.5" />
                         </span>
                       </div>
                     );
@@ -250,11 +251,11 @@ export function LivePreviewModal({
 
           {/* Contact Details Section if enabled */}
           {data.showContactDetails && (
-            <section className="px-6 sm:px-12 py-8 border-t border-black/5 text-xs text-neutral-600 font-sans" style={bodyFont}>
+            <section className="px-6 sm:px-12 py-8 border-t border-black/5 text-xs text-body font-sans">
               <div className="max-w-4xl flex flex-wrap gap-8 items-center justify-between">
                 {locationText && (
                   <div>
-                    <span className="font-semibold text-neutral-900 block mb-0.5">
+                    <span className="font-semibold text-ink block mb-0.5">
                       Location
                     </span>
                     <span>{locationText}</span>
@@ -262,7 +263,7 @@ export function LivePreviewModal({
                 )}
                 {contactText && (
                   <div>
-                    <span className="font-semibold text-neutral-900 block mb-0.5">
+                    <span className="font-semibold text-ink block mb-0.5">
                       Contact
                     </span>
                     <span>{contactText}</span>
@@ -270,7 +271,7 @@ export function LivePreviewModal({
                 )}
                 {data.showOpeningHours && (
                   <div>
-                    <span className="font-semibold text-neutral-900 block mb-0.5">
+                    <span className="font-semibold text-ink block mb-0.5">
                       Hours
                     </span>
                     <span>
@@ -283,12 +284,12 @@ export function LivePreviewModal({
           )}
 
           {/* Client Site Footer */}
-          <footer className="px-6 sm:px-12 py-6 border-t border-black/10 flex items-center justify-between text-xs text-neutral-600 font-sans" style={bodyFont}>
+          <footer className="px-6 sm:px-12 py-6 border-t border-black/10 flex items-center justify-between text-xs text-body font-sans">
             <div>{data.businessName || "Bella Vita Salon & Spa"}</div>
-            <div className="text-[11px] text-neutral-500">Powered by Fides</div>
+            <div className="text-[11px] text-muted">Powered by Fides</div>
           </footer>
         </div>
       </div>
-    </dialog>
+    </Modal>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -9,7 +10,6 @@ import {
 } from "@/lib/merchant/workspace-roles";
 import { MerchantSidebar } from "../merchant-sidebar";
 import { Icon } from "@/components/admin/icon";
-import { AdminButton } from "@/components/admin/admin-button";
 import { MetricCard } from "@/components/admin/metric-card";
 import {
   PageContent,
@@ -29,6 +29,8 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { WebsiteSetupPrompt } from "@/components/merchant/onboarding/website-setup/website-setup-prompt";
 import type { AppointmentServiceOption, AppointmentStaffOption } from "@/types/appointments";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField, type SelectOption } from "@/components/ui/select-field";
 
 export interface AppointmentRow {
   id: string;
@@ -108,6 +110,12 @@ function AppointmentStatusPill({
   return <StatusPill tone={tone}>{label}</StatusPill>;
 }
 
+const periodOptions: SelectOption<"Today" | "This Week" | "This Month">[] = [
+  { value: "Today", label: "Today" },
+  { value: "This Week", label: "This Week" },
+  { value: "This Month", label: "This Month" },
+];
+
 export function OverviewView({
   businessName = "Bella Vita",
   userName = "Maria Santos",
@@ -155,10 +163,7 @@ export function OverviewView({
   const canViewBusinessMetrics = userRole === "owner" || userRole === "admin";
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [period, setPeriod] = React.useState(initialPeriod);
-  const [isPeriodOpen, setIsPeriodOpen] = React.useState(false);
-  const [selectedAppointmentId, setSelectedAppointmentId] = React.useState<
-    string | null
-  >(null);
+  const [selectedAppointmentId, setSelectedAppointmentId] = React.useState<string | null>(null);
   const [isNewBookingOpen, setIsNewBookingOpen] = React.useState(false);
   const [isWalkInOpen, setIsWalkInOpen] = React.useState(false);
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
@@ -325,18 +330,6 @@ export function OverviewView({
     y: number;
   } | null>(null);
 
-  const linePoints = (key: "booked" | "completed") =>
-    stats
-      .map((item, index) => {
-        const x =
-          stats.length === 1
-            ? lineWidth / 2
-            : 12 + (index / (stats.length - 1)) * (lineWidth - 24);
-        const y =
-          lineHeight - 12 - (item[key] / lineMaxVal) * (lineHeight - 24);
-        return `${x},${y}`;
-      })
-      .join(" ");
   const today = todayKey ? new Date(`${todayKey}T12:00:00`) : new Date();
   const currentMonthLabel = calendarMonth.toLocaleDateString("en-US", {
     month: "long",
@@ -391,56 +384,29 @@ export function OverviewView({
             description="Here's the latest update on your business. Let's make today a great one."
             actions={
               <div className="flex flex-wrap items-center gap-2">
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setIsPeriodOpen(!isPeriodOpen)}
-                    className="h-12 w-36 rounded-lg border-2 border-outline bg-white px-4 text-sm font-semibold text-ink flex items-center justify-between gap-3 hover:bg-mist transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
-                  >
-                    <span>{period}</span>
-                    <Icon name="chevron-down" className="size-4 text-glyph" />
-                  </button>
-                  {isPeriodOpen && (
-                    <div className="absolute right-0 mt-2 w-44 rounded-[10px] bg-white border border-hairline shadow-lg py-2 z-30 text-sm">
-                      {["Today", "This Week", "This Month"].map((p) => (
-                        <button
-                          key={p}
-                          type="button"
-                          onClick={() => {
-                            setPeriod(p as typeof initialPeriod);
-                            setIsPeriodOpen(false);
-                            setHoveredPoint(null);
-                            router.push(
-                              `${basePath}/dashboard?${new URLSearchParams({ period: p, ...(calendarMonthKey && { month: calendarMonthKey }) })}`,
-                              { scroll: false },
-                            );
-                          }}
-                          className={`w-full text-left px-4 py-2.5 hover:bg-mist ${period === p ? "text-burnt font-semibold" : "text-body"}`}
-                        >
-                          {p}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                {canManage && (
-                  <>
-                    <AdminButton
-                      variant="primary"
-                      size="sm"
-                      onClick={() => setIsNewBookingOpen(true)}
-                    >
-                      + New Booking
-                    </AdminButton>
-                    <AdminButton
-                      variant="outline-accent"
-                      size="sm"
-                      onClick={() => setIsWalkInOpen(true)}
-                    >
-                      + Add Walk-in
-                    </AdminButton>
-                  </>
-                )}
+                <SelectField
+                  ariaLabel="Overview period"
+                  className="w-40"
+                  value={period}
+                  options={periodOptions}
+                  onChange={(p) => {
+                    setPeriod(p);
+                    setHoveredPoint(null);
+                    router.push(`${basePath}/dashboard?${new URLSearchParams({ period: p, ...(calendarMonthKey && { month: calendarMonthKey }) })}`, { scroll: false });
+                  }}
+                />
+                {canManage && <>
+                <Button variant="brand" size="form"
+                  onClick={() => setIsNewBookingOpen(true)}
+                >
+                  + New Booking
+                </Button>
+                <Button variant="brand-outline" size="form"
+                  onClick={() => setIsWalkInOpen(true)}
+                >
+                  + Add Walk-in
+                </Button>
+                </>}
               </div>
             }
           />
@@ -878,7 +844,7 @@ export function OverviewView({
                           </div>
                         </div>
                         <span
-                          className={`text-[11px] font-medium sm:text-sm ${item.isToday ? "rounded-full bg-burnt px-2 text-white" : "text-muted"}`}
+                          className={`text-[11px] font-medium sm:text-sm ${item.isToday ? "rounded-full bg-burnt px-2 text-on-burnt" : "text-muted"}`}
                         >
                           {item.day}
                         </span>
@@ -918,18 +884,18 @@ export function OverviewView({
                       type="button"
                       aria-label="Previous month"
                       onClick={() => changeCalendarMonth(-1)}
-                      className="flex size-8 items-center justify-center rounded-md text-2xl leading-none text-glyph hover:bg-mist hover:text-ink"
+                      className="flex size-8 items-center justify-center rounded-md text-glyph hover:bg-mist hover:text-ink"
                     >
-                      ‹
+                      <Icon name="chevron-left" weight="medium" className="size-4" />
                     </button>
                     <span className="font-semibold">{currentMonthLabel}</span>
                     <button
                       type="button"
                       aria-label="Next month"
                       onClick={() => changeCalendarMonth(1)}
-                      className="flex size-8 items-center justify-center rounded-md text-2xl leading-none text-glyph hover:bg-mist hover:text-ink"
+                      className="flex size-8 items-center justify-center rounded-md text-glyph hover:bg-mist hover:text-ink"
                     >
-                      ›
+                      <Icon name="chevron-right" weight="medium" className="size-4" />
                     </button>
                   </div>
                   <div className="grid grid-cols-7 gap-1.5 text-center text-xs text-subtle mb-2">
@@ -1027,21 +993,14 @@ export function OverviewView({
                 </span>
               </div>
 
-              <div className="flex w-full items-center gap-2.5 sm:w-auto">
-                <div className="relative min-w-0 flex-1">
-                  <input
-                    type="text"
-                    aria-label="Search customer or service"
-                    placeholder="Search customer or service"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="h-11 w-full rounded-lg border border-hairline bg-white pl-10 pr-3 text-sm text-ink transition-shadow focus:outline-none focus:ring-2 focus:ring-burnt/40 sm:w-64"
-                  />
-                  <Icon
-                    name="search"
-                    className="size-4 text-glyph absolute left-3 top-3 pointer-events-none"
-                  />
-                </div>
+              <div className="flex w-full flex-wrap items-center gap-2.5 sm:w-auto">
+                <SearchField
+                  aria-label="Search customer or service"
+                  placeholder="Search customer or service"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full sm:w-80"
+                />
 
                 <div
                   className="relative shrink-0"
@@ -1065,16 +1024,7 @@ export function OverviewView({
                     onClick={() => setIsFilterOpen(!isFilterOpen)}
                     className="h-11 rounded-lg border border-hairline bg-white px-3 text-sm font-semibold text-ink hover:bg-mist flex items-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
                   >
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                      className="size-3.5 text-glyph"
-                      aria-hidden
-                    >
-                      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-                    </svg>
+                    <Icon name="filter" className="size-3.5 text-glyph" />
                     <span className="relative">
                       Filter
                       {activeFilterCount > 0 && (
@@ -1223,16 +1173,8 @@ export function OverviewView({
                               </strong>
                             </span>
                           </div>
-                          {canManage && (
-                            <AdminButton
-                              size="xs"
-                              variant="outline"
-                              aria-haspopup="dialog"
-                              onClick={() => setSelectedAppointmentId(row.id)}
-                            >
-                              Appointment details
-                            </AdminButton>
-                          )}
+                          {canManage && <Button variant="secondary" size="xs" aria-haspopup="dialog"
+                            onClick={() => setSelectedAppointmentId(row.id)}>Appointment details</Button>}
                         </div>
                       )}
                     </div>
@@ -1362,7 +1304,7 @@ export function OverviewView({
                 className="text-burnt font-semibold hover:underline inline-flex items-center gap-1"
               >
                 <span>View All Appointments</span>
-                <span>→</span>
+                <Icon name="arrow-right" weight="medium" className="size-3.5" />
               </Link>
             </div>
           </Surface>

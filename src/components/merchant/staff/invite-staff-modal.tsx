@@ -1,8 +1,8 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { sendStaffInvitationAction } from "@/app/actions/staff-invitations";
-import { AdminButton } from "@/components/admin/admin-button";
 import { TextField } from "@/components/admin/fields";
 import { Icon } from "@/components/admin/icon";
 import { Modal } from "@/components/ui/modal";
@@ -186,8 +186,8 @@ export function InviteStaffModal({ onClose, onSent, tenantId, canInviteAdmins, s
         <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2.5 border-t border-hairline bg-mist px-4 py-4 sm:px-6">
           {error && <p role="alert" className="w-full rounded-lg bg-danger-bg p-2 text-sm text-danger-dark">{error}</p>}
           <p className="mr-auto text-xs text-muted">{atCapacity ? "No staff seats are available." : "The invitation link expires in 7 days."}</p>
-          <AdminButton variant="outline" size="xs" onClick={onClose} disabled={sending}>Cancel</AdminButton>
-          <AdminButton type="submit" variant="primary" size="xs" disabled={sending || atCapacity}>{sending ? "Sending…" : "Send invitation"}</AdminButton>
+          <Button variant="secondary" size="xs" onClick={onClose} disabled={sending}>Cancel</Button>
+          <Button variant="brand" size="xs" type="submit" disabled={sending || atCapacity}>{sending ? "Sending…" : "Send invitation"}</Button>
         </footer>
       </form>
     </Modal>

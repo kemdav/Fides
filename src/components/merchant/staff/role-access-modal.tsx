@@ -1,5 +1,4 @@
 import { Icon } from "@/components/admin/icon";
-import { AdminButton } from "@/components/admin/admin-button";
 import { Modal } from "@/components/ui/modal";
 
 const capabilities = [

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
+import { Icon } from "@/components/admin/icon";
 
 export interface ToastMessage {
   id: string;
@@ -73,6 +74,7 @@ export function ToastListener() {
 
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [searchParams]);
 
   const removeToast = (id: string) => {
@@ -92,8 +94,8 @@ export function ToastListener() {
           key={toast.id}
           className={`pointer-events-auto flex items-start gap-3 p-4 rounded-lg shadow-lg border text-sm transition-all animate-in fade-in slide-in-from-bottom-2 ${
             toast.type === "error"
-              ? "bg-red-950/90 border-red-800 text-red-100"
-              : "bg-neutral-900/90 border-neutral-700 text-neutral-100"
+              ? "bg-danger-dark/90 border-danger-dark text-danger-bg"
+              : "bg-ink/90 border-body text-mist"
           }`}
         >
           <div className="flex-1">
@@ -108,7 +110,7 @@ export function ToastListener() {
             className="text-xs opacity-60 hover:opacity-100 cursor-pointer p-1"
             aria-label="Close notification"
           >
-            ✕
+            <Icon name="close" className="size-4" />
           </button>
         </div>
       ))}

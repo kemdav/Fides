@@ -1,17 +1,23 @@
 import "server-only";
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
-import { ADMIN_ACCOUNTS, findAdminAccount, type AdminAccount } from "./local-accounts";
+import { findAdminAccount, type AdminAccount } from "./local-accounts";
 
 const COOKIE = "fides_admin_session";
 const MAX_AGE_SECONDS = 60 * 60 * 8; // 8 hours
 
-/** Signing key: ADMIN_SESSION_SECRET if set, otherwise derived from the credentials + server secret. */
+let devSecret: string | null = null;
+
+/** Signing key: ADMIN_SESSION_SECRET (at least 32 characters). Required in production. */
 function secret(): string {
-  return (
-    process.env.ADMIN_SESSION_SECRET ??
-    `fides-admin|${ADMIN_ACCOUNTS.map((a) => a.id + a.password).join("|")}|${process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? ""}`
-  );
+  const configured = process.env.ADMIN_SESSION_SECRET;
+  if (configured && configured.length >= 32) return configured;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("ADMIN_SESSION_SECRET must be set to a random string of at least 32 characters.");
+  }
+  // development only: a throwaway key, admin sessions end when the server restarts
+  devSecret ??= randomBytes(32).toString("hex");
+  return devSecret;
 }
 
 function sign(payload: string): string {

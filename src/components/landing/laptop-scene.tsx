@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { Icon as SolarIcon } from "@/components/admin/icon";
 import { LaptopSvg } from "./laptop-svg";
 import { Sphere } from "./sphere";
 
@@ -91,8 +92,9 @@ function Screen() {
             Professional beauty and wellness services for your self-care journey.
           </p>
           <div className="mt-4 flex items-center gap-4 text-[12.5px] font-semibold">
-            <span className="rounded-full bg-burnt px-5 py-2.5 text-white">
-              Book an Appointment →
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-burnt px-5 py-2.5 text-white">
+              Book an Appointment
+              <SolarIcon name="arrow-right" weight="medium" className="size-3.5" />
             </span>
             <span className="text-burnt-dark">View services</span>
           </div>

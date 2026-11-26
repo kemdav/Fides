@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
+import { limitByClient, MINUTES } from "@/lib/rate-limit";
 import { ServiceError, submitApplication, type DocumentUploads } from "@/lib/applications/service";
 import { ALL_DOCUMENTS, documentFieldName } from "@/lib/registration/options";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  if (await limitByClient("applications", { limit: 6, windowMs: 60 * MINUTES })) {
+    return NextResponse.json({ error: "Too many submissions. Please try again later." }, { status: 429 });
+  }
   try {
     const form = await request.formData();
     const payload = form.get("payload");

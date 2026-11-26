@@ -1,0 +1,9 @@
+# Local services for development. Supabase runs through its own CLI (`supabase start`), not this file.
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: fides-redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
