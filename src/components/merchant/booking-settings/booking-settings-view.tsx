@@ -564,7 +564,9 @@ export function BookingSettingsView({
                     disabled={!canEdit}
                     value={form.defaultBufferMinutes}
                     options={bufferOptions}
-                    onChange={(next) => updateField("defaultBufferMinutes", next)}
+                    onChange={(next) =>
+                      updateField("defaultBufferMinutes", next)
+                    }
                   />
                   {fieldErrors.defaultBufferMinutes && (
                     <p className="mt-1.5 text-xs font-medium text-danger">
@@ -602,13 +604,15 @@ export function BookingSettingsView({
                       Minimum advance notice
                     </label>
                     <NumberSelectField
-                    id="min-advance-notice"
-                    className="mt-2"
-                    disabled={!canEdit}
-                    value={form.bookingLeadTimeMinutes}
-                    options={leadTimeOptions}
-                    onChange={(next) => updateField("bookingLeadTimeMinutes", next)}
-                  />
+                      id="min-advance-notice"
+                      className="mt-2"
+                      disabled={!canEdit}
+                      value={form.bookingLeadTimeMinutes}
+                      options={leadTimeOptions}
+                      onChange={(next) =>
+                        updateField("bookingLeadTimeMinutes", next)
+                      }
+                    />
                     {fieldErrors.bookingLeadTimeMinutes && (
                       <p className="mt-1.5 text-xs font-medium text-danger">
                         {fieldErrors.bookingLeadTimeMinutes}
@@ -625,13 +629,13 @@ export function BookingSettingsView({
                       Maximum advance booking
                     </label>
                     <NumberSelectField
-                    id="max-advance-booking"
-                    className="mt-2"
-                    disabled={!canEdit}
-                    value={form.maxAdvanceDays}
-                    options={maxAdvanceOptions}
-                    onChange={(next) => updateField("maxAdvanceDays", next)}
-                  />
+                      id="max-advance-booking"
+                      className="mt-2"
+                      disabled={!canEdit}
+                      value={form.maxAdvanceDays}
+                      options={maxAdvanceOptions}
+                      onChange={(next) => updateField("maxAdvanceDays", next)}
+                    />
                     {fieldErrors.maxAdvanceDays && (
                       <p className="mt-1.5 text-xs font-medium text-danger">
                         {fieldErrors.maxAdvanceDays}
@@ -654,7 +658,9 @@ export function BookingSettingsView({
                     disabled={!canEdit}
                     value={form.cancellationWindowHours}
                     options={cancellationOptions}
-                    onChange={(next) => updateField("cancellationWindowHours", next)}
+                    onChange={(next) =>
+                      updateField("cancellationWindowHours", next)
+                    }
                   />
                   {fieldErrors.cancellationWindowHours && (
                     <p className="mt-1.5 text-xs font-medium text-danger">
@@ -677,7 +683,9 @@ export function BookingSettingsView({
                     disabled={!canEdit}
                     value={form.rescheduleWindowHours}
                     options={rescheduleOptions}
-                    onChange={(next) => updateField("rescheduleWindowHours", next)}
+                    onChange={(next) =>
+                      updateField("rescheduleWindowHours", next)
+                    }
                   />
                   {fieldErrors.rescheduleWindowHours && (
                     <p className="mt-1.5 text-xs font-medium text-danger">
@@ -726,9 +734,7 @@ export function BookingSettingsView({
 
               {/* Card 4: Scheduling */}
               <Surface className="rounded-xl border border-hairline bg-white p-5 sm:p-6">
-                <h2 className="text-base font-semibold text-ink">
-                  Scheduling
-                </h2>
+                <h2 className="text-base font-semibold text-ink">Scheduling</h2>
                 <p className="mt-1 text-xs leading-relaxed text-subtle">
                   Choose the spacing of available start times.
                 </p>
@@ -746,7 +752,9 @@ export function BookingSettingsView({
                     disabled={!canEdit}
                     value={form.slotIntervalMinutes}
                     options={slotIntervalOptions}
-                    onChange={(next) => updateField("slotIntervalMinutes", next)}
+                    onChange={(next) =>
+                      updateField("slotIntervalMinutes", next)
+                    }
                   />
                   {fieldErrors.slotIntervalMinutes && (
                     <p className="mt-1.5 text-xs font-medium text-danger">

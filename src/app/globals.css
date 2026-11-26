@@ -493,3 +493,20 @@
     animation: float-slow 4.5s ease-in-out infinite alternate;
   }
 }
+
+@media print {
+  body {
+    background: white !important;
+  }
+  aside, nav, header, button, .no-print {
+    display: none !important;
+  }
+  .printable-receipt {
+    display: block !important;
+    width: 100% !important;
+    max-width: 600px !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+}
