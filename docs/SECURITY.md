@@ -7,13 +7,19 @@ How the layers fit together (entry, DTO, guard, service, queries, database) is i
 
 | Layer | Where | Notes |
 | --- | --- | --- |
-| Row Level Security | every table in `public` | Always on. Tables with no policy (`admin_activity_log`, `password_reset_codes`, `rejected_accounts`) are reachable only with the service role. |
+| Row Level Security | every table in `public` | Always on. Tables only the server uses (`account_applications`, `application_identities`, `application_businesses`, `admin_activity_log`, `subscription_plans`) have no client grants, apart from an applicant looking up their own application id. |
 | Tenant access checks | `src/lib/merchant/access.ts` (`resolveTenantAccess`) | Server actions must call this instead of trusting a `tenantId` sent by the browser. It only accepts a tenant the signed-in user is an owner/admin/receptionist/staff member of. |
 | Walk-in RPC guard | `public.assert_tenant_operator` (migration `rpc_tenant_guard`) | `create_walkin_appointment_safe` and `convert_waitlist_entry_to_appointment` call it first. It lets in the service role, platform admins and operators of that tenant, and rejects everyone else including requests with no session. |
 | Admin portal | `src/lib/admin/*`, `requireAdminPortal()` | Local accounts from `ADMIN_ACCOUNTS`, scrypt hashed, signed HttpOnly session cookie (8 hours). |
 | Rate limiting | `src/lib/rate-limit.ts` | See `docs/ENVIRONMENT.md` for Redis. |
 
 ## Rules for new code
+
+- Supabase grants every new table and function to `anon` and `authenticated` by default. `grant update (column)` or `revoke ... from public` does not undo that: **revoke from `anon, authenticated` first**, then grant only what is needed.
+- Server-only functions: `revoke all on function ... from public, anon, authenticated`.
+- Add a check to `scripts/tests/` for anything clients must not do, and run `npm run test:db` against the local stack.
+
+Applying the access hotfix to a hosted project: [SECURITY-HOTFIX](SECURITY-HOTFIX.md).
 
 - **Server actions and API routes always authenticate.** If a route is public on purpose (for example `/api/storefront/[slug]`),
   say so in a comment and return only published data.

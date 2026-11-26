@@ -61,6 +61,7 @@ needs `ADMIN_ACCOUNTS` and every protected rate-limited form works best with Red
 | `npm run lint`      | ESLint                         |
 | `npm run typecheck` | `next typegen && tsc --noEmit` |
 | `npm test`          | Unit tests (`src/lib/__tests__`) |
+| `npm run test:db` | Database access checks against the local Supabase stack |
 | `npm run email:test` / `email:check` | Send a test email / verify mail setup |
 | `node scripts/hash-admin-password.mjs "<pw>"` | Hash an admin password for `ADMIN_ACCOUNTS` |
 

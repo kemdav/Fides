@@ -12,6 +12,7 @@
     "typecheck:strict": "tsc --noEmit --noUncheckedIndexedAccess",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "node --experimental-strip-types --test src/lib/__tests__/*.test.ts",
+    "test:db": "node --env-file=.env.local --test scripts/tests/*.test.mjs",
     "setup:admin": "node scripts/setup-admin-env.mjs",
     "email:test": "node scripts/send-test-email.mjs",
     "email:check": "node scripts/check-email-setup.mjs"
