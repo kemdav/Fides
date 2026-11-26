@@ -194,19 +194,24 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
         title="Walk-Ins & Waiting List"
         description="Welcome every walk-in. Fill available slots without displacing existing bookings."
         actions={
-          <Button variant="brand" size="form"
+          <Button
+            variant="brand"
+            size="form"
             onClick={() => {
               setDefaultModalStaffId("any");
               setWalkInOpen(true);
             }}
             className="shrink-0 shadow-xs"
           >
-            + Add walk-in
+            + Add Walk-in
           </Button>
         }
       />
 
-      <section aria-label="Walk-in metrics" className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+      <section
+        aria-label="Walk-in metrics"
+        className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4"
+      >
         <MetricCard
           label="Waiting now"
           value={kpis.waitingNow}

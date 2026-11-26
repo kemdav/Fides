@@ -135,14 +135,14 @@ export function AvailabilityView({
                   size="form"
                   onClick={() => setDialog({ type: "resource" })}
                 >
-                  <span aria-hidden="true">+</span> Add resource
+                  <span aria-hidden="true">+</span> Add Resource
                 </Button>
                 <Button
                   variant="secondary"
                   size="form"
                   onClick={() => setDialog({ type: "time-off" })}
                 >
-                  <span aria-hidden="true">+</span> Add time off
+                  <span aria-hidden="true">+</span> Add Time Off
                 </Button>
               </div>
             }
