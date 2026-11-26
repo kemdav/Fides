@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { sendRegistrationCodeAction } from "@/app/actions/registration-email";
-import { adminButtonClasses } from "@/components/admin/admin-button";
+import { buttonClasses } from "@/components/ui/button";
 import { Icon } from "@/components/admin/icon";
 import {
   CalendarPicker,
@@ -17,6 +17,9 @@ import { MascotLoadingDialog } from "@/components/ui/mascot-loading-dialog";
 import {
   applicationDocumentsFor,
   BUSINESS_TYPES,
+  BUSINESS_TYPE_MAX_LENGTH,
+  OTHER_BUSINESS_TYPE,
+  businessTypeLabel,
   BUSINESS_LOGO_REQUIRED,
   FILE_LIMITS,
   IDENTITY_DOCUMENT_SLOTS,
@@ -57,7 +60,7 @@ import {
 import { EmailVerificationStep } from "./email-verification-step";
 import { SlugBadge } from "./slug-badge";
 import { uploadDocument } from "./upload-document";
-import { normalizeSlugInput } from "@/lib/account-request/schema";
+import { normalizeSlugInput } from "@/lib/registration/slug";
 import {
   DocumentCard,
   documentFileProblem,
@@ -101,6 +104,7 @@ type Values = {
   businessName: string;
   requestedSlug: string;
   businessType: string;
+  customBusinessType: string;
   establishedYear: string;
   streetAddress: string;
   barangay: string | null;
@@ -122,6 +126,7 @@ const initialValues: Values = {
   businessName: "",
   requestedSlug: "",
   businessType: "",
+  customBusinessType: "",
   establishedYear: "",
   streetAddress: "",
   barangay: null,
@@ -145,13 +150,14 @@ const stepSchemas = [
 ] as const;
 const allowStepPreview = process.env.NODE_ENV === "development";
 
-const primaryButton = adminButtonClasses({
-  size: "md",
+const primaryButton = buttonClasses({
+  variant: "brand",
+  size: "formLg",
   className: "gap-2 disabled:cursor-not-allowed",
 });
-const secondaryButton = adminButtonClasses({
-  variant: "outline-accent",
-  size: "md",
+const secondaryButton = buttonClasses({
+  variant: "brand-outline",
+  size: "formLg",
   className: "gap-2 disabled:cursor-not-allowed disabled:hover:bg-transparent",
 });
 
@@ -783,6 +789,7 @@ export function RegisterFlow({
           {step === 3 && (
             <DocumentsStep
               businessType={values.businessType}
+              businessTypeName={businessTypeLabel(values.businessType, values.customBusinessType)}
               uploads={uploads}
               uploading={uploading}
               docs={docs}
@@ -1365,22 +1372,51 @@ function BusinessStep({
               }
             />
           </Field>
-          <Listbox
-            id="businessType"
-            label="Business Type"
-            required
-            searchable
-            size="large"
-            value={values.businessType}
-            options={BUSINESS_TYPES.map((type) => ({
-              value: type,
-              label: type,
-            }))}
-            onChange={(value) => set("businessType", value)}
-            error={errors.businessType}
-            placeholder="Select a business type"
-            className="sm:col-span-4"
-          />
+          {values.businessType === OTHER_BUSINESS_TYPE ? (
+            <Field label="Business Type" htmlFor="customBusinessType" error={errors.customBusinessType} className="sm:col-span-4">
+              <div className="flex min-w-0 items-center gap-2">
+                <TextInput
+                  id="customBusinessType"
+                  className="min-w-0 flex-1"
+                  placeholder="e.g. Pet grooming"
+                  maxLength={BUSINESS_TYPE_MAX_LENGTH}
+                  invalid={!!errors.customBusinessType}
+                  required
+                  value={values.customBusinessType}
+                  onChange={(event) => set("customBusinessType", event.target.value)}
+                />
+                <button
+                  type="button"
+                  className={buttonClasses({ variant: "brand-outline", size: "form", className: "shrink-0" })}
+                  onClick={() => {
+                    set("businessType", "");
+                    requestAnimationFrame(() => document.getElementById("businessType")?.focus());
+                  }}
+                >
+                  Use list
+                </button>
+              </div>
+            </Field>
+          ) : (
+            <Listbox
+              id="businessType"
+              label="Business Type"
+              required
+              searchable
+              size="large"
+              value={values.businessType}
+              options={BUSINESS_TYPES.map((type) => ({ value: type, label: type }))}
+              onChange={(value) => {
+                set("businessType", value);
+                if (value === OTHER_BUSINESS_TYPE) {
+                  requestAnimationFrame(() => document.getElementById("customBusinessType")?.focus());
+                }
+              }}
+              error={errors.businessType}
+              placeholder="Select a business type"
+              className="sm:col-span-4"
+            />
+          )}
           <Listbox
             id="province"
             label="Province"
@@ -1474,6 +1510,7 @@ function BusinessStep({
 
 function DocumentsStep({
   businessType,
+  businessTypeName,
   uploads,
   uploading,
   docs,
@@ -1486,6 +1523,7 @@ function DocumentsStep({
   onNext,
 }: {
   businessType: string;
+  businessTypeName: string;
   uploads: Uploads;
   uploading: boolean;
   docs: DocMap;
@@ -1512,7 +1550,7 @@ function DocumentsStep({
       <Heading
         title="Upload your business documents"
         subtitle={businessType
-          ? `All documents listed below are required for your selected business type (${businessType}).`
+          ? `All documents listed below are required for your selected business type (${businessTypeName}).`
           : "Select a business type in Step 3 to see the full list of required documents."}
       />
       {summaryError ? (
@@ -1644,8 +1682,8 @@ function SummaryCard({
           type="button"
           aria-label={`Edit ${title}`}
           onClick={onEdit}
-          className={adminButtonClasses({
-            variant: "outline-accent",
+          className={buttonClasses({
+            variant: "brand-outline",
             size: "xs",
           })}
         >
@@ -1771,7 +1809,7 @@ function SummaryStep({
           {values.requestedSlug && (
             <Row label="Requested subdomain" value={values.requestedSlug} />
           )}
-          <Row label="Category" value={values.businessType} />
+          <Row label="Category" value={businessTypeLabel(values.businessType, values.customBusinessType)} />
           <Row label="Established" value={values.establishedYear} />
           <Row
             label="Address"

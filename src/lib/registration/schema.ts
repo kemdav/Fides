@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { BUSINESS_TYPES, ID_TYPES, PLAN_OPTIONS } from "./options";
-import { slugSchema } from "@/lib/account-request/schema";
+import { BUSINESS_TYPES, BUSINESS_TYPE_MAX_LENGTH, ID_TYPES, OTHER_BUSINESS_TYPE, PLAN_OPTIONS } from "./options";
+import { slugSchema } from "@/lib/registration/slug";
 
 export type PasswordChecks = {
   length: boolean;
@@ -107,6 +107,7 @@ const base = z.object({
 
   businessName: text("Business name", 120).min(2, "Business name must be at least 2 characters."),
   businessType: z.enum(BUSINESS_TYPES, { error: "Select a business type." }),
+  customBusinessType: z.string().trim().max(BUSINESS_TYPE_MAX_LENGTH, "Business type is too long.").optional(),
   requestedSlug: slugSchema.optional(),
   establishedYear: z
     .string()
@@ -141,9 +142,17 @@ export const identityStepSchema = base.pick({
   idType: true,
 });
 
+const hasBusinessTypeDetails = (data: { businessType: string; customBusinessType?: string }): boolean =>
+  data.businessType !== OTHER_BUSINESS_TYPE || Boolean(data.customBusinessType);
+const businessTypeDetailsError = {
+  message: "Enter your business type.",
+  path: ["customBusinessType"],
+};
+
 export const businessStepSchema = base.pick({
   businessName: true,
   businessType: true,
+  customBusinessType: true,
   requestedSlug: true,
   establishedYear: true,
   streetAddress: true,
@@ -151,11 +160,11 @@ export const businessStepSchema = base.pick({
   city: true,
   province: true,
   zipCode: true,
-});
+}).refine(hasBusinessTypeDetails, businessTypeDetailsError);
 
 export const planStepSchema = base.pick({ planCode: true });
 
-export const registrationSchema = base.refine((data) => data.password === data.confirmPassword, {
+export const registrationSchema = base.refine(hasBusinessTypeDetails, businessTypeDetailsError).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match.",
   path: ["confirmPassword"],
 });

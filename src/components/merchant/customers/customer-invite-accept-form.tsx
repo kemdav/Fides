@@ -4,6 +4,9 @@ import * as React from "react";
 import Link from "next/link";
 import { acceptCustomerInviteAction } from "@/app/actions/customers";
 import type { CustomerInvitePreview } from "@/types/customers";
+import { Icon } from "@/components/admin/icon";
+import { inputClasses } from "@/components/ui";
+import { cn } from "@/lib/utils";
 
 export function CustomerInviteAcceptForm({
   token,
@@ -41,16 +44,16 @@ export function CustomerInviteAcceptForm({
             : "We could not find an active invitation for this link.";
 
     return (
-      <div className="w-full max-w-md rounded-2xl border border-[#ECEAE0] bg-white p-8 text-center shadow-lg">
-        <h1 className="font-display text-2xl text-[#1E293B]">{title}</h1>
-        <p className="mt-2 text-sm leading-relaxed text-[#64748B]">
+      <div className="w-full max-w-md rounded-2xl border border-hairline bg-white p-8 text-center shadow-lg">
+        <h1 className="font-display text-2xl text-ink">{title}</h1>
+        <p className="mt-2 text-sm leading-relaxed text-subtle">
           {description}
         </p>
         {preview.tenantSlug && (
           <div className="mt-6">
             <Link
               href={`/${preview.tenantSlug}`}
-              className="inline-flex h-10 items-center justify-center rounded-lg bg-[#C35000] px-5 text-sm font-semibold text-white hover:bg-[#A64400]"
+              className="inline-flex h-10 items-center justify-center rounded-lg bg-burnt px-5 text-sm font-semibold text-on-burnt hover:bg-burnt-dark"
             >
               Visit {preview.businessName ?? "Storefront"}
             </Link>
@@ -62,27 +65,16 @@ export function CustomerInviteAcceptForm({
 
   if (completed) {
     return (
-      <div className="w-full max-w-md rounded-2xl border border-[#ECEAE0] bg-white p-8 text-center shadow-lg">
-        <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full border-[3px] border-[#15803D] text-[#15803D]">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="size-7"
-            aria-hidden="true"
-          >
-            <path d="M5 13l4 4L19 7" />
-          </svg>
+      <div className="w-full max-w-md rounded-2xl border border-hairline bg-white p-8 text-center shadow-lg">
+        <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full border-[3px] border-success text-success">
+          <Icon name="check" weight="bold" className="size-7" />
         </div>
-        <h1 className="font-display text-2xl text-[#1E293B]">
+        <h1 className="font-display text-2xl text-ink">
           Account activated
         </h1>
-        <p className="mt-2 text-sm leading-relaxed text-[#64748B]">
+        <p className="mt-2 text-sm leading-relaxed text-subtle">
           Your password is set and your existing visits with{" "}
-          <span className="font-semibold text-[#1E293B]">
+          <span className="font-semibold text-ink">
             {completed.businessName}
           </span>{" "}
           are now linked to your account.
@@ -90,7 +82,7 @@ export function CustomerInviteAcceptForm({
         <div className="mt-6 flex justify-center gap-3">
           <Link
             href={`/${completed.tenantSlug}`}
-            className="inline-flex h-10 items-center justify-center rounded-lg bg-[#C35000] px-5 text-sm font-semibold text-white hover:bg-[#A64400]"
+            className="inline-flex h-10 items-center justify-center rounded-lg bg-burnt px-5 text-sm font-semibold text-on-burnt hover:bg-burnt-dark"
           >
             Visit {completed.businessName}
           </Link>
@@ -125,24 +117,24 @@ export function CustomerInviteAcceptForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="w-full max-w-md rounded-2xl border border-[#ECEAE0] bg-white p-8 shadow-lg"
+      className="w-full max-w-md rounded-2xl border border-hairline bg-white p-8 shadow-lg"
     >
-      <p className="text-xs font-semibold uppercase tracking-widest text-[#C35000]">
+      <p className="text-xs font-semibold uppercase tracking-widest text-burnt">
         {preview.businessName}
       </p>
-      <h1 className="mt-2 font-display text-2xl text-[#1E293B]">
+      <h1 className="mt-2 font-display text-2xl text-ink">
         Finish setting up your account
       </h1>
-      <p className="mt-1.5 text-sm leading-relaxed text-[#64748B]">
+      <p className="mt-1.5 text-sm leading-relaxed text-subtle">
         Hi {preview.customerName}, choose a password for{" "}
-        <span className="font-semibold text-[#1E293B]">{preview.email}</span> to
+        <span className="font-semibold text-ink">{preview.email}</span> to
         link your visit history.
       </p>
 
       {error && (
         <div
           role="alert"
-          className="mt-4 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-xs font-medium text-[#B91C1C]"
+          className="mt-4 rounded-lg border border-danger/30 bg-danger-bg px-3 py-2 text-xs font-medium text-danger-dark"
         >
           {error}
         </div>
@@ -152,7 +144,7 @@ export function CustomerInviteAcceptForm({
         <div>
           <label
             htmlFor="invite-password"
-            className="block text-xs font-semibold text-[#1E293B]"
+            className="block text-xs font-semibold text-ink"
           >
             New password
           </label>
@@ -163,9 +155,9 @@ export function CustomerInviteAcceptForm({
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="At least 8 characters"
-            className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] px-3 text-sm text-[#1E293B] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+            className={cn(inputClasses(false, false), "mt-1.5")}
           />
-          <p className="mt-1 text-[11px] text-[#64748B]">
+          <p className="mt-1 text-xs text-subtle">
             Use 8+ characters with an uppercase letter, lowercase letter, and
             number.
           </p>
@@ -174,7 +166,7 @@ export function CustomerInviteAcceptForm({
         <div>
           <label
             htmlFor="invite-confirm-password"
-            className="block text-xs font-semibold text-[#1E293B]"
+            className="block text-xs font-semibold text-ink"
           >
             Confirm password
           </label>
@@ -185,7 +177,7 @@ export function CustomerInviteAcceptForm({
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             placeholder="Re-enter your password"
-            className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] px-3 text-sm text-[#1E293B] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+            className={cn(inputClasses(false, false), "mt-1.5")}
           />
         </div>
       </div>
@@ -193,7 +185,7 @@ export function CustomerInviteAcceptForm({
       <button
         type="submit"
         disabled={submitting}
-        className="mt-6 h-11 w-full rounded-lg bg-[#C35000] text-sm font-semibold text-white transition-colors hover:bg-[#A64400] disabled:opacity-50"
+        className="mt-6 h-11 w-full rounded-lg bg-burnt text-sm font-semibold text-on-burnt transition-colors hover:bg-burnt-dark disabled:opacity-50"
       >
         {submitting ? "Activating account..." : "Set Password & Activate"}
       </button>

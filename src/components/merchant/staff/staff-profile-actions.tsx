@@ -1,8 +1,8 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { AdminButton } from "@/components/admin/admin-button";
 import { ManageStaffModal, type ManagedStaff } from "./manage-staff-modal";
 import { StaffStatusDialog } from "./staff-status-dialog";
 import { StaffSuccessDialog, type StaffSuccessDetails } from "./staff-confirmation-dialog";
@@ -24,10 +24,10 @@ export function StaffProfileActions({ tenantId, basePath, staff, lastOwnerProtec
   return (
     <div>
       <div className="flex flex-wrap gap-2">
-        <AdminButton variant="primary" size="sm" aria-haspopup="dialog" onClick={() => setEditing(true)}>Edit Staff</AdminButton>
-        <AdminButton variant="outline" size="sm" aria-haspopup="dialog" onClick={() => setConfirming(true)}>
+        <Button variant="brand" size="xs" aria-haspopup="dialog" onClick={() => setEditing(true)}>Edit Staff</Button>
+        <Button variant="secondary" size="xs" aria-haspopup="dialog" onClick={() => setConfirming(true)}>
           {action} Staff
-        </AdminButton>
+        </Button>
       </div>
       {success && <StaffSuccessDialog {...success} onClose={() => setSuccess(null)} />}
       {editing && (

@@ -7,7 +7,7 @@ export const interactiveRing =
 
 export function Surface({ className, children }: { className?: string; children: ReactNode }) {
   return (
-    <section className={cn("rounded-[10px] bg-white p-4 shadow-[0_3px_14px_rgb(44_58_75/0.04)] sm:p-6", className)}>
+    <section className={cn("rounded-[10px] bg-white p-4 shadow-card sm:p-6", className)}>
       {children}
     </section>
   );

@@ -5,30 +5,29 @@ import {
   draftFromTier,
   emptyDraft,
   subscribedLabel,
+  tierFromDraft,
   validateTier,
   type Tier,
   type TierDraft,
   type TierErrors,
 } from "@/lib/admin/tiers";
 import { cn } from "@/lib/utils";
-import { AdminButton } from "./admin-button";
 import { Icon } from "./icon";
 import { TextField } from "./fields";
 import { ConfirmationCard, FormCard } from "./verification-dialogs";
+import { Button } from "@/components/ui/button";
 
 export function TierFormDialog({
   tier,
   tiers,
-  busy = false,
   onClose,
   onSave,
   onDelete,
 }: {
   tier?: Tier;
   tiers: Tier[];
-  busy?: boolean;
   onClose: () => void;
-  onSave: (draft: TierDraft) => void;
+  onSave: (tier: Tier) => void;
   onDelete?: () => void;
 }) {
   const [draft, setDraft] = useState<TierDraft>(tier ? draftFromTier(tier) : emptyDraft);
@@ -47,7 +46,7 @@ export function TierFormDialog({
       setErrors(found);
       return;
     }
-    onSave(draft);
+    onSave(tierFromDraft(draft, tier));
   }
 
   return (
@@ -68,30 +67,32 @@ export function TierFormDialog({
           autoFocus
         />
         <TextField
-          label="Monthly price (PHP)"
+          label="Monthly price (USD)"
           required
           value={draft.price}
           onChange={update("price")}
           error={errors.price}
           inputMode="decimal"
-          placeholder="1299"
+          placeholder="79"
         />
         <div className="grid gap-5 sm:grid-cols-2">
           <TextField
-            label="Staff Limit (optional)"
+            label="Staff Limit"
+            required
             value={draft.staffLimit}
             onChange={update("staffLimit")}
             error={errors.staffLimit}
             inputMode="numeric"
-            placeholder="Not limited"
+            placeholder="10"
           />
           <TextField
-            label="Location Limit (optional)"
+            label="Location Limit"
+            required
             value={draft.locationLimit}
             onChange={update("locationLimit")}
             error={errors.locationLimit}
             inputMode="numeric"
-            placeholder="Not limited"
+            placeholder="3"
           />
         </div>
         <div className="flex items-center gap-[10px] rounded-lg bg-mist p-3 text-xs leading-[18px]">
@@ -100,17 +101,17 @@ export function TierFormDialog({
         </div>
         <div className={cn("flex flex-wrap items-center gap-[10px]", editing ? "justify-between" : "justify-end")}>
           {editing ? (
-            <AdminButton variant="danger" onClick={onDelete}>
+            <Button size="form" variant="danger" onClick={onDelete}>
               Delete tier
-            </AdminButton>
+            </Button>
           ) : null}
           <div className="flex flex-wrap items-center gap-3">
-            <AdminButton variant="outline" className="min-w-[100px]" onClick={onClose}>
+            <Button size="form" variant="secondary" className="min-w-[100px]" onClick={onClose}>
               Cancel
-            </AdminButton>
-            <AdminButton type="submit" disabled={busy} className="min-w-[101px]">
+            </Button>
+            <Button size="form" variant="brand" type="submit" className="min-w-[101px]">
               {editing ? "Save changes" : "Create Tier"}
-            </AdminButton>
+            </Button>
           </div>
         </div>
       </FormCard>
@@ -121,13 +122,11 @@ export function TierFormDialog({
 export function DeleteTierDialog({
   tier,
   subscribed,
-  busy = false,
   onCancel,
   onConfirm,
 }: {
   tier: Tier;
   subscribed: number;
-  busy?: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
@@ -138,12 +137,12 @@ export function DeleteTierDialog({
         Existing tenant subscriptions will remain active ({subscribedLabel(subscribed)}).
       </p>
       <div className="flex flex-wrap items-center justify-center gap-3">
-        <AdminButton variant="outline" size="md" className="min-w-[120px]" onClick={onCancel}>
+        <Button variant="secondary" size="formLg" className="min-w-[120px]" onClick={onCancel}>
           Cancel
-        </AdminButton>
-        <AdminButton variant="danger" size="md" className="min-w-[147px]" onClick={onConfirm} disabled={busy} autoFocus>
+        </Button>
+        <Button variant="danger" size="formLg" className="min-w-[147px]" onClick={onConfirm} autoFocus>
           Delete tier
-        </AdminButton>
+        </Button>
       </div>
     </ConfirmationCard>
   );

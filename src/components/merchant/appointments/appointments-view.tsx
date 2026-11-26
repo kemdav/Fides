@@ -6,12 +6,10 @@ import { canManageBookings, workspaceRoleFromLabel } from "@/lib/merchant/worksp
 import { MerchantSidebar } from "../merchant-sidebar";
 import { AppointmentDetailsModal } from "@/components/merchant/overview/appointment-details-modal";
 import { Icon } from "@/components/admin/icon";
-import { AdminButton } from "@/components/admin/admin-button";
 import { MetricCard } from "@/components/admin/metric-card";
 import {
   PageContent,
   PageHeading,
-  StatusPill,
   Surface,
 } from "@/components/admin/primitives";
 import { updateAppointmentStatusAction } from "@/app/actions/appointments";
@@ -24,10 +22,13 @@ import {
   type WalkInResult,
 } from "@/components/merchant/walk-in-modal";
 import { EmptyState } from "@/components/ui/empty-state";
-import type {
-  AppointmentServiceOption,
-  AppointmentStaffOption,
-} from "@/types/appointments";
+import { AppointmentStatusPill } from "@/components/merchant/appointment-status-pill";
+import { Modal } from "@/components/ui/modal";
+import { Button } from "@/components/ui/button";
+import type { AppointmentServiceOption, AppointmentStaffOption } from "@/types/appointments";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField } from "@/components/ui/select-field";
+import { statusFilterOptions } from "@/components/merchant/appointment-filter-options";
 
 export interface AppointmentItem {
   id: string;
@@ -65,26 +66,6 @@ interface AppointmentsViewProps {
 }
 
 // ─── helpers ────────────────────────────────────────────────────────────────
-
-function AppointmentStatusPill({
-  status,
-}: {
-  status: AppointmentItem["status"];
-}) {
-  const toneMap: Record<
-    AppointmentItem["status"],
-    { tone: React.ComponentProps<typeof StatusPill>["tone"]; label: string }
-  > = {
-    Confirmed: { tone: "success", label: "Confirmed" },
-    "Pending approval": { tone: "warning", label: "Pending approval" },
-    "Check In": { tone: "info", label: "Check In" },
-    "In service": { tone: "info", label: "In service" },
-    Completed: { tone: "neutral", label: "Completed" },
-    Cancelled: { tone: "danger", label: "Cancelled" },
-  };
-  const { tone, label } = toneMap[status] ?? { tone: "neutral", label: status };
-  return <StatusPill tone={tone}>{label}</StatusPill>;
-}
 
 /** Parse "10:30 AM" → minutes-since-midnight */
 function parseTimeToMinutes(timeStr: string): number {
@@ -236,7 +217,6 @@ export function AppointmentsView({
   const [calendarAnchor, setCalendarAnchor] = React.useState<Date>(
     () => new Date(),
   );
-  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [selectedAppointmentId, setSelectedAppointmentId] = React.useState<string | null>(null);
   const [cancelTarget, setCancelTarget] =
     React.useState<AppointmentItem | null>(null);
@@ -382,7 +362,7 @@ export function AppointmentsView({
           d.getMonth() === weekDates[i].getMonth() &&
           d.getDate() === weekDates[i].getDate()
         ) {
-          map.get(i)!.push(item);
+          map.get(i)?.push(item);
           break;
         }
       }
@@ -419,20 +399,20 @@ export function AppointmentsView({
             description="Manage bookings, approvals, and appointment outcomes in one place."
             actions={canManage && (
               <div className="flex flex-wrap items-center gap-2">
-                <AdminButton
-                  variant="primary"
-                  size="sm"
+                <Button
+                  variant="brand"
+                  size="form"
                   onClick={() => setIsNewBookingOpen(true)}
                 >
                   + New Booking
-                </AdminButton>
-                <AdminButton
-                  variant="outline"
-                  size="sm"
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="form"
                   onClick={() => setIsWalkInOpen(true)}
                 >
                   + Add Walk-in
-                </AdminButton>
+                </Button>
               </div>
             )}
           />
@@ -491,63 +471,21 @@ export function AppointmentsView({
 
               {/* Right: search + filter + view toggle */}
               <div className="flex flex-wrap items-center gap-2.5">
-                {/* Search */}
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search customer or service"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="h-11 pl-10 pr-3 rounded-lg border border-hairline bg-white text-sm text-ink focus:outline-none focus:ring-2 focus:ring-burnt/40 w-48 sm:w-60 transition-shadow"
-                  />
-                  <Icon
-                    name="search"
-                    className="size-4 text-glyph absolute left-3 top-3 pointer-events-none"
-                  />
-                </div>
+                <SearchField
+                  placeholder="Search customer or service"
+                  aria-label="Search appointments"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
 
-                {/* Filter */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setIsFilterOpen(!isFilterOpen)}
-                    className="h-11 rounded-lg border border-hairline bg-white px-3 text-sm font-semibold text-ink hover:bg-mist flex items-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                      className="size-3.5 text-glyph"
-                      aria-hidden
-                    >
-                      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-                    </svg>
-                    <span>
-                      Filter {filterStatus !== "All" ? `(${filterStatus})` : ""}
-                    </span>
-                    <Icon name="chevron-down" className="size-3.5 text-glyph" />
-                  </button>
-                  {isFilterOpen && (
-                    <div className="absolute right-0 mt-1 w-44 rounded-[10px] bg-white border border-hairline shadow-lg py-1 z-20 text-sm">
-                      {["All", "Confirmed", "Pending approval", "Check In"].map(
-                        (s) => (
-                          <button
-                            key={s}
-                            type="button"
-                            onClick={() => {
-                              setFilterStatus(s);
-                              setIsFilterOpen(false);
-                            }}
-                            className={`w-full text-left px-4 py-2 hover:bg-mist ${filterStatus === s ? "text-burnt font-semibold" : "text-body"}`}
-                          >
-                            {s}
-                          </button>
-                        ),
-                      )}
-                    </div>
-                  )}
-                </div>
+                <SelectField
+                  ariaLabel="Filter appointments by status"
+                  compact
+                  className="w-full sm:w-52"
+                  value={filterStatus}
+                  options={statusFilterOptions}
+                  onChange={setFilterStatus}
+                />
 
                 {/* View toggle — ICON buttons */}
                 <div
@@ -563,21 +501,12 @@ export function AppointmentsView({
                     onClick={() => setViewMode("list")}
                     className={`flex size-9 items-center justify-center rounded-md transition-colors ${
                       viewMode === "list"
-                        ? "bg-burnt text-white"
+                        ? "bg-burnt text-on-burnt"
                         : "text-muted hover:text-ink hover:bg-mist"
                     }`}
                   >
                     {/* rows / list icon */}
-                    <svg
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                      className="size-4"
-                      aria-hidden
-                    >
-                      <rect x="3" y="4" width="14" height="2" rx="1" />
-                      <rect x="3" y="9" width="14" height="2" rx="1" />
-                      <rect x="3" y="14" width="14" height="2" rx="1" />
-                    </svg>
+                    <Icon name="list" className="size-4" />
                   </button>
                   {/* Calendar / grid icon */}
                   <button
@@ -587,27 +516,12 @@ export function AppointmentsView({
                     onClick={() => setViewMode("calendar")}
                     className={`flex size-9 items-center justify-center rounded-md transition-colors ${
                       viewMode === "calendar"
-                        ? "bg-burnt text-white"
+                        ? "bg-burnt text-on-burnt"
                         : "text-muted hover:text-ink hover:bg-mist"
                     }`}
                   >
                     {/* calendar grid icon */}
-                    <svg
-                      viewBox="0 0 20 20"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                      className="size-4"
-                      aria-hidden
-                    >
-                      <rect x="2.5" y="3.5" width="15" height="14" rx="1.5" />
-                      <line x1="2.5" y1="7.5" x2="17.5" y2="7.5" />
-                      <line x1="7.5" y1="3.5" x2="7.5" y2="7.5" />
-                      <line x1="12.5" y1="3.5" x2="12.5" y2="7.5" />
-                      <line x1="7.5" y1="10.5" x2="7.5" y2="17.5" />
-                      <line x1="12.5" y1="10.5" x2="12.5" y2="17.5" />
-                      <line x1="2.5" y1="13.5" x2="17.5" y2="13.5" />
-                    </svg>
+                    <Icon name="calendar" className="size-4" />
                   </button>
                 </div>
               </div>
@@ -630,20 +544,7 @@ export function AppointmentsView({
                       }
                       className="flex size-8 items-center justify-center rounded-full border border-hairline bg-white hover:bg-mist transition-colors text-ink"
                     >
-                      <svg
-                        viewBox="0 0 16 16"
-                        fill="currentColor"
-                        className="size-3.5"
-                      >
-                        <path
-                          d="M10.5 3L5.5 8l5 5"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          fill="none"
-                        />
-                      </svg>
+                      <Icon name="chevron-left" className="size-3.5" />
                     </button>
 
                     <span className="text-sm font-semibold text-ink min-w-[220px] text-center">
@@ -665,20 +566,7 @@ export function AppointmentsView({
                       }
                       className="flex size-8 items-center justify-center rounded-full border border-hairline bg-white hover:bg-mist transition-colors text-ink"
                     >
-                      <svg
-                        viewBox="0 0 16 16"
-                        fill="currentColor"
-                        className="size-3.5"
-                      >
-                        <path
-                          d="M5.5 3L10.5 8l-5 5"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          fill="none"
-                        />
-                      </svg>
+                      <Icon name="chevron-right" className="size-3.5" />
                     </button>
 
                     <span className="hidden sm:block text-xs text-muted pl-1">
@@ -687,7 +575,7 @@ export function AppointmentsView({
                   </div>
 
                   {/* Status legend */}
-                  <div className="hidden md:flex items-center gap-3 text-[11px] text-muted">
+                  <div className="hidden md:flex items-center gap-3 text-xs text-muted">
                     {[
                       {
                         label: "Confirmed",
@@ -757,7 +645,7 @@ export function AppointmentsView({
                             className={`flex-1 border-b border-l border-hairline px-2 py-2 text-center ${isToday ? "bg-burnt/5" : "bg-white"}`}
                           >
                             <p
-                              className={`text-[11px] font-semibold uppercase tracking-wide ${isToday ? "text-burnt" : "text-subtle"}`}
+                              className={`text-xs font-semibold uppercase tracking-wide ${isToday ? "text-burnt" : "text-subtle"}`}
                             >
                               {date.toLocaleDateString("en-US", {
                                 weekday: "short",
@@ -790,7 +678,7 @@ export function AppointmentsView({
                               className="border-b border-hairline flex items-start justify-end pr-2 pt-1"
                               style={{ height: `${HOUR_HEIGHT}px` }}
                             >
-                              <span className="text-[10px] text-subtle font-medium">
+                              <span className="text-xs text-subtle font-medium">
                                 {h === 12
                                   ? "12:00"
                                   : h < 12
@@ -861,17 +749,17 @@ export function AppointmentsView({
                                     }}
                                   >
                                     <p
-                                      className={`text-[11px] font-bold leading-tight truncate ${colors.text}`}
+                                      className={`text-xs font-bold leading-tight truncate ${colors.text}`}
                                     >
                                       {item.customer}
                                     </p>
                                     <p
-                                      className={`text-[10px] leading-tight truncate ${colors.text} opacity-80`}
+                                      className={`text-xs leading-tight truncate ${colors.text} opacity-80`}
                                     >
                                       {formatTime24(item.time)} · {item.service}
                                     </p>
                                     <p
-                                      className={`text-[10px] leading-tight truncate ${colors.text} opacity-70`}
+                                      className={`text-xs leading-tight truncate ${colors.text} opacity-70`}
                                     >
                                       {item.staff}
                                     </p>
@@ -962,7 +850,7 @@ export function AppointmentsView({
                                 className="relative border-b border-hairline flex items-start justify-end pr-3 pt-1"
                                 style={{ height: `${HOUR_HEIGHT}px` }}
                               >
-                                <span className="text-[11px] font-medium text-subtle -translate-y-2.5">
+                                <span className="text-xs font-medium text-subtle -translate-y-2.5">
                                   {h === 12
                                     ? "12:00 PM"
                                     : h < 12
@@ -1058,18 +946,18 @@ export function AppointmentsView({
                                     {item.customer}
                                   </p>
                                   <p
-                                    className={`text-[11px] leading-snug truncate ${colors.text} opacity-80`}
+                                    className={`text-xs leading-snug truncate ${colors.text} opacity-80`}
                                   >
                                     {formatTime24(item.time)} · {item.service}
                                   </p>
                                   <p
-                                    className={`text-[11px] leading-snug truncate ${colors.text} opacity-70`}
+                                    className={`text-xs leading-snug truncate ${colors.text} opacity-70`}
                                   >
                                     {item.staff}
                                   </p>
                                   {height >= HOUR_HEIGHT && (
                                     <span
-                                      className={`mt-1 inline-flex items-center rounded-full border px-2 py-px text-[10px] font-semibold ${colors.pill}`}
+                                      className={`mt-1 inline-flex items-center rounded-full border px-2 py-px text-xs font-semibold ${colors.pill}`}
                                     >
                                       {item.status}
                                     </span>
@@ -1104,7 +992,7 @@ export function AppointmentsView({
                       className="flex border-b border-hairline"
                       style={{ minWidth: `${staffList.length * 160 + 64}px` }}
                     >
-                      <div className="w-16 shrink-0 bg-white px-2 py-2 text-[10px] text-subtle font-semibold">
+                      <div className="w-16 shrink-0 bg-white px-2 py-2 text-xs text-subtle font-semibold">
                         GMT+8
                       </div>
                       {staffList.map((s) => (
@@ -1116,7 +1004,7 @@ export function AppointmentsView({
                           <p className="text-xs font-semibold text-ink truncate">
                             {s}
                           </p>
-                          <p className="text-[10px] text-muted">
+                          <p className="text-xs text-muted">
                             09:00 – 17:00
                           </p>
                         </div>
@@ -1139,7 +1027,7 @@ export function AppointmentsView({
                               className="border-b border-hairline flex items-start justify-end pr-2 pt-1"
                               style={{ height: `${HOUR_HEIGHT}px` }}
                             >
-                              <span className="text-[10px] text-subtle font-medium">
+                              <span className="text-xs text-subtle font-medium">
                                 {String(h).padStart(2, "0")}:00
                               </span>
                             </div>
@@ -1201,17 +1089,17 @@ export function AppointmentsView({
                                     }}
                                   >
                                     <p
-                                      className={`text-[11px] font-bold leading-tight truncate ${colors.text}`}
+                                      className={`text-xs font-bold leading-tight truncate ${colors.text}`}
                                     >
                                       {item.customer}
                                     </p>
                                     <p
-                                      className={`text-[10px] leading-tight truncate ${colors.text} opacity-80`}
+                                      className={`text-xs leading-tight truncate ${colors.text} opacity-80`}
                                     >
                                       {formatTime24(item.time)} · {item.service}
                                     </p>
                                     <span
-                                      className={`mt-0.5 inline-flex items-center rounded-full border px-1.5 py-px text-[9px] font-semibold ${colors.pill}`}
+                                      className={`mt-0.5 inline-flex items-center rounded-full border px-1.5 py-px text-xs font-semibold ${colors.pill}`}
                                     >
                                       {item.status}
                                     </span>
@@ -1220,7 +1108,7 @@ export function AppointmentsView({
                               })}
                               {staffItems.length === 0 && (
                                 <div className="absolute inset-0 flex items-center justify-center">
-                                  <span className="text-[10px] text-subtle">
+                                  <span className="text-xs text-subtle">
                                     No bookings
                                   </span>
                                 </div>
@@ -1308,8 +1196,8 @@ export function AppointmentsView({
                                 </span>
                               </div>
                               {canManage && (
-                                <AdminButton size="xs" variant="outline" aria-haspopup="dialog"
-                                  onClick={() => setSelectedAppointmentId(row.id)}>Appointment details</AdminButton>
+                                <Button size="xs" variant="outline" aria-haspopup="dialog"
+                                  onClick={() => setSelectedAppointmentId(row.id)}>Appointment details</Button>
                               )}
                             </div>
                           )}
@@ -1430,14 +1318,7 @@ export function AppointmentsView({
       )}
 
       {popoverItem && (
-        <div
-          className="fixed inset-0 z-40 flex items-end justify-center sm:items-center p-4 bg-black/30 backdrop-blur-xs"
-          onClick={() => setPopoverItem(null)}
-        >
-          <div
-            className="w-full max-w-sm rounded-[10px] bg-white border border-line shadow-2xl p-5 space-y-4"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <Modal open onClose={() => setPopoverItem(null)} closeOnBackdrop unstyled className="w-[calc(100%-1rem)] max-w-sm rounded-[10px] bg-white border border-line shadow-2xl p-5 space-y-4 overflow-visible text-ink backdrop:bg-black/30">
             {/* header */}
             <div className="flex items-start justify-between">
               <div>
@@ -1472,26 +1353,26 @@ export function AppointmentsView({
             {/* actions */}
             <div className="flex flex-wrap gap-2 pt-1 border-t border-hairline">
               {canManage && <>{popoverItem.status !== "Confirmed" && (
-                <AdminButton
+                <Button
                   size="xs"
-                  variant="primary"
+                  variant="brand"
                   onClick={() =>
                     handleStatusChange(popoverItem.id, "Confirmed")
                   }
                 >
                   Confirm
-                </AdminButton>
+                </Button>
               )}
               {popoverItem.status !== "Check In" && (
-                <AdminButton
+                <Button
                   size="xs"
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => handleStatusChange(popoverItem.id, "Check In")}
                 >
                   Check In
-                </AdminButton>
+                </Button>
               )}
-              <AdminButton
+              <Button
                 size="xs"
                 variant="danger"
                 onClick={() => {
@@ -1500,18 +1381,17 @@ export function AppointmentsView({
                 }}
               >
                 Cancel
-              </AdminButton></>}
-              <AdminButton
+              </Button></>}
+              <Button
                 size="xs"
-                variant="outline"
+                variant="secondary"
                 onClick={() => setPopoverItem(null)}
                 className="ml-auto"
               >
                 Close
-              </AdminButton>
+              </Button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Toast */}
@@ -1523,8 +1403,7 @@ export function AppointmentsView({
 
       {/* Cancel Confirmation Modal */}
       {cancelTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div className="relative w-full max-w-sm rounded-[10px] bg-white p-6 shadow-2xl border border-line">
+        <Modal open onClose={() => setCancelTarget(null)} unstyled className="w-[calc(100%-1rem)] max-w-sm rounded-[10px] bg-white p-6 shadow-2xl border border-line overflow-visible text-ink">
             <h3 className="font-display text-[22px] leading-tight text-ink">
               Cancel Appointment?
             </h3>
@@ -1536,23 +1415,22 @@ export function AppointmentsView({
               ({cancelTarget.service}) at {cancelTarget.time}?
             </p>
             <div className="mt-5 flex items-center justify-end gap-2.5">
-              <AdminButton
-                variant="outline"
+              <Button
+                variant="secondary"
                 size="xs"
                 onClick={() => setCancelTarget(null)}
               >
                 Keep
-              </AdminButton>
-              <AdminButton
+              </Button>
+              <Button
                 variant="danger"
                 size="xs"
                 onClick={handleConfirmCancel}
               >
                 Confirm Cancel
-              </AdminButton>
+              </Button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* New Appointment Modal (QA #4) */}

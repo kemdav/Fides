@@ -1,6 +1,7 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
-import { validateSlugAvailability } from "@/lib/account-request/store";
+import { publicEnv } from "@/lib/env";
+import { normalizeSlugInput, slugSchema, type SlugValidationResult } from "@/lib/registration/slug";
 import { nextBillingDate } from "@/lib/billing";
 import { isMailConfigured } from "@/lib/mail/mailer";
 import { sendApprovalEmail, sendBillingReminderEmail, sendRejectionEmail, sendSubmissionEmail } from "@/lib/mail/emails";
@@ -15,13 +16,19 @@ import {
   ID_TYPES,
   ID_TYPE_STORAGE_VALUES,
   applicationDocumentsFor,
+  businessTypeLabel,
   type DocumentKey,
 } from "@/lib/registration/options";
 import type { RegistrationInput } from "@/lib/registration/schema";
-import type { ActivityEvent } from "@/lib/admin/activity";
-import type { PlanSummary, Tenant } from "@/lib/admin/tenants";
-import type { Tier } from "@/lib/admin/tiers";
-import type { Submission, SubmissionDocument, SubmissionStatus } from "@/lib/admin/verification";
+import type {
+  ActivityEvent,
+  PlanSummary,
+  Submission,
+  SubmissionDocument,
+  SubmissionStatus,
+  Tenant,
+  Tier,
+} from "./admin-types";
 import type {
   AccountApplicationRow,
   ActivityCategory,
@@ -121,8 +128,17 @@ function safeFileName(name: string): string {
   return (cleaned || "document").slice(0, 180);
 }
 
-export async function checkRequestedSlug(raw: string) {
-  const result = validateSlugAvailability(raw);
+export async function checkRequestedSlug(raw: string): Promise<SlugValidationResult> {
+  const normalizedSlug = normalizeSlugInput(raw);
+  const parsed = slugSchema.safeParse(normalizedSlug);
+  const result = {
+    slug: raw,
+    normalizedSlug,
+    available: parsed.success,
+    reason: parsed.error?.issues[0]?.message ?? "Available to request.",
+    previewHost: `${normalizedSlug || "your-business"}.${publicEnv.platformDomain || "fides.app"}`,
+    suggestions: [],
+  };
   if (!result.available) return result;
 
   const admin = createAdminClient();
@@ -143,6 +159,7 @@ export async function submitApplication(
   documents: DocumentUploads
 ): Promise<{ referenceCode: string }> {
   const fullName = data.fullName ?? data.ownerLegalName;
+  const businessType = businessTypeLabel(data.businessType, data.customBusinessType);
   if (data.requestedSlug) {
     const availability = await checkRequestedSlug(data.requestedSlug);
     if (!availability.available) throw new ServiceError(availability.reason, 409);
@@ -260,7 +277,7 @@ export async function submitApplication(
     const { error: businessError } = await admin.from("application_businesses").insert({
       application_id: application.id,
       business_name: data.businessName,
-      business_type: data.businessType,
+      business_type: businessType,
       established_year: Number(data.establishedYear),
       street_address: formatRegistrationStreetAddress(data.streetAddress, data.barangay),
       city: data.city,
@@ -301,7 +318,7 @@ export async function submitApplication(
         dateOfBirth: data.dateOfBirth,
         idType: data.idType,
         businessName: data.businessName,
-        businessType: data.businessType,
+        businessType,
         establishedYear: data.establishedYear,
         streetAddress: data.streetAddress,
         barangay: data.barangay,
@@ -469,7 +486,7 @@ export async function loadAdminSnapshot(): Promise<AdminSnapshot> {
     plan: planMap.get(app.plan_code)?.name ?? app.plan_code,
     submittedAt: app.submitted_at,
     reviewedAt: app.reviewed_at,
-    status: app.status as SubmissionStatus,
+    status: app.status,
     idType: ID_TYPES.find(({ value }) => value === identity?.id_type || ID_TYPE_STORAGE_VALUES[value] === identity?.id_type)?.label ?? identity?.id_type ?? "—",
     documents: buildDocumentList(documentsByApplication.get(app.id) ?? []),
     note: app.review_notes ? [app.review_notes] : undefined,
@@ -836,7 +853,7 @@ export async function listAccountDirectory(): Promise<AccountDirectoryEntry[]> {
       email: app.email,
       business: business?.business_name ?? "Unnamed business",
       owner: identity?.owner_legal_name ?? app.full_name,
-      status: app.status as SubmissionStatus,
+      status: app.status,
     }))
     .sort((a, b) => a.email.localeCompare(b.email));
 }

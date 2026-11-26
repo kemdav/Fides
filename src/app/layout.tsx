@@ -80,7 +80,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       className={`${mulish.variable} ${ovo.variable} scroll-smooth`}
       suppressHydrationWarning
     >
-      <body className="min-h-dvh bg-white font-sans text-neutral-900 antialiased">
+      <body className="min-h-dvh bg-white font-sans text-ink antialiased">
         {children}
         <Suspense fallback={null}>
           <ToastListener />

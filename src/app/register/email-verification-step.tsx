@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { verifyRegistrationCodeAction, type sendRegistrationCodeAction } from "@/app/actions/registration-email";
-import { AdminButton } from "@/components/admin/admin-button";
+import { Button } from "@/components/ui/button";
 import { REGISTRATION_CODE_LENGTH as DIGITS } from "@/lib/registration/options";
 import { cn } from "@/lib/utils";
 
@@ -122,9 +122,9 @@ export function EmailVerificationStep({ email, retryAt, onResend, onResent, onVe
       {error && <p id="registration-code-error" role="alert" className="mt-4 text-center text-sm text-danger-dark">{error}</p>}
 
       <div className="mx-auto mt-8 flex max-w-[368px] flex-col gap-3">
-        <AdminButton type="submit" size="md" disabled={pending !== null || code.length !== DIGITS}>
+        <Button type="submit" size="formLg" variant="brand" disabled={pending !== null || code.length !== DIGITS}>
           {pending === "confirm" ? "Checking code…" : "Confirm"}
-        </AdminButton>
+        </Button>
         <div className="flex flex-wrap justify-between gap-x-3">
           <button type="button" onClick={onEdit} disabled={pending !== null} className="min-h-11 rounded-md text-sm font-semibold text-burnt hover:underline focus-visible:outline-2 focus-visible:outline-burnt disabled:opacity-50">
             Change email

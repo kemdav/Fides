@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useId, useMemo, useState } from "react";
 import {
   daysWaiting,
-  formatDecidedOn,
   formatWaiting,
   matchesQuery,
   sortSubmissions,
@@ -21,13 +20,14 @@ import { Select } from "./select";
 export const statusTones: Record<SubmissionStatus, PillTone> = {
   pending: "warning",
   approved: "success",
+  changes_requested: "info",
   rejected: "danger",
-  suspended: "danger",
 };
 
 const tabs: { status: SubmissionStatus; label: string }[] = [
   { status: "pending", label: "Pending" },
   { status: "approved", label: "Approved" },
+  { status: "changes_requested", label: "Changes requested" },
   { status: "rejected", label: "Rejected" },
 ];
 
@@ -38,7 +38,6 @@ type ReviewQueueProps = {
   onSelect?: (submission: Submission) => void;
   hrefFor?: (submission: Submission) => string;
   className?: string;
-  now: number;
 };
 
 function QueueRow({
@@ -46,16 +45,14 @@ function QueueRow({
   selected,
   onSelect,
   href,
-  now,
 }: {
-  now: number;
   submission: Submission;
   selected: boolean;
   onSelect?: (submission: Submission) => void;
   href?: string;
 }) {
   const className = cn(
-    "flex min-h-16 w-full items-center gap-3 rounded-[10px] px-3 py-2 text-left",
+    "flex h-16 w-full items-center gap-3 rounded-[10px] px-3 py-2 text-left",
     "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40",
     selected ? "bg-selected" : "hover:bg-mist"
   );
@@ -66,15 +63,13 @@ function QueueRow({
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="truncate text-sm font-semibold leading-[21px]">{submission.business}</span>
-        <span className="truncate text-xs leading-[18px] text-muted">
-          {submission.status === "pending" ? submission.category : `${submission.category} · ${submission.owner}`}
-        </span>
+        <span className="truncate text-xs leading-[18px] text-muted">{submission.category}</span>
       </span>
-      <span className="flex shrink-0 flex-col items-center gap-1 sm:min-w-[120px]">
+      <span className="flex shrink-0 flex-col items-center gap-1 sm:min-w-[100px]">
         {submission.status === "pending" ? (
           <>
             <StatusPill tone="warning">
-              {formatWaiting(daysWaiting(submission, now))}
+              {formatWaiting(daysWaiting(submission))}
             </StatusPill>
             <span className="text-xs leading-[18px] text-muted">Pending</span>
           </>
@@ -86,11 +81,6 @@ function QueueRow({
             {statusLabels[submission.status]}
           </StatusPill>
         )}
-        {submission.status !== "pending" && submission.decidedAt ? (
-          <span className="text-center text-xs leading-[18px] text-muted">
-            {submission.status === "suspended" ? "Approved" : statusLabels[submission.status]} {formatDecidedOn(submission)}
-          </span>
-        ) : null}
       </span>
     </>
   );
@@ -106,15 +96,10 @@ function QueueRow({
   );
 }
 
-export function ReviewQueue({ title, submissions, selectedId, onSelect, hrefFor, className, now }: ReviewQueueProps) {
+export function ReviewQueue({ title, submissions, selectedId, onSelect, hrefFor, className }: ReviewQueueProps) {
   const [tab, setTab] = useState<SubmissionStatus>("pending");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SubmissionSort>("oldest");
-  const switchTab = (next: SubmissionStatus) => {
-    setTab(next);
-    // Decided tabs read best newest-decision-first; pending keeps oldest-first.
-    setSort(next === "pending" ? "oldest" : "decided");
-  };
   const searchId = useId();
   const panelId = useId();
 
@@ -122,7 +107,7 @@ export function ReviewQueue({ title, submissions, selectedId, onSelect, hrefFor,
   const rows = useMemo(
     () =>
       sortSubmissions(
-        submissions.filter((item) => (tab === "approved" ? item.status === "approved" || item.status === "suspended" : item.status === tab) && matchesQuery(item, query)),
+        submissions.filter((item) => item.status === tab && matchesQuery(item, query)),
         sort
       ),
     [submissions, tab, query, sort]
@@ -145,7 +130,7 @@ export function ReviewQueue({ title, submissions, selectedId, onSelect, hrefFor,
               role="tab"
               aria-selected={active}
               aria-controls={panelId}
-              onClick={() => switchTab(item.status)}
+              onClick={() => setTab(item.status)}
               className={cn(
                 "py-1.5 leading-[18px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40",
                 active ? "font-semibold text-burnt" : "text-muted hover:text-ink"
@@ -172,7 +157,7 @@ export function ReviewQueue({ title, submissions, selectedId, onSelect, hrefFor,
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Business, owner, or reference"
+              placeholder="Business name or merchant ID"
               className="h-11 w-full rounded-lg border border-hairline bg-white pl-11 pr-4 text-sm text-body transition-colors placeholder:text-subtle hover:border-outline focus-visible:border-burnt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
             />
           </div>
@@ -184,7 +169,6 @@ export function ReviewQueue({ title, submissions, selectedId, onSelect, hrefFor,
           options={[
             { value: "oldest", label: "Oldest first" },
             { value: "newest", label: "Newest first" },
-            { value: "decided", label: "Latest decision" },
           ]}
           className="w-full sm:w-[163px]"
         />
@@ -193,7 +177,7 @@ export function ReviewQueue({ title, submissions, selectedId, onSelect, hrefFor,
       <div id={panelId} role="tabpanel" className="flex flex-col gap-2">
         {rows.length === 0 ? (
           <p role="status" className="px-3 py-6 text-sm text-muted">
-            {query.trim() ? "No submissions match your search." : "No submissions in this view yet."}
+            {query.trim() ? "No submissions match your search." : "No submissions in this view."}
           </p>
         ) : (
           rows.map((submission) => (
@@ -203,7 +187,6 @@ export function ReviewQueue({ title, submissions, selectedId, onSelect, hrefFor,
               selected={submission.id === selectedId}
               onSelect={onSelect}
               href={hrefFor?.(submission)}
-              now={now}
             />
           ))
         )}

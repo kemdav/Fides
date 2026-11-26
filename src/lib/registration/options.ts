@@ -25,6 +25,9 @@ export const ID_TYPE_STORAGE_VALUES: Record<IdType, string> = {
   philhealth: "philhealth",
 };
 
+export const OTHER_BUSINESS_TYPE = "Other Service Provider";
+export const BUSINESS_TYPE_MAX_LENGTH = 80;
+
 export const BUSINESS_TYPES = [
   "Salon & Spa",
   "Barbershop",
@@ -47,8 +50,12 @@ export const BUSINESS_TYPES = [
   "Event Styling",
   "Repair, Maintenance & HVAC",
   "Construction & Engineering Contractor",
-  "Other Service Provider",
+  OTHER_BUSINESS_TYPE,
 ] as const;
+
+export function businessTypeLabel(businessType: string, customType?: string): string {
+  return businessType === OTHER_BUSINESS_TYPE ? customType?.trim() || businessType : businessType;
+}
 
 export const GOVERNMENT_ID_SLOT = {
   key: "government_id",

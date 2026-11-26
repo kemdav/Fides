@@ -3,21 +3,19 @@
 import { useId, useState, type FormEvent } from "react";
 import {
   accessOptions,
-  formatPrice,
+  planOptions,
   REASON_MAX,
   REASON_MIN,
   validReason,
-  type PlanSummary,
   type Tenant,
   type TenantAccess,
 } from "@/lib/admin/tenants";
 import { pluralize } from "@/lib/admin/tiers";
 import { cn } from "@/lib/utils";
-import { AdminButton } from "./admin-button";
 import { Icon } from "./icon";
 import { Select } from "./select";
-import { useTenants } from "./tenant-provider";
 import { ConfirmationCard, FormCard } from "./verification-dialogs";
+import { Button } from "@/components/ui/button";
 
 const selectLabel = "text-sm";
 
@@ -47,7 +45,7 @@ function ReasonField({
   return (
     <div className="flex flex-col gap-2">
       <label htmlFor={id} className="text-base font-semibold leading-6 opacity-80">
-        Reason for change <span className="text-[13px] text-[#991b1b]">*</span>
+        Reason for change <span className="text-[13px] text-danger-text">*</span>
       </label>
       <textarea
         id={id}
@@ -80,34 +78,23 @@ function ReasonField({
 
 export type TenantChange = { plan: string; access: TenantAccess; reason: string };
 
-function usePlanOptions(): { value: string; label: string; detail: string }[] {
-  const { plans } = useTenants();
-  return plans.map((plan: PlanSummary) => ({ value: plan.code, label: plan.name, detail: `${formatPrice(plan.price)}/month` }));
-}
-
 export function TenantDialog({
   tenant,
   onClose,
   onSuspend,
   onSave,
-  onResend,
-  onDelete,
 }: {
   tenant: Tenant;
   onClose: () => void;
   onSuspend: () => void;
   onSave: (change: TenantChange) => void;
-  onResend: () => void;
-  onDelete: () => void;
 }) {
-  const planOptions = usePlanOptions();
-  const { mailConfigured, busy } = useTenants();
-  const [plan, setPlan] = useState(tenant.planCode);
+  const [plan, setPlan] = useState(tenant.plan);
   const [access, setAccess] = useState<TenantAccess>(tenant.access);
   const [reason, setReason] = useState("");
   const [showError, setShowError] = useState(false);
   const reviewing = tenant.access === "suspended";
-  const changed = plan !== tenant.planCode || access !== tenant.access;
+  const changed = plan !== tenant.plan || access !== tenant.access;
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -129,12 +116,12 @@ export function TenantDialog({
           labelClassName={selectLabel}
           value={plan}
           onChange={setPlan}
-          options={planOptions}
+          options={[...planOptions]}
         />
         <Notice>
           {reviewing
-            ? `${formatPrice(tenant.price)}/month currently. Account access changes apply immediately.`
-            : `${formatPrice(tenant.price)}/month currently. New pricing applies from the next billing date.`}
+            ? `$${tenant.price}/month currently. Account access changes apply immediately.`
+            : `$${tenant.price}/month currently. Plan changes apply at the next renewal.`}
         </Notice>
         {reviewing ? (
           <>
@@ -148,37 +135,19 @@ export function TenantDialog({
             <ReasonField value={reason} onChange={setReason} showError={showError} />
           </>
         ) : null}
-        <div className="flex flex-wrap items-center gap-[10px] text-xs leading-[18px]">
-          <button
-            type="button"
-            onClick={onResend}
-            disabled={busy || !mailConfigured}
-            title={mailConfigured ? undefined : "Email delivery is not configured"}
-            className="rounded font-semibold text-burnt underline underline-offset-2 hover:text-burnt-dark disabled:text-glyph disabled:no-underline"
-          >
-            Resend approval email
-          </button>
-          <button
-            type="button"
-            onClick={onDelete}
-            className="rounded font-semibold text-danger underline underline-offset-2 hover:text-danger-dark"
-          >
-            Delete account
-          </button>
-        </div>
         <div className={cn("flex flex-wrap items-center gap-[10px]", reviewing ? "justify-end" : "justify-between")}>
           {reviewing ? (
-            <AdminButton variant="outline" className="min-w-[100px]" onClick={onClose}>
+            <Button size="form" variant="secondary" className="min-w-[100px]" onClick={onClose}>
               Cancel
-            </AdminButton>
+            </Button>
           ) : (
-            <AdminButton variant="danger" className="min-w-[147px]" onClick={onSuspend}>
+            <Button size="form" variant="danger" className="min-w-[147px]" onClick={onSuspend}>
               Suspend Tenant
-            </AdminButton>
+            </Button>
           )}
-          <AdminButton type="submit" disabled={!changed} className="min-w-[124px]">
+          <Button size="form" variant="brand" type="submit" disabled={!changed} className="min-w-[124px]">
             Save changes
-          </AdminButton>
+          </Button>
         </div>
       </FormCard>
     </form>
@@ -214,12 +183,12 @@ export function SuspendDialog({
         </p>
         <ReasonField value={reason} onChange={setReason} showError={showError} autoFocus />
         <div className="flex flex-wrap items-center justify-center gap-3">
-          <AdminButton variant="outline" className="min-w-[100px]" onClick={onCancel}>
+          <Button size="form" variant="secondary" className="min-w-[100px]" onClick={onCancel}>
             Cancel
-          </AdminButton>
-          <AdminButton variant="danger" type="submit" className="min-w-[147px]">
+          </Button>
+          <Button size="form" variant="danger" type="submit" className="min-w-[147px]">
             Suspend Tenant
-          </AdminButton>
+          </Button>
         </div>
       </ConfirmationCard>
     </form>
@@ -267,12 +236,12 @@ export function BulkAccessDialog({
         </p>
         <ReasonField value={reason} onChange={setReason} showError={showError} autoFocus />
         <div className="flex flex-wrap items-center justify-center gap-3">
-          <AdminButton variant="outline" className="min-w-[100px]" onClick={onCancel}>
+          <Button size="form" variant="secondary" className="min-w-[100px]" onClick={onCancel}>
             Cancel
-          </AdminButton>
-          <AdminButton variant={suspending ? "danger" : "primary"} type="submit" className="min-w-[147px]">
+          </Button>
+          <Button size="form" variant={suspending ? "danger" : "brand"} type="submit" className="min-w-[147px]">
             {suspending ? "Suspend" : "Reactivate"} {pluralize(count, "tenant")}
-          </AdminButton>
+          </Button>
         </div>
       </ConfirmationCard>
     </form>
@@ -290,7 +259,6 @@ export function SchedulePlanDialog({
   onCancel: () => void;
   onConfirm: (plan: string, reason: string) => void;
 }) {
-  const planOptions = usePlanOptions();
   const [plan, setPlan] = useState(initialPlan);
   const [reason, setReason] = useState("");
   const [showError, setShowError] = useState(false);
@@ -306,7 +274,7 @@ export function SchedulePlanDialog({
 
   return (
     <form onSubmit={submit} noValidate>
-      <ConfirmationCard icon="status-warning" title="Change subscription plan">
+      <ConfirmationCard icon="status-warning" title="Plan change at renewal">
         <p className="text-center text-sm leading-[21px] text-muted">
           {tenant.reference} · {tenant.email}
         </p>
@@ -315,46 +283,19 @@ export function SchedulePlanDialog({
           labelClassName={selectLabel}
           value={plan}
           onChange={setPlan}
-          options={planOptions}
+          options={[...planOptions]}
         />
         <ReasonField value={reason} onChange={setReason} showError={showError} autoFocus />
-        <Notice>The new plan is recorded now and its pricing applies from the next billing date.</Notice>
+        <Notice>New pricing starts at the next renewal. There is no immediate charge.</Notice>
         <div className="flex flex-wrap items-center justify-center gap-3">
-          <AdminButton variant="outline" className="min-w-[100px]" onClick={onCancel}>
+          <Button size="form" variant="secondary" className="min-w-[100px]" onClick={onCancel}>
             Cancel
-          </AdminButton>
-          <AdminButton type="submit" className="min-w-[125px]">
-            Change Plan
-          </AdminButton>
+          </Button>
+          <Button size="form" variant="brand" type="submit" className="min-w-[125px]">
+            Schedule Plan
+          </Button>
         </div>
       </ConfirmationCard>
     </form>
-  );
-}
-
-export function DeleteTenantDialog({
-  tenant,
-  onCancel,
-  onConfirm,
-}: {
-  tenant: Tenant;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  const { busy } = useTenants();
-  return (
-    <ConfirmationCard icon="status-danger" title="Delete account?">
-      <p className="text-center text-sm leading-[21px] text-muted">
-        Permanently delete {tenant.name} and the login for {tenant.email}. All of its registration records will be removed. This cannot be undone.
-      </p>
-      <div className="flex flex-wrap items-center justify-center gap-3">
-        <AdminButton variant="outline" className="min-w-[100px]" onClick={onCancel}>
-          Cancel
-        </AdminButton>
-        <AdminButton variant="danger" className="min-w-[147px]" onClick={onConfirm} disabled={busy} autoFocus>
-          Delete account
-        </AdminButton>
-      </div>
-    </ConfirmationCard>
   );
 }

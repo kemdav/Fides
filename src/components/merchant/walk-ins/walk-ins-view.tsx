@@ -1,7 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import * as React from "react";
-import { AdminButton } from "@/components/admin/admin-button";
 import { MetricCard } from "@/components/admin/metric-card";
 import { PageContent, PageHeading } from "@/components/admin/primitives";
 import { createClient } from "@/lib/supabase/client";
@@ -16,10 +16,18 @@ import type {
   WalkInStaffOption,
   WalkInWorkspaceData,
 } from "@/types/walk-ins";
+import { Icon } from "@/components/admin/icon";
+import { SearchField, SelectField, type SelectOption } from "@/components/ui";
 
 interface WalkInsViewProps {
   initialData: WalkInWorkspaceData;
 }
+
+const waitingFilterOptions: SelectOption<"all" | "waiting" | "notified">[] = [
+  { value: "all", label: "Filter: All" },
+  { value: "waiting", label: "Waiting" },
+  { value: "notified", label: "Notified" },
+];
 
 export function WalkInsView({ initialData }: WalkInsViewProps) {
   const [data, setData] = React.useState<WalkInWorkspaceData>(initialData);
@@ -186,9 +194,7 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
         title="Walk-Ins & Waiting List"
         description="Welcome every walk-in. Fill available slots without displacing existing bookings."
         actions={
-          <AdminButton
-            variant="primary"
-            size="sm"
+          <Button variant="brand" size="form"
             onClick={() => {
               setDefaultModalStaffId("any");
               setWalkInOpen(true);
@@ -196,7 +202,7 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
             className="shrink-0 shadow-xs"
           >
             + Add walk-in
-          </AdminButton>
+          </Button>
         }
       />
 
@@ -240,33 +246,27 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
             <h2 className="text-base font-semibold text-ink">
               Active Waiting Lists
             </h2>
-            <span className="inline-flex size-6 items-center justify-center rounded-full bg-[#eef1f5] text-xs font-semibold text-ink">
+            <span className="inline-flex size-6 items-center justify-center rounded-full bg-mist text-xs font-semibold text-ink">
               {filteredQueue.length}
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
-            <input
-              type="search"
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+            <SearchField
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search customer or service"
-              className="h-9 w-full rounded-lg border border-[#d0d5dd] bg-white px-3 text-xs text-ink outline-none focus:border-burnt sm:w-56"
+              aria-label="Search waiting list"
+              className="sm:w-96"
             />
-            <select
-              aria-label="Filter waiting list"
+            <SelectField
+              ariaLabel="Filter waiting list"
+              compact
+              className="sm:w-44"
               value={statusFilter}
-              onChange={(e) =>
-                setStatusFilter(
-                  e.target.value as "all" | "waiting" | "notified",
-                )
-              }
-              className="h-9 rounded-lg border border-[#d0d5dd] bg-white px-3 text-xs font-medium text-ink outline-none focus:border-burnt"
-            >
-              <option value="all">Filter: All</option>
-              <option value="waiting">Waiting</option>
-              <option value="notified">Notified</option>
-            </select>
+              options={waitingFilterOptions}
+              onChange={setStatusFilter}
+            />
           </div>
         </div>
 
@@ -304,7 +304,7 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
                           {item.customerName}
                         </span>
                         {item.status === "notified" && (
-                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                          <span className="rounded-full bg-warn-bg px-2 py-0.5 text-xs font-semibold text-warn-fg">
                             Notified
                           </span>
                         )}
@@ -334,7 +334,7 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
                         }}
                         className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-mist hover:text-ink"
                       >
-                        •••
+                        <Icon name="more" weight="fill" className="size-5" />
                       </button>
 
                       {openRowMenuId === item.id && menuPos && (
@@ -456,7 +456,7 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
                         }}
                         className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-mist hover:text-ink"
                       >
-                        •••
+                        <Icon name="more" weight="fill" className="size-5" />
                       </button>
 
                       {openStaffMenuId === member.id && menuPos && (

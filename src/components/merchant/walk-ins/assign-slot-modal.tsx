@@ -10,6 +10,10 @@ import type {
   WaitlistQueueItem,
   WalkInStaffOption,
 } from "@/types/walk-ins";
+import { Icon } from "@/components/admin/icon";
+import { DatePicker, inputClasses, SelectField } from "@/components/ui";
+import { cn } from "@/lib/utils";
+import { Modal } from "@/components/ui/modal";
 
 interface AssignSlotModalProps {
   entry: WaitlistQueueItem | null;
@@ -85,10 +89,11 @@ export function AssignSlotModal({
   React.useEffect(() => {
     if (!entry || !selectedStaffId || !date) return;
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- starts the slot request
     setLoadingSlots(true);
     setError(null);
 
-    getAssignableSlotsAction({
+    void getAssignableSlotsAction({
       tenantId,
       staffId: selectedStaffId,
       date,
@@ -115,30 +120,9 @@ export function AssignSlotModal({
 
   if (assignedSuccess) {
     return (
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4 backdrop-blur-xs"
-        onClick={onClose}
-      >
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="w-full max-w-[360px] rounded-[12px] bg-white px-6 py-8 text-center shadow-2xl"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="mx-auto flex size-12 items-center justify-center rounded-full border-2 border-emerald-600 text-emerald-600">
-            <svg
-              viewBox="0 0 24 24"
-              className="size-6"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2.4}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
+      <Modal open onClose={onClose} closeOnBackdrop unstyled className="w-[calc(100%-1rem)] max-w-[360px] rounded-[12px] bg-white px-6 py-8 text-center shadow-2xl overflow-visible text-ink backdrop:bg-black/35">
+          <div className="mx-auto flex size-12 items-center justify-center rounded-full border-2 border-success text-success">
+            <Icon name="check" weight="bold" className="size-6" />
           </div>
           <h3 className="mt-4 text-lg font-semibold text-ink">Slot assigned</h3>
           <p className="mt-2 text-xs text-muted">
@@ -151,8 +135,7 @@ export function AssignSlotModal({
           >
             Done
           </button>
-        </div>
-      </div>
+        </Modal>
     );
   }
 
@@ -190,17 +173,7 @@ export function AssignSlotModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-3 backdrop-blur-xs sm:p-5"
-      onClick={onClose}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="assign-slot-title"
-        className="max-h-[96dvh] w-full max-w-[660px] overflow-y-auto rounded-[12px] bg-white px-6 py-5 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal open onClose={onClose} labelledBy="assign-slot-title" closeOnBackdrop unstyled className="max-h-[96dvh] w-[calc(100%-1rem)] max-w-[660px] overflow-y-auto rounded-[12px] bg-white px-6 py-5 shadow-2xl text-ink backdrop:bg-black/35">
         <div className="flex items-start justify-between">
           <h2
             id="assign-slot-title"
@@ -212,15 +185,15 @@ export function AssignSlotModal({
             type="button"
             onClick={onClose}
             aria-label="Close assign slot modal"
-            className="text-2xl leading-none text-glyph hover:text-ink"
+            className="rounded-lg p-1 text-glyph hover:text-ink"
           >
-            ×
+            <Icon name="close" className="size-5" />
           </button>
         </div>
 
         {/* Original request banner */}
-        <div className="mt-4 rounded-lg bg-[#f3f4f6] px-4 py-3">
-          <p className="text-[11px] font-medium uppercase tracking-wider text-muted">
+        <div className="mt-4 rounded-lg bg-mist px-4 py-3">
+          <p className="text-xs font-medium uppercase tracking-wider text-muted">
             Original request · Position {entry.position} of {entry.totalWaiting}
           </p>
           <p className="mt-1 text-sm font-medium text-ink">
@@ -248,17 +221,13 @@ export function AssignSlotModal({
                   : entry.requestedStaffName}
               </p>
             ) : (
-              <select
+              <SelectField
+                ariaLabel="Assigned staff and resource"
+                className="mt-1"
                 value={selectedStaffId}
-                onChange={(e) => setSelectedStaffId(e.target.value)}
-                className="mt-1 h-9 w-full rounded-md border border-[#d0d5dd] bg-white px-2.5 text-sm font-medium text-ink outline-none focus:border-burnt"
-              >
-                {staff.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.fullName} · {s.resourceLabel}
-                  </option>
-                ))}
-              </select>
+                options={staff.map((s) => ({ value: s.id, label: `${s.fullName} · ${s.resourceLabel}` }))}
+                onChange={setSelectedStaffId}
+              />
             )}
           </div>
         </div>
@@ -267,7 +236,7 @@ export function AssignSlotModal({
           {entry.requestedStaffId
             ? `Requested staff ${entry.requestedStaffName} is retained for this appointment.`
             : assignedStaff
-              ? `Any available → ${assignedStaff.fullName} (first available eligible staff).`
+              ? `Any available staff: assigned to ${assignedStaff.fullName} (first available eligible staff).`
               : "Select an eligible staff member."}
         </p>
 
@@ -279,37 +248,30 @@ export function AssignSlotModal({
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="block text-xs text-muted">
-              Appointment date
-              <input
-                type="date"
+            <div className="block text-xs text-muted">
+              <label htmlFor="assign-slot-date">Appointment date</label>
+              <DatePicker
+                id="assign-slot-date"
+                className="mt-1"
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="mt-1 h-10 w-full rounded-lg border border-[#d0d5dd] bg-[#f8f9fa] px-3 text-sm text-ink outline-none focus:border-burnt"
+                min={getTodayManila()}
+                ariaLabel="Choose appointment date"
+                onChange={(next) => setDate(next || getTodayManila())}
               />
-            </label>
+            </div>
 
-            <label className="block text-xs text-muted">
-              Start time → End time · {entry.serviceDurationMinutes} minutes
-              <select
-                value={selectedSlotIso}
-                onChange={(e) => setSelectedSlotIso(e.target.value)}
+            <div className="block text-xs text-muted">
+              <span id="assign-slot-time-label">Start time to end time · {entry.serviceDurationMinutes} minutes</span>
+              <SelectField
+                labelledBy="assign-slot-time-label"
+                className="mt-1"
                 disabled={loadingSlots || slots.length === 0}
-                className="mt-1 h-10 w-full rounded-lg border border-[#d0d5dd] bg-white px-3 text-sm text-ink outline-none focus:border-burnt disabled:bg-[#f8f9fa] disabled:text-muted"
-              >
-                {loadingSlots ? (
-                  <option value="">Checking availability...</option>
-                ) : slots.length === 0 ? (
-                  <option value="">No open slots on this date</option>
-                ) : (
-                  slots.map((slot) => (
-                    <option key={slot.startsAt} value={slot.startsAt}>
-                      {slot.label}
-                    </option>
-                  ))
-                )}
-              </select>
-            </label>
+                placeholder={loadingSlots ? "Checking availability..." : "No open slots on this date"}
+                value={selectedSlotIso}
+                options={slots.map((slot) => ({ value: slot.startsAt, label: slot.label }))}
+                onChange={setSelectedSlotIso}
+              />
+            </div>
           </div>
 
           <p
@@ -328,7 +290,7 @@ export function AssignSlotModal({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="No queue notes recorded."
-            className="mt-1.5 h-10 w-full rounded-lg border border-[#d0d5dd] px-3 text-sm font-normal text-ink outline-none focus:border-burnt"
+            className={cn(inputClasses(false, false), "mt-1.5")}
           />
         </label>
 
@@ -343,14 +305,14 @@ export function AssignSlotModal({
             />
             Notify the customer: &ldquo;Your slot is ready&rdquo;
           </label>
-          <p className="mt-1 pl-6 text-[11px] text-muted">
+          <p className="mt-1 pl-6 text-xs text-muted">
             Uses the customer&apos;s recorded contact details. Notification
             status is recorded with the queue entry.
           </p>
         </div>
 
         {/* After confirmation queue-shift preview */}
-        <div className="mt-4 rounded-lg border border-burnt/15 bg-sky/25 px-4 py-3">
+        <div className="mt-4 rounded-lg border border-burnt/15 bg-burnt/10 px-4 py-3">
           <p className="text-xs font-semibold text-ink">
             After confirmation · {remainingQueue.length}{" "}
             {remainingQueue.length === 1 ? "customer" : "customers"} waiting
@@ -363,7 +325,7 @@ export function AssignSlotModal({
           </p>
         </div>
 
-        <p className="mt-3 text-[11px] text-muted">
+        <p className="mt-3 text-xs text-muted">
           If this appointment is cancelled later, it will not automatically
           return to the queue. Add the customer again if needed.
         </p>
@@ -391,7 +353,6 @@ export function AssignSlotModal({
             {isSubmitting ? "Confirming..." : "Confirm Appointment"}
           </button>
         </div>
-      </div>
-    </div>
+      </Modal>
   );
 }

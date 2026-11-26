@@ -1,8 +1,10 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
+import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { requestStaffEmailChangeAction } from "@/app/actions/staff-email-change";
-import { AdminButton, AdminLinkButton } from "@/components/admin/admin-button";
 import { TextField } from "@/components/admin/fields";
 import { Icon } from "@/components/admin/icon";
 import { Modal } from "@/components/ui/modal";
@@ -43,11 +45,11 @@ export function StaffAvailabilityDialog({ name, availability, href, onClose }: {
       </p>
       <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
         {href ? (
-          <AdminLinkButton href={href} variant="primary" size="xs">Open Availability</AdminLinkButton>
+          <Link className={buttonClasses({ variant: "brand", size: "xs" })} href={href}>Open Availability</Link>
         ) : (
           <>
             <p className="mr-auto text-xs text-muted">Availability is currently unavailable.</p>
-            <AdminButton variant="primary" size="xs" disabled>Open Availability</AdminButton>
+            <Button variant="brand" size="xs" disabled>Open Availability</Button>
           </>
         )}
       </div>
@@ -114,10 +116,10 @@ export function StaffEmailChangeDialog({ name, tenantId, staffId, currentEmail, 
         )}
         {error && <p role="alert" className="text-xs text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
-          <AdminButton variant="outline" size="xs" onClick={onClose} disabled={busy}>Cancel</AdminButton>
-          <AdminButton variant="primary" size="xs" type="submit" disabled={busy || !currentEmail || !email.trim()}>
+          <Button variant="secondary" size="xs" onClick={onClose} disabled={busy}>Cancel</Button>
+          <Button variant="brand" size="xs" type="submit" disabled={busy || !currentEmail || !email.trim()}>
             {busy ? "Sending…" : "Send verification email"}
-          </AdminButton>
+          </Button>
         </div>
       </form>
     </StaffEditDialog>

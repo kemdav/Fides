@@ -1,9 +1,11 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { saveStaffProfileAction } from "@/app/actions/staff";
-import { AdminButton, AdminLinkButton } from "@/components/admin/admin-button";
 import { fieldOutlineClasses, TextField } from "@/components/admin/fields";
 import { Icon } from "@/components/admin/icon";
 import { StatusPill } from "@/components/admin/primitives";
@@ -154,7 +156,7 @@ export function ManageStaffModal({ staff, tenantId, basePath, onClose, onSaved }
                     {staff.email || "Not provided"}
                   </p>
                 </div>
-                <AdminButton variant="outline-accent" size="xs" className="h-11" aria-haspopup="dialog" onClick={() => setDialog("email")} disabled={saving}>Request Email Change</AdminButton>
+                <Button variant="brand-outline" size="xs" className="h-11" aria-haspopup="dialog" onClick={() => setDialog("email")} disabled={saving}>Request Email Change</Button>
               </div>
               <p className="text-xs text-muted">Email changes require identity confirmation and verification.</p>
             </div>
@@ -241,15 +243,15 @@ export function ManageStaffModal({ staff, tenantId, basePath, onClose, onSaved }
               {isServiceStaff && <p className="mt-1 text-xs text-muted">Commission this month {staff.earnings}</p>}
             </div>
             <div className="flex flex-wrap gap-2">
-              <AdminLinkButton href={`${basePath}/dashboard/appointments?staff=${staff.id}`} variant="outline-accent" size="xs">View Schedule</AdminLinkButton>
-              <AdminButton variant="outline" size="xs" aria-haspopup="dialog" onClick={() => setDialog("availability")} disabled={saving}>View shifts</AdminButton>
+              <Link className={buttonClasses({ variant: "brand-outline", size: "xs" })} href={`${basePath}/dashboard/appointments?staff=${staff.id}`}>View Schedule</Link>
+              <Button variant="secondary" size="xs" aria-haspopup="dialog" onClick={() => setDialog("availability")} disabled={saving}>View shifts</Button>
             </div>
           </div>
 
           <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2.5 border-t border-hairline bg-mist px-4 py-4 sm:px-6">
             {error && <p role="alert" className="w-full rounded-lg bg-danger-bg px-3 py-2 text-sm text-danger-dark">{error}</p>}
-            <AdminButton variant="outline" size="xs" onClick={onClose} disabled={saving}>Cancel</AdminButton>
-            <AdminButton type="submit" variant="primary" size="xs" disabled={saving}>{saving ? "Saving…" : "Save changes"}</AdminButton>
+            <Button variant="secondary" size="xs" onClick={onClose} disabled={saving}>Cancel</Button>
+            <Button variant="brand" size="xs" type="submit" disabled={saving}>{saving ? "Saving…" : "Save changes"}</Button>
           </footer>
         </form>
       </Modal>

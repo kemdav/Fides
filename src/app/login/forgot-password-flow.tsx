@@ -1,23 +1,18 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { resetPasswordAction, sendResetCodeAction, verifyResetCodeAction } from "@/app/actions/password-reset";
-import { Modal, PasswordInput } from "@/components/ui";
+import { buttonClasses, inputClasses, Modal, PasswordInput } from "@/components/ui";
 import { checkPassword } from "@/lib/registration/schema";
 import { cn } from "@/lib/utils";
 
 type Step = "confirm" | "code" | "password" | "done";
 
 const RESEND_SECONDS = 45;
-const inputClass = (invalid: boolean) =>
-  cn(
-    "h-11 w-full rounded-md border bg-white px-3.5 text-sm text-ink placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2",
-    invalid ? "border-danger focus-visible:ring-danger/30" : "border-outline/60 hover:border-outline focus-visible:border-burnt focus-visible:ring-burnt/30"
-  );
-const primary =
-  "inline-flex h-11 items-center justify-center rounded-md bg-burnt px-5 text-sm font-semibold text-white transition-colors hover:bg-burnt-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-60";
-const secondary =
-  "inline-flex h-11 items-center justify-center rounded-md border border-ink/50 bg-white px-5 text-sm font-semibold text-ink transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:opacity-60";
+const inputClass = inputClasses;
+const primary = buttonClasses({ variant: "brand", size: "form" });
+const secondary = buttonClasses({ variant: "secondary", size: "form" });
 
 /**
  * Forgot-password flow shown as popups on the login page:
@@ -25,6 +20,7 @@ const secondary =
  * 3) choose a new password  4) reload the login page.
  */
 export function ForgotPasswordFlow({ open, initialEmail, onClose }: { open: boolean; initialEmail: string; onClose: () => void }) {
+  const router = useRouter();
   const [step, setStep] = useState<Step>("confirm");
   const [email, setEmail] = useState(initialEmail);
   const [code, setCode] = useState("");
@@ -91,7 +87,7 @@ export function ForgotPasswordFlow({ open, initialEmail, onClose }: { open: bool
       if (!result.ok) return setError(result.error);
       setStep("done");
       // Reload the login page so the user can sign in with the new password.
-      window.setTimeout(() => { window.location.href = "/login?message=" + encodeURIComponent("Your password has been updated. Please log in with your new password."); }, 1200);
+      window.setTimeout(() => router.push("/login?message=" + encodeURIComponent("Your password has been updated. Please log in with your new password.")), 1200);
     });
   }
 

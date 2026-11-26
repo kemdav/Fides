@@ -4,10 +4,14 @@ import { applicationDocumentsFor, BUSINESS_LOGO_REQUIRED, documentFieldName } fr
 import { loadStagedDocuments } from "@/lib/applications/staged-documents";
 import { hasRegistrationEmailProof } from "@/lib/auth/registration-email";
 import { registrationSchema } from "@/lib/registration/schema";
+import { limitByClient, MINUTES } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  if (await limitByClient("applications", { limit: 6, windowMs: 60 * MINUTES })) {
+    return NextResponse.json({ error: "Too many submissions. Please try again later." }, { status: 429 });
+  }
   try {
     const form = await request.formData();
     const payload = form.get("payload");

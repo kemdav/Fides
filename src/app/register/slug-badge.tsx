@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { slugSchema, type SlugValidationResult } from "@/lib/account-request/schema";
+import { z } from "zod";
+import { slugSchema } from "@/lib/registration/slug";
 import { publicEnv } from "@/lib/env";
 import { Field, TextInput } from "./parts";
+
+const availabilitySchema = z.object({ available: z.boolean(), reason: z.string() });
 
 export function SlugBadge({ slug, onChange, error }: { slug: string; onChange: (slug: string) => void; error?: string }) {
   const [result, setResult] = useState<{ slug: string; available: boolean; message: string } | null>(null);
@@ -12,16 +15,17 @@ export function SlugBadge({ slug, onChange, error }: { slug: string; onChange: (
   useEffect(() => {
     if (!valid) return;
     const controller = new AbortController();
-    const timer = setTimeout(async () => {
+    async function checkAvailability() {
       try {
         const response = await fetch(`/api/applications/validate-slug?slug=${encodeURIComponent(slug)}`, { signal: controller.signal });
         if (!response.ok) throw new Error();
-        const data: SlugValidationResult = await response.json();
+        const data = availabilitySchema.parse(await response.json());
         setResult({ slug, available: data.available, message: data.reason });
       } catch {
         if (!controller.signal.aborted) setResult({ slug, available: false, message: "Availability could not be checked." });
       }
-    }, 250);
+    }
+    const timer = setTimeout(() => void checkAvailability(), 250);
     return () => {
       clearTimeout(timer);
       controller.abort();

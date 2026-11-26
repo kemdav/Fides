@@ -1,8 +1,8 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { loadStaffScheduleAction } from "@/app/actions/staff-schedule";
-import { AdminButton } from "@/components/admin/admin-button";
 import { Icon } from "@/components/admin/icon";
 import { StatusPill } from "@/components/admin/primitives";
 import { Modal } from "@/components/ui/modal";
@@ -37,7 +37,7 @@ export function StaffSchedulePreview(props: {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <AdminButton variant="outline" size="xs" aria-haspopup="dialog" onClick={() => setOpen(true)}>Preview schedule</AdminButton>
+      <Button variant="secondary" size="xs" aria-haspopup="dialog" onClick={() => setOpen(true)}>Preview schedule</Button>
       {open && <ScheduleDialog {...props} onClose={() => setOpen(false)} />}
     </>
   );
@@ -117,9 +117,9 @@ function ScheduleDialog({ tenantId, staffId, name, role, timezone, today, onClos
         <div className="min-h-0 space-y-4 overflow-y-auto px-4 pb-4 sm:px-6 sm:pb-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <AdminButton size="xs" variant="outline-accent" className="size-8 rounded-full p-0" aria-label="Previous period" onClick={() => navigate(-1)}>‹</AdminButton>
+              <Button variant="brand-outline" size="xs" className="size-8 rounded-full p-0" aria-label="Previous period" onClick={() => navigate(-1)}><Icon name="chevron-left" weight="medium" className="size-4" /></Button>
               <span className="text-sm font-semibold" aria-live="polite">{period}</span>
-              <AdminButton size="xs" variant="outline-accent" className="size-8 rounded-full p-0" aria-label="Next period" onClick={() => navigate(1)}>›</AdminButton>
+              <Button variant="brand-outline" size="xs" className="size-8 rounded-full p-0" aria-label="Next period" onClick={() => navigate(1)}><Icon name="chevron-right" weight="medium" className="size-4" /></Button>
               <span className="text-xs text-muted">{timezone}{zone && ` (${zone.replace("GMT", "UTC")})`}</span>
             </div>
             <div className="inline-flex w-full gap-1 rounded-full border border-hairline bg-mist p-1 sm:w-auto" role="group" aria-label="Schedule view">
@@ -152,7 +152,7 @@ function ScheduleDialog({ tenantId, staffId, name, role, timezone, today, onClos
                 {selected.resources.length > 0 && <p className="text-muted">{selected.resources.join(", ")}</p>}
                 <StatusPill tone={statusTone(selected.status)}>{statusLabel(selected.status)}</StatusPill>
               </div>
-              <AdminButton size="xs" variant="outline" onClick={() => setSelected(null)}>Close details</AdminButton>
+              <Button variant="secondary" size="xs" onClick={() => setSelected(null)}>Close details</Button>
             </section>
           )}
 
@@ -160,7 +160,7 @@ function ScheduleDialog({ tenantId, staffId, name, role, timezone, today, onClos
           {data === null && (
             <div className="rounded-lg bg-mist p-5 text-sm">
               <p role="alert">The schedule could not be loaded.</p>
-              <AdminButton size="xs" variant="outline-accent" className="mt-2" onClick={() => { setResult(undefined); setRetry(retry + 1); }}>Try again</AdminButton>
+              <Button variant="brand-outline" size="xs" className="mt-2" onClick={() => { setResult(undefined); setRetry(retry + 1); }}>Try again</Button>
             </div>
           )}
           {data && view === "List" && (

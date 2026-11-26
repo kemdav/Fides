@@ -1,10 +1,10 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MerchantSidebar } from "@/components/merchant/merchant-sidebar";
-import { AdminButton } from "@/components/admin/admin-button";
 import { MetricCard } from "@/components/admin/metric-card";
 import { Surface } from "@/components/admin/primitives";
 import {
@@ -29,33 +29,45 @@ import {
   StatusFeedbackModal,
 } from "./customer-modals";
 import { formatPesoCents, formatShortDate } from "./customer-formatters";
+import { Icon } from "@/components/admin/icon";
+import { SearchField, SelectField, type SelectOption } from "@/components/ui";
 
 const PAGE_SIZE = 10;
+
+const customerFilterOptions: SelectOption<CustomerFilterOption>[] = [
+  { value: "all", label: "Filter: All active" },
+  { value: "registered", label: "Registered accounts" },
+  { value: "walk_in", label: "Walk-in records" },
+  { value: "invite_sent", label: "Invite sent" },
+  { value: "invite_not_sent", label: "Invite not sent" },
+  { value: "invite_expired", label: "Invite expired" },
+  { value: "archived", label: "Archived records" },
+];
 
 function AccountBadges({ item }: { item: CustomerRegistryItem }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {item.accountType === "registered" ? (
-        <span className="inline-flex items-center rounded-full bg-[#DCFCE7] px-2.5 py-0.5 text-[11px] font-semibold text-[#15803D]">
+        <span className="inline-flex items-center rounded-full bg-success/15 px-2.5 py-0.5 text-xs font-semibold text-success">
           Registered account
         </span>
       ) : (
         <>
-          <span className="inline-flex items-center rounded-full bg-[#FFEDD5] px-2.5 py-0.5 text-[11px] font-semibold text-[#C2410C]">
+          <span className="inline-flex items-center rounded-full bg-burnt/10 px-2.5 py-0.5 text-xs font-semibold text-burnt-dark">
             Walk-in record
           </span>
           {item.inviteStatus === "invite_sent" && (
-            <span className="inline-flex items-center rounded-full border border-[#D97706] bg-[#FFFBEB] px-2.5 py-0.5 text-[11px] font-semibold text-[#B45309]">
+            <span className="inline-flex items-center rounded-full border border-warn-fg bg-warn-bg px-2.5 py-0.5 text-xs font-semibold text-warn-fg">
               Invite sent
             </span>
           )}
           {item.inviteStatus === "invite_not_sent" && (
-            <span className="inline-flex items-center rounded-full border border-[#6366F1] bg-[#EEF2FF] px-2.5 py-0.5 text-[11px] font-semibold text-[#4338CA]">
+            <span className="inline-flex items-center rounded-full border border-info bg-info-bg px-2.5 py-0.5 text-xs font-semibold text-info">
               Invite not sent
             </span>
           )}
           {item.inviteStatus === "invite_expired" && (
-            <span className="inline-flex items-center rounded-full border border-[#EF4444] bg-[#FEF2F2] px-2.5 py-0.5 text-[11px] font-semibold text-[#DC2626]">
+            <span className="inline-flex items-center rounded-full border border-danger bg-danger-bg px-2.5 py-0.5 text-xs font-semibold text-danger">
               Invite expired
             </span>
           )}
@@ -63,7 +75,7 @@ function AccountBadges({ item }: { item: CustomerRegistryItem }) {
       )}
 
       {item.archivedAt && (
-        <span className="inline-flex items-center rounded-full bg-[#E2E8F0] px-2.5 py-0.5 text-[11px] font-semibold text-[#475569]">
+        <span className="inline-flex items-center rounded-full bg-hairline px-2.5 py-0.5 text-xs font-semibold text-muted">
           Archived
         </span>
       )}
@@ -286,7 +298,7 @@ export function CustomersRegistryView({
   const { meta, stats } = data;
 
   return (
-    <div className="flex min-h-dvh flex-col bg-powder text-[#1E293B] lg:flex-row">
+    <div className="flex min-h-dvh flex-col bg-powder text-ink lg:flex-row">
       <MerchantSidebar
         businessName={meta.businessName}
         userName={meta.userName}
@@ -299,28 +311,26 @@ export function CustomersRegistryView({
         {/* Header */}
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="font-display text-[28px] leading-[36px] text-[#1E293B] sm:text-[32px] sm:leading-[40px]">
+            <h1 className="font-display text-[28px] leading-[36px] text-ink sm:text-[32px] sm:leading-[40px]">
               Customers
             </h1>
-            <p className="mt-1 text-sm text-[#64748B]">
+            <p className="mt-1 text-sm text-subtle">
               One customer registry for online bookings and in-person visits.
             </p>
           </div>
-          <AdminButton
-            variant="primary"
-            size="sm"
+          <Button variant="brand" size="form"
             onClick={() => setShowAddModal(true)}
             className="gap-2 shadow-xs"
           >
             <span className="text-base leading-none">+</span>
             <span>Add Customer</span>
-          </AdminButton>
+          </Button>
         </header>
 
         {errorBanner && (
           <div
             role="alert"
-            className="rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm font-medium text-[#B91C1C]"
+            className="rounded-xl border border-danger/30 bg-danger-bg px-4 py-3 text-sm font-medium text-danger-dark"
           >
             {errorBanner}
           </div>
@@ -360,55 +370,36 @@ export function CustomersRegistryView({
         </section>
 
         {/* Registry Table Card */}
-        <Surface className="rounded-xl border border-[#ECEAE0] bg-white p-0">
+        <Surface className="rounded-xl border border-hairline bg-white p-0">
           {/* Toolbar */}
-          <div className="flex flex-col justify-between gap-3 border-b border-[#F1EFE7] px-5 py-4 sm:flex-row sm:items-center sm:px-6">
-            <h2 className="text-sm font-semibold text-[#1E293B]">
+          <div className="flex flex-col justify-between gap-3 border-b border-mist px-5 py-4 sm:flex-row sm:items-center sm:px-6">
+            <h2 className="text-sm font-semibold text-ink">
               Customer Registry
             </h2>
 
             <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
-              <div className="relative">
-                <svg
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#94A3B8]"
-                  aria-hidden="true"
-                >
-                  <circle cx="9" cy="9" r="6" />
-                  <path d="M13.5 13.5L17 17" strokeLinecap="round" />
-                </svg>
-                <input
-                  type="search"
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setPage(1);
-                  }}
-                  placeholder="Search name, email, or phone"
-                  className="h-9 w-full rounded-lg border border-[#D9DDE3] bg-white pl-9 pr-3 text-xs text-[#1E293B] placeholder:text-[#94A3B8] focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20 sm:w-[250px]"
-                />
-              </div>
-
-              <select
-                aria-label="Filter customers"
-                value={filter}
+              <SearchField
+                value={search}
                 onChange={(e) => {
-                  setFilter(e.target.value as CustomerFilterOption);
+                  setSearch(e.target.value);
                   setPage(1);
                 }}
-                className="h-9 rounded-lg border border-[#D9DDE3] bg-white px-3 text-xs font-medium text-[#334155] focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20"
-              >
-                <option value="all">Filter: All active</option>
-                <option value="registered">Registered accounts</option>
-                <option value="walk_in">Walk-in records</option>
-                <option value="invite_sent">Invite sent</option>
-                <option value="invite_not_sent">Invite not sent</option>
-                <option value="invite_expired">Invite expired</option>
-                <option value="archived">Archived records</option>
-              </select>
+                placeholder="Search name, email, or phone"
+                aria-label="Search customers"
+                className="sm:w-96"
+              />
+
+              <SelectField
+                ariaLabel="Filter customers"
+                compact
+                className="sm:w-56"
+                value={filter}
+                options={customerFilterOptions}
+                onChange={(next) => {
+                  setFilter(next);
+                  setPage(1);
+                }}
+              />
             </div>
           </div>
 
@@ -416,7 +407,7 @@ export function CustomersRegistryView({
           <div className="overflow-x-auto">
             <table className="w-full min-w-[780px] border-collapse text-left">
               <thead>
-                <tr className="border-b border-[#F1EFE7] text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">
+                <tr className="border-b border-mist text-xs font-semibold uppercase tracking-wide text-subtle">
                   <th className="px-6 py-3.5">Customer</th>
                   <th className="px-4 py-3.5">Contact</th>
                   <th className="px-4 py-3.5">Account</th>
@@ -426,12 +417,12 @@ export function CustomersRegistryView({
                   <th className="px-6 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#F4F2EA] text-xs">
+              <tbody className="divide-y divide-mist text-xs">
                 {pageItems.length === 0 ? (
                   <tr>
                     <td
                       colSpan={7}
-                      className="px-6 py-12 text-center text-sm text-[#64748B]"
+                      className="px-6 py-12 text-center text-sm text-subtle"
                     >
                       No customer records match your current search or filter.
                     </td>
@@ -449,12 +440,12 @@ export function CustomersRegistryView({
                         <td className="px-6 py-4">
                           <Link
                             href={profileHref}
-                            className="font-semibold text-[#1E293B] hover:text-burnt"
+                            className="font-semibold text-ink hover:text-burnt"
                           >
                             {item.fullName}
                           </Link>
                           {item.notesCount > 0 && (
-                            <p className="mt-0.5 text-[11px] text-[#94A3B8]">
+                            <p className="mt-0.5 text-xs text-glyph">
                               {item.notesCount}{" "}
                               {item.notesCount === 1
                                 ? "internal note"
@@ -466,26 +457,26 @@ export function CustomersRegistryView({
                           <p
                             className={
                               item.email
-                                ? "text-[#1E293B]"
-                                : "italic text-[#94A3B8]"
+                                ? "text-ink"
+                                : "italic text-glyph"
                             }
                           >
                             {item.email ?? "No email added"}
                           </p>
-                          <p className="mt-0.5 text-[11px] text-[#64748B]">
+                          <p className="mt-0.5 text-xs text-subtle">
                             {item.phone ?? "No phone added"}
                           </p>
                         </td>
                         <td className="px-4 py-4">
                           <AccountBadges item={item} />
                         </td>
-                        <td className="px-4 py-4 text-[#334155]">
+                        <td className="px-4 py-4 text-body">
                           {formatShortDate(item.lastVisitAt)}
                         </td>
-                        <td className="px-4 py-4 text-right font-medium text-[#1E293B]">
+                        <td className="px-4 py-4 text-right font-medium text-ink">
                           {item.totalVisits}
                         </td>
-                        <td className="px-4 py-4 text-right font-semibold text-[#1E293B]">
+                        <td className="px-4 py-4 text-right font-semibold text-ink">
                           {formatPesoCents(item.lifetimeSpendCents)}
                         </td>
                         <td className="relative px-6 py-4 text-right">
@@ -498,15 +489,15 @@ export function CustomersRegistryView({
                                 openMenuId === item.id ? null : item.id,
                               );
                             }}
-                            className="inline-flex size-8 items-center justify-center rounded-lg text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#1E293B]"
+                            className="inline-flex size-8 items-center justify-center rounded-lg text-subtle hover:bg-mist hover:text-ink"
                           >
-                            •••
+                            <Icon name="more" weight="fill" className="size-5" />
                           </button>
 
                           {openMenuId === item.id && (
                             <div
                               onClick={(e) => e.stopPropagation()}
-                              className={`absolute right-6 z-30 w-44 rounded-xl border border-[#E2E8F0] bg-white py-1.5 text-left shadow-lg ${
+                              className={`absolute right-6 z-30 w-44 rounded-xl border border-hairline bg-white py-1.5 text-left shadow-lg ${
                                 openUpward ? "bottom-12" : "top-12"
                               }`}
                             >
@@ -516,7 +507,7 @@ export function CustomersRegistryView({
                                   setOpenMenuId(null);
                                   router.push(profileHref);
                                 }}
-                                className="block w-full px-3.5 py-2 text-xs font-medium text-[#1E293B] hover:bg-[#F8FAFC]"
+                                className="block w-full px-3.5 py-2 text-xs font-medium text-ink hover:bg-mist"
                               >
                                 View profile
                               </button>
@@ -526,7 +517,7 @@ export function CustomersRegistryView({
                                   setOpenMenuId(null);
                                   setEditingCustomer(item);
                                 }}
-                                className="block w-full px-3.5 py-2 text-xs font-medium text-[#1E293B] hover:bg-[#F8FAFC]"
+                                className="block w-full px-3.5 py-2 text-xs font-medium text-ink hover:bg-mist"
                               >
                                 Edit customer
                               </button>
@@ -552,7 +543,7 @@ export function CustomersRegistryView({
                                             setOpenMenuId(null);
                                             setCancelingCustomer(item);
                                           }}
-                                          className="block w-full px-3.5 py-2 text-xs font-medium text-[#B45309] hover:bg-[#FFFBEB]"
+                                          className="block w-full px-3.5 py-2 text-xs font-medium text-warn-fg hover:bg-warn-bg"
                                         >
                                           Cancel invite
                                         </button>
@@ -571,7 +562,7 @@ export function CustomersRegistryView({
                                     )}
                                   </>
                                 )}
-                              <div className="my-1 border-t border-[#F1F5F9]" />
+                              <div className="my-1 border-t border-mist" />
                               {item.archivedAt ? (
                                 <button
                                   type="button"
@@ -579,7 +570,7 @@ export function CustomersRegistryView({
                                     setOpenMenuId(null);
                                     void handleArchiveToggle(item, false);
                                   }}
-                                  className="block w-full px-3.5 py-2 text-xs font-medium text-[#15803D] hover:bg-[#F0FDF4]"
+                                  className="block w-full px-3.5 py-2 text-xs font-medium text-success hover:bg-wash"
                                 >
                                   Restore customer
                                 </button>
@@ -590,7 +581,7 @@ export function CustomersRegistryView({
                                     setOpenMenuId(null);
                                     setArchivingCustomer(item);
                                   }}
-                                  className="block w-full px-3.5 py-2 text-xs font-medium text-[#DC2626] hover:bg-[#FEF2F2]"
+                                  className="block w-full px-3.5 py-2 text-xs font-medium text-danger hover:bg-danger-bg"
                                 >
                                   Archive customer
                                 </button>
@@ -607,7 +598,7 @@ export function CustomersRegistryView({
           </div>
 
           {/* Pagination Footer */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#F1EFE7] px-6 py-3.5 text-xs text-[#64748B]">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-mist px-6 py-3.5 text-xs text-subtle">
             <span>
               {filteredCustomers.length === 0
                 ? "Showing 0 of 0"
@@ -622,7 +613,7 @@ export function CustomersRegistryView({
                 type="button"
                 disabled={safePage <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="h-8 rounded-lg border border-[#D9DDE3] bg-white px-3 text-xs font-semibold text-[#334155] hover:bg-[#F8FAFC] disabled:opacity-40"
+                className="h-8 rounded-lg border border-line bg-white px-3 text-xs font-semibold text-body hover:bg-mist disabled:opacity-40"
               >
                 Previous
               </button>
@@ -633,7 +624,7 @@ export function CustomersRegistryView({
                 type="button"
                 disabled={safePage >= totalPages}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                className="h-8 rounded-lg border border-[#D9DDE3] bg-white px-3 text-xs font-semibold text-[#334155] hover:bg-[#F8FAFC] disabled:opacity-40"
+                className="h-8 rounded-lg border border-line bg-white px-3 text-xs font-semibold text-body hover:bg-mist disabled:opacity-40"
               >
                 Next
               </button>
@@ -677,6 +668,7 @@ export function CustomersRegistryView({
         onCancel={() => setResendingCustomer(null)}
         onConfirm={() => {
           if (resendingCustomer) return handleSendInvite(resendingCustomer);
+          return undefined;
         }}
       />
 
@@ -708,6 +700,7 @@ export function CustomersRegistryView({
           if (archivingCustomer) {
             return handleArchiveToggle(archivingCustomer, true);
           }
+          return undefined;
         }}
       />
 

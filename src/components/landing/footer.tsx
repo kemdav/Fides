@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { BackToTop } from "./back-to-top";
 import { landingLinks } from "./links";
 import { Reveal } from "./reveal";
+import { Icon } from "@/components/admin/icon";
 
 const columns = [
   {
@@ -19,7 +20,6 @@ const columns = [
     title: "Get Started",
     links: [
       { label: "Create an Account", href: landingLinks.signup },
-      { label: "Log in", href: landingLinks.login },
     ],
   },
   {
@@ -31,31 +31,13 @@ const columns = [
   },
 ];
 
-function ArrowIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="M5 12h14M13 6l6 6-6 6" />
-    </svg>
-  );
-}
-
-function FooterLink({ href, children, strong }: { href: string; children: ReactNode; strong?: boolean }) {
+function FooterLink({ href, children }: { href: string; children: ReactNode }) {
   return (
     <Link
       href={href}
       className={cn(
         "group inline-flex items-center gap-2 text-lg/6 transition-[translate] sm:text-xl/6 duration-300 ease-out hover:translate-x-1",
-        "motion-reduce:transition-none motion-reduce:hover:translate-x-0",
-        strong && "rounded-full bg-white px-4 py-1.5 font-semibold text-burnt"
+        "motion-reduce:transition-none motion-reduce:hover:translate-x-0"
       )}
     >
       <span className="relative">
@@ -65,7 +47,7 @@ function FooterLink({ href, children, strong }: { href: string; children: ReactN
           className="absolute inset-x-0 -bottom-1 h-px origin-left scale-x-0 bg-sky transition-transform duration-300 ease-out group-hover:scale-x-100 motion-reduce:transition-none"
         />
       </span>
-      <ArrowIcon className="size-4 -translate-x-2 opacity-0 transition-[opacity,translate] duration-300 ease-out group-hover:translate-x-0 group-hover:opacity-100 motion-reduce:transition-none" />
+      <Icon name="arrow-right" weight="medium" className="size-4 -translate-x-2 opacity-0 transition-[opacity,translate] duration-300 ease-out group-hover:translate-x-0 group-hover:opacity-100 motion-reduce:transition-none" />
     </Link>
   );
 }
@@ -91,7 +73,7 @@ export function Footer() {
                   <ul className="mt-6 flex flex-col gap-4">
                     {column.links.map((link) => (
                       <li key={link.label}>
-                        <FooterLink href={link.href} strong={link.label === "Create an Account"}>{link.label}</FooterLink>
+                        <FooterLink href={link.href}>{link.label}</FooterLink>
                       </li>
                     ))}
                   </ul>
