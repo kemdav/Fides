@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { MerchantSidebar } from "@/components/merchant/merchant-sidebar";
-import { AdminButton } from "@/components/admin/admin-button";
 import { Icon } from "@/components/admin/icon";
 import { MetricCard } from "@/components/admin/metric-card";
 import {
@@ -11,6 +10,7 @@ import {
   PageHeading,
   Surface,
 } from "@/components/admin/primitives";
+import { Button } from "@/components/ui/button";
 import { formatPeso } from "@/lib/payments";
 import { cn } from "@/lib/utils";
 import {
@@ -665,20 +665,21 @@ export function PaymentsView({
               description="Record appointment settlements, track balances, and review payment history."
               actions={
                 <div className="flex flex-wrap items-center gap-2">
-                  <AdminButton
-                    size="sm"
+                  <Button
+                    size="form"
+                    variant="brand"
                     aria-haspopup="dialog"
                     onClick={() => handleStartRecordPayment()}
                   >
                     + Record Payment
-                  </AdminButton>
-                  <AdminButton
-                    size="sm"
-                    variant="outline"
+                  </Button>
+                  <Button
+                    size="form"
+                    variant="secondary"
                     onClick={handleExportCsv}
                   >
                     Export CSV
-                  </AdminButton>
+                  </Button>
                 </div>
               }
             />
@@ -918,23 +919,25 @@ export function PaymentsView({
                 }
                 emptyAction={
                   hasQuery ? (
-                    <AdminButton
+                    <Button
                       size="xs"
+                      variant="brand"
                       onClick={() => {
                         setSearchQuery("");
                         resetFilters();
                       }}
                     >
                       Reset filters
-                    </AdminButton>
+                    </Button>
                   ) : isHistory ? (
-                    <AdminButton
+                    <Button
                       size="xs"
+                      variant="brand"
                       aria-haspopup="dialog"
                       onClick={() => handleStartRecordPayment()}
                     >
                       + Record Payment
-                    </AdminButton>
+                    </Button>
                   ) : undefined
                 }
               />

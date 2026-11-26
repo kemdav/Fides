@@ -3,8 +3,8 @@
 import * as React from "react";
 import { fieldOutlineClasses } from "@/components/admin/fields";
 import { Icon } from "@/components/admin/icon";
-import { Listbox } from "@/components/admin/listbox";
 import { Surface } from "@/components/admin/primitives";
+import { SelectField } from "@/components/ui/select-field";
 import { getManilaDateKey, getManilaTodayKey, MANILA_TIMEZONE } from "@/lib/date-utils";
 import { formatPeso } from "@/lib/payments";
 import { cn } from "@/lib/utils";
@@ -182,10 +182,10 @@ export function DailyCollectionsBarChart({
             <Icon name="chevron-down" className="size-4 rotate-90" />
           </button>
           <div className="w-28">
-            <Listbox
+            <SelectField
               id={timeframeId}
-              label="Collections timeframe"
-              hideLabel
+              compact
+              ariaLabel="Collections timeframe"
               describedBy={rangeId}
               value={timeframe}
               options={timeframeOptions}

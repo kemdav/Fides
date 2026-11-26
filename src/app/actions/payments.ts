@@ -173,7 +173,7 @@ export async function recordPaymentAction(
   }
 
   // 3. Compute change and applied amount
-  const { appliedCents, changeCents, remainingCents } = calculateChangeAndApplied(
+  const { appliedCents, changeCents } = calculateChangeAndApplied(
     input.amountCents,
     remainingBalanceCents,
     input.method

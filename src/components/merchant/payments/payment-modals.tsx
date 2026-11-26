@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { AdminButton } from "@/components/admin/admin-button";
 import { fieldOutlineClasses } from "@/components/admin/fields";
 import { Icon } from "@/components/admin/icon";
 import { StatusPill, type PillTone } from "@/components/admin/primitives";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Modal } from "@/components/ui/modal";
 import { formatPeso, resolvePaymentMethodLabel } from "@/lib/payments";
@@ -42,17 +42,15 @@ function PaymentDialog({
   children: React.ReactNode;
 }) {
   const titleId = React.useId();
-  const descriptionId = React.useId();
   if (!open) return null;
 
   return (
     <Modal
       open
       unstyled
-      dismissOnBackdrop
+      closeOnBackdrop
       onClose={() => { if (!busy) onClose(); }}
       labelledBy={titleId}
-      describedBy={description ? descriptionId : undefined}
       className={cn(
         "m-auto w-[calc(100%-1rem)] overflow-hidden bg-white text-ink shadow-2xl sm:w-[calc(100%-2rem)]",
         feedback ? "max-w-[400px] rounded-2xl" : "max-w-3xl rounded-[14px] border border-line",
@@ -66,7 +64,7 @@ function PaymentDialog({
               <Icon name={feedback === "success" ? "check" : "alert"} weight="bold" className="size-7" />
             </div>
             <h2 id={titleId} className="text-xl font-semibold text-ink">{title}</h2>
-            {description && <p id={descriptionId} className="mt-2.5 break-words text-sm leading-relaxed text-muted">{description}</p>}
+            {description && <p className="mt-2.5 break-words text-sm leading-relaxed text-muted">{description}</p>}
           </header>
         ) : (
           <header className="flex shrink-0 items-start justify-between gap-3 border-b border-hairline px-4 pb-4 pt-5 sm:px-6 sm:pb-5 sm:pt-6">
@@ -75,7 +73,7 @@ function PaymentDialog({
                 <h2 id={titleId} className="font-display text-[26px] leading-[34px] text-ink">{title}</h2>
                 {status && <StatusBadge status={status} />}
               </div>
-              {description && <p id={descriptionId} className="mt-1 text-sm text-muted">{description}</p>}
+              {description && <p className="mt-1 text-sm text-muted">{description}</p>}
             </div>
             <button
               type="button"
@@ -207,15 +205,16 @@ export function SelectAppointmentModal({
                       {formatPeso(apt.balanceCents)}
                     </span>
                   </div>
-                  <AdminButton
-                    size="sm"
+                  <Button
+                    size="form"
+                    variant="brand"
                     onClick={() => {
                       onSelectAppointment(apt);
                       onClose();
                     }}
                   >
                     Select
-                  </AdminButton>
+                  </Button>
                 </div>
               </div>
             ))
@@ -224,12 +223,13 @@ export function SelectAppointmentModal({
       </div>
 
       <PaymentDialogFooter>
-        <AdminButton
-          size="sm" variant="outline"
+        <Button
+          size="form"
+          variant="secondary"
           onClick={onClose}
         >
           Cancel
-        </AdminButton>
+        </Button>
       </PaymentDialogFooter>
     </PaymentDialog>
   );
@@ -312,7 +312,7 @@ function RecordPaymentForm({
     if (isPartialPayment) {
       onProceedToConfirmPartial(payload, appointment);
     } else {
-      onSubmitFullPayment(payload);
+      void onSubmitFullPayment(payload);
     }
   };
 
@@ -489,20 +489,22 @@ function RecordPaymentForm({
           )}
         </div>
         <PaymentDialogFooter>
-          <AdminButton
-            size="sm" variant="outline"
+          <Button
+            size="form"
+            variant="secondary"
             onClick={onClose}
             disabled={isSubmitting}
           >
             Cancel
-          </AdminButton>
-          <AdminButton
-            size="sm"
+          </Button>
+          <Button
+            size="form"
+            variant="brand"
             type="submit"
             disabled={isSubmitting}
           >
             {isSubmitting ? "Recording..." : "Record Payment"}
-          </AdminButton>
+          </Button>
         </PaymentDialogFooter>
       </form>
     </PaymentDialog>
@@ -571,20 +573,22 @@ export function ConfirmPartialPaymentModal({
       </div>
 
       <PaymentDialogFooter centered>
-        <AdminButton
-          size="sm" variant="outline"
+        <Button
+          size="form"
+          variant="secondary"
           onClick={onClose}
           disabled={isSubmitting}
         >
           Cancel
-        </AdminButton>
-        <AdminButton
-          size="sm"
+        </Button>
+        <Button
+          size="form"
+          variant="brand"
           onClick={onConfirm}
           disabled={isSubmitting}
         >
           {isSubmitting ? "Recording..." : "Confirm Partial"}
-        </AdminButton>
+        </Button>
       </PaymentDialogFooter>
     </PaymentDialog>
   );
@@ -647,21 +651,23 @@ export function PaymentRecordedSuccessModal({
       </div>
 
       <PaymentDialogFooter centered>
-        <AdminButton
-          size="sm" variant="outline"
+        <Button
+          size="form"
+          variant="secondary"
           onClick={() => {
             onClose();
             onViewReceipt(payment);
           }}
         >
           View Receipt
-        </AdminButton>
-        <AdminButton
-          size="sm"
+        </Button>
+        <Button
+          size="form"
+          variant="brand"
           onClick={onClose}
         >
           Done
-        </AdminButton>
+        </Button>
       </PaymentDialogFooter>
     </PaymentDialog>
   );
@@ -796,66 +802,74 @@ export function PaymentReceiptModal({
         <div className="mr-auto empty:hidden">
           {isOwnerOrAdmin && record.status === "paid" && (
             <div className="flex items-center gap-2">
-              <AdminButton
-                size="sm" variant="danger"
+              <Button
+                size="form"
+                variant="danger"
                 onClick={() => {
                   onClose();
                   onTriggerVoid(record);
                 }}
               >
                 Void Payment
-              </AdminButton>
-              <AdminButton
-                size="sm" variant="outline" className="text-danger-dark"
+              </Button>
+              <Button
+                size="form"
+                variant="secondary"
+                className="text-danger-dark"
                 onClick={() => {
                   onClose();
                   onTriggerRefund(record);
                 }}
               >
                 Refund
-              </AdminButton>
+              </Button>
             </div>
           )}
 
           {isOwnerOrAdmin && record.status === "partial" && (
-            <AdminButton
-              size="sm" variant="danger"
+            <Button
+              size="form"
+              variant="danger"
               onClick={() => {
                 onClose();
                 onTriggerVoid(record);
               }}
             >
               Void Payment
-            </AdminButton>
+            </Button>
           )}
         </div>
 
         {/* Right Actions */}
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <AdminButton
-            size="sm" variant="outline"
+          <Button
+            size="form"
+            variant="secondary"
             onClick={onClose}
           >
             Close
-          </AdminButton>
+          </Button>
 
           {record.status === "partial" ? (
-            <AdminButton
-              size="sm"
+            <Button
+              size="form"
+              variant="brand"
               onClick={() => {
                 onClose();
                 onTriggerSettleBalance(record);
               }}
             >
               Settle Balance
-            </AdminButton>
+            </Button>
           ) : (
-            <AdminButton
-              size="sm" className="gap-1.5"
+            <Button
+              size="form"
+              variant="brand"
+              className="gap-1.5"
               onClick={handlePrint}
             >
               <Icon name="document" className="size-4" /> Print Receipt
-            </AdminButton>
+            </Button>
           )}
         </div>
       </PaymentDialogFooter>
@@ -892,7 +906,7 @@ function VoidPaymentForm({
 
   const handleConfirm = () => {
     if (!isFormValid) return;
-    onConfirmVoid(record.id, reason.trim());
+    void onConfirmVoid(record.id, reason.trim());
   };
 
   return (
@@ -944,20 +958,22 @@ function VoidPaymentForm({
       </div>
 
       <PaymentDialogFooter centered>
-        <AdminButton
-          size="sm" variant="outline"
+        <Button
+          size="form"
+          variant="secondary"
           onClick={onClose}
           disabled={isSubmitting}
         >
           Cancel
-        </AdminButton>
-        <AdminButton
-          size="sm" variant="danger"
+        </Button>
+        <Button
+          size="form"
+          variant="danger"
           onClick={handleConfirm}
           disabled={!isFormValid || isSubmitting}
         >
           {isSubmitting ? "Voiding..." : "Void Payment"}
-        </AdminButton>
+        </Button>
       </PaymentDialogFooter>
     </PaymentDialog>
   );
@@ -995,7 +1011,7 @@ function RefundPaymentForm({
 
   const handleConfirm = () => {
     if (!isFormValid) return;
-    onConfirmRefund(record.id, refundCents, reason.trim());
+    void onConfirmRefund(record.id, refundCents, reason.trim());
   };
 
   return (
@@ -1059,20 +1075,22 @@ function RefundPaymentForm({
       </div>
 
       <PaymentDialogFooter centered>
-        <AdminButton
-          size="sm" variant="outline"
+        <Button
+          size="form"
+          variant="secondary"
           onClick={onClose}
           disabled={isSubmitting}
         >
           Cancel
-        </AdminButton>
-        <AdminButton
-          size="sm" variant="danger"
+        </Button>
+        <Button
+          size="form"
+          variant="danger"
           onClick={handleConfirm}
           disabled={!isFormValid || isSubmitting}
         >
           {isSubmitting ? "Refunding..." : "Confirm Refund"}
-        </AdminButton>
+        </Button>
       </PaymentDialogFooter>
     </PaymentDialog>
   );
@@ -1102,12 +1120,13 @@ export function ActionCompletedModal({
       feedback="success"
     >
       <PaymentDialogFooter centered>
-        <AdminButton
-          size="sm"
+        <Button
+          size="form"
+          variant="brand"
           onClick={onClose}
         >
           Done
-        </AdminButton>
+        </Button>
       </PaymentDialogFooter>
     </PaymentDialog>
   );
@@ -1139,12 +1158,13 @@ export function PaymentActionErrorModal({
         <p role="alert" className="rounded-lg bg-danger-bg p-3 text-sm text-danger-dark">{errorMessage}</p>
       </div>
       <PaymentDialogFooter centered>
-        <AdminButton
-          size="sm"
+        <Button
+          size="form"
+          variant="brand"
           onClick={onClose}
         >
           Got it
-        </AdminButton>
+        </Button>
       </PaymentDialogFooter>
     </PaymentDialog>
   );
