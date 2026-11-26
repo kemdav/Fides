@@ -6,13 +6,13 @@ import { interactiveRing } from "./primitives";
 
 type MetricCardProps = {
   label: string;
-  value: number;
+  value: number | string;
   caption: string;
   /** Adds the shared arrow after the caption, for cards that link somewhere. */
   captionArrow?: boolean;
   /** Optional: some pages (outside the admin portal) show cards without an icon. */
   icon?: IconName;
-  progress: number;
+  progress?: number;
   featured?: boolean;
   badge?: ReactNode;
   miniChart?: boolean;
@@ -54,7 +54,7 @@ export function MetricCard({
           <Icon
             name={icon}
             weight={iconWeight ?? (featured ? "fill" : "regular")}
-            className={cn("size-5 shrink-0", featured ? "text-white" : "text-glyph")}
+            className={cn("size-5 shrink-0", featured ? "text-on-burnt" : "text-glyph")}
           />
         ) : null}
         <p className="min-w-0 break-words text-sm font-semibold leading-5">{label}</p>
@@ -86,7 +86,7 @@ export function MetricCard({
           <p
             className={cn(
               "min-w-0 flex-1 text-xs leading-[13px] sm:text-[13px] sm:leading-[14px]",
-              featured ? "text-white" : "text-muted",
+              featured ? "text-on-burnt" : "text-muted",
             )}
           >
             {caption}
@@ -97,14 +97,14 @@ export function MetricCard({
         <>
           <p
             className={cn(
-              "break-words text-[13px] leading-[18px]",
-              featured ? "text-white" : "text-muted",
+              "wrap-anywhere text-[13px] leading-[18px]",
+              featured ? "text-on-burnt" : "text-muted",
             )}
           >
             {caption}
             {captionArrow ? <Icon name="arrow-right" weight="medium" className="ml-1 inline size-4 align-text-bottom" /> : null}
           </p>
-          <div
+          {progress !== undefined && <div
             className="mt-auto flex h-[5px] overflow-hidden rounded-[3px] bg-mist"
             aria-hidden
           >
@@ -115,7 +115,7 @@ export function MetricCard({
               )}
               style={{ width: `${progress}%` }}
             />
-          </div>
+          </div>}
         </>
       )}
     </>

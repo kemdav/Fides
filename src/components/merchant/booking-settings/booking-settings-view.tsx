@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MerchantSidebar } from "@/components/merchant/merchant-sidebar";
-import { Surface } from "@/components/admin/primitives";
+import { PageHeading, Surface } from "@/components/admin/primitives";
 import { saveBookingSettingsAction } from "@/app/actions/booking-settings";
 import type {
   BookingSettingsFormValues,
@@ -16,7 +16,8 @@ import {
 } from "./booking-settings-modals";
 import { cn } from "@/lib/utils";
 import { Icon } from "@/components/admin/icon";
-import { inputClasses, NumberSelectField } from "@/components/ui";
+import { Button, inputClasses, NumberSelectField } from "@/components/ui";
+import { useTenant } from "@/providers/tenant-provider";
 
 interface SelectOption {
   value: number;
@@ -120,7 +121,7 @@ function formatLastSavedDate(iso: string | null): string | null {
 function CheckBadgeIcon() {
   return (
     <span
-      className="inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-white text-burnt"
+      className="inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-on-burnt text-burnt"
       aria-hidden="true"
     >
       <Icon name="check" weight="bold" className="size-2.5" />
@@ -138,6 +139,7 @@ export function BookingSettingsView({
   basePath = "",
 }: BookingSettingsViewProps) {
   const router = useRouter();
+  const { businessName } = useTenant();
   const { meta } = initialData;
   const canEdit = meta.canEdit;
 
@@ -354,9 +356,9 @@ export function BookingSettingsView({
   const formattedSavedDate = formatLastSavedDate(lastSavedAt);
 
   return (
-    <div className="flex min-h-dvh flex-col bg-mist text-ink lg:flex-row">
+    <div className="flex min-h-dvh flex-col bg-powder text-ink lg:h-dvh lg:flex-row lg:overflow-hidden">
       <MerchantSidebar
-        businessName={meta.businessName}
+        businessName={businessName}
         userName={meta.userName}
         userEmail={meta.userEmail}
         userRole={meta.userRole}
@@ -365,18 +367,13 @@ export function BookingSettingsView({
 
       <div className="flex min-w-0 flex-1 flex-col">
         <main className="flex w-full min-w-0 flex-1 flex-col gap-5 p-4 sm:p-6 lg:p-8">
-          {/* Page Header */}
-          <header className="flex flex-col gap-1">
-            <h1 className="font-display text-[28px] leading-[36px] text-ink sm:text-[32px] sm:leading-[40px]">
-              Booking settings
-            </h1>
-            <p className="text-sm leading-relaxed text-subtle">
-              Set the rules that shape your customer booking experience.
-            </p>
-          </header>
+          <PageHeading
+            title="Booking settings"
+            description="Set the rules that shape your customer booking experience."
+          />
 
           {/* Timezone Info Banner */}
-          <div className="flex flex-col justify-between gap-3 rounded-xl border border-hairline bg-mist px-4 py-3.5 sm:flex-row sm:items-center sm:px-5">
+          <div className="flex flex-col justify-between gap-3 rounded-xl border border-burnt/20 bg-white px-4 py-3.5 sm:flex-row sm:items-center sm:px-5">
             <div className="space-y-0.5">
               <p className="text-sm font-semibold text-ink">
                 Business timezone: {meta.timeZone}
@@ -388,16 +385,20 @@ export function BookingSettingsView({
             </div>
             <Link
               href={websiteSettingsHref}
-              className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-burnt transition-colors hover:text-burnt-dark"
+              className="inline-flex min-h-10 w-fit shrink-0 items-center gap-1.5 rounded-md text-sm font-semibold text-ink underline decoration-burnt underline-offset-4 focus-visible:outline-2 focus-visible:outline-burnt"
             >
               <span>Go to Website Settings</span>
-              <Icon name="arrow-right" weight="medium" className="size-3.5" />
+              <Icon
+                name="arrow-right"
+                weight="medium"
+                className="size-3.5 text-burnt"
+              />
             </Link>
           </div>
 
           {/* Read-only banner for non-owners */}
           {!canEdit && (
-            <div className="rounded-xl border border-burnt/20 bg-burnt/10 px-4 py-3 text-sm text-burnt-dark">
+            <div className="rounded-xl border border-burnt/20 bg-white px-4 py-3 text-sm text-body">
               You have view-only access to booking rules. Only the business
               owner can modify and save changes.
             </div>
@@ -435,39 +436,29 @@ export function BookingSettingsView({
                     aria-label="Approval mode"
                     className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2"
                   >
-                    <button
-                      type="button"
+                    <Button
+                      variant={form.autoConfirm ? "brand" : "outline"}
                       role="radio"
                       aria-checked={form.autoConfirm}
                       disabled={!canEdit}
                       onClick={() => updateField("autoConfirm", true)}
-                      className={cn(
-                        "flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-60",
-                        form.autoConfirm
-                          ? "bg-burnt text-on-burnt shadow-xs"
-                          : "bg-glyph text-white hover:bg-glyph",
-                      )}
+                      className="rounded-lg text-xs font-semibold"
                     >
                       {form.autoConfirm && <CheckBadgeIcon />}
                       <span>Automatic Confirmation</span>
-                    </button>
+                    </Button>
 
-                    <button
-                      type="button"
+                    <Button
+                      variant={!form.autoConfirm ? "brand" : "outline"}
                       role="radio"
                       aria-checked={!form.autoConfirm}
                       disabled={!canEdit}
                       onClick={() => updateField("autoConfirm", false)}
-                      className={cn(
-                        "flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-60",
-                        !form.autoConfirm
-                          ? "bg-burnt text-on-burnt shadow-xs"
-                          : "bg-glyph text-white hover:bg-glyph",
-                      )}
+                      className="rounded-lg text-xs font-semibold"
                     >
                       {!form.autoConfirm && <CheckBadgeIcon />}
                       <span>Manual Approval</span>
-                    </button>
+                    </Button>
                   </div>
 
                   <p className="mt-3 text-xs leading-relaxed text-subtle">
@@ -496,8 +487,12 @@ export function BookingSettingsView({
                     aria-label="Staff assignment mode"
                     className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2"
                   >
-                    <button
-                      type="button"
+                    <Button
+                      variant={
+                        form.staffAssignmentMode === "specific_staff"
+                          ? "brand"
+                          : "outline"
+                      }
                       role="radio"
                       aria-checked={
                         form.staffAssignmentMode === "specific_staff"
@@ -506,21 +501,20 @@ export function BookingSettingsView({
                       onClick={() =>
                         updateField("staffAssignmentMode", "specific_staff")
                       }
-                      className={cn(
-                        "flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-60",
-                        form.staffAssignmentMode === "specific_staff"
-                          ? "bg-burnt text-on-burnt shadow-xs"
-                          : "bg-glyph text-white hover:bg-glyph",
-                      )}
+                      className="rounded-lg text-xs font-semibold"
                     >
                       {form.staffAssignmentMode === "specific_staff" && (
                         <CheckBadgeIcon />
                       )}
                       <span>Specific Staff</span>
-                    </button>
+                    </Button>
 
-                    <button
-                      type="button"
+                    <Button
+                      variant={
+                        form.staffAssignmentMode === "any_available"
+                          ? "brand"
+                          : "outline"
+                      }
                       role="radio"
                       aria-checked={
                         form.staffAssignmentMode === "any_available"
@@ -529,18 +523,13 @@ export function BookingSettingsView({
                       onClick={() =>
                         updateField("staffAssignmentMode", "any_available")
                       }
-                      className={cn(
-                        "flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-60",
-                        form.staffAssignmentMode === "any_available"
-                          ? "bg-burnt text-on-burnt shadow-xs"
-                          : "bg-glyph text-white hover:bg-glyph",
-                      )}
+                      className="rounded-lg text-xs font-semibold"
                     >
                       {form.staffAssignmentMode === "any_available" && (
                         <CheckBadgeIcon />
                       )}
                       <span>Any Available</span>
-                    </button>
+                    </Button>
                   </div>
 
                   <p className="mt-2.5 text-xs leading-relaxed text-subtle">
@@ -564,7 +553,9 @@ export function BookingSettingsView({
                     disabled={!canEdit}
                     value={form.defaultBufferMinutes}
                     options={bufferOptions}
-                    onChange={(next) => updateField("defaultBufferMinutes", next)}
+                    onChange={(next) =>
+                      updateField("defaultBufferMinutes", next)
+                    }
                   />
                   {fieldErrors.defaultBufferMinutes && (
                     <p className="mt-1.5 text-xs font-medium text-danger">
@@ -602,13 +593,15 @@ export function BookingSettingsView({
                       Minimum advance notice
                     </label>
                     <NumberSelectField
-                    id="min-advance-notice"
-                    className="mt-2"
-                    disabled={!canEdit}
-                    value={form.bookingLeadTimeMinutes}
-                    options={leadTimeOptions}
-                    onChange={(next) => updateField("bookingLeadTimeMinutes", next)}
-                  />
+                      id="min-advance-notice"
+                      className="mt-2"
+                      disabled={!canEdit}
+                      value={form.bookingLeadTimeMinutes}
+                      options={leadTimeOptions}
+                      onChange={(next) =>
+                        updateField("bookingLeadTimeMinutes", next)
+                      }
+                    />
                     {fieldErrors.bookingLeadTimeMinutes && (
                       <p className="mt-1.5 text-xs font-medium text-danger">
                         {fieldErrors.bookingLeadTimeMinutes}
@@ -625,13 +618,13 @@ export function BookingSettingsView({
                       Maximum advance booking
                     </label>
                     <NumberSelectField
-                    id="max-advance-booking"
-                    className="mt-2"
-                    disabled={!canEdit}
-                    value={form.maxAdvanceDays}
-                    options={maxAdvanceOptions}
-                    onChange={(next) => updateField("maxAdvanceDays", next)}
-                  />
+                      id="max-advance-booking"
+                      className="mt-2"
+                      disabled={!canEdit}
+                      value={form.maxAdvanceDays}
+                      options={maxAdvanceOptions}
+                      onChange={(next) => updateField("maxAdvanceDays", next)}
+                    />
                     {fieldErrors.maxAdvanceDays && (
                       <p className="mt-1.5 text-xs font-medium text-danger">
                         {fieldErrors.maxAdvanceDays}
@@ -654,7 +647,9 @@ export function BookingSettingsView({
                     disabled={!canEdit}
                     value={form.cancellationWindowHours}
                     options={cancellationOptions}
-                    onChange={(next) => updateField("cancellationWindowHours", next)}
+                    onChange={(next) =>
+                      updateField("cancellationWindowHours", next)
+                    }
                   />
                   {fieldErrors.cancellationWindowHours && (
                     <p className="mt-1.5 text-xs font-medium text-danger">
@@ -677,7 +672,9 @@ export function BookingSettingsView({
                     disabled={!canEdit}
                     value={form.rescheduleWindowHours}
                     options={rescheduleOptions}
-                    onChange={(next) => updateField("rescheduleWindowHours", next)}
+                    onChange={(next) =>
+                      updateField("rescheduleWindowHours", next)
+                    }
                   />
                   {fieldErrors.rescheduleWindowHours && (
                     <p className="mt-1.5 text-xs font-medium text-danger">
@@ -726,9 +723,7 @@ export function BookingSettingsView({
 
               {/* Card 4: Scheduling */}
               <Surface className="rounded-xl border border-hairline bg-white p-5 sm:p-6">
-                <h2 className="text-base font-semibold text-ink">
-                  Scheduling
-                </h2>
+                <h2 className="text-base font-semibold text-ink">Scheduling</h2>
                 <p className="mt-1 text-xs leading-relaxed text-subtle">
                   Choose the spacing of available start times.
                 </p>
@@ -746,7 +741,9 @@ export function BookingSettingsView({
                     disabled={!canEdit}
                     value={form.slotIntervalMinutes}
                     options={slotIntervalOptions}
-                    onChange={(next) => updateField("slotIntervalMinutes", next)}
+                    onChange={(next) =>
+                      updateField("slotIntervalMinutes", next)
+                    }
                   />
                   {fieldErrors.slotIntervalMinutes && (
                     <p className="mt-1.5 text-xs font-medium text-danger">
@@ -776,7 +773,7 @@ export function BookingSettingsView({
                 <p
                   className={cn(
                     "text-xs font-semibold",
-                    isDirty ? "text-burnt" : "text-body",
+                    isDirty ? "text-ink" : "text-body",
                   )}
                 >
                   {isDirty ? "Unsaved changes" : "All changes saved"}
@@ -788,23 +785,23 @@ export function BookingSettingsView({
                 </p>
               </div>
 
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  variant="outline"
                   disabled={!canEdit || !isDirty || isSaving}
                   onClick={() => setShowDiscardModal(true)}
-                  className="h-10 rounded-lg border border-line bg-white px-4 text-xs font-semibold text-body transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-45"
+                  className="rounded-lg text-xs font-semibold"
                 >
                   Discard changes
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant="brand"
                   disabled={!canEdit || !isDirty || isSaving}
                   onClick={handleSave}
-                  className="h-10 min-w-[124px] rounded-lg bg-burnt px-5 text-xs font-semibold text-on-burnt transition-colors hover:bg-burnt-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-45"
+                  className="min-w-[124px] rounded-lg text-xs font-semibold"
                 >
                   {isSaving ? "Saving..." : "Save changes"}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
