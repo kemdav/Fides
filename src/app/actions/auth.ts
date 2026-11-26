@@ -56,6 +56,7 @@ export async function login(_previous: LoginState, formData: FormData): Promise<
   }
 
   const requestedRedirect = safeRedirect(formData.get("redirect"));
+  const onboardingRedirect = requestedRedirect.match(/^\/(?:([a-z0-9-]+)\/)?dashboard\/onboarding(?:\?.*)?$/);
   let target = requestedRedirect;
 
   let tenantSlug: string | null = null;
@@ -68,7 +69,7 @@ export async function login(_previous: LoginState, formData: FormData): Promise<
     tenantSlug = tenant?.slug ?? null;
   }
 
-  if (!tenantSlug && !requestedRedirect.match(/^\/[a-z0-9-]+\/dashboard(?:\/appointments)?$/)) {
+  if (!tenantSlug && !onboardingRedirect && !requestedRedirect.match(/^\/[a-z0-9-]+\/dashboard(?:\/appointments)?$/)) {
     await supabase.auth.signOut();
     return { error: AUTH_ERROR_MESSAGES.NO_ACCOUNT, email };
   }
@@ -76,7 +77,14 @@ export async function login(_previous: LoginState, formData: FormData): Promise<
   if (tenantSlug) {
     const canonicalOverview = `/${tenantSlug}/dashboard`;
     const canonicalAppointments = `/${tenantSlug}/dashboard/appointments`;
-    if (
+    if (onboardingRedirect) {
+      const requestedTenant = onboardingRedirect[1];
+      if (!requestedTenant) {
+        target = `/${tenantSlug}${requestedRedirect}`;
+      } else if (requestedTenant !== tenantSlug) {
+        target = canonicalOverview;
+      }
+    } else if (
       requestedRedirect === "/dashboard" ||
       requestedRedirect.startsWith("/dashboard/") ||
       requestedRedirect === "/tenant-dashboard" ||

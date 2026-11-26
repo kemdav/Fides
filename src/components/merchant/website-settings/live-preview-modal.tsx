@@ -32,6 +32,7 @@ interface LivePreviewModalProps {
   onClose: () => void;
   data: WebsiteSettingsData;
   services?: PreviewServiceItem[];
+  fonts?: { heading: string; body: string };
 }
 
 export function LivePreviewModal({
@@ -39,8 +40,24 @@ export function LivePreviewModal({
   onClose,
   data,
   services = [],
+  fonts,
 }: LivePreviewModalProps) {
+  const dialogRef = React.useRef<HTMLDialogElement>(null);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const dialog = dialogRef.current;
+    const previousFocus = document.activeElement;
+    dialog?.showModal();
+    return () => {
+      dialog?.close();
+      if (previousFocus instanceof HTMLElement) previousFocus.focus({ preventScroll: true });
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
+
+  const bodyFont = fonts && { fontFamily: fonts.body };
 
   const displayedServices =
     services.length > 0 ? services.slice(0, 3) : FALLBACK_SERVICES;
@@ -88,12 +105,15 @@ export function LivePreviewModal({
 
         {/* Live Client Website Content Container */}
         <div
-          className="flex-1 overflow-y-auto"
+          role="region"
+          aria-label="Website preview content"
+          tabIndex={0}
+          className="min-h-0 flex-1 overflow-y-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-neutral-600"
           style={{
             backgroundColor: data.mainColor || "#FFFFEB",
-            fontFamily: data.typography.includes("Ovo")
+            fontFamily: fonts?.heading ?? (data.typography.includes("Ovo")
               ? "var(--font-display), Georgia, serif"
-              : "inherit",
+              : "inherit"),
           }}
         >
           {/* Client Site Navbar */}
@@ -175,7 +195,7 @@ export function LivePreviewModal({
                 <Image
                   src={
                     data.coverPhotoUrl ||
-                    "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80"
+                    "/images/storefront/hero Image.png"
                   }
                   alt="Salon Studio"
                   fill
@@ -196,7 +216,7 @@ export function LivePreviewModal({
                 <h2 className="text-xl sm:text-2xl font-semibold text-ink mb-6">
                   Find your moment of care
                 </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-sans">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-sans" style={bodyFont}>
                   {displayedServices.map((svc) => {
                     const formattedPrice = `₱${Math.round(
                       svc.priceCents / 100,
