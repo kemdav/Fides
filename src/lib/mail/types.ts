@@ -15,6 +15,7 @@ export interface MailMessage {
   html?: string;
   text?: string;
   replyTo?: string;
+  allowTestRecipientRedirect?: boolean;
   attachments?: MailAttachment[];
 }
 

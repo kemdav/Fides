@@ -9,7 +9,8 @@ import {
 import { buttonClasses, inputClasses } from "@/components/ui";
 import type { WalkInServiceOption, WalkInStaffOption } from "@/types/walk-ins";
 import { getEligibleBookingStaff } from "@/lib/merchant/booking-staff-eligibility";
-import { CalendarPicker, Listbox, TimeListbox } from "./new-appointment-modal";
+import { CalendarPicker } from "@/components/ui/calendar-picker";
+import { Listbox, TimeListbox } from "./new-appointment-modal";
 import { Icon } from "@/components/admin/icon";
 import { Modal } from "@/components/ui/modal";
 
@@ -404,15 +405,14 @@ export function WalkInModal({
               Schedule
             </legend>
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-              <div className="block text-sm font-medium text-body">
-                Appointment Date<span className="text-burnt">*</span>
-                <CalendarPicker
-                  id="walk-in-date"
-                  label=""
-                  value={date}
-                  onChange={setDate}
-                />
-              </div>
+              <CalendarPicker
+                id="walk-in-date"
+                label="Appointment date"
+                required
+                min={getTodayManilaDate()}
+                value={date}
+                onChange={setDate}
+              />
               <div className="block text-sm font-medium text-body">
                 Appointment Time<span className="text-burnt">*</span>
                 <TimeListbox

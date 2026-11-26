@@ -1958,6 +1958,10 @@ type DatabaseCore = {
       [_ in never]: never;
     };
     Functions: {
+      missing_required_documents: {
+        Args: { _application_id: string }
+        Returns: { code: string; label: string }[]
+      }
       renew_staff_invitation: {
         Args: { p_expected_expiry: string; p_invitation_id: string; p_tenant_id: string; p_token_hash: string }
         Returns: boolean
@@ -2100,7 +2104,7 @@ export type AccountApplicationRow = {
   user_id: string;
   full_name: string;
   email: string;
-  phone: string;
+  phone: string | null;
   status: ApplicationStatus;
   plan_code: string;
   terms_accepted_at: string;
@@ -2147,6 +2151,7 @@ export type ApplicationIdentityRow = {
 };
 
 export type ApplicationBusinessRow = {
+  requested_slug: string | null;
   application_id: string;
   business_name: string;
   business_type: string;
@@ -2217,6 +2222,18 @@ type AccountTable<Row, Insert = Partial<Row>, Update = Partial<Row>> = {
   Relationships: [];
 };
 
+type RegistrationEmailCodeRow = {
+  email: string;
+  id: string;
+  code_hash: string;
+  attempts: number;
+  sent_at: string;
+  expires_at: string;
+  used_at: string | null;
+  window_started_at: string;
+  send_count: number;
+};
+
 type AccountTables = {
   subscription_plans: AccountTable<SubscriptionPlanRow>;
   account_applications: AccountTable<AccountApplicationRow>;
@@ -2224,6 +2241,7 @@ type AccountTables = {
   application_identities: AccountTable<ApplicationIdentityRow>;
   application_businesses: AccountTable<ApplicationBusinessRow>;
   password_reset_codes: AccountTable<PasswordResetCodeRow>;
+  registration_email_codes: AccountTable<RegistrationEmailCodeRow>;
   document_types: AccountTable<DocumentTypeRow>;
   application_documents: AccountTable<ApplicationDocumentRow>;
   admin_activity_log: AccountTable<AdminActivityRow>;

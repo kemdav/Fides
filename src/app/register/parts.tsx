@@ -2,135 +2,271 @@
 
 import Link from "next/link";
 import { useMemo, type InputHTMLAttributes, type ReactNode } from "react";
-import { inputClasses, PasswordInput as BasePasswordInput } from "@/components/ui";
+import { Icon } from "@/components/admin/icon";
+import { Input, PasswordInput as BasePasswordInput } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { getObjectUrl, formatBytes } from "./controls";
-import { Icon, type IconName as SharedIconName } from "@/components/admin/icon";
+import { registrationFieldClasses } from "./field-styles";
+import motion from "./sidebar-motion.module.css";
 
 export { formatBytes };
 
 export const STEPS = [
   { title: "Account Creation", icon: "user" },
   { title: "Identity Verification", icon: "shield" },
-  { title: "Business Information", icon: "building" },
+  { title: "Business Information", icon: "grid" },
   { title: "Document Requirements", icon: "document" },
   { title: "Subscription Package", icon: "card" },
-  { title: "Application Summary", icon: "clipboard" },
+  { title: "Application Summary", icon: "verified" },
 ] as const;
 
-type IconName = (typeof STEPS)[number]["icon"] | "check" | "upload" | "info" | "lock";
-
-const sharedIcons: Record<IconName, { name: SharedIconName; weight: "regular" | "bold" | "fill" }> = {
-  user: { name: "user", weight: "fill" },
-  shield: { name: "shield", weight: "fill" },
-  building: { name: "buildings", weight: "fill" },
-  document: { name: "document", weight: "fill" },
-  card: { name: "card", weight: "fill" },
-  clipboard: { name: "clipboard-list", weight: "fill" },
-  check: { name: "check", weight: "bold" },
-  upload: { name: "upload", weight: "regular" },
-  info: { name: "alert", weight: "fill" },
-  lock: { name: "lock", weight: "fill" },
-};
-
-export function StepIcon({ name, className }: { name: IconName; className?: string }) {
-  const { name: shared, weight } = sharedIcons[name];
-  return <Icon name={shared} weight={weight} className={cn("size-5", className)} />;
-}
-
-export function Sidebar({ current, onJump, furthest }: { current: number; furthest: number; onJump: (step: number) => void }) {
+export function Sidebar({
+  current,
+  onJump,
+  furthest,
+  completed,
+}: {
+  current: number;
+  furthest: number;
+  completed: readonly number[];
+  onJump: (step: number) => void;
+}) {
   return (
-    <aside className="relative hidden w-[300px] shrink-0 overflow-hidden bg-sand lg:block xl:w-[354px]">
-      <div aria-hidden className="absolute -left-20 -top-24 size-[340px] rounded-full bg-sand-200/70" />
-      <div aria-hidden className="absolute -bottom-20 -right-24 size-[300px] rounded-full bg-sand-200/70" />
-      <div aria-hidden className="absolute left-[132px] top-[250px] size-[120px] rounded-full bg-sand-200/50" />
-      <div aria-hidden className="absolute right-12 top-24 size-9 rotate-[15deg] rounded-lg bg-sand-300" />
-      <div aria-hidden className="absolute bottom-40 right-16 size-10 rotate-[15deg] rounded-xl bg-sand-300" />
-      <div aria-hidden className="absolute left-5 top-[360px] size-2 rounded-full bg-sand-400" />
-      <div aria-hidden className="absolute right-14 top-[200px] size-1.5 rounded-full bg-sand-400" />
-      <div aria-hidden className="absolute bottom-16 left-16 size-1.5 rounded-full bg-sand-400" />
-      <div className="sticky top-0 flex h-dvh min-h-[640px] flex-col px-8 pb-8 pt-9 xl:px-10">
-        <div>
-          <Link href="/" className="font-display text-4xl leading-tight text-burnt">
-            Fides
-          </Link>
-          <p className="text-xs text-burnt/90">Manage and grow your service business</p>
+    <aside className="hidden w-1/3 shrink-0 bg-[#faeed5] lg:block">
+      <div className="sticky top-0 isolate h-dvh">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
+        >
+          <div
+            className={cn(
+              motion.circle,
+              "absolute -left-[22%] -top-[12%] aspect-square w-[min(72%,44dvh)] rounded-full bg-[#efd0a5]/45",
+            )}
+          />
+          <div
+            className={cn(
+              motion.circle,
+              "absolute left-[32%] top-[32%] aspect-square w-[min(34%,30dvh)] rounded-full bg-[#efd0a5]/20",
+            )}
+          />
+          <div
+            className={cn(
+              motion.circle,
+              "absolute -right-[19%] top-[65%] aspect-square w-[min(54%,50dvh)] rounded-full bg-[#efd0a5]/35",
+            )}
+          />
+          <div
+            className={cn(
+              motion.square,
+              "absolute right-[11%] top-[14%] aspect-square w-[min(9%,10dvh)] rotate-[23deg] rounded-md bg-[#e9bb86]/30",
+            )}
+          />
+          <div
+            className={cn(
+              motion.square,
+              motion.driftLeft,
+              "absolute left-[8%] top-[53%] aspect-square w-[min(6%,8dvh)] -rotate-12 rounded bg-[#e9bb86]/40",
+            )}
+          />
+          <div
+            className={cn(
+              motion.square,
+              motion.driftLeft,
+              "absolute bottom-[max(6%,18px)] left-[calc(50%_-_12px)] size-6 rotate-[20deg] rounded bg-[#e9bb86]/30",
+            )}
+          />
+          <div
+            className={cn(
+              motion.dot,
+              "absolute right-[17%] top-[22%] size-1.5 rounded-full bg-burnt/25",
+            )}
+          />
+          <div
+            className={cn(
+              motion.dot,
+              "absolute right-[28%] top-[52%] size-1.5 rounded-full bg-burnt/25",
+            )}
+          />
+          <div
+            className={cn(
+              motion.dot,
+              "absolute left-[17%] top-[81%] size-2 rounded-full bg-burnt/20",
+            )}
+          />
         </div>
-        <nav aria-label="Registration progress" className="mt-16">
-          <ol className="relative flex flex-col">
-            {STEPS.map((step, index) => {
-              const done = index < current;
-              const active = index === current;
-              const reachable = index <= furthest && !active;
-              const last = index === STEPS.length - 1;
-              return (
-                <li key={step.title} className={cn("relative", !last && "pb-[38px]")}>
-                  {!last ? (
-                    <span
-                      aria-hidden
-                      className={cn("absolute left-[18px] top-[46px] h-[22px] w-0.5 rounded-full", done ? "bg-success" : active ? "bg-burnt/40" : "bg-sand-line")}
-                    />
-                  ) : null}
-                  <button
-                    type="button"
-                    disabled={!reachable}
-                    onClick={() => onJump(index)}
+
+        <div className="grid h-full grid-rows-[minmax(max-content,1fr)_auto_minmax(0,1fr)] justify-items-start overflow-y-auto py-6 pl-[calc(10%_+_12px)] pr-[calc(10%_-_12px)]">
+          <header className="mb-14 self-end text-left">
+            <Link
+              href="/"
+              className="inline-block rounded-sm font-display text-[clamp(2.5rem,4vw,3.5rem)] leading-none text-burnt focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-burnt"
+            >
+              Fides
+            </Link>
+            <p className="mt-1 text-base leading-6 text-burnt-dark">
+              Manage and grow your service business
+            </p>
+          </header>
+
+          <nav
+            aria-label="Registration progress"
+            className="relative top-3 w-fit max-w-full"
+          >
+            <ol className="flex h-[clamp(476px,72dvh,37rem)] flex-col [--step-size:56px]">
+              {STEPS.map((step, index) => {
+                const active = index === current;
+                const done = !active && completed.includes(index);
+                const reachable = index <= furthest && !active;
+                const last = index === STEPS.length - 1;
+                const Row = reachable ? "button" : "div";
+
+                return (
+                  <li
+                    key={step.title}
                     aria-current={active ? "step" : undefined}
-                    className="flex items-center gap-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-default"
+                    className={cn("relative", !last && "flex-1 pb-7")}
                   >
-                    <span
+                    {!last && (
+                      <span
+                        aria-hidden
+                        className={cn(
+                          "absolute bottom-1.5 left-[calc(var(--step-size)/2)] top-[calc(var(--step-size)+0.375rem)] w-0.5 -translate-x-1/2 rounded-full",
+                          done
+                            ? "bg-success/65"
+                            : active
+                              ? "bg-burnt/50"
+                              : "bg-outline/40",
+                        )}
+                      />
+                    )}
+                    <Row
+                      {...(reachable
+                        ? {
+                            type: "button" as const,
+                            onClick: () => onJump(index),
+                          }
+                        : {})}
                       className={cn(
-                        "flex size-[38px] shrink-0 items-center justify-center rounded-full border-2",
-                        done && "border-success bg-white text-success",
-                        active && "border-burnt bg-burnt text-on-burnt shadow-[0_4px_10px_-2px_rgb(195_80_0/0.45)]",
-                        !done && !active && "border-hairline bg-mist text-muted"
+                        "flex w-full items-center gap-4 rounded-xl pr-3 text-left transition-colors motion-reduce:transition-none",
+                        reachable &&
+                          "cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-burnt",
+                        reachable &&
+                          done &&
+                          "group hover:bg-wash/90 focus-visible:bg-wash/90",
                       )}
                     >
-                      <StepIcon name={step.icon} className="size-[18px]" />
-                    </span>
-                    <span className="flex flex-col gap-0.5">
-                      <span className={cn("text-sm leading-5", active ? "font-bold text-burnt" : "font-semibold text-muted")}>{step.title}</span>
-                      <span className={cn("text-xs leading-4", done ? "flex items-center gap-1 text-success" : active ? "text-burnt/80" : "text-subtle")}>
-                        {done ? (
-                          <>
-                            <Icon name="check-circle" weight="fill" className="size-3.5" />
-                            Completed
-                          </>
-                        ) : active ? (
-                          `Step ${index + 1} · Active`
-                        ) : (
-                          `Step ${index + 1}`
+                      <span
+                        className={cn(
+                          "grid size-(--step-size) shrink-0 place-items-center rounded-full border",
+                          active
+                            ? "border-burnt bg-burnt text-white shadow-md shadow-burnt/25"
+                            : done
+                              ? "border-success-deep bg-wash text-success"
+                              : "border-outline/30 bg-mist text-muted",
                         )}
+                      >
+                        <Icon
+                          name={step.icon}
+                          weight={active || done ? "fill" : "regular"}
+                          className="size-[22px]"
+                        />
                       </span>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ol>
-        </nav>
+                      <span className="flex min-w-0 flex-col gap-0.5">
+                        <span
+                          className={cn(
+                            "text-lg font-bold leading-6 xl:text-xl xl:leading-7",
+                            active
+                              ? "text-burnt-dark"
+                              : "text-muted group-hover:text-ink group-focus-visible:text-ink",
+                          )}
+                        >
+                          {step.title}
+                        </span>
+                        <span
+                          className={cn(
+                            "text-sm leading-5",
+                            active
+                              ? "text-burnt-dark"
+                              : done
+                                ? "text-success-deep"
+                                : "text-muted",
+                          )}
+                        >
+                          {done ? "Completed" : `Step ${index + 1}`}
+                        </span>
+                      </span>
+                    </Row>
+                  </li>
+                );
+              })}
+            </ol>
+          </nav>
+        </div>
       </div>
     </aside>
   );
 }
 
-export function MobileProgress({ current }: { current: number }) {
+export function MobileProgress({
+  current,
+  completed,
+  onJump,
+  navigationLocked,
+}: {
+  current: number;
+  completed: readonly number[];
+  onJump?: (step: number) => void;
+  navigationLocked: boolean;
+}) {
   return (
-    <header className="bg-sand px-4 pb-4 pt-4 sm:px-8 lg:hidden">
+    <header className="bg-[#faecd3] px-4 pb-4 pt-4 sm:px-8 lg:hidden">
       <div className="flex items-center justify-between">
         <Link href="/" className="font-display text-3xl text-burnt">
           Fides
         </Link>
-        <p className="text-xs font-semibold text-burnt">
+        <p className="text-sm font-semibold text-burnt">
           Step {current + 1} of {STEPS.length}
         </p>
       </div>
-      <p className="mt-1 text-sm font-semibold text-ink">{STEPS[current].title}</p>
+      <p className="mt-1 flex items-center gap-2 text-base font-semibold text-ink">
+        <Icon
+          name={STEPS[current].icon}
+          weight="fill"
+          className="size-5 text-burnt"
+        />
+        {STEPS[current].title}
+      </p>
       <div className="mt-3 flex gap-1.5" aria-hidden>
         {STEPS.map((step, index) => (
-          <span key={step.title} className={cn("h-1.5 flex-1 rounded-full", index <= current ? "bg-burnt" : "bg-sand-line")} />
+          <span
+            key={step.title}
+            className={cn(
+              "h-1.5 flex-1 rounded-full",
+              index === current || completed.includes(index)
+                ? "bg-burnt"
+                : "bg-[#e6d5bb]",
+            )}
+          />
         ))}
       </div>
+      {onJump && (
+        <label className="mt-3 grid gap-1 text-sm font-semibold text-ink">
+          Preview a step (development)
+          <select
+            value={current}
+            disabled={navigationLocked}
+            onChange={(event) => onJump(Number(event.target.value))}
+            className="min-h-11 w-full rounded-lg border border-outline bg-white px-3 text-base font-normal focus-visible:outline-2 focus-visible:outline-burnt disabled:opacity-50"
+          >
+            {STEPS.map((step, index) => (
+              <option key={step.title} value={index}>
+                {step.title}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
     </header>
   );
 }
@@ -139,36 +275,39 @@ export function Field({
   label,
   error,
   hint,
+  required = true,
   className,
   children,
   htmlFor,
-  caps = false,
 }: {
   label: string;
   error?: string;
   hint?: ReactNode;
+  required?: boolean;
   className?: string;
   children: ReactNode;
   htmlFor: string;
-  /** Small uppercase label style used on the Identity step in Figma. */
-  caps?: boolean;
 }) {
   return (
     <div className={cn("flex min-w-0 flex-col gap-1.5", className)}>
-      <label htmlFor={htmlFor} className={cn(caps ? "text-xs font-semibold uppercase tracking-wide text-body" : "text-sm font-semibold text-ink")}>
+      <label htmlFor={htmlFor} className="text-base font-semibold text-ink">
         {label}
-        <span aria-hidden className="ml-0.5 text-danger">
-          *
-        </span>
-        <span className="sr-only"> (required)</span>
+        {required && (
+          <>
+            <span aria-hidden className="ml-0.5 text-danger">
+              *
+            </span>
+            <span className="sr-only"> (required)</span>
+          </>
+        )}
       </label>
       {children}
       {error ? (
-        <p id={`${htmlFor}-error`} role="alert" className="text-xs text-danger">
+        <p id={`${htmlFor}-error`} role="alert" className="text-sm text-danger">
           {error}
         </p>
       ) : hint ? (
-        <div id={`${htmlFor}-hint`} className="text-xs text-subtle">
+        <div id={`${htmlFor}-hint`} className="text-sm text-subtle">
           {hint}
         </div>
       ) : null}
@@ -176,50 +315,107 @@ export function Field({
   );
 }
 
-export const inputClass = (invalid: boolean) => inputClasses(invalid);
-
-export function TextField({
+export function TextInput({
   id,
   invalid,
   className,
   ...props
 }: InputHTMLAttributes<HTMLInputElement> & { id: string; invalid: boolean }) {
-  return <input id={id} aria-invalid={invalid} className={cn(inputClass(invalid), className)} {...props} />;
+  return (
+    <Input
+      unstyled
+      id={id}
+      aria-invalid={invalid}
+      aria-describedby={invalid ? `${id}-error` : undefined}
+      className={cn(registrationFieldClasses(invalid), className)}
+      {...props}
+    />
+  );
 }
 
-export function PasswordField({
+export function PasswordInput({
   id,
   invalid,
   fieldLabel,
   ...props
-}: Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & { id: string; invalid: boolean; fieldLabel?: string }) {
-  return <BasePasswordInput id={id} aria-invalid={invalid} fieldLabel={fieldLabel} inputClassName={inputClass(invalid)} {...props} />;
+}: Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & {
+  id: string;
+  invalid: boolean;
+  fieldLabel?: string;
+}) {
+  return (
+    <BasePasswordInput
+      id={id}
+      aria-invalid={invalid}
+      aria-describedby={invalid ? `${id}-error` : undefined}
+      fieldLabel={fieldLabel}
+      inputClassName={registrationFieldClasses(invalid)}
+      {...props}
+    />
+  );
 }
 
 export function useObjectUrl(file: File | null): string | null {
   return useMemo(() => (file ? getObjectUrl(file) : null), [file]);
 }
 
-export function validateFile(file: File, types: readonly string[], limit: number, label: string): string | null {
-  if (!types.includes(file.type)) return `${label} must be ${types.map((type) => type.split("/")[1].toUpperCase().replace("JPEG", "JPG")).join(", ")}.`;
-  if (file.size > limit) return `${label} must be ${Math.round(limit / (1024 * 1024))} MB or smaller.`;
+export function validateFile(
+  file: File,
+  types: readonly string[],
+  limit: number,
+  label: string,
+): string | null {
+  if (!types.includes(file.type))
+    return `${label} must be ${types.map((type) => type.split("/")[1].toUpperCase().replace("JPEG", "JPG")).join(", ")}.`;
+  if (file.size > limit)
+    return `${label} must be ${Math.round(limit / (1024 * 1024))} MB or smaller.`;
   return null;
 }
 
-export function InfoNote({ children, icon = "info" }: { children: ReactNode; icon?: "info" | "shield" }) {
+export function InfoNote({
+  children,
+  icon = "info",
+}: {
+  children: ReactNode;
+  icon?: "info" | "shield";
+}) {
   return (
-    <div className="flex items-start gap-3 rounded-lg bg-info-bg px-4 py-3 text-sm text-info">
-      <StepIcon name={icon === "shield" ? "shield" : "info"} className="mt-0.5 size-4 shrink-0" />
+    <div
+      className={cn(
+        "grid grid-cols-[--spacing(5)_minmax(0,1fr)] items-center gap-3 rounded-lg bg-info-bg px-4 py-3 text-info",
+        icon === "shield" ? "text-sm leading-5" : "text-base",
+      )}
+    >
+      {icon === "shield" ? (
+        <Icon name="shield" weight="fill" className="size-5 justify-self-center" />
+      ) : (
+        <Icon name="alert" className="size-4 justify-self-center" />
+      )}
       <p>{children}</p>
     </div>
   );
 }
 
-export function SecureFooter() {
+export function SecureFooter({
+  children = "Your verification documents are stored securely.",
+}: {
+  children?: ReactNode;
+}) {
   return (
-    <p className="flex items-center justify-center gap-2 text-xs text-subtle">
-      <StepIcon name="shield" className="size-4 text-glyph" />
-      Your data is encrypted and secure. We never share your information.
+    <p className="flex items-start justify-center gap-2 text-sm leading-6 text-muted">
+      <Icon name="shield" weight="fill" className="mt-0.5 size-5 text-muted" />
+      <span>{children}</span>
     </p>
+  );
+}
+
+export function SummaryRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-start gap-3 text-sm leading-5 sm:gap-5">
+      <span className="text-muted">{label}</span>
+      <span className="min-w-0 [overflow-wrap:anywhere] text-right font-medium text-ink">
+        {value}
+      </span>
+    </div>
   );
 }

@@ -66,4 +66,3 @@ export function findAdminAccount(id: string): AdminAccount | null {
   const account = loadAccounts().find((item) => item.id === id);
   return account ? toPublic(account) : null;
 }
-

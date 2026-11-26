@@ -12,13 +12,11 @@ import { Icon } from "@/components/admin/icon";
 const initialState: LoginState = { error: null, email: "" };
 
 export function LoginForm({
-  submitted,
   queryError,
   queryMessage,
   redirectTo,
   staffSignInHref,
 }: {
-  submitted: boolean;
   queryError: string | null;
   queryMessage: string | null;
   redirectTo: string;
@@ -72,11 +70,6 @@ export function LoginForm({
               <p className="text-sm text-muted">Log in to manage your business account on Fides.</p>
             </div>
 
-            {submitted ? (
-              <p role="status" className="rounded-lg bg-wash px-4 py-3 text-sm text-success">
-                Application received. You can log in once an administrator approves it — we will email you.
-              </p>
-            ) : null}
             {queryMessage ? (
               <p role="status" className="rounded-lg bg-info-bg px-4 py-3 text-sm text-info">
                 {queryMessage}

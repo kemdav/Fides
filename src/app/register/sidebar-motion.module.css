@@ -1,0 +1,61 @@
+@media (prefers-reduced-motion: no-preference) {
+  .circle {
+    --drift-distance: clamp(24px, 3vw, 42px);
+    animation: breathe 10s ease-in-out infinite, drift 15s ease-in-out infinite;
+  }
+
+  .square {
+    --drift-distance: 24px;
+    animation: drift 12s ease-in-out infinite, spin 32s linear infinite;
+  }
+
+  .driftLeft {
+    --drift-distance: -12px;
+  }
+
+  .dot {
+    --drift-distance: 8px;
+    animation: drift 12s ease-in-out infinite;
+  }
+
+  .circle:nth-child(3n + 2) {
+    --drift-distance: -30px;
+    animation-delay: -4s, -7s;
+  }
+
+  .circle:nth-child(3n) {
+    animation-delay: -7s, -11s;
+  }
+
+  .dot:nth-child(3n + 2) {
+    animation-delay: -5s;
+  }
+
+  .dot:nth-child(3n) {
+    animation-delay: -9s;
+  }
+
+  .square:nth-child(3n + 2) {
+    animation-delay: -5s, -12s;
+    animation-direction: normal, reverse;
+  }
+
+  .square:nth-child(3n) {
+    animation-delay: -10s, -24s;
+  }
+}
+
+@keyframes breathe {
+  0%, 100% { scale: 1; }
+  50% { scale: 1.16; }
+}
+
+@keyframes drift {
+  0%, 100% { translate: 0 0; }
+  50% { translate: var(--drift-distance, 12px) calc(-1 * var(--drift-distance, 12px)); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0turn); }
+  to { transform: rotate(1turn); }
+}

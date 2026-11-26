@@ -7,7 +7,6 @@ import { mapAuthError, AUTH_ERROR_MESSAGES } from "@/lib/auth/error-handler";
  *
  * Processes:
  * - Email confirmation links
- * - Password recovery OTP callbacks
  * - OAuth code exchanges
  *
  * Catches expired, malformed, or rejected tokens and prompts user to request
@@ -43,26 +42,21 @@ export async function GET(request: NextRequest) {
   const type = searchParams.get("type"); // e.g. "recovery", "signup", "invite"
   const redirectTo = searchParams.get("redirect_to") ?? searchParams.get("next");
 
+  if (type === "recovery") {
+    const loginUrl = new URL("/login", origin);
+    loginUrl.searchParams.set("message", "Use Forgot your password? to request a new reset code.");
+    return NextResponse.redirect(loginUrl);
+  }
+
   if (code) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (error) {
       const userMessage = mapAuthError(error);
-      const isRecovery = type === "recovery";
-
       const failureUrl = new URL("/login", origin);
       failureUrl.searchParams.set("error", userMessage);
-      if (isRecovery) {
-        failureUrl.searchParams.set("tab", "forgot");
-      }
       return NextResponse.redirect(failureUrl);
-    }
-
-    // Successfully exchanged code!
-    // If this was a password recovery callback, route to reset-password form
-    if (type === "recovery") {
-      return NextResponse.redirect(new URL("/reset-password", origin));
     }
 
     // Otherwise route to the requested destination or dashboard

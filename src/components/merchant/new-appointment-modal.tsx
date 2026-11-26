@@ -4,19 +4,20 @@ import * as React from "react";
 import { fieldOutlineClasses } from "@/components/admin/fields";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/admin/icon";
-import { Listbox } from "@/components/admin/listbox";
-import { DatePicker, SelectField } from "@/components/ui";
+import { CalendarPicker } from "@/components/ui/calendar-picker";
+import { Listbox } from "@/components/ui/listbox";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { createAppointmentBookingAction } from "@/app/actions/appointments";
 import { getEligibleBookingStaff } from "@/lib/merchant/booking-staff-eligibility";
+import { getManilaDateKey } from "@/lib/date-utils";
 import type {
   AppointmentServiceOption,
   AppointmentStaffOption,
 } from "@/types/appointments";
 
 export type { AppointmentServiceOption, AppointmentStaffOption };
-export { Listbox } from "@/components/admin/listbox";
+export { Listbox } from "@/components/ui/listbox";
 
 // ─── static option lists ─────────────────────────────────────────────────────
 
@@ -62,47 +63,14 @@ function addMinutes(timeStr: string, mins: number): string {
 const fieldCls =
   `${fieldOutlineClasses} h-11 w-full px-3 text-sm text-ink placeholder:text-glyph`;
 
-// ─── labelled pickers (thin wrappers over the shared dropdown and date picker) ──
+// ─── Time listbox ─────────────────────────────────────────────────────────────
 
-function PickerLabel({ id, label, required }: { id: string; label: string; required?: boolean }) {
+const timeOptions = TIME_SLOTS.map((time) => ({ value: time, label: time }));
+
+export function TimeListbox({ id, label, required, value, onChange }: { id: string; label: string; required?: boolean; value: string; onChange: (v: string) => void }): React.JSX.Element {
   return (
-    <label htmlFor={id} className="mb-2 block text-sm font-semibold leading-5 text-ink">
-      {label}
-      {required && <span className="text-burnt"> *</span>}
-    </label>
-  );
-}
-
-function todayIso(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-}
-
-interface CalendarPickerProps {
-  id: string;
-  label: string;
-  required?: boolean;
-  value: string;
-  onChange: (iso: string) => void;
-}
-
-export function CalendarPicker({ id, label, required, value, onChange }: CalendarPickerProps) {
-  return (
-    <div>
-      <PickerLabel id={id} label={label} required={required} />
-      <DatePicker id={id} value={value} onChange={onChange} min={todayIso()} placeholder="Select a date" ariaLabel="Choose appointment date" />
-    </div>
-  );
-}
-
-const timeOptions = TIME_SLOTS.map((slot) => ({ value: slot, label: slot }));
-
-export function TimeListbox({ id, label, required, value, onChange }: { id: string; label: string; required?: boolean; value: string; onChange: (v: string) => void }) {
-  return (
-    <div>
-      <PickerLabel id={id} label={label} required={required} />
-      <SelectField id={id} value={value} options={timeOptions} onChange={onChange} placeholder="Select a time" />
-    </div>
+    <Listbox id={id} label={label} required={required} value={value} placement="above"
+      options={timeOptions} onChange={onChange} placeholder="Select a time" />
   );
 }
 
@@ -651,6 +619,7 @@ export function NewAppointmentModal({
                     id="appt-date"
                     label="Date"
                     required
+                    min={getManilaDateKey()}
                     value={date}
                     onChange={(v) => { setDate(v); setStep2Error(null); setConflictWarning(null); }}
                   />

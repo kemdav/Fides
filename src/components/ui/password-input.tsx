@@ -4,10 +4,6 @@ import { useState, type InputHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 import { Icon } from "@/components/admin/icon";
 
-function EyeIcon({ off }: { off: boolean }) {
-  return <Icon name={off ? "eye-closed" : "eye"} className="size-5" />;
-}
-
 export type PasswordInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & {
   id: string;
   /** Tailwind classes for the <input> itself (border, height, colours). */
@@ -34,7 +30,7 @@ export function PasswordInput({ id, inputClassName, fieldLabel = "password", cla
         title={visible ? `Hide ${fieldLabel}` : `Show ${fieldLabel}`}
         className="absolute right-1.5 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-glyph transition-colors hover:bg-burnt/10 hover:text-burnt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
       >
-        <EyeIcon off={visible} />
+        <Icon name={visible ? "eye-off" : "eye"} className="size-5" />
       </button>
     </div>
   );

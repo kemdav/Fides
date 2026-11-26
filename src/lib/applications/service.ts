@@ -1,18 +1,26 @@
 import "server-only";
+import { randomBytes } from "node:crypto";
+import { publicEnv } from "@/lib/env";
+import { normalizeSlugInput, slugSchema, type SlugValidationResult } from "@/lib/registration/slug";
 import { nextBillingDate } from "@/lib/billing";
 import { isMailConfigured } from "@/lib/mail/mailer";
 import { sendApprovalEmail, sendBillingReminderEmail, sendRejectionEmail, sendSubmissionEmail } from "@/lib/mail/emails";
+import { formatRegistrationStreetAddress } from "@/lib/registration/address";
+import { readMissingApprovalDocuments } from "./document-queries";
 import { createAdminClient, type AdminClient } from "@/lib/supabase/admin";
 import {
   ALL_DOCUMENTS,
   DOCUMENT_BUCKET,
+  documentByteLimit,
   FILE_LIMITS,
   GOVERNMENT_ID_SLOT,
   ID_TYPES,
-  REQUIRED_DOCUMENT_KEYS,
+  ID_TYPE_STORAGE_VALUES,
+  applicationDocumentsFor,
+  businessTypeLabel,
   type DocumentKey,
 } from "@/lib/registration/options";
-import { registrationSchema, type RegistrationInput } from "@/lib/registration/schema";
+import type { RegistrationInput } from "@/lib/registration/schema";
 import type {
   ActivityEvent,
   PlanSummary,
@@ -41,6 +49,12 @@ export class ServiceError extends Error {
   ) {
     super(message);
     this.name = "ServiceError";
+  }
+}
+
+export class DocumentUploadError extends ServiceError {
+  constructor(public readonly key: DocumentKey, message: string) {
+    super(message, 422);
   }
 }
 
@@ -93,18 +107,18 @@ function sniffDocument(bytes: Buffer): Pick<PreparedDocument, "mime" | "extensio
   return null;
 }
 
-async function prepareDocuments(documents: DocumentUploads): Promise<PreparedDocument[]> {
+async function prepareDocuments(documents: DocumentUploads, data: RegistrationInput): Promise<PreparedDocument[]> {
   const prepared: PreparedDocument[] = [];
-  for (const key of REQUIRED_DOCUMENT_KEYS) {
-    const title = ALL_DOCUMENTS.find((doc) => doc.key === key)?.title ?? key;
+  for (const { key, title } of applicationDocumentsFor(data.businessType)) {
     const file = documents[key];
-    if (!file || file.size === 0) throw new ServiceError(`${title} is required. Please upload this document.`, 400);
-    if (file.size > FILE_LIMITS.documentBytes) {
-      throw new ServiceError(`${title} must be ${Math.round(FILE_LIMITS.documentBytes / (1024 * 1024))} MB or smaller.`, 400);
+    if (!file || file.size === 0) throw new DocumentUploadError(key, `${title} is required. Please upload this document.`);
+    const limit = documentByteLimit(key);
+    if (file.size > limit) {
+      throw new DocumentUploadError(key, `${title} must be ${limit / (1024 * 1024)} MB or smaller.`);
     }
     const bytes = Buffer.from(await file.arrayBuffer());
     const kind = sniffDocument(bytes);
-    if (!kind) throw new ServiceError(`${title} must be a PDF, JPG or PNG file.`, 400);
+    if (!kind) throw new DocumentUploadError(key, `${title} must be a PDF, JPG or PNG file.`);
     prepared.push({ key, file, bytes, ...kind });
   }
   return prepared;
@@ -115,34 +129,58 @@ function safeFileName(name: string): string {
   return (cleaned || "document").slice(0, 180);
 }
 
+export async function checkRequestedSlug(raw: string): Promise<SlugValidationResult> {
+  const normalizedSlug = normalizeSlugInput(raw);
+  const parsed = slugSchema.safeParse(normalizedSlug);
+  const result = {
+    slug: raw,
+    normalizedSlug,
+    available: parsed.success,
+    reason: parsed.error?.issues[0]?.message ?? "Available to request.",
+    previewHost: `${normalizedSlug || "your-business"}.${publicEnv.platformDomain || "fides.app"}`,
+    suggestions: [],
+  };
+  if (!result.available) return result;
+
+  const admin = createAdminClient();
+  const slug = result.normalizedSlug;
+  const [tenant, application] = await Promise.all([
+    admin.from("tenants").select("id").eq("slug", slug).maybeSingle(),
+    admin.from("application_businesses").select("application_id").eq("requested_slug", slug).maybeSingle(),
+  ]);
+  if (tenant.error || application.error) throw new ServiceError("Could not check subdomain availability.", 503);
+  return tenant.data || application.data
+    ? { ...result, available: false, reason: "This subdomain is already in use or requested." }
+    : { ...result, reason: "Available to request." };
+}
+
 export async function submitApplication(
-  raw: unknown,
-  logo: File | null,
+  data: RegistrationInput,
+  logo: File,
   documents: DocumentUploads
 ): Promise<{ referenceCode: string }> {
-  const parsed = registrationSchema.safeParse(raw);
-  if (!parsed.success) {
-    throw new ServiceError(parsed.error.issues[0]?.message ?? "Invalid application details.", 400);
+  const fullName = data.fullName ?? data.ownerLegalName;
+  const businessType = businessTypeLabel(data.businessType, data.customBusinessType);
+  if (data.requestedSlug) {
+    const availability = await checkRequestedSlug(data.requestedSlug);
+    if (!availability.available) throw new ServiceError(availability.reason, 409);
   }
-  const data: RegistrationInput = parsed.data;
 
-  if (logo) {
-    if (!(FILE_LIMITS.logoTypes as readonly string[]).includes(logo.type)) {
-      throw new ServiceError("The business logo must be a JPG, PNG, or WebP image.", 400);
-    }
-    if (logo.size > FILE_LIMITS.logoBytes) {
-      throw new ServiceError("The business logo must be 2 MB or smaller.", 400);
-    }
+  if (!(FILE_LIMITS.logoTypes as readonly string[]).includes(logo.type)) {
+    throw new ServiceError("The business logo must be a JPG, PNG, or WebP image.", 400);
+  }
+  if (logo.size > FILE_LIMITS.logoBytes) {
+    throw new ServiceError("The business logo must be 2 MB or smaller.", 400);
   }
 
   // Every document is required. Validate them all before anything is created.
-  const preparedDocuments = await prepareDocuments(documents);
+  const preparedDocuments = await prepareDocuments(documents, data);
 
   const admin = createAdminClient();
 
   const { data: plan } = await admin
     .from("subscription_plans")
-    .select("code, is_active")
+    .select("code, is_active, name, price_php, billing_cycle")
     .eq("code", data.planCode)
     .maybeSingle();
   if (!plan || !plan.is_active) throw new ServiceError("The selected subscription package is not available.", 400);
@@ -158,7 +196,7 @@ export async function submitApplication(
     email: data.email,
     password: data.password,
     email_confirm: true,
-    user_metadata: { full_name: data.fullName },
+    user_metadata: { full_name: fullName },
     app_metadata: { role: "owner" },
   });
 
@@ -179,10 +217,11 @@ export async function submitApplication(
     const { data: application, error: applicationError } = await admin
       .from("account_applications")
       .insert({
+        reference_code: `FID-${randomBytes(16).toString("hex").toUpperCase()}`,
         user_id: userId,
-        full_name: data.fullName,
+        full_name: fullName,
         email: data.email,
-        phone: data.phone,
+        phone: data.phone ?? null,
         status: "pending",
         plan_code: data.planCode,
         terms_accepted_at: now,
@@ -223,34 +262,35 @@ export async function submitApplication(
       application_id: application.id,
       owner_legal_name: data.ownerLegalName,
       date_of_birth: data.dateOfBirth,
-      id_type: data.idType,
+      id_type: ID_TYPE_STORAGE_VALUES[data.idType],
       id_document_path: governmentIdPath,
     });
     if (identityError) fail(identityError, "Could not save the identity details");
 
-    let logoUrl: string | null = null;
-    if (logo) {
-      const extension = logo.type === "image/png" ? "png" : logo.type === "image/webp" ? "webp" : "jpg";
-      logoPath = `${application.id}/logo.${extension}`;
-      const { error: uploadError } = await admin.storage
-        .from(LOGO_BUCKET)
-        .upload(logoPath, Buffer.from(await logo.arrayBuffer()), { contentType: logo.type, upsert: true });
-      if (uploadError) fail(uploadError, "Could not upload the business logo");
-      logoUrl = admin.storage.from(LOGO_BUCKET).getPublicUrl(logoPath).data.publicUrl;
-    }
+    const extension = logo.type === "image/png" ? "png" : logo.type === "image/webp" ? "webp" : "jpg";
+    logoPath = `${application.id}/logo.${extension}`;
+    const { error: uploadError } = await admin.storage
+      .from(LOGO_BUCKET)
+      .upload(logoPath, Buffer.from(await logo.arrayBuffer()), { contentType: logo.type, upsert: true });
+    if (uploadError) fail(uploadError, "Could not upload the business logo");
+    const logoUrl = admin.storage.from(LOGO_BUCKET).getPublicUrl(logoPath).data.publicUrl;
 
     const { error: businessError } = await admin.from("application_businesses").insert({
       application_id: application.id,
       business_name: data.businessName,
-      business_type: data.businessType,
+      business_type: businessType,
       established_year: Number(data.establishedYear),
-      street_address: data.streetAddress,
+      street_address: formatRegistrationStreetAddress(data.streetAddress, data.barangay),
       city: data.city,
       province: data.province,
       zip_code: data.zipCode,
       logo_path: logoPath,
       logo_url: logoUrl,
+      ...(data.requestedSlug ? { requested_slug: data.requestedSlug } : {}),
     });
+    if (businessError?.code === "23505" && data.requestedSlug) {
+      throw new ServiceError("This subdomain is already in use or requested.", 409);
+    }
     if (businessError) fail(businessError, "Could not save the business details");
 
     const { error: documentsError } = await admin.from("application_documents").insert(documentRows);
@@ -263,10 +303,10 @@ export async function submitApplication(
       category: "verification",
       before: "None",
       after: "Pending",
-      reason: `${data.fullName} submitted a new account application with ${documentRows.length} documents.${
+      reason: `${fullName} submitted a new account application with ${documentRows.length} documents.${
         previousRejections ? ` This email was rejected ${previousRejections} time${previousRejections === 1 ? "" : "s"} before.` : ""
       }`,
-      actor: data.fullName,
+      actor: fullName,
     });
 
     // Everything is saved: confirm by email. A mail failure must never undo a valid submission.
@@ -274,7 +314,22 @@ export async function submitApplication(
       await sendSubmissionEmail({
         to: data.email,
         ownerName: data.ownerLegalName,
+        accountName: fullName,
+        phone: data.phone,
+        dateOfBirth: data.dateOfBirth,
+        idType: data.idType,
         businessName: data.businessName,
+        businessType,
+        establishedYear: data.establishedYear,
+        streetAddress: data.streetAddress,
+        barangay: data.barangay,
+        city: data.city,
+        province: data.province,
+        zipCode: data.zipCode,
+        requestedSlug: data.requestedSlug,
+        planName: plan.name,
+        planPrice: Number(plan.price_php),
+        billingCycle: plan.billing_cycle,
         referenceCode: application.reference_code,
       });
     } catch (mailError) {
@@ -343,17 +398,20 @@ function mimeLabel(mime: string | null): string {
   return "File";
 }
 
-/** One entry per required document, in display order, flagged as uploaded or missing. */
-function buildDocumentList(rows: ApplicationDocumentRow[]): SubmissionDocument[] {
+/** Show the current requirements alongside any files received on earlier checklists. */
+function buildDocumentList(rows: ApplicationDocumentRow[], businessType: string): SubmissionDocument[] {
   const byType = new Map(rows.map((row) => [row.document_type, row]));
-  const list: SubmissionDocument[] = ALL_DOCUMENTS.map((doc) => {
+  const requiredKeys = new Set(applicationDocumentsFor(businessType)
+    .filter(({ key }) => key !== "government_id_back" || byType.has(key))
+    .map(({ key }) => key));
+  const list: SubmissionDocument[] = ALL_DOCUMENTS.filter(({ key }) => byType.has(key) || requiredKeys.has(key)).map((doc) => {
     const row = byType.get(doc.key);
     const uploaded = !!row?.storage_path;
     return {
       id: row?.id ?? null,
       key: doc.key,
       label: doc.title,
-      required: doc.required,
+      required: requiredKeys.has(doc.key),
       status: uploaded ? "uploaded" : "missing",
       fileName: row?.file_name ?? null,
       mimeType: row?.mime_type ?? null,
@@ -426,13 +484,13 @@ export async function loadAdminSnapshot(): Promise<AdminSnapshot> {
     owner: identity?.owner_legal_name ?? app.full_name,
     location: business ? `${business.city}, ${business.province}` : "—",
     email: app.email,
-    phone: app.phone,
+    phone: app.phone ?? "—",
     plan: planMap.get(app.plan_code)?.name ?? app.plan_code,
     submittedAt: app.submitted_at,
     reviewedAt: app.reviewed_at,
     status: app.status,
-    idType: ID_TYPES.find((item) => item.value === identity?.id_type)?.label ?? identity?.id_type ?? "—",
-    documents: buildDocumentList(documentsByApplication.get(app.id) ?? []),
+    idType: ID_TYPES.find(({ value }) => value === identity?.id_type || ID_TYPE_STORAGE_VALUES[value] === identity?.id_type)?.label ?? identity?.id_type ?? "—",
+    documents: buildDocumentList(documentsByApplication.get(app.id) ?? [], business?.business_type ?? ""),
     note: app.review_notes ? [app.review_notes] : undefined,
     decidedAt: app.status === "pending" ? null : (app.decided_at ?? app.approved_at ?? app.reviewed_at),
     previousRejections: rejectionsByEmail.get(app.email.toLowerCase()),
@@ -563,7 +621,13 @@ export async function approveApplication(id: string): Promise<DecisionResult> {
   if (app.status !== "pending") throw new ServiceError("Only pending applications can be approved.", 409);
   if (!business) throw new ServiceError("This application has no business details.", 409);
 
-  const slug = await uniqueSlug(admin, business.business_name);
+  const missing = await readMissingApprovalDocuments(admin, id);
+  if (!missing) throw new ServiceError("Could not verify the application documents.", 503);
+  if (missing.length) {
+    throw new ServiceError(`The application is missing required documents: ${missing.map(({ label }) => label).join(", ")}.`, 409);
+  }
+
+  const slug = business.requested_slug ?? await uniqueSlug(admin, business.business_name);
   const { data: tenant, error: tenantError } = await admin
     .from("tenants")
     .insert({
