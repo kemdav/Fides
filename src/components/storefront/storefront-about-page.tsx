@@ -195,7 +195,7 @@ export function StorefrontAboutPage({
       </section>
 
       {(address || (showOpeningHours && hoursMonFri)) && (
-        <section className="border-t border-[#e2e8f0] bg-powder">
+        <section className="border-t border-hairline bg-powder">
           <div className="mx-auto max-w-[1440px] px-5 py-8 sm:px-8 sm:py-12 lg:px-[90px] lg:py-16">
             <p className="text-xs font-bold uppercase tracking-wider text-burnt">
               Visit us

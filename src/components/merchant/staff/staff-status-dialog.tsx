@@ -1,8 +1,8 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { toggleStaffActiveAction } from "@/app/actions/staff";
-import { AdminButton } from "@/components/admin/admin-button";
 import { StaffConfirmationDialog } from "./staff-confirmation-dialog";
 
 export function StaffStatusDialog({ tenantId, staff, lastOwnerProtected = false, onClose, onChanged }: {
@@ -45,13 +45,13 @@ export function StaffStatusDialog({ tenantId, staff, lastOwnerProtected = false,
           : `${staff.fullName} will be marked as ${staff.active ? "inactive" : "active"} in the staff roster.`}
     >
         {protectedOwner ? (
-          <AdminButton variant="primary" size="xs" onClick={onClose}>Keep owner role</AdminButton>
+          <Button variant="brand" size="xs" onClick={onClose}>Keep owner role</Button>
         ) : (
           <>
-            <AdminButton variant="outline" size="xs" onClick={onClose} disabled={saving}>Cancel</AdminButton>
-            <AdminButton variant={staff.active ? "danger" : "primary"} size="xs" onClick={confirm} disabled={saving}>
+            <Button variant="secondary" size="xs" onClick={onClose} disabled={saving}>Cancel</Button>
+            <Button size="xs" variant={staff.active ? "danger" : "brand"} onClick={confirm} disabled={saving}>
               {saving ? "Saving…" : action}
-            </AdminButton>
+            </Button>
           </>
         )}
     </StaffConfirmationDialog>

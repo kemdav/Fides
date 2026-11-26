@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { DatePicker } from "@/components/ui";
 import { Checkbox } from "@/components/admin/primitives";
 import {
   SUPPLIER_BILLING_INFO,
@@ -108,7 +109,7 @@ export function BillingDetailsModal({
             type="button"
             onClick={onClose}
             disabled={submitting}
-            className="inline-flex h-11 min-w-[110px] items-center justify-center rounded-lg border border-[#E5E7EB] bg-white px-5 text-sm font-semibold text-[#243242] transition-colors hover:bg-[#F9FAFB]"
+            className="inline-flex h-11 min-w-[110px] items-center justify-center rounded-lg border border-line bg-white px-5 text-sm font-semibold text-ink transition-colors hover:bg-mist"
           >
             Cancel
           </button>
@@ -128,7 +129,7 @@ export function BillingDetailsModal({
                 branchCode,
               })
             }
-            className="inline-flex h-11 min-w-[148px] items-center justify-center rounded-lg bg-[#C35000] px-6 text-sm font-semibold text-white transition-colors hover:bg-[#A64400] disabled:bg-[#E5B896] disabled:text-white"
+            className="inline-flex h-11 min-w-[148px] items-center justify-center rounded-lg bg-burnt px-6 text-sm font-semibold text-on-burnt transition-colors hover:bg-burnt-dark disabled:bg-sand-400 disabled:text-on-burnt"
           >
             {submitting ? "Saving..." : "Save changes"}
           </button>
@@ -137,32 +138,32 @@ export function BillingDetailsModal({
     >
       <div className="space-y-4">
         {error && (
-          <div className="rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B91C1C]">
+          <div className="rounded-lg border border-danger/30 bg-danger-bg px-4 py-3 text-sm text-danger-dark">
             {error}
           </div>
         )}
 
         <div>
-          <label className="block text-sm font-medium text-[#243242]">
+          <label className="block text-sm font-medium text-ink">
             Billing name *
           </label>
           <input
             type="text"
             value={billingName}
             onChange={(e) => setBillingName(e.target.value)}
-            className="mt-1.5 h-11 w-full rounded-[10px] border border-[#E5E7EB] px-3.5 text-sm text-[#243242] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+            className="mt-1.5 h-11 w-full rounded-[10px] border border-line px-3.5 text-sm text-ink focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[#243242]">
+          <label className="block text-sm font-medium text-ink">
             Billing email *
           </label>
           <input
             type="email"
             value={billingEmail}
             onChange={(e) => setBillingEmail(e.target.value)}
-            className="mt-1.5 h-11 w-full rounded-[10px] border border-[#E5E7EB] px-3.5 text-sm text-[#243242] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+            className="mt-1.5 h-11 w-full rounded-[10px] border border-line px-3.5 text-sm text-ink focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20"
           />
         </div>
 
@@ -173,20 +174,20 @@ export function BillingDetailsModal({
               onChange={handleToggleSync}
               tone="brand"
               label={
-                <span className="font-medium text-[#243242]">
+                <span className="font-medium text-ink">
                   Same as Business Email
                 </span>
               }
             />
           </div>
-          <p className="text-xs leading-[18px] text-[#6B7280]">
+          <p className="text-xs leading-[18px] text-muted">
             Synced with your business address. Turn this off to edit a separate
             billing address.
           </p>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[#243242]">
+          <label className="block text-sm font-medium text-ink">
             Street / barangay *
           </label>
           <input
@@ -194,12 +195,12 @@ export function BillingDetailsModal({
             value={streetBarangay}
             disabled={sameAsBusinessEmail && Boolean(streetBarangay)}
             onChange={(e) => setStreetBarangay(e.target.value)}
-            className="mt-1.5 h-11 w-full rounded-[10px] border border-[#E5E7EB] px-3.5 text-sm text-[#243242] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20 disabled:bg-[#F9FAFB] disabled:text-[#6B7280]"
+            className="mt-1.5 h-11 w-full rounded-[10px] border border-line px-3.5 text-sm text-ink focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20 disabled:bg-mist disabled:text-muted"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[#243242]">
+          <label className="block text-sm font-medium text-ink">
             City *
           </label>
           <input
@@ -207,12 +208,12 @@ export function BillingDetailsModal({
             value={city}
             disabled={sameAsBusinessEmail && Boolean(city)}
             onChange={(e) => setCity(e.target.value)}
-            className="mt-1.5 h-11 w-full rounded-[10px] border border-[#E5E7EB] px-3.5 text-sm text-[#243242] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20 disabled:bg-[#F9FAFB] disabled:text-[#6B7280]"
+            className="mt-1.5 h-11 w-full rounded-[10px] border border-line px-3.5 text-sm text-ink focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20 disabled:bg-mist disabled:text-muted"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[#243242]">
+          <label className="block text-sm font-medium text-ink">
             Province *
           </label>
           <input
@@ -220,12 +221,12 @@ export function BillingDetailsModal({
             value={province}
             disabled={sameAsBusinessEmail && Boolean(province)}
             onChange={(e) => setProvince(e.target.value)}
-            className="mt-1.5 h-11 w-full rounded-[10px] border border-[#E5E7EB] px-3.5 text-sm text-[#243242] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20 disabled:bg-[#F9FAFB] disabled:text-[#6B7280]"
+            className="mt-1.5 h-11 w-full rounded-[10px] border border-line px-3.5 text-sm text-ink focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20 disabled:bg-mist disabled:text-muted"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[#243242]">
+          <label className="block text-sm font-medium text-ink">
             Postal code *
           </label>
           <input
@@ -233,13 +234,13 @@ export function BillingDetailsModal({
             value={postalCode}
             disabled={sameAsBusinessEmail && Boolean(postalCode)}
             onChange={(e) => setPostalCode(e.target.value)}
-            className="mt-1.5 h-11 w-full rounded-[10px] border border-[#E5E7EB] px-3.5 text-sm text-[#243242] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20 disabled:bg-[#F9FAFB] disabled:text-[#6B7280]"
+            className="mt-1.5 h-11 w-full rounded-[10px] border border-line px-3.5 text-sm text-ink focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20 disabled:bg-mist disabled:text-muted"
           />
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium text-[#243242]">
+            <label className="block text-sm font-medium text-ink">
               TIN (optional)
             </label>
             <input
@@ -247,11 +248,11 @@ export function BillingDetailsModal({
               value={tin}
               onChange={(e) => setTin(e.target.value)}
               placeholder="123-456-789"
-              className="mt-1.5 h-11 w-full rounded-[10px] border border-[#E5E7EB] px-3.5 text-sm text-[#243242] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+              className="mt-1.5 h-11 w-full rounded-[10px] border border-line px-3.5 text-sm text-ink focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#243242]">
+            <label className="block text-sm font-medium text-ink">
               Branch code (optional)
             </label>
             <input
@@ -259,7 +260,7 @@ export function BillingDetailsModal({
               value={branchCode}
               onChange={(e) => setBranchCode(e.target.value)}
               placeholder="000"
-              className="mt-1.5 h-11 w-full rounded-[10px] border border-[#E5E7EB] px-3.5 text-sm text-[#243242] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+              className="mt-1.5 h-11 w-full rounded-[10px] border border-line px-3.5 text-sm text-ink focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20"
             />
           </div>
         </div>
@@ -309,7 +310,7 @@ export function InvoiceDeliveryPreferencesModal({
             onSave({ ccEmail, renewalRemindersEnabled: remindersEnabled })
           }
           disabled={submitting}
-          className="inline-flex h-11 items-center justify-center rounded-lg bg-[#C35000] px-6 text-sm font-semibold text-white transition-colors hover:bg-[#A64400] disabled:opacity-50"
+          className="inline-flex h-11 items-center justify-center rounded-lg bg-burnt px-6 text-sm font-semibold text-on-burnt transition-colors hover:bg-burnt-dark disabled:opacity-50"
         >
           {submitting ? "Saving..." : "Save preferences"}
         </button>
@@ -317,7 +318,7 @@ export function InvoiceDeliveryPreferencesModal({
     >
       <div className="space-y-4">
         {error && (
-          <div className="rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B91C1C]">
+          <div className="rounded-lg border border-danger/30 bg-danger-bg px-4 py-3 text-sm text-danger-dark">
             {error}
           </div>
         )}
@@ -325,7 +326,7 @@ export function InvoiceDeliveryPreferencesModal({
         <div>
           <label
             htmlFor="cc-email-input"
-            className="block text-sm font-medium text-[#243242]"
+            className="block text-sm font-medium text-ink"
           >
             CC email (optional)
           </label>
@@ -335,25 +336,25 @@ export function InvoiceDeliveryPreferencesModal({
             value={ccEmail}
             onChange={(e) => setCcEmail(e.target.value)}
             placeholder="accounts@bellavita.example"
-            className="mt-1.5 h-11 w-full rounded-[10px] border border-[#E5E7EB] px-3.5 text-sm text-[#243242] placeholder:text-[#9CA3AF] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+            className="mt-1.5 h-11 w-full rounded-[10px] border border-line px-3.5 text-sm text-ink placeholder:text-glyph focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20"
           />
-          <p className="mt-2 text-xs leading-[18px] text-[#6B7280]">
+          <p className="mt-2 text-xs leading-[18px] text-muted">
             Invoices go to the billing email. This address receives a copy.
           </p>
         </div>
 
-        <div className="rounded-[10px] bg-[#F4F5F7] px-4 py-3.5">
+        <div className="rounded-[10px] bg-mist px-4 py-3.5">
           <Checkbox
             checked={remindersEnabled}
             onChange={setRemindersEnabled}
             tone="brand"
             label={
-              <span className="text-sm font-medium text-[#243242]">
+              <span className="text-sm font-medium text-ink">
                 Automated renewal due-date email reminders
               </span>
             }
           />
-          <p className="mt-1.5 pl-6 text-xs leading-[18px] text-[#6B7280]">
+          <p className="mt-1.5 pl-6 text-xs leading-[18px] text-muted">
             Sent automatically {renewalReminderDays.join(", ")} days before your
             upcoming renewal date to your billing email and CC recipient.
           </p>
@@ -406,7 +407,7 @@ export function SubscriptionInvoiceModal({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-11 min-w-[96px] items-center justify-center rounded-lg border border-[#E5E7EB] bg-white px-5 text-sm font-semibold text-[#243242] transition-colors hover:bg-[#F9FAFB]"
+            className="inline-flex h-11 min-w-[96px] items-center justify-center rounded-lg border border-line bg-white px-5 text-sm font-semibold text-ink transition-colors hover:bg-mist"
           >
             Close
           </button>
@@ -417,8 +418,8 @@ export function SubscriptionInvoiceModal({
             className={cn(
               "inline-flex h-11 items-center justify-center rounded-lg text-sm font-semibold transition-colors disabled:opacity-50",
               canSubmitPayment
-                ? "border border-[#E5E7EB] bg-white px-5 text-[#243242] hover:bg-[#F9FAFB]"
-                : "bg-[#C35000] px-6 text-white hover:bg-[#A64400]",
+                ? "border border-line bg-white px-5 text-ink hover:bg-mist"
+                : "bg-burnt px-6 text-on-burnt hover:bg-burnt-dark",
             )}
           >
             {downloading ? "Preparing PDF…" : "Download PDF"}
@@ -427,7 +428,7 @@ export function SubscriptionInvoiceModal({
             <button
               type="button"
               onClick={() => onOpenSubmitPayment(invoice)}
-              className="inline-flex h-11 items-center justify-center rounded-lg bg-[#C35000] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#A64400]"
+              className="inline-flex h-11 items-center justify-center rounded-lg bg-burnt px-5 text-sm font-semibold text-on-burnt transition-colors hover:bg-burnt-dark"
             >
               Submit payment details
             </button>
@@ -442,8 +443,8 @@ export function SubscriptionInvoiceModal({
             className={cn(
               "inline-flex items-center rounded-full px-3.5 py-1 text-xs font-semibold",
               isPaid
-                ? "bg-[#E9F9EE] text-[#15803D]"
-                : "bg-[#F3F4F6] text-[#243242]",
+                ? "bg-wash text-success"
+                : "bg-mist text-ink",
             )}
           >
             {statusLabel}
@@ -451,26 +452,26 @@ export function SubscriptionInvoiceModal({
         </div>
 
         <div className="space-y-0.5">
-          <p className="text-[15px] font-semibold text-[#243242]">
+          <p className="text-[15px] font-semibold text-ink">
             {SUPPLIER_BILLING_INFO.legalName}
           </p>
-          <p className="text-xs text-[#6B7280]">
+          <p className="text-xs text-muted">
             {SUPPLIER_BILLING_INFO.address}
           </p>
-          <p className="text-xs text-[#6B7280]">
+          <p className="text-xs text-muted">
             Supplier TIN: {SUPPLIER_BILLING_INFO.tin}
           </p>
         </div>
 
         <div className="space-y-0.5">
-          <p className="font-semibold text-[#243242]">
+          <p className="font-semibold text-ink">
             Billed to: {invoice.billedToName}
           </p>
           {invoice.billedToAddress && (
-            <p className="text-xs text-[#4B5563]">{invoice.billedToAddress}</p>
+            <p className="text-xs text-body">{invoice.billedToAddress}</p>
           )}
           {(invoice.billedToTin || invoice.billedToBranch) && (
-            <p className="text-xs text-[#4B5563]">
+            <p className="text-xs text-body">
               {[
                 invoice.billedToTin ? `TIN: ${invoice.billedToTin}` : null,
                 invoice.billedToBranch
@@ -481,19 +482,19 @@ export function SubscriptionInvoiceModal({
                 .join(" · ")}
             </p>
           )}
-          <p className="text-xs text-[#4B5563]">{invoice.billedToEmail}</p>
+          <p className="text-xs text-body">{invoice.billedToEmail}</p>
         </div>
 
         <dl className="space-y-2.5 pt-1 text-sm">
           <div className="grid grid-cols-2 gap-4">
-            <dt className="text-[#6B7280]">Invoice number</dt>
-            <dd className="font-medium text-[#243242]">
+            <dt className="text-muted">Invoice number</dt>
+            <dd className="font-medium text-ink">
               {invoice.invoiceNumber}
             </dd>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <dt className="text-[#6B7280]">Billing period</dt>
-            <dd className="font-medium text-[#243242]">
+            <dt className="text-muted">Billing period</dt>
+            <dd className="font-medium text-ink">
               {formatPeriodRange(
                 invoice.billingPeriodStart,
                 invoice.billingPeriodEnd,
@@ -502,67 +503,67 @@ export function SubscriptionInvoiceModal({
             </dd>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <dt className="text-[#6B7280]">Issued</dt>
-            <dd className="font-medium text-[#243242]">
+            <dt className="text-muted">Issued</dt>
+            <dd className="font-medium text-ink">
               {formatLongDate(invoice.issuedAt, timezone)}
             </dd>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <dt className="text-[#6B7280]">Due date</dt>
-            <dd className="font-medium text-[#243242]">
+            <dt className="text-muted">Due date</dt>
+            <dd className="font-medium text-ink">
               {formatLongDate(invoice.dueAt, timezone)}
             </dd>
           </div>
           {invoice.paidAt && (
             <div className="grid grid-cols-2 gap-4">
-              <dt className="text-[#6B7280]">Paid date</dt>
-              <dd className="font-medium text-[#243242]">
+              <dt className="text-muted">Paid date</dt>
+              <dd className="font-medium text-ink">
                 {formatLongDate(invoice.paidAt, timezone)}
               </dd>
             </div>
           )}
           <div className="grid grid-cols-2 gap-4 pt-1">
-            <dt className="text-[#6B7280]">
+            <dt className="text-muted">
               {invoice.tierName} subscription · 1 month
             </dt>
-            <dd className="font-medium text-[#243242]">
+            <dd className="font-medium text-ink">
               {formatPhp(invoice.subtotalCents, true)}
             </dd>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <dt className="text-[#6B7280]">VAT · Illustrative 12%</dt>
-            <dd className="font-medium text-[#243242]">
+            <dt className="text-muted">VAT · Illustrative 12%</dt>
+            <dd className="font-medium text-ink">
               {formatPhp(invoice.vatCents, true)}
             </dd>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <dt className="text-[#6B7280]">Total invoice amount</dt>
-            <dd className="font-medium text-[#243242]">
+            <dt className="text-muted">Total invoice amount</dt>
+            <dd className="font-medium text-ink">
               {formatPhp(invoice.totalCents)}
             </dd>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <dt className="text-[#6B7280]">Amount paid</dt>
-            <dd className="font-medium text-[#243242]">
+            <dt className="text-muted">Amount paid</dt>
+            <dd className="font-medium text-ink">
               {formatPhp(invoice.amountPaidCents)}
             </dd>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <dt className="text-[#6B7280]">Balance due</dt>
-            <dd className="font-medium text-[#243242]">
+            <dt className="text-muted">Balance due</dt>
+            <dd className="font-medium text-ink">
               {formatPhp(invoice.balanceDueCents)}
             </dd>
           </div>
         </dl>
 
-        <div className="space-y-1 rounded-[10px] bg-[#F4F5F7] px-4 py-3.5 text-xs leading-[18px] text-[#374151]">
-          <p className="font-medium text-[#243242]">
+        <div className="space-y-1 rounded-[10px] bg-mist px-4 py-3.5 text-xs leading-[18px] text-body">
+          <p className="font-medium text-ink">
             {SUPPLIER_BILLING_INFO.bankName}
           </p>
           <p>Account: {SUPPLIER_BILLING_INFO.accountMask}</p>
           <p>Transfer reference: {invoice.invoiceNumber}</p>
           {isUnpaidOrOverdue && (
-            <p className="pt-0.5 text-[#4B5563]">
+            <p className="pt-0.5 text-body">
               Payment verification: allow up to 2 business days after submitting
               payment details.
             </p>
@@ -628,7 +629,7 @@ export function SubmitPaymentDetailsModal({
             type="button"
             onClick={onClose}
             disabled={submitting}
-            className="inline-flex h-11 min-w-[108px] items-center justify-center rounded-lg border border-[#E5E7EB] bg-white px-5 text-sm font-semibold text-[#243242] transition-colors hover:bg-[#F9FAFB]"
+            className="inline-flex h-11 min-w-[108px] items-center justify-center rounded-lg border border-line bg-white px-5 text-sm font-semibold text-ink transition-colors hover:bg-mist"
           >
             Cancel
           </button>
@@ -644,7 +645,7 @@ export function SubmitPaymentDetailsModal({
                 receiptFile,
               })
             }
-            className="inline-flex h-11 min-w-[144px] items-center justify-center rounded-lg bg-[#C35000] px-6 text-sm font-semibold text-white transition-colors hover:bg-[#A64400] disabled:bg-[#E5B896] disabled:text-white"
+            className="inline-flex h-11 min-w-[144px] items-center justify-center rounded-lg bg-burnt px-6 text-sm font-semibold text-on-burnt transition-colors hover:bg-burnt-dark disabled:bg-sand-400 disabled:text-on-burnt"
           >
             {submitting ? "Submitting..." : "Submit details"}
           </button>
@@ -653,19 +654,19 @@ export function SubmitPaymentDetailsModal({
     >
       <div className="space-y-4">
         {error && (
-          <div className="rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B91C1C]">
+          <div className="rounded-lg border border-danger/30 bg-danger-bg px-4 py-3 text-sm text-danger-dark">
             {error}
           </div>
         )}
 
-        <div className="rounded-[10px] bg-[#F4F5F7] px-4 py-3 text-sm font-medium text-[#243242]">
+        <div className="rounded-[10px] bg-mist px-4 py-3 text-sm font-medium text-ink">
           {invoice.invoiceNumber}
         </div>
 
         <div>
           <label
             htmlFor="payment-bank-ref"
-            className="block text-sm font-medium text-[#243242]"
+            className="block text-sm font-medium text-ink"
           >
             Bank transfer reference *
           </label>
@@ -675,30 +676,33 @@ export function SubmitPaymentDetailsModal({
             value={reference}
             onChange={(e) => setReference(e.target.value)}
             placeholder="Enter your transaction reference"
-            className="mt-1.5 h-11 w-full rounded-[10px] border border-[#E5E7EB] px-3.5 text-sm text-[#243242] placeholder:text-[#6B7280] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+            className="mt-1.5 h-11 w-full rounded-[10px] border border-line px-3.5 text-sm text-ink placeholder:text-muted focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20"
           />
         </div>
 
         <div>
           <label
             htmlFor="payment-transfer-date"
-            className="block text-sm font-medium text-[#243242]"
+            className="block text-sm font-medium text-ink"
           >
             Transfer date *
           </label>
-          <input
+          <DatePicker
             id="payment-transfer-date"
-            type="date"
+            className="mt-1.5"
             value={transferDate}
-            onChange={(e) => setTransferDate(e.target.value)}
-            className="mt-1.5 h-11 w-full rounded-[10px] border border-[#E5E7EB] px-3.5 text-sm text-[#243242] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+            max={new Date().toISOString().slice(0, 10)}
+            minYear={new Date().getFullYear() - 5}
+            placeholder="Select transfer date"
+            ariaLabel="Choose transfer date"
+            onChange={setTransferDate}
           />
         </div>
 
         <div>
           <label
             htmlFor="payment-amount-php"
-            className="block text-sm font-medium text-[#243242]"
+            className="block text-sm font-medium text-ink"
           >
             Amount transferred (PHP) *
           </label>
@@ -708,11 +712,11 @@ export function SubmitPaymentDetailsModal({
             value={amountPhp}
             onChange={(e) => setAmountPhp(e.target.value)}
             placeholder="1,499.00"
-            className="mt-1.5 h-11 w-full rounded-[10px] border border-[#E5E7EB] px-3.5 text-sm text-[#243242] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+            className="mt-1.5 h-11 w-full rounded-[10px] border border-line px-3.5 text-sm text-ink focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20"
           />
         </div>
 
-        <div className="rounded-[10px] bg-[#F4F5F7] px-4 py-3 text-xs text-[#4B5563]">
+        <div className="rounded-[10px] bg-mist px-4 py-3 text-xs text-body">
           Attach receipt or transfer confirmation (optional) · PNG, JPG or PDF,
           up to 10 MB.
         </div>
@@ -728,13 +732,13 @@ export function SubmitPaymentDetailsModal({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="inline-flex h-11 min-w-[140px] items-center justify-center rounded-lg border border-[#E5E7EB] bg-white px-4 text-sm font-medium text-[#243242] transition-colors hover:bg-[#F9FAFB]"
+            className="inline-flex h-11 min-w-[140px] items-center justify-center rounded-lg border border-line bg-white px-4 text-sm font-medium text-ink transition-colors hover:bg-mist"
           >
             Choose file
           </button>
           {receiptFile && (
-            <div className="flex items-center gap-2 text-xs text-[#4B5563]">
-              <span className="max-w-[260px] truncate font-medium text-[#243242]">
+            <div className="flex items-center gap-2 text-xs text-body">
+              <span className="max-w-[260px] truncate font-medium text-ink">
                 {receiptFile.name}
               </span>
               <button
@@ -743,7 +747,7 @@ export function SubmitPaymentDetailsModal({
                   setReceiptFile(null);
                   if (fileInputRef.current) fileInputRef.current.value = "";
                 }}
-                className="text-[#C35000] hover:underline"
+                className="text-burnt hover:underline"
               >
                 Remove
               </button>

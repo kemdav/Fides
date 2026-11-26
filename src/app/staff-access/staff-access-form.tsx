@@ -1,7 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { AdminButton } from "@/components/admin/admin-button";
 import { fieldOutlineClasses, TextField } from "@/components/admin/fields";
 import { PasswordInput } from "@/components/ui/password-input";
 import { accessStaffWorkspaceAction } from "@/app/actions/staff-invitations";
@@ -96,9 +96,9 @@ export function StaffAccessForm({ token, workspace, invitedEmail }: {
           </div>
         )}
         {error && <p role="alert" className="rounded-lg bg-danger-bg p-3 text-sm text-danger-dark">{error}</p>}
-        <AdminButton type="submit" className="w-full" disabled={busy}>
+        <Button variant="brand" size="form" type="submit" className="w-full" disabled={busy}>
           {busy ? (create ? "Creating account…" : "Signing in…") : submitLabel}
-        </AdminButton>
+        </Button>
       </form>
     </section>
   );

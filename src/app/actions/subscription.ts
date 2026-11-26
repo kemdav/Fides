@@ -20,7 +20,6 @@ import type {
   PaymentSubmissionStatus,
   SubscriptionInvoice,
   SubscriptionPaymentSubmission,
-  SubscriptionStatus,
   SubscriptionTierCode,
   SubscriptionTierOption,
   SubscriptionWorkspaceData,
@@ -57,41 +56,6 @@ interface RawTierFeatureRow {
   feature_key: string;
   enabled: boolean;
   limit_value: number | null;
-}
-
-interface RawSubscriptionRow {
-  id: string;
-  tenant_id: string;
-  tier_id: string;
-  status: SubscriptionStatus;
-  trial_ends_at: string | null;
-  current_period_start: string | null;
-  current_period_end: string | null;
-  scheduled_tier_id: string | null;
-  scheduled_change_effective_at: string | null;
-  cancel_at_period_end: boolean | null;
-  cancellation_reason: string | null;
-  cancelled_at: string | null;
-  trial_conversion_scheduled: boolean | null;
-  reactivation_requested_at: string | null;
-  add_on_branches: number | null;
-  renewal_reminders_enabled: boolean | null;
-  renewal_reminder_days: number[] | null;
-}
-
-interface RawBillingProfileRow {
-  tenant_id: string;
-  billing_name: string;
-  billing_email: string;
-  cc_email: string | null;
-  same_as_business_email: boolean | null;
-  street_barangay: string | null;
-  city: string | null;
-  province: string | null;
-  postal_code: string | null;
-  tin: string | null;
-  branch_code: string | null;
-  updated_at: string | null;
 }
 
 interface RawInvoiceRow {
@@ -131,7 +95,7 @@ interface RawPaymentSubmissionRow {
 function asUntypedClient(
   client: Awaited<ReturnType<typeof createClient>>
 ): SupabaseClient {
-  return client as unknown as SupabaseClient;
+  return client;
 }
 
 function formatRoleLabel(role: string): string {
@@ -422,10 +386,10 @@ export async function getSubscriptionWorkspaceAction(
   }
 
   const tiers = mapTierOptions(
-    tiersRes.data as RawTierRow[],
-    (featuresRes.data ?? []) as RawTierFeatureRow[]
+    tiersRes.data,
+    (featuresRes.data ?? [])
   );
-  const subRow = subRes.data as RawSubscriptionRow;
+  const subRow = subRes.data;
   const currentTier = tiers.find((t) => t.id === subRow.tier_id) ?? tiers[1] ?? tiers[0];
   const scheduledTier = subRow.scheduled_tier_id
     ? tiers.find((t) => t.id === subRow.scheduled_tier_id) ?? null
@@ -447,7 +411,7 @@ export async function getSubscriptionWorkspaceAction(
     subRow.add_on_branches ?? 0
   );
 
-  const billingRow = billingRes.data as RawBillingProfileRow | null;
+  const billingRow = billingRes.data;
   const billingProfile: TenantBillingProfile = {
     tenantId: access.tenantId,
     billingName: billingRow?.billing_name ?? access.businessName,

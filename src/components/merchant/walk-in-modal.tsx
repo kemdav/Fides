@@ -6,9 +6,12 @@ import {
   createSafeWalkInAppointmentAction,
   getWalkInWorkspaceAction,
 } from "@/app/actions/walk-ins";
-import { getEligibleBookingStaff } from "@/lib/merchant/booking-staff-eligibility";
+import { buttonClasses, inputClasses } from "@/components/ui";
 import type { WalkInServiceOption, WalkInStaffOption } from "@/types/walk-ins";
+import { getEligibleBookingStaff } from "@/lib/merchant/booking-staff-eligibility";
 import { CalendarPicker, Listbox, TimeListbox } from "./new-appointment-modal";
+import { Icon } from "@/components/admin/icon";
+import { Modal } from "@/components/ui/modal";
 
 export interface WalkInResult {
   id: string;
@@ -31,10 +34,6 @@ interface WalkInModalProps {
   onCreated?: (result: WalkInResult) => void;
   onWaitlistAdded?: () => void;
   showToast: (message: string) => void;
-}
-
-function fieldClassName() {
-  return "h-11 w-full rounded-lg border border-[#aeb6c0] bg-white px-3 text-sm text-ink outline-none transition focus:border-burnt focus:ring-2 focus:ring-burnt/20";
 }
 
 function formatPeso(cents: number): string {
@@ -85,10 +84,12 @@ export function WalkInModal({
   >(null);
 
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mirrors the services prop
     if (propServices) setServices(propServices);
   }, [propServices]);
 
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mirrors the staff prop
     if (propStaff) setStaffList(propStaff);
   }, [propStaff]);
 
@@ -118,13 +119,16 @@ export function WalkInModal({
       !propStaff ||
       propStaff.length === 0
     ) {
-      getWalkInWorkspaceAction(tenantId).then((res) => {
+      void getWalkInWorkspaceAction(tenantId).then((res) => {
         if (res.success && res.data) {
           setServices(res.data.services);
           setStaffList(res.data.staff);
           setServiceId(res.data.services[0]?.id ?? "");
         }
       });
+    } else if (propServices[0]) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- default service for the freshly reset form
+      setServiceId(propServices[0].id);
     }
   }, [isOpen, tenantId, propServices, propStaff, defaultStaffId]);
 
@@ -149,30 +153,9 @@ export function WalkInModal({
   if (confirmation) {
     const isWaitlist = confirmation === "waitlist";
     return (
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4 backdrop-blur-xs"
-        onClick={onClose}
-      >
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="w-full max-w-[360px] rounded-[12px] bg-white px-6 py-8 text-center shadow-2xl"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="mx-auto flex size-12 items-center justify-center rounded-full border-2 border-emerald-600 text-emerald-600">
-            <svg
-              viewBox="0 0 24 24"
-              className="size-6"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2.4}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
+      <Modal open onClose={onClose} closeOnBackdrop unstyled className="w-[calc(100%-1rem)] max-w-[360px] rounded-[12px] bg-white px-6 py-8 text-center shadow-2xl overflow-visible text-ink backdrop:bg-black/35">
+          <div className="mx-auto flex size-12 items-center justify-center rounded-full border-2 border-success text-success">
+            <Icon name="check" weight="bold" className="size-6" />
           </div>
           <h3 className="mt-4 text-lg font-semibold text-ink">
             {isWaitlist
@@ -191,8 +174,7 @@ export function WalkInModal({
           >
             Done
           </button>
-        </div>
-      </div>
+        </Modal>
     );
   }
 
@@ -304,17 +286,7 @@ export function WalkInModal({
   ];
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-2 backdrop-blur-xs sm:p-5"
-      onClick={onClose}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="walk-in-title"
-        className="max-h-[96dvh] w-full max-w-[642px] overflow-y-auto rounded-[10px] bg-white px-5 py-5 shadow-2xl sm:px-6 sm:py-5"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal open onClose={onClose} labelledBy="walk-in-title" closeOnBackdrop unstyled className="max-h-[96dvh] w-[calc(100%-1rem)] max-w-[642px] overflow-y-auto rounded-[10px] bg-white px-5 py-5 shadow-2xl sm:px-6 sm:py-5 text-ink backdrop:bg-black/35">
         <div className="flex items-start justify-between">
           <div>
             <h2
@@ -332,9 +304,9 @@ export function WalkInModal({
             type="button"
             onClick={onClose}
             aria-label="Close walk-in form"
-            className="text-2xl leading-none text-glyph hover:text-ink"
+            className="rounded-lg p-1 text-glyph hover:text-ink"
           >
-            ×
+            <Icon name="close" className="size-5" />
           </button>
         </div>
 
@@ -349,7 +321,7 @@ export function WalkInModal({
                 className="mt-2 text-xs font-semibold underline hover:opacity-80"
               >
                 Place {customer.trim() || "customer"} on the waiting list
-                instead →
+                instead
               </button>
             )}
           </div>
@@ -357,7 +329,7 @@ export function WalkInModal({
 
         <form onSubmit={handleCreateWalkIn} className="mt-5 space-y-4">
           <fieldset className="space-y-2.5">
-            <legend className="text-[11px] font-semibold text-muted">
+            <legend className="text-xs font-semibold text-muted">
               Customer Information
             </legend>
             <label className="block text-sm font-medium text-body">
@@ -366,7 +338,7 @@ export function WalkInModal({
                 value={customer}
                 onChange={(e) => setCustomer(e.target.value)}
                 placeholder="Name"
-                className={`${fieldClassName()} mt-1.5`}
+                className={`${inputClasses()} mt-1.5`}
               />
             </label>
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
@@ -377,7 +349,7 @@ export function WalkInModal({
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@gmail.com"
-                  className={`${fieldClassName()} mt-1.5`}
+                  className={`${inputClasses()} mt-1.5`}
                 />
               </label>
               <label className="block text-sm font-medium text-body">
@@ -387,14 +359,14 @@ export function WalkInModal({
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="09956663254"
-                  className={`${fieldClassName()} mt-1.5`}
+                  className={`${inputClasses()} mt-1.5`}
                 />
               </label>
             </div>
           </fieldset>
 
           <fieldset className="space-y-2.5">
-            <legend className="text-[11px] font-semibold text-muted">
+            <legend className="text-xs font-semibold text-muted">
               Service &amp; staff
             </legend>
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
@@ -428,7 +400,7 @@ export function WalkInModal({
           </fieldset>
 
           <fieldset className="space-y-2.5">
-            <legend className="text-[11px] font-semibold text-muted">
+            <legend className="text-xs font-semibold text-muted">
               Schedule
             </legend>
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
@@ -459,7 +431,7 @@ export function WalkInModal({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Add customer requests or service notes..."
-              className="mt-1.5 min-h-14 w-full resize-y rounded-lg border border-[#aeb6c0] px-3 py-2 text-sm text-ink outline-none focus:border-burnt focus:ring-2 focus:ring-burnt/20"
+              className={`${inputClasses(false, true)} mt-1.5`}
             />
           </label>
 
@@ -482,20 +454,19 @@ export function WalkInModal({
               type="button"
               onClick={handleAddToWaitlist}
               disabled={isAddingWaitlist || isSubmitting}
-              className="h-10 rounded-md border-2 border-burnt px-4 text-sm font-semibold text-burnt hover:bg-mist disabled:opacity-60"
+              className={buttonClasses({ variant: "brand-outline", size: "dialog" })}
             >
               {isAddingWaitlist ? "Adding..." : "Add to waiting list"}
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || isAddingWaitlist || noEligibleStaff}
-              className="h-10 rounded-md bg-burnt px-6 text-sm font-semibold text-on-burnt hover:bg-burnt/90 disabled:opacity-60"
+              disabled={isSubmitting || isAddingWaitlist}
+              className={buttonClasses({ variant: "brand", size: "dialog", className: "px-6" })}
             >
               {isSubmitting ? "Creating..." : "Create walk-in appointment"}
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </Modal>
   );
 }

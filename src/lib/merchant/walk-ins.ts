@@ -1,8 +1,8 @@
     import { createClient } from "@/lib/supabase/server";
+import { resolveTenantAccess } from "./access";
 import type {
   AssignableSlotOption,
   WaitlistQueueItem,
-  WaitlistStatus,
   WalkInServiceOption,
   WalkInStaffOption,
   WalkInWorkspaceData,
@@ -69,14 +69,8 @@ export async function resolveMerchantTenantId(
   supabase: Awaited<ReturnType<typeof createClient>>,
   tenantIdParam?: string
 ): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const memberships = supabase.from("tenant_memberships").select("tenant_id")
-    .eq("profile_id", user.id).in("role", ["owner", "admin", "receptionist"]);
-  if (tenantIdParam) memberships.eq("tenant_id", tenantIdParam);
-  const { data: membership } = await memberships.limit(1).maybeSingle();
-  return membership?.tenant_id ?? null;
+  const access = await resolveTenantAccess(supabase, tenantIdParam);
+  return access?.tenantId ?? null;
 }
 
 interface BusyInterval {
@@ -145,7 +139,7 @@ export function computeAvailableSlotsForStaff(params: {
       slots.push({
         startsAt,
         endsAt,
-        label: `${formatManilaTime(startsAt)} → ${formatManilaTime(endsAt)}`,
+        label: `${formatManilaTime(startsAt)} – ${formatManilaTime(endsAt)}`,
         durationMinutes,
       });
     }
@@ -283,7 +277,7 @@ export async function getWalkInWorkspaceData(
       servicePriceCents: svc?.priceCents ?? 0,
       requestedStaffId: row.staff_id,
       requestedStaffName: requestedStaff?.fullName ?? null,
-      status: row.status as WaitlistStatus,
+      status: row.status,
       notifiedAt: row.notified_at,
       notes: row.notes,
       estimatedWaitMinutes: (index + 1) * baseWaitStep,

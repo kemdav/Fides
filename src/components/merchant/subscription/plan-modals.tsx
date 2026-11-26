@@ -91,7 +91,7 @@ export function ComparePlansModal({
               onClose();
               onStartChangePlan();
             }}
-            className="inline-flex h-11 items-center justify-center rounded-lg bg-[#C35000] px-6 text-sm font-semibold text-white transition-colors hover:bg-[#A64400]"
+            className="inline-flex h-11 items-center justify-center rounded-lg bg-burnt px-6 text-sm font-semibold text-on-burnt transition-colors hover:bg-burnt-dark"
           >
             Change plan
           </button>
@@ -99,7 +99,7 @@ export function ComparePlansModal({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-11 min-w-[104px] items-center justify-center rounded-lg border border-[#E5E7EB] bg-white px-5 text-sm font-semibold text-[#243242] transition-colors hover:bg-[#F9FAFB]"
+            className="inline-flex h-11 min-w-[104px] items-center justify-center rounded-lg border border-line bg-white px-5 text-sm font-semibold text-ink transition-colors hover:bg-mist"
           >
             Close
           </button>
@@ -110,13 +110,13 @@ export function ComparePlansModal({
         <table className="w-full min-w-[560px] border-collapse text-left text-sm">
           <thead>
             <tr>
-              <th className="pb-4 pr-4 font-semibold text-[#243242]">
+              <th className="pb-4 pr-4 font-semibold text-ink">
                 Feature
               </th>
               {tiers.map((tier) => (
                 <th
                   key={tier.id}
-                  className="pb-4 px-3 font-semibold text-[#243242]"
+                  className="pb-4 px-3 font-semibold text-ink"
                 >
                   {tier.name}
                   {tier.code === currentTierCode ? " · Your plan" : ""}
@@ -126,10 +126,10 @@ export function ComparePlansModal({
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.label} className="border-t border-[#F3F4F6]">
-                <td className="py-3 pr-4 text-[#6B7280]">{row.label}</td>
+              <tr key={row.label} className="border-t border-mist">
+                <td className="py-3 pr-4 text-muted">{row.label}</td>
                 {tiers.map((tier) => (
-                  <td key={tier.id} className="py-3 px-3 text-[#6B7280]">
+                  <td key={tier.id} className="py-3 px-3 text-muted">
                     {row.render(tier)}
                   </td>
                 ))}
@@ -198,7 +198,7 @@ export function ChangePlanModal({
         open={open}
         onClose={onClose}
         title="Review plan change"
-        subtitle={`Step 2 of 2 · ${currentTier.name} → ${selectedTier.name}`}
+        subtitle={`Step 2 of 2 · ${currentTier.name} to ${selectedTier.name}`}
         maxWidthClass="max-w-[680px]"
         footer={
           <>
@@ -206,7 +206,7 @@ export function ChangePlanModal({
               type="button"
               onClick={() => setStep(1)}
               disabled={submitting}
-              className="inline-flex h-11 min-w-[96px] items-center justify-center rounded-lg border border-[#E5E7EB] bg-white px-5 text-sm font-semibold text-[#243242] transition-colors hover:bg-[#F9FAFB] disabled:opacity-50"
+              className="inline-flex h-11 min-w-[96px] items-center justify-center rounded-lg border border-line bg-white px-5 text-sm font-semibold text-ink transition-colors hover:bg-mist disabled:opacity-50"
             >
               Back
             </button>
@@ -214,7 +214,7 @@ export function ChangePlanModal({
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="inline-flex h-11 min-w-[96px] items-center justify-center rounded-lg border border-[#E5E7EB] bg-white px-5 text-sm font-semibold text-[#243242] transition-colors hover:bg-[#F9FAFB] disabled:opacity-50"
+              className="inline-flex h-11 min-w-[96px] items-center justify-center rounded-lg border border-line bg-white px-5 text-sm font-semibold text-ink transition-colors hover:bg-mist disabled:opacity-50"
             >
               Cancel
             </button>
@@ -222,7 +222,7 @@ export function ChangePlanModal({
               type="button"
               onClick={() => onConfirmPlanChange(selectedTier.code)}
               disabled={submitting}
-              className="inline-flex h-11 items-center justify-center rounded-lg bg-[#C35000] px-6 text-sm font-semibold text-white transition-colors hover:bg-[#A64400] disabled:opacity-50"
+              className="inline-flex h-11 items-center justify-center rounded-lg bg-burnt px-6 text-sm font-semibold text-on-burnt transition-colors hover:bg-burnt-dark disabled:opacity-50"
             >
               {submitting ? "Scheduling..." : "Confirm plan change"}
             </button>
@@ -231,27 +231,27 @@ export function ChangePlanModal({
       >
         <div className="space-y-4">
           {error && (
-            <div className="rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B91C1C]">
+            <div className="rounded-lg border border-danger/30 bg-danger-bg px-4 py-3 text-sm text-danger-dark">
               {error}
             </div>
           )}
 
-          <dl className="divide-y divide-[#F3F4F6] text-sm">
+          <dl className="divide-y divide-mist text-sm">
             <div className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-2">
-              <dt className="text-[#6B7280]">Effective date</dt>
-              <dd className="font-medium text-[#243242]">{effectiveLabel}</dd>
+              <dt className="text-muted">Effective date</dt>
+              <dd className="font-medium text-ink">{effectiveLabel}</dd>
             </div>
             <div className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-2">
-              <dt className="text-[#6B7280]">Current usage</dt>
-              <dd className="font-medium text-[#243242]">
+              <dt className="text-muted">Current usage</dt>
+              <dd className="font-medium text-ink">
                 {usage.totalStaffSeatsUsed} staff · {usage.branchesCount}{" "}
                 {usage.branchesCount === 1 ? "branch" : "branches"} ·{" "}
                 {usage.appointmentsThisPeriod.toLocaleString()} appointments
               </dd>
             </div>
             <div className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-2">
-              <dt className="text-[#6B7280]">New limits</dt>
-              <dd className="font-medium text-[#243242]">
+              <dt className="text-muted">New limits</dt>
+              <dd className="font-medium text-ink">
                 {selectedTier.limits.staffAccounts} staff ·{" "}
                 {selectedTier.limits.branches}{" "}
                 {selectedTier.limits.branches === 1 ? "branch" : "branches"} ·{" "}
@@ -260,31 +260,31 @@ export function ChangePlanModal({
               </dd>
             </div>
             <div className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-2">
-              <dt className="text-[#6B7280]">Monthly price change</dt>
-              <dd className="font-medium text-[#243242]">
-                {formatPhp(currentTier.priceCents)} →{" "}
+              <dt className="text-muted">Monthly price change</dt>
+              <dd className="font-medium text-ink">
+                {formatPhp(currentTier.priceCents)} to{" "}
                 {formatPhp(selectedTier.priceCents)} ({deltaText})
               </dd>
             </div>
             <div className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-2">
-              <dt className="text-[#6B7280]">Proration / credit</dt>
-              <dd className="font-medium text-[#243242]">
+              <dt className="text-muted">Proration / credit</dt>
+              <dd className="font-medium text-ink">
                 ₱0 · Change starts next billing cycle
               </dd>
             </div>
             <div className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-2">
-              <dt className="text-[#6B7280]">Amount due today</dt>
-              <dd className="font-medium text-[#243242]">₱0</dd>
+              <dt className="text-muted">Amount due today</dt>
+              <dd className="font-medium text-ink">₱0</dd>
             </div>
             <div className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-2">
-              <dt className="text-[#6B7280]">First invoice on new plan</dt>
-              <dd className="font-medium text-[#243242]">
+              <dt className="text-muted">First invoice on new plan</dt>
+              <dd className="font-medium text-ink">
                 {formatPhp(selectedTier.priceCents)} · {effectiveLabel}
               </dd>
             </div>
           </dl>
 
-          <div className="rounded-[10px] bg-[#F4F5F7] px-4 py-3.5 text-xs leading-[19px] text-[#374151]">
+          <div className="rounded-[10px] bg-mist px-4 py-3.5 text-xs leading-[19px] text-body">
             Monthly billing by invoice / bank transfer. Pay within 7 days of
             invoice issue. No payment is taken when you confirm this change.
           </div>
@@ -305,7 +305,7 @@ export function ChangePlanModal({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-11 min-w-[104px] items-center justify-center rounded-lg border border-[#E5E7EB] bg-white px-5 text-sm font-semibold text-[#243242] transition-colors hover:bg-[#F9FAFB]"
+            className="inline-flex h-11 min-w-[104px] items-center justify-center rounded-lg border border-line bg-white px-5 text-sm font-semibold text-ink transition-colors hover:bg-mist"
           >
             Cancel
           </button>
@@ -313,7 +313,7 @@ export function ChangePlanModal({
             type="button"
             onClick={() => setStep(2)}
             disabled={!selectedTier}
-            className="inline-flex h-11 min-w-[128px] items-center justify-center rounded-lg bg-[#C35000] px-6 text-sm font-semibold text-white transition-colors hover:bg-[#A64400] disabled:bg-[#E5B896] disabled:text-white"
+            className="inline-flex h-11 min-w-[128px] items-center justify-center rounded-lg bg-burnt px-6 text-sm font-semibold text-on-burnt transition-colors hover:bg-burnt-dark disabled:bg-sand-400 disabled:text-on-burnt"
           >
             Continue
           </button>
@@ -321,7 +321,7 @@ export function ChangePlanModal({
       }
     >
       <div className="space-y-4">
-        <p className="text-xs text-[#6B7280]">
+        <p className="text-xs text-muted">
           Monthly billing · Annual billing is not offered.
         </p>
 
@@ -358,12 +358,12 @@ export function ChangePlanModal({
                 className={cn(
                   "flex flex-col rounded-[12px] border p-5 transition-all",
                   isSelected
-                    ? "border-2 border-[#C35000] bg-white shadow-sm"
-                    : "border-[#E5E7EB] bg-white",
-                  isSelectable && "cursor-pointer hover:border-[#C35000]/60",
+                    ? "border-2 border-burnt bg-white shadow-sm"
+                    : "border-line bg-white",
+                  isSelectable && "cursor-pointer hover:border-burnt/60",
                 )}
               >
-                <div className="flex items-center gap-2 text-xs font-medium text-[#374151]">
+                <div className="flex items-center gap-2 text-xs font-medium text-body">
                   {blocker ? (
                     <span>Unavailable</span>
                   ) : isCurrent ? (
@@ -373,11 +373,11 @@ export function ChangePlanModal({
                       <span
                         className={cn(
                           "flex size-3.5 items-center justify-center rounded-full border",
-                          isSelected ? "border-[#243242]" : "border-[#6B7280]",
+                          isSelected ? "border-ink" : "border-muted",
                         )}
                       >
                         {isSelected && (
-                          <span className="size-2 rounded-full bg-[#243242]" />
+                          <span className="size-2 rounded-full bg-ink" />
                         )}
                       </span>
                       <span>{isSelected ? "Selected" : "Select plan"}</span>
@@ -385,14 +385,14 @@ export function ChangePlanModal({
                   )}
                 </div>
 
-                <h3 className="mt-3 text-[22px] font-semibold leading-[28px] text-[#243242]">
+                <h3 className="mt-3 text-[22px] font-semibold leading-[28px] text-ink">
                   {tier.name}
                 </h3>
-                <p className="mt-2 text-base font-semibold text-[#243242]">
+                <p className="mt-2 text-base font-semibold text-ink">
                   {formatPhp(tier.priceCents)} / month
                 </p>
 
-                <div className="mt-3 space-y-0.5 text-xs text-[#6B7280]">
+                <div className="mt-3 space-y-0.5 text-xs text-muted">
                   <p>
                     {tier.limits.branches}{" "}
                     {tier.limits.branches === 1 ? "branch" : "branches"} ·{" "}
@@ -401,17 +401,17 @@ export function ChangePlanModal({
                   <p>{tier.limits.appointmentsPerMonth} appointments / month</p>
                 </div>
 
-                <ul className="mt-4 space-y-1.5 text-xs text-[#374151]">
+                <ul className="mt-4 space-y-1.5 text-xs text-body">
                   {featureLabels.map((label) => (
                     <li key={label} className="flex items-center gap-1.5">
-                      <span className="text-[#243242]">✓</span>
+                      <span className="text-ink">✓</span>
                       <span>{label}</span>
                     </li>
                   ))}
                 </ul>
 
                 {blocker && (
-                  <div className="mt-4 rounded-lg bg-[#F4F5F7] p-3 text-xs leading-[18px] text-[#374151]">
+                  <div className="mt-4 rounded-lg bg-mist p-3 text-xs leading-[18px] text-body">
                     {blocker}
                   </div>
                 )}
@@ -420,7 +420,7 @@ export function ChangePlanModal({
           })}
         </div>
 
-        <div className="rounded-[10px] bg-[#F4F5F7] px-4 py-3 text-xs text-[#374151]">
+        <div className="rounded-[10px] bg-mist px-4 py-3 text-xs text-body">
           Changes take effect on {effectiveLabel}. Your current plan remains
           active until then; no immediate charge or credit applies.
         </div>
@@ -460,7 +460,7 @@ export function WhyCannotAddBranchModal({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-11 items-center justify-center rounded-lg border border-[#E5E7EB] bg-white px-5 text-sm font-semibold text-[#243242] transition-colors hover:bg-[#F9FAFB]"
+            className="inline-flex h-11 items-center justify-center rounded-lg border border-line bg-white px-5 text-sm font-semibold text-ink transition-colors hover:bg-mist"
           >
             Close
           </button>
@@ -471,7 +471,7 @@ export function WhyCannotAddBranchModal({
                 onClose();
                 onUpgradeClick();
               }}
-              className="inline-flex h-11 items-center justify-center rounded-lg bg-[#C35000] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#A64400]"
+              className="inline-flex h-11 items-center justify-center rounded-lg bg-burnt px-5 text-sm font-semibold text-on-burnt transition-colors hover:bg-burnt-dark"
             >
               Upgrade to Enterprise
             </button>
@@ -479,14 +479,14 @@ export function WhyCannotAddBranchModal({
         </>
       }
     >
-      <div className="space-y-3 text-sm leading-[21px] text-[#4B5563]">
+      <div className="space-y-3 text-sm leading-[21px] text-body">
         <p>
           You are currently using all {currentBranchLimit} included{" "}
           {currentBranchLimit === 1 ? "branch slot" : "branch slots"} on the{" "}
-          <strong className="text-[#243242]">{currentTierName}</strong> tier.
+          <strong className="text-ink">{currentTierName}</strong> tier.
         </p>
-        <div className="rounded-[10px] bg-[#F4F5F7] px-4 py-3.5 text-xs leading-[19px] text-[#374151]">
-          Switch to <strong className="text-[#243242]">Enterprise</strong> to
+        <div className="rounded-[10px] bg-mist px-4 py-3.5 text-xs leading-[19px] text-body">
+          Switch to <strong className="text-ink">Enterprise</strong> to
           unlock up to {enterpriseBranchLimit} branches, 50 staff accounts, and
           5,000 monthly appointments starting on your next billing cycle.
         </div>
@@ -537,30 +537,30 @@ export function CancelSubscriptionModal({
           <button
             type="button"
             onClick={() => onProceedToFinalConfirm(reason)}
-            className="inline-flex h-11 min-w-[180px] items-center justify-center rounded-lg bg-[#DC2626] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#B91C1C]"
+            className="inline-flex h-11 min-w-[180px] items-center justify-center rounded-lg bg-danger px-5 text-sm font-semibold text-white transition-colors hover:bg-danger-dark"
           >
             Confirm cancellation
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-11 min-w-[144px] items-center justify-center rounded-lg bg-[#C35000] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#A64400]"
+            className="inline-flex h-11 min-w-[144px] items-center justify-center rounded-lg bg-burnt px-5 text-sm font-semibold text-on-burnt transition-colors hover:bg-burnt-dark"
           >
             Keep my plan
           </button>
         </>
       }
     >
-      <div className="space-y-5 text-sm text-[#374151]">
-        <div className="rounded-[10px] bg-[#F4F5F7] px-4 py-3.5 leading-[21px]">
+      <div className="space-y-5 text-sm text-body">
+        <div className="rounded-[10px] bg-mist px-4 py-3.5 leading-[21px]">
           Your {subscription.tierName} plan stays active through{" "}
           {periodEndLabel} at 23:59 ({timezone}). Cancellation takes effect{" "}
           {effectiveLabel}.
         </div>
 
         <div>
-          <p className="font-medium text-[#243242]">After the period ends:</p>
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-[#374151]">
+          <p className="font-medium text-ink">After the period ends:</p>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-body">
             <li>New bookings and staff changes stop.</li>
             <li>Your workspace becomes read-only.</li>
             <li>Customer records, visit history and invoices are retained.</li>
@@ -574,7 +574,7 @@ export function CancelSubscriptionModal({
         <div>
           <label
             htmlFor="cancel-reason-notes"
-            className="block font-medium text-[#243242]"
+            className="block font-medium text-ink"
           >
             Reason for leaving (optional)
           </label>
@@ -585,12 +585,12 @@ export function CancelSubscriptionModal({
             onChange={(e) => setReason(e.target.value)}
             placeholder="Customer notes."
             maxLength={500}
-            className="mt-2 w-full rounded-[10px] border border-[#E5E7EB] px-3.5 py-2.5 text-sm text-[#243242] placeholder:text-[#9CA3AF] focus:border-[#C35000] focus:outline-none focus:ring-2 focus:ring-[#C35000]/20"
+            className="mt-2 w-full rounded-[10px] border border-line px-3.5 py-2.5 text-sm text-ink placeholder:text-glyph focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20"
           />
         </div>
 
         {basicTier && subscription.tierCode !== "basic" && (
-          <div className="rounded-[10px] bg-[#F4F5F7] px-4 py-3.5 text-xs leading-[19px] text-[#374151]">
+          <div className="rounded-[10px] bg-mist px-4 py-3.5 text-xs leading-[19px] text-body">
             {basicExceedsSeats
               ? `Need a lower-cost plan? Basic is ${formatPhp(basicTier.priceCents)} / month, but your ${usage.totalStaffSeatsUsed} staff accounts exceed its ${basicTier.limits.staffAccounts}-seat limit. Reduce usage before downgrading.`
               : `Need a lower-cost plan? You can downgrade to Basic (${formatPhp(basicTier.priceCents)} / month) instead of cancelling.`}
@@ -632,7 +632,7 @@ export function ConvertTrialModal({
           type="button"
           onClick={onConfirm}
           disabled={submitting}
-          className="inline-flex h-11 items-center justify-center rounded-lg bg-[#C35000] px-6 text-sm font-semibold text-white transition-colors hover:bg-[#A64400] disabled:opacity-50"
+          className="inline-flex h-11 items-center justify-center rounded-lg bg-burnt px-6 text-sm font-semibold text-on-burnt transition-colors hover:bg-burnt-dark disabled:opacity-50"
         >
           {submitting
             ? "Confirming..."
@@ -640,13 +640,13 @@ export function ConvertTrialModal({
         </button>
       }
     >
-      <div className="space-y-4 text-sm text-[#374151]">
+      <div className="space-y-4 text-sm text-body">
         <div>
-          <p className="font-medium text-[#243242]">
+          <p className="font-medium text-ink">
             {subscription.tierName} · {formatPhp(subscription.priceCents)} /
             month
           </p>
-          <p className="mt-1 text-[#4B5563]">
+          <p className="mt-1 text-body">
             Trial ends {formatLongDate(trialEndIso, timezone)}. Paid billing
             starts {formatLongDate(nextStartIso, timezone)}.
           </p>
@@ -654,19 +654,19 @@ export function ConvertTrialModal({
 
         <dl className="space-y-3 pt-1">
           <div className="flex items-center justify-between gap-4">
-            <dt className="text-[#4B5563]">Due today</dt>
-            <dd className="font-medium text-[#243242]">₱0</dd>
+            <dt className="text-body">Due today</dt>
+            <dd className="font-medium text-ink">₱0</dd>
           </div>
           <div className="flex items-center justify-between gap-4">
-            <dt className="text-[#4B5563]">First invoice</dt>
-            <dd className="font-medium text-[#243242]">
+            <dt className="text-body">First invoice</dt>
+            <dd className="font-medium text-ink">
               {formatPhp(subscription.priceCents)} on{" "}
               {formatMonthDay(nextStartIso, timezone)}
             </dd>
           </div>
         </dl>
 
-        <p className="text-xs leading-[18px] text-[#6B7280]">
+        <p className="text-xs leading-[18px] text-muted">
           Payment method: Invoice / bank transfer. Your trial continues until
           its stated end date.
         </p>
@@ -702,7 +702,7 @@ export function ReactivateSubscriptionModal({
             type="button"
             onClick={onClose}
             disabled={submitting}
-            className="inline-flex h-11 min-w-[96px] items-center justify-center rounded-lg border border-[#E5E7EB] bg-white px-5 text-sm font-semibold text-[#243242] transition-colors hover:bg-[#F9FAFB]"
+            className="inline-flex h-11 min-w-[96px] items-center justify-center rounded-lg border border-line bg-white px-5 text-sm font-semibold text-ink transition-colors hover:bg-mist"
           >
             Cancel
           </button>
@@ -710,30 +710,30 @@ export function ReactivateSubscriptionModal({
             type="button"
             onClick={onRequestReactivation}
             disabled={submitting}
-            className="inline-flex h-11 items-center justify-center rounded-lg bg-[#C35000] px-6 text-sm font-semibold text-white transition-colors hover:bg-[#A64400] disabled:opacity-50"
+            className="inline-flex h-11 items-center justify-center rounded-lg bg-burnt px-6 text-sm font-semibold text-on-burnt transition-colors hover:bg-burnt-dark disabled:opacity-50"
           >
             {submitting ? "Requesting..." : "Request reactivation"}
           </button>
         </>
       }
     >
-      <div className="space-y-4 text-sm text-[#374151]">
+      <div className="space-y-4 text-sm text-body">
         <dl className="space-y-3">
           <div className="flex items-center justify-between gap-4">
-            <dt className="text-[#4B5563]">Plan</dt>
-            <dd className="font-medium text-[#243242]">
+            <dt className="text-body">Plan</dt>
+            <dd className="font-medium text-ink">
               {subscription.tierName} · Monthly
             </dd>
           </div>
           <div className="flex items-center justify-between gap-4">
-            <dt className="text-[#4B5563]">Price</dt>
-            <dd className="font-medium text-[#243242]">
+            <dt className="text-body">Price</dt>
+            <dd className="font-medium text-ink">
               {formatPhp(subscription.priceCents)} / month
             </dd>
           </div>
         </dl>
 
-        <p className="text-sm leading-[21px] text-[#4B5563]">
+        <p className="text-sm leading-[21px] text-body">
           Review your billing details before reactivating. An invoice will be
           issued for bank transfer; access resumes after payment verification.
         </p>
@@ -763,13 +763,13 @@ export function ReactivationRequestedModal({
         <button
           type="button"
           onClick={onViewPaymentInstructions}
-          className="inline-flex h-11 items-center justify-center rounded-lg bg-[#C35000] px-6 text-sm font-semibold text-white transition-colors hover:bg-[#A64400]"
+          className="inline-flex h-11 items-center justify-center rounded-lg bg-burnt px-6 text-sm font-semibold text-on-burnt transition-colors hover:bg-burnt-dark"
         >
           View payment instructions
         </button>
       }
     >
-      <p className="text-sm leading-[21px] text-[#4B5563]">
+      <p className="text-sm leading-[21px] text-body">
         Your invoice is ready. Access resumes once payment is verified.
       </p>
     </ModalShell>

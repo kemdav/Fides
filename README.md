@@ -5,8 +5,9 @@ booking website and a unified management dashboard. Online bookings, phone
 requests, and walk-in visits flow through a single scheduling engine, with
 tenant isolation enforced at the database layer.
 
-> **Status:** technical foundation only. No user-facing features, domain
-> workflows, or screen logic have been implemented yet.
+> **Docs for the team:** [architecture guide](docs/ARCHITECTURE.md) (start here) ·
+> [known issues and backlog](docs/KNOWN-ISSUES.md) · [environment variables](docs/ENVIRONMENT.md) ·
+> [security notes](docs/SECURITY.md) · [frontend reuse guide](docs/FRONTEND.md)
 
 ## Tech stack
 
@@ -19,18 +20,36 @@ tenant isolation enforced at the database layer.
 | Realtime/Files | Supabase Realtime + Storage                                   |
 | AI             | Google Gemini API (`@google/genai`, 3.0s timeout ceiling)     |
 | Email          | SMTP via nodemailer (transactional mailer)                    |
+| Rate limiting  | Redis (ioredis), in-memory fallback when `REDIS_URL` is unset |
 | Delivery       | Progressive Web App (manifest + service worker)               |
 
 ## Getting started
 
+Requires Node 20+, Docker (Supabase and Redis run in containers) and the Supabase CLI.
+
 ```bash
 npm install
-cp .env.example .env.local   # then fill in real values
+cp .env.example .env.local        # then fill in real values (see docs/ENVIRONMENT.md)
+npm run setup:admin               # adds ADMIN_SESSION_SECRET and a local admin login to .env.local
+
+docker compose up -d redis        # local Redis for rate limiting (host port 6380)
+supabase start                    # local Supabase stack
+supabase db reset                 # apply all migrations + seed data
+
 npm run dev
 ```
 
-The app boots without any environment values (integrations simply report
-misconfiguration at request time), so you can explore the structure first.
+Things your `.env.local` needs beyond the Supabase and mail keys:
+
+1. `ADMIN_SESSION_SECRET`: a random string of 32+ characters.
+2. `ADMIN_ACCOUNTS`: the admin logins, as JSON with hashed passwords. Create each hash with
+   `node scripts/hash-admin-password.mjs "<password of 12+ characters>"`.
+3. `REDIS_URL=redis://localhost:6380`: optional locally (limits fall back to memory), required in production.
+
+Admins sign in at `/admin/login`. The normal `/login` is for business owners only and never accepts admin accounts.
+
+The app still boots with missing values (integrations report misconfiguration at request time), but admin login
+needs `ADMIN_ACCOUNTS` and every protected rate-limited form works best with Redis running.
 
 ## Scripts
 
@@ -40,7 +59,10 @@ misconfiguration at request time), so you can explore the structure first.
 | `npm run build`     | Production build               |
 | `npm run start`     | Serve the production build     |
 | `npm run lint`      | ESLint                         |
-| `npm run typecheck` | `tsc --noEmit`                 |
+| `npm run typecheck` | `next typegen && tsc --noEmit` |
+| `npm test`          | Unit tests (`src/lib/__tests__`) |
+| `npm run email:test` / `email:check` | Send a test email / verify mail setup |
+| `node scripts/hash-admin-password.mjs "<pw>"` | Hash an admin password for `ADMIN_ACCOUNTS` |
 
 ## Project structure
 
@@ -49,11 +71,16 @@ src/
   app/                     Next.js App Router
     (site)/                Provider website surface (per-tenant)
     (dashboard)/           Management dashboard surface
-    (admin)/               Fides admin portal surface
+    (admin)/admin/         Fides admin portal pages (needs an admin session)
+    admin/login/           Admin sign-in (outside the (admin) group on purpose)
+    login/, register/      Business owner sign-in and registration
+    contact/               Global contact page
     auth/callback/         Supabase auth code exchange
     api/health/            Liveness probe
   components/
-    ui/                    Headless primitives (Button, Input, Card, Modal)
+    ui/                    Shared primitives: buttonClasses, inputClasses, PasswordInput, Modal, Card
+    auth/                  Reusable auth screens (AuthCard, AuthField, AuthSubmit, admin shell)
+    landing/               Landing page, headers and the shared full-page MobileMenu
     layout/                Layout wrappers
     pwa/                   Service worker registration
   lib/
@@ -61,23 +88,31 @@ src/
     tenant/                Wildcard subdomain -> tenant resolution
     ai/                    Gemini concierge wrapper
     mail/                  SMTP transactional mailer
+    admin/                 Admin accounts (env based), signed session cookie
+    merchant/access.ts     resolveTenantAccess: checks a user may act on a tenant
+    rate-limit.ts          Redis-backed rate limiter (in-memory fallback)
     env.ts                 Validated environment access
   types/
     database.types.ts      Supabase schema types
   proxy.ts                 Next.js 16 proxy (session refresh + tenant routing)
 supabase/
-  migrations/              SQL migrations (baseline multi-tenant + RLS)
-  seed.sql                 Seed data (intentionally empty)
+  migrations/              SQL migrations, named <utc timestamp>_<name>.sql
+  seed.sql                 Local seed data (Bella Vita demo tenant, owner@bellavita.com / Password123!)
 public/                    PWA manifest, service worker, offline shell, icons
 ```
 
 ## Architecture notes
 
+The full guide is [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): why we run one Next.js app on Supabase instead of a separate
+Node backend, the entry / DTO / service / queries layering we are moving to (feature modules in `src/features`), the
+rules every change follows, an honest snapshot of where the code is today, the migration plan and the production checklist.
+Short version:
+
 - **Multi-tenant routing.** One Next.js app serves every provider website, the
   dashboard, and the admin portal. `src/proxy.ts` (Next.js 16's replacement for
   `middleware.ts`) resolves the tenant from the request hostname using the
   wildcard subdomain strategy and forwards it via the `x-fides-tenant` header.
-- **Tenant isolation.** `supabase/migrations/00001_baseline.sql` enables
+- **Tenant isolation.** `supabase/migrations/*_baseline.sql` enables
   PostgreSQL Row Level Security on `tenants`, `profiles`, and
   `tenant_memberships`, with policies driven by tenant claims in the JWT.
 - **Sessions.** Supabase sessions are cookie-based; the proxy refreshes tokens
@@ -117,7 +152,7 @@ The app sends three emails through [Resend](https://resend.com): **account reque
 2. Set `MAIL_FROM_EMAIL`. `onboarding@resend.dev` is a test sender that only delivers to your own Resend account
    email. To email real applicants, verify a domain at <https://resend.com/domains> and use an address on it.
 3. Set `NEXT_PUBLIC_SITE_URL` to the public URL: the "log in" link in the approval email is built from it.
-4. Run `supabase/migrations/00013_password_reset_codes.sql` in the Supabase SQL Editor (forgot-password codes).
+4. Run `supabase/migrations/*_password_reset_codes.sql` in the Supabase SQL Editor (forgot-password codes). `supabase db reset` already applies it locally.
 5. Check delivery: `npm run email:test` (sends to Resend's `delivered@resend.dev`) or `npm run email:test -- you@example.com`.
 6. Optional Edge Function (`supabase/functions/send-fides-email`): set `MAIL_TRANSPORT=edge` and
    `FIDES_EMAIL_FUNCTION_SECRET`, then

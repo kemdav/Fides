@@ -1,4 +1,5 @@
-import { DAY_MS, RENEWAL_WINDOW_DAYS } from "@/lib/billing";
+import { defaultTiers } from "./tiers";
+import { DAY_MS, SAMPLE_TODAY } from "./verification";
 
 export type TenantAccess = "active" | "suspended";
 
@@ -8,40 +9,61 @@ export type Tenant = {
   reference: string;
   owner: string;
   email: string;
-  nextBilling: string | null;
-  planCode: string;
+  nextBilling: string;
   plan: string;
   price: number;
   access: TenantAccess;
 };
 
-export type PlanSummary = {
-  code: string;
-  name: string;
-  price: number;
-};
+export const planOptions = defaultTiers.map((tier) => ({
+  value: tier.name,
+  label: tier.name,
+  detail: `$${tier.price}/month`,
+}));
 
 export const accessOptions = [
   { value: "active", label: "Active" },
   { value: "suspended", label: "Suspended" },
 ] as const;
 
-export function daysUntilBilling(tenant: Tenant, now: number): number {
-  if (!tenant.nextBilling) return Number.POSITIVE_INFINITY;
-  return Math.ceil((Date.parse(tenant.nextBilling) - now) / DAY_MS);
+export const sampleTenants: Tenant[] = [
+  {
+    id: "aura-skin-clinic",
+    name: "Aura Skin Clinic",
+    reference: "FID-1024",
+    owner: "Amelia Go",
+    email: "amelia@aura.example",
+    nextBilling: "2026-10-15",
+    plan: "Enterprise",
+    price: 199,
+    access: "suspended",
+  },
+  {
+    id: "olive-and-oak-spa",
+    name: "Olive & Oak Spa",
+    reference: "FID-1036",
+    owner: "Isabella Chua",
+    email: "isabella@olive.example",
+    nextBilling: "2026-10-12",
+    plan: "Business",
+    price: 79,
+    access: "active",
+  },
+];
+
+const RENEWAL_WINDOW_DAYS = 7;
+
+export function daysUntilBilling(tenant: Tenant): number {
+  const billing = new Date(`${tenant.nextBilling}T00:00:00`);
+  return Math.round((billing.getTime() - SAMPLE_TODAY.getTime()) / DAY_MS);
 }
 
-export function isRenewingSoon(tenant: Tenant, now: number): boolean {
-  return tenant.access === "active" && daysUntilBilling(tenant, now) <= RENEWAL_WINDOW_DAYS;
+export function isRenewingSoon(tenant: Tenant): boolean {
+  return tenant.access === "active" && daysUntilBilling(tenant) <= RENEWAL_WINDOW_DAYS;
 }
 
 export function formatNextBilling(tenant: Tenant): string {
-  if (!tenant.nextBilling) return "—";
-  return new Date(tenant.nextBilling).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-export function formatPrice(price: number): string {
-  return `₱${price.toLocaleString("en-PH", { maximumFractionDigits: 2 })}`;
+  return new Date(`${tenant.nextBilling}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 export const REASON_MIN = 10;

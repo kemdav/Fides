@@ -1,24 +1,18 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import * as React from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import {
+import type {
   WebsiteSettingsData,
   ActiveTab,
   ColorType,
   PreviewServiceItem,
 } from "./types";
-import {
-  CheckIcon,
-  CopyIcon,
-  ChevronDownIcon,
-  AlertCircleIcon,
-  EyeIcon,
-} from "./icons";
 import { MerchantSidebar } from "../merchant-sidebar";
 import { Icon } from "@/components/admin/icon";
-import { AdminButton } from "@/components/admin/admin-button";
+import { SelectField } from "@/components/ui/select-field";
 import {
   PageContent,
   PageHeading,
@@ -180,119 +174,6 @@ const fieldTextarea =
 const sectionTitle = "text-base font-semibold leading-6 text-ink";
 const sectionSubtitle = "mt-1 text-xs leading-relaxed text-muted";
 
-interface CustomSelectOption {
-  value: string;
-  label: string;
-}
-
-interface CustomSelectProps {
-  value: string;
-  options: CustomSelectOption[];
-  disabled?: boolean;
-  onChange: (value: string) => void;
-  ariaLabel?: string;
-}
-
-function CustomSelect({
-  value,
-  options,
-  disabled = false,
-  onChange,
-  ariaLabel,
-}: CustomSelectProps) {
-  const [isOpen, setIsOpen] = React.useState(false);
-  const containerRef = React.useRef<HTMLDivElement | null>(null);
-
-  React.useEffect(() => {
-    if (!isOpen) return;
-
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    };
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen]);
-
-  const selectedLabel =
-    options.find((opt) => opt.value === value)?.label ?? value;
-
-  return (
-    <div ref={containerRef} className="relative">
-      <button
-        type="button"
-        disabled={disabled}
-        aria-label={ariaLabel}
-        aria-haspopup="listbox"
-        aria-expanded={isOpen}
-        onClick={() => {
-          if (!disabled) setIsOpen((prev) => !prev);
-        }}
-        className={`h-11 w-full min-w-0 rounded-lg border bg-white px-3 text-left text-sm text-ink flex items-center justify-between gap-2 transition-all focus:outline-none disabled:bg-mist disabled:text-muted disabled:cursor-not-allowed ${
-          isOpen
-            ? "border-burnt ring-2 ring-burnt/20"
-            : "border-outline hover:border-ink/40 focus:border-burnt focus:ring-2 focus:ring-burnt/30"
-        }`}
-      >
-        <span className="truncate">{selectedLabel}</span>
-        <ChevronDownIcon
-          className={`w-4 h-4 shrink-0 text-glyph transition-transform duration-150 ${
-            isOpen ? "rotate-180 text-burnt" : ""
-          }`}
-        />
-      </button>
-
-      {isOpen && !disabled && (
-        <div
-          role="listbox"
-          className="absolute left-0 right-0 z-40 mt-1.5 rounded-xl border border-hairline bg-white py-1.5 shadow-lg max-h-60 overflow-y-auto"
-        >
-          {options.map((opt) => {
-            const isSelected = opt.value === value;
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                role="option"
-                aria-selected={isSelected}
-                onClick={() => {
-                  onChange(opt.value);
-                  setIsOpen(false);
-                }}
-                className={`w-full px-3.5 py-2.5 text-left text-sm flex items-center justify-between gap-2 transition-colors ${
-                  isSelected
-                    ? "bg-burnt/10 text-burnt font-semibold"
-                    : "text-ink hover:bg-mist"
-                }`}
-              >
-                <span className="truncate">{opt.label}</span>
-                {isSelected && (
-                  <CheckIcon className="w-4 h-4 shrink-0 text-burnt" />
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
 interface ToggleSwitchProps {
   checked: boolean;
   disabled?: boolean;
@@ -318,14 +199,14 @@ function ToggleSwitch({
     >
       <span
         className={`block h-3.5 w-full rounded-full transition-colors duration-200 ${
-          checked ? "bg-neutral-300/80" : "bg-neutral-200"
+          checked ? "bg-outline/80" : "bg-line"
         }`}
       />
       <span
         className={`pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full shadow-xs transition-all duration-200 ${
           checked
             ? "translate-x-4 bg-burnt"
-            : "translate-x-0 bg-white border border-neutral-300"
+            : "translate-x-0 bg-white border border-outline"
         }`}
       />
     </button>
@@ -549,7 +430,7 @@ export function WebsiteSettingsView({
 
   const handleCopyLink = () => {
     const url = `https://${form.subdomain}.fides.app`;
-    navigator.clipboard?.writeText(url);
+    void navigator.clipboard?.writeText(url);
     setLinkCopiedToast(true);
     setTimeout(() => setLinkCopiedToast(false), 2200);
   };
@@ -639,14 +520,14 @@ export function WebsiteSettingsView({
       {/* Toast notifications */}
       {linkCopiedToast && (
         <div className="fixed top-4 right-4 left-4 sm:left-auto z-50 bg-ink text-white px-4 py-2.5 rounded-[10px] shadow-xl flex items-center gap-2 text-xs font-medium max-w-md">
-          <CheckIcon className="w-4 h-4 shrink-0 text-mint" />
+          <Icon name="check" className="w-4 h-4 shrink-0 text-mint" />
           <span>Website link copied to clipboard</span>
         </div>
       )}
 
       {uploadError && (
         <div className="fixed top-4 right-4 left-4 sm:left-auto z-50 bg-danger text-white px-4 py-2.5 rounded-[10px] shadow-xl flex items-center gap-2 text-xs font-medium max-w-md">
-          <AlertCircleIcon className="w-4 h-4 shrink-0 text-white" />
+          <Icon name="alert" className="w-4 h-4 shrink-0 text-white" />
           <span className="flex-1 min-w-0 break-words">{uploadError}</span>
           <button
             type="button"
@@ -660,7 +541,7 @@ export function WebsiteSettingsView({
 
       {saveDraftError && (
         <div className="fixed top-4 right-4 left-4 sm:left-auto z-50 bg-danger text-white px-4 py-2.5 rounded-[10px] shadow-xl flex items-center gap-2 text-xs font-medium max-w-md">
-          <AlertCircleIcon className="w-4 h-4 shrink-0 text-white" />
+          <Icon name="alert" className="w-4 h-4 shrink-0 text-white" />
           <span className="flex-1 min-w-0 break-words">{saveDraftError}</span>
           <button
             type="button"
@@ -696,26 +577,24 @@ export function WebsiteSettingsView({
                   <span className="size-1.5 rounded-full bg-success" />
                   Website is live
                 </StatusPill>
-                <AdminButton
-                  variant="outline"
-                  size="sm"
+                <Button variant="secondary" size="form"
                   className="gap-2"
                   onClick={() => setIsLivePreviewOpen(true)}
                 >
-                  <EyeIcon className="w-3.5 h-3.5" />
+                  <Icon name="eye" className="w-3.5 h-3.5" />
                   Preview website
-                </AdminButton>
+                </Button>
               </div>
             }
           />
 
           {/* Staff View-Only Banner */}
           {!canEdit && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 flex items-start gap-2.5">
-              <AlertCircleIcon className="w-4 h-4 shrink-0 mt-0.5 text-amber-700" />
+            <div className="rounded-xl border border-warn-fg/30 bg-warn-bg px-4 py-3 text-sm text-warn-fg flex items-start gap-2.5">
+              <Icon name="alert" className="w-4 h-4 shrink-0 mt-0.5 text-warn-fg" />
               <div className="min-w-0">
                 <p className="font-semibold">View-only access</p>
-                <p className="text-xs text-amber-800 mt-0.5">
+                <p className="text-xs text-warn-fg mt-0.5">
                   Only business owners can edit or publish website settings. You
                   can still review configurations and preview the website.
                 </p>
@@ -845,7 +724,7 @@ export function WebsiteSettingsView({
                         <label className="block text-xs font-semibold text-ink mb-1.5">
                           Website typography
                         </label>
-                        <CustomSelect
+                        <SelectField
                           ariaLabel="Website typography"
                           value={form.typography}
                           options={TYPOGRAPHY_OPTIONS}
@@ -1152,40 +1031,9 @@ export function WebsiteSettingsView({
                             aria-label={`${device} view`}
                           >
                             {device === "desktop" ? (
-                              <svg
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth={2}
-                                className="w-3.5 h-3.5"
-                              >
-                                <rect
-                                  x="2"
-                                  y="3"
-                                  width="20"
-                                  height="14"
-                                  rx="2"
-                                />
-                                <line x1="12" y1="17" x2="12" y2="21" />
-                                <line x1="8" y1="21" x2="16" y2="21" />
-                              </svg>
+                              <Icon name="monitor" className="size-3.5" />
                             ) : (
-                              <svg
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth={2}
-                                className="w-3.5 h-3.5"
-                              >
-                                <rect
-                                  x="5"
-                                  y="2"
-                                  width="14"
-                                  height="20"
-                                  rx="2"
-                                />
-                                <line x1="12" y1="18" x2="12.01" y2="18" />
-                              </svg>
+                              <Icon name="smartphone" className="size-3.5" />
                             )}
                           </button>
                         ))}
@@ -1199,17 +1047,7 @@ export function WebsiteSettingsView({
                   {/* Browser URL bar */}
                   <div className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg bg-mist border border-hairline text-xs font-mono text-body">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                        className="w-3.5 h-3.5 text-glyph shrink-0"
-                      >
-                        <circle cx="12" cy="12" r="10" />
-                        <line x1="2" y1="12" x2="22" y2="12" />
-                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                      </svg>
+                      <Icon name="globe" className="size-3.5 text-glyph shrink-0" />
                       <span className="truncate">
                         {form.subdomain}.fides.app
                       </span>
@@ -1220,17 +1058,7 @@ export function WebsiteSettingsView({
                       className="text-glyph hover:text-ink shrink-0 transition-colors"
                       aria-label="Open in full preview"
                     >
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                        className="w-3.5 h-3.5"
-                      >
-                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                        <polyline points="15 3 21 3 21 9" />
-                        <line x1="10" y1="14" x2="21" y2="3" />
-                      </svg>
+                      <Icon name="external-link" className="size-3.5" />
                     </button>
                   </div>
 
@@ -1366,7 +1194,7 @@ export function WebsiteSettingsView({
                                   className="text-[8px] font-medium mt-1 block"
                                   style={{ color: form.accentColor }}
                                 >
-                                  View service →
+                                  View service
                                 </span>
                               </div>
                             );
@@ -1382,7 +1210,7 @@ export function WebsiteSettingsView({
                   </div>
 
                   <p className="text-xs text-muted flex items-center gap-1.5 pt-1">
-                    <CheckIcon className="w-3.5 h-3.5 shrink-0 text-glyph" />
+                    <Icon name="check" className="w-3.5 h-3.5 shrink-0 text-glyph" />
                     <span>
                       Only you can see these updates until you publish.
                     </span>
@@ -1425,7 +1253,7 @@ export function WebsiteSettingsView({
                       <label className="block text-xs font-semibold text-ink mb-1.5">
                         Business category
                       </label>
-                      <CustomSelect
+                      <SelectField
                         ariaLabel="Business category"
                         value={form.businessCategory}
                         options={BUSINESS_CATEGORY_OPTIONS}
@@ -1651,26 +1479,22 @@ export function WebsiteSettingsView({
                         onClick={handleCopyLink}
                         className="inline-flex items-center gap-1 shrink-0 text-xs text-muted hover:text-ink font-sans transition-colors"
                       >
-                        <CopyIcon className="w-3.5 h-3.5" />
+                        <Icon name="copy" className="w-3.5 h-3.5" />
                         <span>Copy link</span>
                       </button>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 pt-1">
-                      <AdminButton
-                        variant="primary"
-                        size="xs"
+                      <Button variant="brand" size="xs"
                         disabled={!canEdit}
                         onClick={() => setIsChangeAddressOpen(true)}
                       >
                         Change website address
-                      </AdminButton>
-                      <AdminButton
-                        variant="outline"
-                        size="xs"
+                      </Button>
+                      <Button variant="secondary" size="xs"
                         onClick={() => setIsShareModalOpen(true)}
                       >
                         Share
-                      </AdminButton>
+                      </Button>
                     </div>
                     <p className="text-xs text-muted">
                       Use 3–40 lowercase letters, numbers, or hyphens. No
@@ -1680,7 +1504,7 @@ export function WebsiteSettingsView({
 
                   <div className="rounded-lg bg-warn-bg border border-warn-bg p-4 space-y-1">
                     <div className="flex items-center gap-2 text-sm font-semibold text-warn-fg">
-                      <AlertCircleIcon className="w-4 h-4 shrink-0" />
+                      <Icon name="alert" className="w-4 h-4 shrink-0" />
                       <span>Changing your address affects shared links</span>
                     </div>
                     <p className="text-sm text-warn-fg leading-relaxed pl-6">
@@ -1714,14 +1538,12 @@ export function WebsiteSettingsView({
                     />
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-lg bg-mist border border-hairline">
-                    <AdminButton
-                      variant="primary"
-                      size="xs"
+                    <Button variant="brand" size="xs"
                       disabled={!canEdit}
                       onClick={() => setIsConnectDomainOpen(true)}
                     >
                       View connection steps
-                    </AdminButton>
+                    </Button>
                     {form.isDomainVerified ? (
                       <span className="inline-flex items-center rounded-md bg-wash px-2 py-1 text-xs font-semibold leading-[18px] text-success whitespace-nowrap">
                         <span className="w-1.5 h-1.5 rounded-full bg-success mr-1.5" />
@@ -1920,15 +1742,13 @@ export function WebsiteSettingsView({
                           Use cover
                         </button>
                       )}
-                      <AdminButton
-                        variant="outline"
-                        size="xs"
+                      <Button variant="secondary" size="xs"
                         type="button"
                         disabled={!canEdit || isUploadingSocial}
                         onClick={() => socialInputRef.current?.click()}
                       >
                         {isUploadingSocial ? "Uploading..." : "Change image"}
-                      </AdminButton>
+                      </Button>
                     </div>
                   </div>
                 </Surface>
@@ -1997,33 +1817,27 @@ export function WebsiteSettingsView({
             </div>
 
             <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3 shrink-0">
-              <AdminButton
-                variant="outline"
-                size="xs"
+              <Button variant="secondary" size="xs"
                 type="button"
                 disabled={!hasChanges}
                 onClick={() => setIsDiscardOpen(true)}
               >
                 Discard changes
-              </AdminButton>
-              <AdminButton
-                variant="outline"
-                size="xs"
+              </Button>
+              <Button variant="secondary" size="xs"
                 type="button"
                 disabled={isSavingDraft}
                 onClick={handleSaveDraft}
               >
                 {isSavingDraft ? "Saving..." : "Save draft"}
-              </AdminButton>
-              <AdminButton
-                variant="primary"
-                size="sm"
+              </Button>
+              <Button variant="brand" size="form"
                 type="button"
                 disabled={isPublishing}
                 onClick={() => setIsPublishReviewOpen(true)}
               >
                 {isPublishing ? "Publishing..." : "Publish changes"}
-              </AdminButton>
+              </Button>
             </div>
           </div>
         )}

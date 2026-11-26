@@ -4,7 +4,7 @@ import * as React from "react";
 import { Modal } from "@/components/ui/modal";
 import { normalizeBrandColor } from "@/lib/brand-colors";
 import { HEX_COLOR_REGEX } from "@/lib/validations/website-settings";
-import { ColorType, ColorOption } from "./types";
+import type { ColorType, ColorOption } from "./types";
 
 const COLOR_CONFIG: Record<
   ColorType,
@@ -113,7 +113,7 @@ function ColorPickerContent({
       unstyled
       onClose={onClose}
       labelledBy={titleId}
-      className="m-auto w-[calc(100%-2rem)] max-w-sm rounded-2xl border border-neutral-200 bg-white p-6 text-neutral-900 shadow-2xl backdrop:backdrop-blur-xs"
+      className="m-auto w-[calc(100%-2rem)] max-w-sm rounded-2xl border border-line bg-white p-6 text-ink shadow-2xl backdrop:backdrop-blur-xs"
     >
       <form
         onSubmit={(event) => {
@@ -127,7 +127,7 @@ function ColorPickerContent({
           <h3 id={titleId} className="text-lg font-semibold">
             {config.title}
           </h3>
-          <p className="mt-1 text-xs text-neutral-500 leading-relaxed">
+          <p className="mt-1 text-xs text-muted leading-relaxed">
             {config.description}
           </p>
         </div>
@@ -136,7 +136,7 @@ function ColorPickerContent({
           className="relative mb-4 flex h-10 w-full items-center justify-end rounded-lg border border-black/10 px-2 shadow-inner focus-within:ring-2 focus-within:ring-burnt/50"
           style={{ backgroundColor: pickerHex }}
         >
-          <span className="rounded-md border border-black/10 bg-white px-2 py-1 text-xs font-medium text-neutral-800">
+          <span className="rounded-md border border-black/10 bg-white px-2 py-1 text-xs font-medium text-ink">
             Choose color
           </span>
           <input
@@ -153,7 +153,7 @@ function ColorPickerContent({
           <div>
             <label
               htmlFor={hexId}
-              className="mb-1 block text-xs font-medium text-neutral-700"
+              className="mb-1 block text-xs font-medium text-body"
             >
               HEX color*
             </label>
@@ -168,9 +168,9 @@ function ColorPickerContent({
               spellCheck={false}
               maxLength={7}
               placeholder="#000000"
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2.5 font-mono text-xs uppercase text-neutral-900 transition focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/25 aria-invalid:border-danger"
+              className="w-full rounded-lg border border-outline px-3 py-2.5 font-mono text-xs uppercase text-ink transition focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/25 aria-invalid:border-danger"
             />
-            <p id={hexHelpId} className="mt-1 text-[11px] text-neutral-500">
+            <p id={hexHelpId} className="mt-1 text-[11px] text-muted">
               Enter a 6-digit HEX value, such as #0D6E6E.
             </p>
           </div>
@@ -187,8 +187,8 @@ function ColorPickerContent({
                   aria-pressed={isSelected}
                   className={`flex items-center justify-center px-3 py-2 rounded-lg border text-xs font-medium transition cursor-pointer ${
                     isSelected
-                      ? "border-neutral-900 bg-neutral-50 ring-1 ring-neutral-900 text-neutral-900 font-semibold"
-                      : "border-neutral-200 hover:border-neutral-300 bg-white text-neutral-700"
+                      ? "border-ink bg-mist ring-1 ring-ink text-ink font-semibold"
+                      : "border-line hover:border-outline bg-white text-body"
                   }`}
                 >
                   <span className="truncate">{preset.name}</span>
@@ -199,18 +199,18 @@ function ColorPickerContent({
         </div>
 
         {/* Action Buttons */}
-        <div className="mt-6 flex items-center justify-end gap-3 pt-3 border-t border-neutral-100">
+        <div className="mt-6 flex items-center justify-end gap-3 pt-3 border-t border-mist">
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex items-center justify-center h-10 px-4 text-sm font-medium text-neutral-800 bg-white border border-neutral-400/80 hover:bg-neutral-50 rounded-lg transition cursor-pointer"
+            className="inline-flex items-center justify-center h-10 px-4 text-sm font-medium text-ink bg-white border border-glyph/80 hover:bg-mist rounded-lg transition cursor-pointer"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={!validHex}
-            className="inline-flex items-center justify-center h-10 px-5 text-sm font-semibold text-white bg-burnt hover:opacity-90 rounded-lg transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center justify-center h-10 px-5 text-sm font-semibold text-on-burnt bg-burnt hover:opacity-90 rounded-lg transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
           >
             Apply color
           </button>

@@ -110,7 +110,7 @@ function InvoiceRowActions({
   }, [open]);
 
   const actionClass =
-    "block w-full px-3.5 py-2 text-left text-xs font-medium text-[#243242] hover:bg-[#F9FAFB]";
+    "block w-full px-3.5 py-2 text-left text-xs font-medium text-ink hover:bg-mist";
 
   return (
     <>
@@ -119,7 +119,7 @@ function InvoiceRowActions({
         type="button"
         aria-label={`Actions for ${invoiceNumber}`}
         popoverTarget={menuId}
-        className="inline-flex size-8 items-center justify-center rounded-lg text-[#4B5563] hover:bg-[#F3F4F6]"
+        className="inline-flex size-8 items-center justify-center rounded-lg text-body hover:bg-mist"
       >
         <Icon name="more" className="size-4" />
       </button>
@@ -129,7 +129,7 @@ function InvoiceRowActions({
         popover="auto"
         onToggle={(event) => setOpen(event.newState === "open")}
         style={{ visibility: "hidden" }}
-        className="fixed inset-auto m-0 w-48 max-w-[calc(100vw-1rem)] rounded-[10px] border border-[#E5E7EB] bg-white px-0 py-1.5 shadow-lg"
+        className="fixed inset-auto m-0 w-48 max-w-[calc(100vw-1rem)] rounded-[10px] border border-line bg-white px-0 py-1.5 shadow-lg"
       >
         <button
           type="button"
@@ -157,7 +157,7 @@ function InvoiceRowActions({
             popoverTarget={menuId}
             popoverTargetAction="hide"
             onClick={onSubmitPayment}
-            className="block w-full px-3.5 py-2 text-left text-xs font-semibold text-[#C35000] hover:bg-[#FFF7ED]"
+            className="block w-full px-3.5 py-2 text-left text-xs font-semibold text-burnt hover:bg-warn-bg"
           >
             Submit payment details
           </button>
@@ -618,15 +618,15 @@ export function SubscriptionSettingsView({
         : "Active";
 
   const statusPillClass = isEnded
-    ? "bg-[#F3F4F6] text-[#4B5563]"
+    ? "bg-mist text-body"
     : isPastDue
-      ? "bg-[#FEF2F2] text-[#B91C1C]"
+      ? "bg-danger-bg text-danger-dark"
       : isTrialing
-        ? "bg-[#EEF2FF] text-[#3B5BDB]"
-        : "bg-[#E9F9EE] text-[#15803D]";
+        ? "bg-info-bg text-info"
+        : "bg-wash text-success";
 
   return (
-    <div className="flex min-h-dvh bg-[#FEFCE8]">
+    <div className="flex min-h-dvh flex-col bg-powder lg:flex-row">
       <MerchantSidebar
         businessName={data.businessName}
         userName={data.userName}
@@ -640,10 +640,10 @@ export function SubscriptionSettingsView({
           {/* Page Header */}
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0">
-              <h1 className="font-display text-[28px] leading-[36px] text-[#243242] sm:text-[32px] sm:leading-[40px]">
+              <h1 className="font-display text-[28px] leading-[36px] text-ink sm:text-[32px] sm:leading-[40px]">
                 Subscription settings
               </h1>
-              <p className="mt-2 text-[13px] leading-[20px] text-[#6B7280]">
+              <p className="mt-2 text-[13px] leading-[20px] text-muted">
                 Manage your plan, usage, invoices, and billing preferences.
               </p>
             </div>
@@ -654,12 +654,12 @@ export function SubscriptionSettingsView({
 
           {/* Status Banners */}
           {!canEdit ? (
-            <div className="rounded-[10px] border border-[#E9ECF0] bg-[#F3F5F8] px-4 py-3 text-[12.5px] leading-[19px] text-[#354357]">
+            <div className="rounded-[10px] border border-hairline bg-mist px-4 py-3 text-[12.5px] leading-[19px] text-body">
               Read-only access · Only the business owner can change the
               subscription and billing details.
             </div>
           ) : isCancelling ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-[#E9ECF0] bg-[#F3F5F8] px-4 py-2.5 text-[12.5px] leading-[19px] text-[#354357]">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-hairline bg-mist px-4 py-2.5 text-[12.5px] leading-[19px] text-body">
               <p>
                 Cancellation scheduled · {subscription.tierName} stays active
                 through {periodEndLabel} at 23:59 ({timezone}). Renewal on{" "}
@@ -669,13 +669,13 @@ export function SubscriptionSettingsView({
                 type="button"
                 onClick={handleKeepMyPlan}
                 disabled={submitting}
-                className="inline-flex h-9 items-center justify-center rounded-[7px] bg-[#C35000] px-4 text-[12.5px] font-semibold text-white transition-colors hover:bg-[#A64400] disabled:opacity-50"
+                className="inline-flex h-9 items-center justify-center rounded-[7px] bg-burnt px-4 text-[12.5px] font-semibold text-on-burnt transition-colors hover:bg-burnt-dark disabled:opacity-50"
               >
                 Keep my Plan
               </button>
             </div>
           ) : isEnded ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-[#FECACA] bg-[#FEF2F2] px-4 py-2.5 text-[12.5px] leading-[19px] text-[#991B1B]">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-danger/30 bg-danger-bg px-4 py-2.5 text-[12.5px] leading-[19px] text-danger-text">
               <p>
                 Subscription {subscription.status} · Your workspace is in
                 read-only mode. Reactivate your plan to resume bookings.
@@ -683,13 +683,13 @@ export function SubscriptionSettingsView({
               <button
                 type="button"
                 onClick={() => setReactivateOpen(true)}
-                className="inline-flex h-9 items-center justify-center rounded-[7px] bg-[#C35000] px-4 text-[12.5px] font-semibold text-white transition-colors hover:bg-[#A64400]"
+                className="inline-flex h-9 items-center justify-center rounded-[7px] bg-burnt px-4 text-[12.5px] font-semibold text-on-burnt transition-colors hover:bg-burnt-dark"
               >
                 Reactivate subscription
               </button>
             </div>
           ) : isPastDue ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-[#FDE68A] bg-[#FFFBEB] px-4 py-2.5 text-[12.5px] leading-[19px] text-[#92400E]">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-warn-bg bg-warn-bg px-4 py-2.5 text-[12.5px] leading-[19px] text-warn-fg">
               <p>
                 Payment past due · Submit your bank transfer details for the
                 overdue invoice to avoid service interruption.
@@ -698,14 +698,14 @@ export function SubscriptionSettingsView({
                 <button
                   type="button"
                   onClick={() => setViewingInvoice(latestUnpaidInvoice)}
-                  className="inline-flex h-9 items-center justify-center rounded-[7px] bg-[#C35000] px-4 text-[12.5px] font-semibold text-white transition-colors hover:bg-[#A64400]"
+                  className="inline-flex h-9 items-center justify-center rounded-[7px] bg-burnt px-4 text-[12.5px] font-semibold text-on-burnt transition-colors hover:bg-burnt-dark"
                 >
                   View overdue invoice
                 </button>
               )}
             </div>
           ) : isTrialing ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-[#E9ECF0] bg-[#F3F5F8] px-4 py-2.5 text-[12.5px] leading-[19px] text-[#354357]">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-hairline bg-mist px-4 py-2.5 text-[12.5px] leading-[19px] text-body">
               <p>
                 {subscription.trialConversionScheduled
                   ? `Paid plan scheduled · ${subscription.tierName} billing starts after your trial ends on ${formatLongDate(subscription.trialEndsAt ?? subscription.currentPeriodEnd, timezone)}.`
@@ -715,7 +715,7 @@ export function SubscriptionSettingsView({
                 <button
                   type="button"
                   onClick={() => setConvertTrialOpen(true)}
-                  className="inline-flex h-9 items-center justify-center rounded-[7px] bg-[#C35000] px-4 text-[12.5px] font-semibold text-white transition-colors hover:bg-[#A64400]"
+                  className="inline-flex h-9 items-center justify-center rounded-[7px] bg-burnt px-4 text-[12.5px] font-semibold text-on-burnt transition-colors hover:bg-burnt-dark"
                 >
                   Convert trial to paid
                 </button>
@@ -724,11 +724,11 @@ export function SubscriptionSettingsView({
           ) : hasScheduledChange ? (
             <div className="space-y-2.5">
               {justScheduledPlanBanner && (
-                <div className="rounded-[10px] border border-[#E9ECF0] bg-[#F3F5F8] px-4 py-3 text-[12.5px] leading-[19px] text-[#354357]">
+                <div className="rounded-[10px] border border-hairline bg-mist px-4 py-3 text-[12.5px] leading-[19px] text-body">
                   Plan change scheduled. No charge is due today.
                 </div>
               )}
-              <div className="rounded-[10px] border border-[#E9ECF0] bg-[#F3F5F8] px-4 py-3 text-[12.5px] leading-[19px] text-[#354357]">
+              <div className="rounded-[10px] border border-hairline bg-mist px-4 py-3 text-[12.5px] leading-[19px] text-body">
                 Plan change scheduled · {subscription.scheduledTierName} starts{" "}
                 {formatLongDate(
                   subscription.scheduledChangeEffectiveAt ?? nextStartIso,
@@ -738,7 +738,7 @@ export function SubscriptionSettingsView({
               </div>
             </div>
           ) : (
-            <div className="rounded-[10px] border border-[#E9ECF0] bg-[#F3F5F8] px-4 py-3 text-[12.5px] leading-[19px] text-[#354357]">
+            <div className="rounded-[10px] border border-hairline bg-mist px-4 py-3 text-[12.5px] leading-[19px] text-body">
               Active subscription · Your {subscription.tierName} plan is active
               for {currentPeriodLabel}.
             </div>
@@ -748,14 +748,14 @@ export function SubscriptionSettingsView({
           <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
             {/* Left Card: Plan & Usage */}
             <section className={cardClass}>
-              <h2 className="text-[17px] font-medium leading-[24px] text-[#243242]">
+              <h2 className="text-[17px] font-medium leading-[24px] text-ink">
                 {subscription.tierName}
                 {isCancelling ? " · Cancels at period end" : ""}
               </h2>
-              <p className="mt-3 text-[26px] font-medium leading-[32px] tracking-[-0.01em] text-[#243242]">
+              <p className="mt-3 text-[26px] font-medium leading-[32px] tracking-[-0.01em] text-ink">
                 {formatPhp(subscription.priceCents)} / month
               </p>
-              <p className="mt-2 text-[12.5px] text-[#6B7280]">
+              <p className="mt-2 text-[12.5px] text-muted">
                 Current period: {currentPeriodLabel} · Monthly billing
               </p>
 
@@ -774,16 +774,16 @@ export function SubscriptionSettingsView({
               <div className="mt-5 space-y-4">
                 {/* Staff accounts */}
                 <div>
-                  <p className="text-[13px] font-medium text-[#243242]">
+                  <p className="text-[13px] font-medium text-ink">
                     Staff accounts · {usage.totalStaffSeatsUsed} of {staffLimit}
                   </p>
-                  <div className="mt-2 h-[6px] w-full overflow-hidden rounded-full bg-[#ECEFF3]">
+                  <div className="mt-2 h-[6px] w-full overflow-hidden rounded-full bg-hairline">
                     <div
-                      className="h-full rounded-full bg-[#C35000] transition-all"
+                      className="h-full rounded-full bg-burnt transition-all"
                       style={{ width: `${staffPct}%` }}
                     />
                   </div>
-                  <p className="mt-2 text-[12px] leading-[17px] text-[#6B7280]">
+                  <p className="mt-2 text-[12px] leading-[17px] text-muted">
                     {usage.activeStaffCount} active{" "}
                     {usage.activeStaffCount === 1 ? "account" : "accounts"} +{" "}
                     {usage.pendingInvitationsCount} pending{" "}
@@ -796,19 +796,19 @@ export function SubscriptionSettingsView({
 
                 {/* Branches */}
                 <div>
-                  <p className="text-[13px] font-medium text-[#243242]">
+                  <p className="text-[13px] font-medium text-ink">
                     Branches · {usage.branchesCount} of {branchLimit}
                   </p>
-                  <div className="mt-2 h-[6px] w-full overflow-hidden rounded-full bg-[#ECEFF3]">
+                  <div className="mt-2 h-[6px] w-full overflow-hidden rounded-full bg-hairline">
                     <div
                       className={cn(
                         "h-full rounded-full transition-all",
-                        branchAtLimit ? "bg-[#243242]" : "bg-[#C35000]",
+                        branchAtLimit ? "bg-ink" : "bg-burnt",
                       )}
                       style={{ width: `${branchPct}%` }}
                     />
                   </div>
-                  <p className="mt-2 text-[12px] leading-[17px] text-[#6B7280]">
+                  <p className="mt-2 text-[12px] leading-[17px] text-muted">
                     {branchAtLimit
                       ? subscription.tierCode === "enterprise"
                         ? "At plan branch limit."
@@ -819,18 +819,18 @@ export function SubscriptionSettingsView({
 
                 {/* Appointments */}
                 <div>
-                  <p className="text-[13px] font-medium text-[#243242]">
+                  <p className="text-[13px] font-medium text-ink">
                     Appointments this period ·{" "}
                     {usage.appointmentsThisPeriod.toLocaleString()} of{" "}
                     {apptLimit.toLocaleString()}
                   </p>
-                  <div className="mt-2 h-[6px] w-full overflow-hidden rounded-full bg-[#ECEFF3]">
+                  <div className="mt-2 h-[6px] w-full overflow-hidden rounded-full bg-hairline">
                     <div
-                      className="h-full rounded-full bg-[#8ECAE0] transition-all"
+                      className="h-full rounded-full bg-sky transition-all"
                       style={{ width: `${apptPct}%` }}
                     />
                   </div>
-                  <p className="mt-2 text-[12px] leading-[17px] text-[#6B7280]">
+                  <p className="mt-2 text-[12px] leading-[17px] text-muted">
                     {isCancelling || isEnded
                       ? "Last billing period usage · New usage starts after a paid plan is active."
                       : `${currentPeriodNoYear} · Resets ${nextResetDateLabel} at 00:00 (${timezone}).`}
@@ -844,7 +844,7 @@ export function SubscriptionSettingsView({
                     <button
                       type="button"
                       onClick={() => setWhyBranchOpen(true)}
-                      className="inline-flex h-[44px] min-w-[186px] items-center justify-center rounded-[8px] border border-[#E5E7EB] bg-white px-5 text-[13px] font-medium text-[#243242] transition-colors hover:bg-[#F9FAFB]"
+                      className="inline-flex h-[44px] min-w-[186px] items-center justify-center rounded-[8px] border border-line bg-white px-5 text-[13px] font-medium text-ink transition-colors hover:bg-mist"
                     >
                       Why can&apos;t I add a branch?
                     </button>
@@ -853,7 +853,7 @@ export function SubscriptionSettingsView({
                     <button
                       type="button"
                       onClick={() => setReactivateOpen(true)}
-                      className="inline-flex h-[44px] min-w-[164px] items-center justify-center rounded-[8px] bg-[#C35000] px-6 text-[13px] font-semibold text-white transition-colors hover:bg-[#A64400]"
+                      className="inline-flex h-[44px] min-w-[164px] items-center justify-center rounded-[8px] bg-burnt px-6 text-[13px] font-semibold text-on-burnt transition-colors hover:bg-burnt-dark"
                     >
                       Reactivate subscription
                     </button>
@@ -861,7 +861,7 @@ export function SubscriptionSettingsView({
                     <button
                       type="button"
                       onClick={handleOpenChangePlan}
-                      className="inline-flex h-[44px] min-w-[136px] items-center justify-center rounded-[8px] bg-[#C35000] px-6 text-[13px] font-semibold text-white transition-colors hover:bg-[#A64400]"
+                      className="inline-flex h-[44px] min-w-[136px] items-center justify-center rounded-[8px] bg-burnt px-6 text-[13px] font-semibold text-on-burnt transition-colors hover:bg-burnt-dark"
                     >
                       Change plan
                     </button>
@@ -872,12 +872,12 @@ export function SubscriptionSettingsView({
 
             {/* Right Card: Next Invoice / Subscription Ending */}
             <section className={cardClass}>
-              <h2 className="text-[17px] font-medium leading-[24px] text-[#243242]">
+              <h2 className="text-[17px] font-medium leading-[24px] text-ink">
                 {isCancelling || isEnded
                   ? "Subscription ending"
                   : "Next invoice"}
               </h2>
-              <p className="mt-3 text-[24px] font-medium leading-[30px] tracking-[-0.01em] text-[#243242]">
+              <p className="mt-3 text-[24px] font-medium leading-[30px] tracking-[-0.01em] text-ink">
                 {isCancelling || isEnded
                   ? "No scheduled renewal"
                   : nextInvoiceDateLabel}
@@ -885,11 +885,11 @@ export function SubscriptionSettingsView({
 
               <div className="mt-3">
                 {isCancelling || isEnded ? (
-                  <span className="inline-flex items-center rounded-full bg-[#FEF3C7] px-3 py-1 text-[12px] font-medium text-[#B45309]">
+                  <span className="inline-flex items-center rounded-full bg-warn-bg px-3 py-1 text-[12px] font-medium text-warn-fg">
                     No renewal
                   </span>
                 ) : (
-                  <span className="inline-flex items-center rounded-full bg-[#EEF2FF] px-3 py-1 text-[12px] font-medium text-[#4361EE]">
+                  <span className="inline-flex items-center rounded-full bg-info-bg px-3 py-1 text-[12px] font-medium text-info">
                     Not issued
                   </span>
                 )}
@@ -898,48 +898,48 @@ export function SubscriptionSettingsView({
               {!isCancelling && !isEnded && (
                 <dl className="mt-5 space-y-3 text-[13px]">
                   <div className="grid grid-cols-2 gap-4">
-                    <dt className="text-[#6B7280]">Billing period</dt>
-                    <dd className="font-medium text-[#243242]">
+                    <dt className="text-muted">Billing period</dt>
+                    <dd className="font-medium text-ink">
                       {nextInvoicePeriodLabel}
                     </dd>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <dt className="text-[#6B7280]">
+                    <dt className="text-muted">
                       {nextPlanName} monthly plan
                     </dt>
-                    <dd className="font-medium text-[#243242]">
+                    <dd className="font-medium text-ink">
                       {formatPhp(nextPlanPriceCents)}
                     </dd>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <dt className="text-[#6B7280]">Add-ons</dt>
-                    <dd className="font-medium text-[#243242]">₱0</dd>
+                    <dt className="text-muted">Add-ons</dt>
+                    <dd className="font-medium text-ink">₱0</dd>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <dt className="text-[#6B7280]">Tax</dt>
-                    <dd className="font-medium text-[#243242]">
+                    <dt className="text-muted">Tax</dt>
+                    <dd className="font-medium text-ink">
                       Included in the estimate
                     </dd>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <dt className="text-[#6B7280]">Next invoice total</dt>
-                    <dd className="font-semibold text-[#243242]">
+                    <dt className="text-muted">Next invoice total</dt>
+                    <dd className="font-semibold text-ink">
                       {formatPhp(nextPlanPriceCents)}
                     </dd>
                   </div>
                 </dl>
               )}
 
-              <div className="mt-4 rounded-[10px] bg-[#F3F5F8] px-4 py-3 text-[12.5px] leading-[19px] text-[#354357]">
+              <div className="mt-4 rounded-[10px] bg-mist px-4 py-3 text-[12.5px] leading-[19px] text-body">
                 This is an estimate. Payment is due only after an invoice is
                 issued. No payment is requested today.
               </div>
 
               <div className="mt-4 space-y-2">
-                <p className="text-[13px] font-medium text-[#243242]">
+                <p className="text-[13px] font-medium text-ink">
                   Payment method: Invoice / bank transfer
                 </p>
-                <p className="text-[12.5px] leading-[19px] text-[#6B7280]">
+                <p className="text-[12.5px] leading-[19px] text-muted">
                   Pay within 7 days of issue. Include the invoice number as your
                   transfer reference. No card is stored.
                 </p>
@@ -950,7 +950,7 @@ export function SubscriptionSettingsView({
                   <button
                     type="button"
                     onClick={handleOpenBillingDetails}
-                    className="inline-flex h-[34px] items-center justify-center rounded-[6px] border-[1.5px] border-[#C35000] bg-white px-3.5 text-[12.5px] font-semibold text-[#C35000] transition-colors hover:bg-[#C35000]/5"
+                    className="inline-flex h-[34px] items-center justify-center rounded-[6px] border-[1.5px] border-burnt bg-white px-3.5 text-[12.5px] font-semibold text-burnt transition-colors hover:bg-burnt/5"
                   >
                     Billing Details
                   </button>
@@ -958,16 +958,16 @@ export function SubscriptionSettingsView({
                     <button
                       type="button"
                       onClick={() => setViewingInvoice(latestInvoice)}
-                      className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-[#6B7280] transition-colors hover:text-[#243242]"
+                      className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-muted transition-colors hover:text-ink"
                     >
                       <span>View Latest Invoice</span>
-                      <span aria-hidden="true">→</span>
+                      <Icon name="arrow-right" weight="medium" className="size-3.5" />
                     </button>
                   )}
                 </div>
               )}
 
-              <div className="mt-5 flex flex-wrap items-center justify-between gap-2 text-[12px] text-[#6B7280]">
+              <div className="mt-5 flex flex-wrap items-center justify-between gap-2 text-[12px] text-muted">
                 <p>
                   Invoice and reminder recipient:{" "}
                   <span>{billingProfile.billingEmail}</span>
@@ -979,7 +979,7 @@ export function SubscriptionSettingsView({
                   <button
                     type="button"
                     onClick={handleOpenDeliveryPrefs}
-                    className="font-medium text-[#C35000] hover:underline"
+                    className="font-medium text-burnt hover:underline"
                   >
                     Delivery &amp; alerts
                   </button>
@@ -990,10 +990,10 @@ export function SubscriptionSettingsView({
 
           {/* Included Features Section */}
           <section className={cardClass}>
-            <h2 className="text-[17px] font-medium leading-[24px] text-[#243242]">
+            <h2 className="text-[17px] font-medium leading-[24px] text-ink">
               Included in {subscription.tierName}
             </h2>
-            <p className="mt-1.5 text-[12.5px] text-[#6B7280]">
+            <p className="mt-1.5 text-[12.5px] text-muted">
               Everything included with your {subscription.tierName} plan.
             </p>
 
@@ -1001,26 +1001,16 @@ export function SubscriptionSettingsView({
               {includedFeatures.map((feature) => (
                 <div
                   key={feature.key}
-                  className="flex items-start gap-3 rounded-[10px] bg-[#F3F5F8] px-4 py-3.5"
+                  className="flex items-start gap-3 rounded-[10px] bg-mist px-4 py-3.5"
                 >
-                  <span className="mt-0.5 flex size-[18px] shrink-0 items-center justify-center rounded-full bg-[#C35000] text-white">
-                    <svg
-                      viewBox="0 0 20 20"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.6"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="size-2.5"
-                    >
-                      <path d="M4.5 10.5l3.5 3.5 7.5-7.5" />
-                    </svg>
+                  <span className="mt-0.5 flex size-[18px] shrink-0 items-center justify-center rounded-full bg-burnt text-on-burnt">
+                    <Icon name="check" weight="bold" className="size-2.5" />
                   </span>
                   <div className="min-w-0">
-                    <p className="text-[13.5px] font-medium leading-[19px] text-[#243242]">
+                    <p className="text-[13.5px] font-medium leading-[19px] text-ink">
                       {feature.title}
                     </p>
-                    <p className="mt-1 text-[12px] leading-[17px] text-[#6B7280]">
+                    <p className="mt-1 text-[12px] leading-[17px] text-muted">
                       {feature.description}
                     </p>
                   </div>
@@ -1031,7 +1021,7 @@ export function SubscriptionSettingsView({
 
           {/* Billing History Table */}
           <section className={cardClass}>
-            <h2 className="text-[17px] font-medium leading-[24px] text-[#243242]">
+            <h2 className="text-[17px] font-medium leading-[24px] text-ink">
               Billing history
             </h2>
 
@@ -1049,11 +1039,11 @@ export function SubscriptionSettingsView({
             )}
 
             {invoices.length === 0 ? (
-              <div className="mt-4 rounded-[10px] border border-dashed border-[#E5E7EB] bg-[#FAFAFB] px-6 py-10 text-center">
-                <p className="text-sm font-semibold text-[#243242]">
+              <div className="mt-4 rounded-[10px] border border-dashed border-line bg-mist px-6 py-10 text-center">
+                <p className="text-sm font-semibold text-ink">
                   No invoices yet
                 </p>
-                <p className="mt-1 text-xs text-[#6B7280]">
+                <p className="mt-1 text-xs text-muted">
                   Subscription invoices and bank transfer payment records will
                   appear here once issued.
                 </p>
@@ -1063,7 +1053,7 @@ export function SubscriptionSettingsView({
                 <div className="mt-4 overflow-x-auto overflow-y-hidden">
                   <table className="w-full min-w-[680px] border-collapse text-left text-[13px]">
                     <thead>
-                      <tr className="text-[12.5px] text-[#6B7280]">
+                      <tr className="text-[12.5px] text-muted">
                         <th className="pb-4 pr-4 font-normal">Invoice</th>
                         <th className="pb-4 px-3 font-normal">
                           Billing period
@@ -1086,17 +1076,17 @@ export function SubscriptionSettingsView({
                         const isOverdue = inv.status === "overdue";
 
                         return (
-                          <tr key={inv.id} className="text-[#243242]">
+                          <tr key={inv.id} className="text-ink">
                             <td className="py-4 pr-4 font-normal">
                               <button
                                 type="button"
                                 onClick={() => setViewingInvoice(inv)}
-                                className="hover:text-[#C35000] hover:underline"
+                                className="hover:text-burnt hover:underline"
                               >
                                 {inv.invoiceNumber}
                               </button>
                             </td>
-                            <td className="py-4 px-3 text-[#4B5563]">
+                            <td className="py-4 px-3 text-body">
                               {formatPeriodRange(
                                 inv.billingPeriodStart,
                                 inv.billingPeriodEnd,
@@ -1104,10 +1094,10 @@ export function SubscriptionSettingsView({
                                 true,
                               )}
                             </td>
-                            <td className="py-4 px-3 text-[#4B5563]">
+                            <td className="py-4 px-3 text-body">
                               {formatShortDate(inv.issuedAt, timezone)}
                             </td>
-                            <td className="py-4 px-3 text-[#4B5563]">
+                            <td className="py-4 px-3 text-body">
                               {inv.paidAt
                                 ? formatShortDate(inv.paidAt, timezone)
                                 : "—"}
@@ -1120,10 +1110,10 @@ export function SubscriptionSettingsView({
                                 className={cn(
                                   "inline-flex items-center rounded-full px-3.5 py-1 text-[12px] font-medium",
                                   isPaid
-                                    ? "bg-[#E9F9EE] text-[#15803D]"
+                                    ? "bg-wash text-success"
                                     : isOverdue
-                                      ? "bg-[#FEF2F2] text-[#B91C1C]"
-                                      : "bg-[#F3F4F6] text-[#374151]",
+                                      ? "bg-danger-bg text-danger-dark"
+                                      : "bg-mist text-body",
                                 )}
                               >
                                 {statusLabel}
@@ -1150,18 +1140,18 @@ export function SubscriptionSettingsView({
                 </div>
 
                 {/* Pagination Footer */}
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 pt-2 text-[12px] text-[#6B7280]">
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 pt-2 text-[12px] text-muted">
                   <p>
                     Showing {pagedInvoices.length}{" "}
                     {pagedInvoices.length === 1 ? "invoice" : "invoices"} ·
                     Amounts in PHP
                   </p>
-                  <div className="flex items-center gap-3">
+                  <div className="flex w-full items-center gap-3 sm:w-auto">
                     <button
                       type="button"
                       disabled={safePage <= 1}
                       onClick={() => setInvoicePage((p) => Math.max(1, p - 1))}
-                      className="inline-flex h-10 min-w-[110px] items-center justify-center rounded-[8px] border border-[#E5E7EB] bg-white px-4 text-[13px] font-medium text-[#243242] transition-colors hover:bg-[#F9FAFB] disabled:opacity-40"
+                      className="inline-flex h-10 min-w-0 flex-1 sm:min-w-[110px] sm:flex-none items-center justify-center rounded-[8px] border border-line bg-white px-4 text-[13px] font-medium text-ink transition-colors hover:bg-mist disabled:opacity-40"
                     >
                       Previous
                     </button>
@@ -1171,7 +1161,7 @@ export function SubscriptionSettingsView({
                       onClick={() =>
                         setInvoicePage((p) => Math.min(totalPages, p + 1))
                       }
-                      className="inline-flex h-10 min-w-[110px] items-center justify-center rounded-[8px] border border-[#E5E7EB] bg-white px-4 text-[13px] font-medium text-[#243242] transition-colors hover:bg-[#F9FAFB] disabled:opacity-40"
+                      className="inline-flex h-10 min-w-0 flex-1 sm:min-w-[110px] sm:flex-none items-center justify-center rounded-[8px] border border-line bg-white px-4 text-[13px] font-medium text-ink transition-colors hover:bg-mist disabled:opacity-40"
                     >
                       Next
                     </button>
@@ -1182,7 +1172,7 @@ export function SubscriptionSettingsView({
           </section>
 
           {/* Bottom Metadata & Subscription Cancellation Link */}
-          <div className="flex flex-wrap items-center justify-between gap-3 px-1 pb-4 text-[12px] text-[#6B7280]">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-1 pb-4 text-[12px] text-muted">
             <p>
               Billing details · Last saved{" "}
               {formatLastSaved(billingProfile.updatedAt, timezone)}
@@ -1191,7 +1181,7 @@ export function SubscriptionSettingsView({
               <button
                 type="button"
                 onClick={handleOpenCancelStep1}
-                className="font-medium text-[#B91C1C] hover:underline"
+                className="font-medium text-danger-dark hover:underline"
               >
                 Cancel subscription
               </button>

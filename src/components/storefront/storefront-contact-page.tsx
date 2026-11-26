@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import { useActionState, useState } from "react";
-import { buttonClasses } from "@/components/ui";
+import { buttonClasses, inputClasses, SelectField } from "@/components/ui";
+import { cn } from "@/lib/utils";
 import {
   submitContactForm,
   type ContactFormState,
@@ -34,7 +35,6 @@ export function StorefrontContactPage({
   servicesHref = "#services",
 }: StorefrontContactPageProps) {
   const [topic, setTopic] = useState("");
-  const [topicOpen, setTopicOpen] = useState(false);
   const [topicError, setTopicError] = useState(false);
 
   const [state, formAction, isPending] = useActionState(
@@ -111,7 +111,7 @@ export function StorefrontContactPage({
                   name="name"
                   placeholder="Juan Dela Cruz"
                   disabled={isPending}
-                  className="mt-2 h-12 w-full rounded-lg border border-[#aeb6c0] px-4 text-base outline-none placeholder:text-muted focus:border-burnt disabled:opacity-60"
+                  className={cn(inputClasses(), "mt-2")}
                 />
               </label>
               <label className="text-base/6 text-ink">
@@ -122,7 +122,7 @@ export function StorefrontContactPage({
                   name="email"
                   placeholder="juan@gmail.com"
                   disabled={isPending}
-                  className="mt-2 h-12 w-full rounded-lg border border-[#aeb6c0] px-4 text-base outline-none placeholder:text-muted focus:border-burnt disabled:opacity-60"
+                  className={cn(inputClasses(), "mt-2")}
                 />
               </label>
               <label className="text-base/6 text-ink">
@@ -131,55 +131,23 @@ export function StorefrontContactPage({
                   name="phone"
                   placeholder="09123456789"
                   disabled={isPending}
-                  className="mt-2 h-12 w-full rounded-lg border border-[#aeb6c0] px-4 text-base outline-none placeholder:text-muted focus:border-burnt disabled:opacity-60"
+                  className={cn(inputClasses(), "mt-2")}
                 />
               </label>
-              <div className="relative text-base/6 text-ink">
-                Service/Topic*
-                <button
-                  type="button"
-                  aria-haspopup="listbox"
-                  aria-expanded={topicOpen}
+              <div className="text-base/6 text-ink">
+                <label htmlFor="storefront-topic">Service/Topic*</label>
+                <SelectField
+                  id="storefront-topic"
+                  className="mt-2"
                   disabled={isPending}
-                  onClick={() => setTopicOpen((open) => !open)}
-                  className="mt-2 flex h-12 w-full items-center justify-between rounded-lg border border-[#aeb6c0] bg-white px-4 text-left text-base outline-none focus:border-burnt disabled:opacity-60"
-                >
-                  <span className={topic ? "text-ink" : "text-muted"}>
-                    {topic || "Select a Topic"}
-                  </span>
-                  <svg
-                    aria-hidden
-                    viewBox="0 0 16 10"
-                    className={`size-4 text-muted transition-transform ${topicOpen ? "rotate-180" : ""}`}
-                    fill="currentColor"
-                  >
-                    <path d="M1.2 1.4a1 1 0 0 1 1.4-.2L8 5.7l5.4-4.5a1 1 0 1 1 1.2 1.6l-6 5a1 1 0 0 1-1.2 0l-6-5a1 1 0 0 1-.2-1.4Z" />
-                  </svg>
-                </button>
-                {topicOpen && (
-                  <ul
-                    role="listbox"
-                    className="absolute inset-x-0 top-full z-10 mt-2 overflow-hidden rounded-lg border border-[#aeb6c0] bg-white py-1 shadow-md"
-                  >
-                    {topicOptions.map((option) => (
-                      <li key={option}>
-                        <button
-                          type="button"
-                          role="option"
-                          aria-selected={topic === option}
-                          onClick={() => {
-                            setTopic(option);
-                            setTopicOpen(false);
-                            setTopicError(false);
-                          }}
-                          className="w-full px-4 py-3 text-left text-base text-ink transition-colors hover:bg-mist"
-                        >
-                          {option}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                  value={topic}
+                  placeholder="Select a Topic"
+                  options={topicOptions.map((option) => ({ value: option, label: option }))}
+                  onChange={(next) => {
+                    setTopic(next);
+                    setTopicError(false);
+                  }}
+                />
                 {topicError && (
                   <p className="mt-1 text-sm text-burnt">
                     Please choose a service or topic.
@@ -193,7 +161,7 @@ export function StorefrontContactPage({
                   name="message"
                   placeholder="How can we help you?"
                   disabled={isPending}
-                  className="mt-2 min-h-32 w-full resize-y rounded-lg border border-[#aeb6c0] px-4 py-3 text-base outline-none placeholder:text-muted focus:border-burnt disabled:opacity-60"
+                  className={cn(inputClasses(false, true), "mt-2 min-h-32")}
                 />
               </label>
               <p className="text-sm/6 text-muted sm:col-span-2">
@@ -214,7 +182,7 @@ export function StorefrontContactPage({
                 </button>
 
                 {state.success && (
-                  <p className="mt-3 text-sm font-medium text-emerald-600">
+                  <p className="mt-3 text-sm font-medium text-success">
                     {state.message || "Thanks — we'll be in touch soon."}
                   </p>
                 )}
@@ -230,7 +198,7 @@ export function StorefrontContactPage({
           <div className="text-sm/6 text-muted">
             {/* Dynamic tenant contact details card */}
             {(email || phone || address) && (
-              <div className="mb-8 rounded-lg border border-[#e2e8f0] bg-powder/70 p-6">
+              <div className="mb-8 rounded-lg border border-hairline bg-powder/70 p-6">
                 <h3 className="font-display text-xl text-ink">
                   Direct Details
                 </h3>
@@ -321,7 +289,7 @@ export function StorefrontContactPage({
               </span>
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <a
               href={servicesHref}
               className={buttonClasses({

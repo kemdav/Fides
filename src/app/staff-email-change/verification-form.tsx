@@ -1,8 +1,8 @@
 ﻿"use client";
 
+import { Button } from "@/components/ui/button";
 import { useActionState } from "react";
 import { verifyStaffEmailChangeAction } from "@/app/actions/staff-email-change";
-import { AdminButton } from "@/components/admin/admin-button";
 import { fieldOutlineClasses } from "@/components/admin/fields";
 import { PasswordInput } from "@/components/ui/password-input";
 
@@ -28,9 +28,9 @@ export function StaffEmailVerificationForm({ token, email }: {
         <p id="staff-verification-help" className="text-xs leading-relaxed text-muted">Use the password you already sign in to Fides with.</p>
       </div>
       {error && <p role="alert" className="rounded-lg bg-danger-bg p-3 text-sm text-danger-dark">{error}</p>}
-      <AdminButton type="submit" variant="primary" className="w-full" disabled={busy}>
+      <Button variant="brand" size="form" type="submit" className="w-full" disabled={busy}>
         {busy ? "Verifying and signing in…" : "Verify Email"}
-      </AdminButton>
+      </Button>
     </form>
   );
 }

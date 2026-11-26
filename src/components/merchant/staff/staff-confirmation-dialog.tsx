@@ -1,7 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { useId, type ReactNode } from "react";
-import { AdminButton } from "@/components/admin/admin-button";
 import { Icon } from "@/components/admin/icon";
 import { Modal } from "@/components/ui/modal";
 
@@ -39,7 +39,7 @@ export type StaffSuccessDetails = { title: string; description: string };
 export function StaffSuccessDialog({ title, description, onClose }: StaffSuccessDetails & { onClose: () => void }) {
   return (
     <StaffConfirmationDialog title={title} description={description} tone="success" onClose={onClose}>
-      <AdminButton variant="primary" size="xs" onClick={onClose}>Done</AdminButton>
+      <Button variant="brand" size="xs" onClick={onClose}>Done</Button>
     </StaffConfirmationDialog>
   );
 }

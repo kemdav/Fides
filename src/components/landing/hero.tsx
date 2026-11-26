@@ -24,7 +24,7 @@ export function Hero() {
         aria-hidden
         className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-burnt/0 to-burnt/10"
       />
-      <div className="relative mx-auto flex max-w-[1440px] flex-col items-center gap-10 px-4 py-12 sm:px-8 lg:min-h-[820px] lg:flex-row lg:gap-[102px] lg:px-[120px] lg:py-[86px]">
+      <div className="relative mx-auto flex max-w-[1440px] min-h-[calc(100dvh-4rem)] flex-col items-center justify-center gap-10 px-4 py-12 sm:px-8 lg:min-h-[max(820px,calc(100dvh-88px))] lg:flex-row lg:gap-[102px] lg:px-[120px] lg:py-[86px]">
         <div className="flex w-full flex-col gap-[15px] lg:w-[595px] lg:shrink-0">
           <h1
             style={{ animationDelay: "100ms" }}

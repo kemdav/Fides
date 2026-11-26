@@ -17,7 +17,7 @@ export default async function CustomerInviteAcceptPage({
   const preview = await previewCustomerInviteAction(token);
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-[#FCFAE8] p-4">
+    <main className="flex min-h-dvh items-center justify-center bg-powder p-4">
       <CustomerInviteAcceptForm token={token} preview={preview} />
     </main>
   );
