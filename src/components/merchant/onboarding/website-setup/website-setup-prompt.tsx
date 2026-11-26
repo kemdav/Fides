@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import * as React from "react";
-import { AdminLinkButton } from "@/components/admin/admin-button";
+import { buttonClasses } from "@/components/ui/button";
 import { Icon } from "@/components/admin/icon";
 import { loadSetupDraft } from "./draft-storage";
 import type { SetupDraft } from "./setup-data";
@@ -29,7 +30,7 @@ export function WebsiteSetupPrompt({ tenantId, userId, basePath }: { tenantId: s
           <p className="mt-0.5 text-sm text-muted">{started ? `Pick up where you left off at step ${draft?.step} of 6.` : "Choose your branding, add your business details, and preview your site before publishing."}</p>
         </div>
       </div>
-      <AdminLinkButton href={`${basePath}/dashboard/onboarding`} size="xs">{started ? "Continue website setup" : "Set up your website"}</AdminLinkButton>
+      <Link href={`${basePath}/dashboard/onboarding`} className={buttonClasses({ variant: "brand", size: "xs" })}>{started ? "Continue website setup" : "Set up your website"}</Link>
     </section>
   );
 }

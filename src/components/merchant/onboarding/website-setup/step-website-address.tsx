@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AdminButton } from "@/components/admin/admin-button";
+import { Button } from "@/components/ui/button";
 import { customDomainSchema, subdomainSchema } from "@/lib/validations/website-settings";
 import { FIELD_CLASS, websiteAddress, type StepFields } from "./setup-data";
 import { SetupDialog } from "./setup-dialog";
@@ -27,14 +27,15 @@ export function StepWebsiteAddress({ data, onChange, confirmedSubdomain, onConfi
   React.useEffect(() => {
     if (!valid || confirmed) return;
     let cancelled = false;
-    const timer = window.setTimeout(async () => {
+    async function checkAvailability() {
       try {
         const available = await checkAddress(subdomain);
         if (!cancelled) setChecked({ subdomain, available });
       } catch {
         if (!cancelled) setChecked({ subdomain, available: false, failed: true });
       }
-    }, 450);
+    }
+    const timer = window.setTimeout(() => { void checkAvailability(); }, 450);
     return () => { cancelled = true; window.clearTimeout(timer); };
   }, [checkAddress, confirmed, subdomain, valid]);
 
@@ -80,8 +81,8 @@ export function StepWebsiteAddress({ data, onChange, confirmedSubdomain, onConfi
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
-        <AdminButton size="xs" variant="outline" disabled={!available || confirmed} onClick={() => onConfirm(subdomain)}>Confirm address</AdminButton>
-        <AdminButton size="xs" variant="outline" disabled={!valid} onClick={copyLink}>Copy link</AdminButton>
+        <Button size="xs" variant="secondary" disabled={!available || confirmed} onClick={() => onConfirm(subdomain)}>Confirm address</Button>
+        <Button size="xs" variant="secondary" disabled={!valid} onClick={copyLink}>Copy link</Button>
       </div>
       {valid && <p className="break-all font-mono text-xs text-body">{link}</p>}
       {copyStatus && <p role="status" className="text-sm text-muted">{copyStatus}</p>}
@@ -94,16 +95,16 @@ export function StepWebsiteAddress({ data, onChange, confirmedSubdomain, onConfi
             <input className={FIELD_CLASS} value={data.customDomain} maxLength={100} placeholder="www.yourbusiness.com" onChange={(event) => { setDomainError(""); onChange({ customDomain: event.target.value, isDomainVerified: false }); }} />
           </label>
           {domainError && <p role="alert" className="text-sm text-danger">{domainError}</p>}
-          <AdminButton size="xs" variant="outline" onClick={openDomain}>View DNS setup</AdminButton>
+          <Button size="xs" variant="secondary" onClick={openDomain}>View DNS setup</Button>
         </div>
       </details>
       {domainOpen && (
         <SetupDialog title="Custom domain setup" onClose={() => setDomainOpen(false)} actions={
-          <AdminButton size="xs" onClick={() => setDomainOpen(false)}>Done</AdminButton>
+          <Button variant="brand" size="xs" onClick={() => setDomainOpen(false)}>Done</Button>
         }>
           <p className="break-all font-semibold">{data.customDomain}</p>
           <p>Save this domain in your setup draft. Connecting it will require adding DNS records with your domain provider.</p>
-          <AdminButton size="xs" variant="outline" onClick={() => setDomainChecked(true)}>Check DNS status</AdminButton>
+          <Button size="xs" variant="secondary" onClick={() => setDomainChecked(true)}>Check DNS status</Button>
           {domainChecked && <p role="status">DNS verification is pending in this preview.</p>}
         </SetupDialog>
       )}

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AdminButton } from "@/components/admin/admin-button";
+import { Button } from "@/components/ui/button";
 
 export function SetupDialog({ title, onClose, children, actions }: {
   title: string;
@@ -28,7 +28,7 @@ export function SetupDialog({ title, onClose, children, actions }: {
       <h2 id={titleId} className="mb-3 font-display text-2xl">{title}</h2>
       <div className="space-y-3 text-sm text-body">{children}</div>
       <div className="mt-5 flex flex-wrap justify-end gap-2">
-        {actions ?? <AdminButton size="xs" onClick={onClose}>Close</AdminButton>}
+        {actions ?? <Button variant="brand" size="xs" onClick={onClose}>Close</Button>}
       </div>
     </dialog>
   );

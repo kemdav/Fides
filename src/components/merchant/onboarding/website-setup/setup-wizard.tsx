@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AdminButton } from "@/components/admin/admin-button";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/admin/icon";
 import { Surface } from "@/components/admin/primitives";
 import { LivePreviewModal } from "@/components/merchant/website-settings/live-preview-modal";
@@ -183,13 +183,13 @@ export function SetupWizard({ userId, services, entryStep, verification = "ready
             <span className="font-display text-2xl leading-tight text-burnt lg:text-[28px]">Fides</span>
             <span className="text-sm font-semibold text-body">Website setup</span>
           </div>
-          <AdminButton size="xs" variant="outline" className="lg:hidden" disabled={busy} onClick={() => void finishLater()}>Finish later</AdminButton>
+          <Button size="xs" variant="secondary" className="lg:hidden" disabled={busy} onClick={() => void finishLater()}>Finish later</Button>
         </div>
         <div className="border-t border-hairline px-4 py-3 sm:px-6 lg:mx-4 lg:px-0 lg:py-4">
           <SetupProgress step={step} completedSteps={completedSteps} onStep={goTo} disabled={busy} />
         </div>
         <div className="mt-auto hidden border-t border-hairline p-4 lg:block">
-          <AdminButton size="xs" variant="outline" className="w-full" disabled={busy} onClick={() => void finishLater()}>Finish later</AdminButton>
+          <Button size="xs" variant="secondary" className="w-full" disabled={busy} onClick={() => void finishLater()}>Finish later</Button>
         </div>
       </aside>
 
@@ -209,7 +209,7 @@ export function SetupWizard({ userId, services, entryStep, verification = "ready
                   {step === 0 && (
                     <>
                       <StepWelcome />
-                      <AdminButton size="sm" disabled={busy} onClick={advance}>Start setup</AdminButton>
+                      <Button variant="brand" size="form" disabled={busy} onClick={advance}>Start setup</Button>
                     </>
                   )}
                   {step === 1 && <StepBrandIdentity {...stepProps} />}
@@ -238,11 +238,11 @@ export function SetupWizard({ userId, services, entryStep, verification = "ready
           </div>
           {step > 0 && (
             <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-              <AdminButton size="xs" variant="outline" disabled={busy} onClick={() => goTo((step - 1) as SetupStep)}>Back</AdminButton>
+              <Button size="xs" variant="secondary" disabled={busy} onClick={() => goTo((step - 1) as SetupStep)}>Back</Button>
               {step === 5 && <button type="button" onClick={skipSearch} className="rounded px-1.5 py-2 text-xs font-semibold text-body hover:text-burnt focus-visible:outline-2 focus-visible:outline-burnt">Skip for now</button>}
-              {step < 6 && <AdminButton size="xs" disabled={busy} onClick={advance}>Save & continue</AdminButton>}
+              {step < 6 && <Button variant="brand" size="xs" disabled={busy} onClick={advance}>Save & continue</Button>}
               {step === 6 && (
-                <AdminButton size="xs" disabled={busy || publishBlocked} onClick={() => { setReviewError(""); setModal("review"); }}>Publish</AdminButton>
+                <Button variant="brand" size="xs" disabled={busy || publishBlocked} onClick={() => { setReviewError(""); setModal("review"); }}>Publish</Button>
               )}
             </div>
           )}
@@ -259,8 +259,8 @@ export function SetupWizard({ userId, services, entryStep, verification = "ready
       {modal === "exit" && (
         <SetupDialog title="Draft saved" onClose={() => setModal(null)} actions={
           <>
-            <AdminButton size="xs" variant="outline" onClick={() => setModal(null)}>Keep editing</AdminButton>
-            <AdminButton size="xs" onClick={() => router.push(dashboardPath)}>Back to dashboard</AdminButton>
+            <Button size="xs" variant="secondary" onClick={() => setModal(null)}>Keep editing</Button>
+            <Button variant="brand" size="xs" onClick={() => router.push(dashboardPath)}>Back to dashboard</Button>
           </>
         }>
           <p>Your draft and current step are saved in this browser. Return from your dashboard whenever you’re ready.</p>
@@ -269,8 +269,8 @@ export function SetupWizard({ userId, services, entryStep, verification = "ready
       {modal === "review" && (
         <SetupDialog title={simulated ? "Review your publish preview" : "Publish your first website?"} onClose={() => { if (!busy) setModal(null); }} actions={
           <>
-            <AdminButton size="xs" variant="outline" disabled={busy} onClick={() => setModal(null)}>Keep editing</AdminButton>
-            <AdminButton size="xs" disabled={busy} onClick={confirmPublish}>{busy ? "Publishing…" : "Publish website"}</AdminButton>
+            <Button size="xs" variant="secondary" disabled={busy} onClick={() => setModal(null)}>Keep editing</Button>
+            <Button variant="brand" size="xs" disabled={busy} onClick={confirmPublish}>{busy ? "Publishing…" : "Publish website"}</Button>
           </>
         }>
           <p>{simulated ? "This publish preview is saved in this browser." : "Your booking website will be available to customers."}</p>
@@ -280,7 +280,7 @@ export function SetupWizard({ userId, services, entryStep, verification = "ready
       )}
       {modal === "published" && (
         <SetupDialog title={simulated ? "Publish preview complete" : "Your website is live"} onClose={() => router.replace(dashboardPath)} actions={
-          <AdminButton size="xs" onClick={() => router.replace(dashboardPath)}>Back to dashboard</AdminButton>
+          <Button variant="brand" size="xs" onClick={() => router.replace(dashboardPath)}>Back to dashboard</Button>
         }>
           <p>{simulated ? "Your website setup is saved in this browser." : websiteAddress(data.subdomain)}</p>
           <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs font-semibold text-burnt">

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Image from "next/image";
-import { AdminButton } from "@/components/admin/admin-button";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/admin/icon";
 import { FIELD_CLASS, readSetupMedia, type StepFields } from "./setup-data";
 
@@ -46,7 +46,7 @@ export function WebsiteMediaUploader({ label, asset, url, filename, onUpload, on
           <p className="text-xs text-muted">{formats}</p>
         </div>
         <input ref={input} type="file" aria-label={label} className="hidden" accept={asset === "logo" ? ".png,.jpg,.jpeg,.webp,.svg" : ".png,.jpg,.jpeg,.webp"} onChange={handleFile} />
-        <AdminButton size="xs" variant="outline" disabled={reading} onClick={() => input.current?.click()}>{reading ? "Reading…" : url ? "Replace" : "Upload"}</AdminButton>
+        <Button size="xs" variant="secondary" disabled={reading} onClick={() => input.current?.click()}>{reading ? "Reading…" : url ? "Replace" : "Upload"}</Button>
         {url && <button type="button" disabled={reading} className="text-xs font-semibold text-burnt underline-offset-4 hover:underline" onClick={() => { setError(""); onRemove(); }}>Remove</button>}
       </div>
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}
