@@ -382,16 +382,14 @@ export function InfoNote({
   return (
     <div
       className={cn(
-        "flex gap-3 rounded-lg bg-[#eef2ff] px-4 py-3 text-info",
-        icon === "shield"
-          ? "items-center text-sm leading-5"
-          : "items-start text-base",
+        "grid grid-cols-[--spacing(5)_minmax(0,1fr)] items-center gap-3 rounded-lg bg-info-bg px-4 py-3 text-info",
+        icon === "shield" ? "text-sm leading-5" : "text-base",
       )}
     >
       {icon === "shield" ? (
-        <Icon name="shield" weight="fill" className="size-5" />
+        <Icon name="shield" weight="fill" className="size-5 justify-self-center" />
       ) : (
-        <Icon name="alert" className="mt-0.5 size-4" />
+        <Icon name="alert" className="size-4 justify-self-center" />
       )}
       <p>{children}</p>
     </div>

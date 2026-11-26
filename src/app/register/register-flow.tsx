@@ -87,7 +87,6 @@ type DocMap = Partial<Record<DocumentKey, File>>;
 type UploadReceipt = Awaited<ReturnType<typeof uploadDocument>>;
 type UploadState = {
   file: File;
-  percent: number;
   receipt?: UploadReceipt;
   error?: string;
 };
@@ -138,6 +137,7 @@ const initialValues: Values = {
 };
 
 type Errors = Partial<Record<string, string>>;
+type DocumentErrors = Partial<Record<DocumentKey, string | null>>;
 
 const documentSizeMb = FILE_LIMITS.documentBytes / (1024 * 1024);
 const stepSchemas = [
@@ -197,7 +197,7 @@ export function RegisterFlow({
   const [logo, setLogo] = useState<File | null>(null);
   const [logoError, setLogoError] = useState<string | null>(null);
   const [docs, setDocs] = useState<DocMap>({});
-  const [docErrors, setDocErrors] = useState<Errors>({});
+  const [docErrors, setDocErrors] = useState<DocumentErrors>({});
   const [preview, setPreview] = useState<{ file: File; title: string } | null>(
     null,
   );
@@ -367,7 +367,7 @@ export function RegisterFlow({
     if (step === 1) found = { ...found, ...missingIdentityDocuments() };
     if (step === 2 && !logo) found.logo = BUSINESS_LOGO_REQUIRED;
     if (step === 3) {
-      const missing: Errors = {};
+      const missing: DocumentErrors = {};
       const identityMissing = missingIdentityDocuments();
       if (Object.keys(identityMissing).length) {
         setErrors(identityMissing);
@@ -376,17 +376,13 @@ export function RegisterFlow({
         return false;
       }
       for (const slot of requiredDocuments) {
-        if (!docs[slot.key])
-          missing[slot.key] =
-            `${slot.title} is required. Please upload a PDF, JPG or PNG file (max ${documentSizeMb} MB).`;
+        if (!docs[slot.key]) missing[slot.key] = null;
       }
       setDocErrors(missing);
-      const count = Object.keys(missing).length;
-      found = count
-        ? {
-            documents: `${count} required ${count === 1 ? "document is" : "documents are"} still missing.`,
-          }
-        : {};
+      setErrors({});
+      const ok = Object.keys(missing).length === 0;
+      if (!ok) focusFirstError();
+      return ok;
     }
     setErrors(found);
     const ok = Object.keys(found).length === 0;
@@ -487,16 +483,12 @@ export function RegisterFlow({
               [key]: { ...state, file },
             }));
           };
-          update({ percent: 0 });
           try {
-            const receipt = await uploadDocument(key, file, (percent) =>
-              update({ percent }),
-            );
-            update({ percent: 100, receipt });
+            const receipt = await uploadDocument(key, file);
+            update({ receipt });
             return true;
           } catch (error) {
             update({
-              percent: 0,
               error:
                 error instanceof Error
                   ? error.message
@@ -596,7 +588,7 @@ export function RegisterFlow({
       } else {
         setDocErrors(
           Object.fromEntries(
-            missingDocs.map((doc) => [doc.key, `${doc.title} is required.`]),
+            missingDocs.map((doc) => [doc.key, null]),
           ),
         );
         setStep(3);
@@ -805,8 +797,14 @@ export function RegisterFlow({
               docs={docs}
               docErrors={docErrors}
               summaryError={errors.documents}
-              onFile={setDocument}
-              onRemove={removeDocument}
+              onFile={(key, title, file) => {
+                const problem = setDocument(key, title, file);
+                if (problem) setDocErrors((current) => ({ ...current, [key]: problem }));
+              }}
+              onRemove={(key) => {
+                removeDocument(key);
+                setDocErrors((current) => ({ ...current, [key]: undefined }));
+              }}
               onPreview={(file, title) => setPreview({ file, title })}
               onBack={back}
               onNext={next}
@@ -878,7 +876,9 @@ export function RegisterFlow({
           }}
         />
       )}
-      {submitting ? <MascotLoadingDialog label="Submitting your application" /> : sendingCode ? (
+      {submitting ? <MascotLoadingDialog label="Submitting your application" /> : uploading ? (
+        <MascotLoadingDialog label="Uploading your documents" />
+      ) : sendingCode ? (
         <MascotLoadingDialog />
       ) : (
         sentEmail && (
@@ -1552,13 +1552,13 @@ function DocumentsStep({
   uploads: Uploads;
   uploading: boolean;
   docs: DocMap;
-  docErrors: Errors;
+  docErrors: DocumentErrors;
   summaryError?: string;
   onFile: (
     key: BusinessDocumentKey,
     title: string,
     file: File,
-  ) => string | null;
+  ) => void;
   onRemove: (key: BusinessDocumentKey) => void;
   onPreview: (file: File, title: string) => void;
   onBack: () => void;
@@ -1568,6 +1568,12 @@ function DocumentsStep({
   const added = documents.filter(({ key }) => docs[key]).length;
   const uploaded = documents.filter(({ key }) => uploads[key]?.file === docs[key] && uploads[key]?.receipt).length;
   const sections = groupBusinessDocuments(documents);
+  const missingTitles = documents.filter(({ key }) => docErrors[key] === null).map(({ title }) => title);
+  const missingNames = new Intl.ListFormat("en-US").format(missingTitles);
+  const documentErrors = new Map(documents.map(({ key }) => [
+    key,
+    docErrors[key] ?? (uploads[key]?.file === docs[key] ? uploads[key]?.error : undefined),
+  ]));
   return (
     <form
       noValidate
@@ -1579,15 +1585,27 @@ function DocumentsStep({
       <Heading
         title="Upload your business documents"
         subtitle={businessType
-          ? `All documents listed below are required for your selected business type (${businessTypeName}).`
-          : "Select a business type in Step 3 to see the full list of required documents."}
+          ? `Upload the documents needed to review your ${businessTypeName} application.`
+          : "Select a business type in Step 3 to see which documents your application needs."}
       />
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-white p-4">
         <div role="status" className="min-w-0">
           <p className="text-base font-semibold text-ink">{added} of {documents.length} documents added</p>
           <p className="text-sm text-muted">{uploaded} uploaded. Files are sent when you select Continue.</p>
         </div>
-        <progress aria-label="Business documents added" value={added} max={documents.length} className="h-2.5 w-full appearance-none overflow-hidden rounded-full bg-mist [&::-webkit-progress-bar]:rounded-full [&::-webkit-progress-bar]:bg-mist [&::-webkit-progress-value]:rounded-full [&::-webkit-progress-value]:bg-burnt [&::-moz-progress-bar]:rounded-full [&::-moz-progress-bar]:bg-burnt" />
+        <div
+          role="progressbar"
+          aria-label="Business documents added"
+          aria-valuemin={0}
+          aria-valuemax={documents.length}
+          aria-valuenow={added}
+          className="h-2.5 w-full overflow-hidden rounded-full bg-mist"
+        >
+          <div
+            className="h-full rounded-full bg-burnt motion-safe:transition-[width] motion-safe:duration-300 motion-safe:ease-out"
+            style={{ width: `${(added / documents.length) * 100}%` }}
+          />
+        </div>
       </div>
       {summaryError ? (
         <p
@@ -1611,9 +1629,10 @@ function DocumentsStep({
                     title={slot.title}
                     hint={slot.hint}
                     file={file}
-                    error={docErrors[slot.key] ?? upload?.error}
+                    errorId={docErrors[slot.key] === null
+                      ? "missing-business-documents"
+                      : documentErrors.get(slot.key) ? `business-document-error-${slot.key}` : undefined}
                     uploaded={!!upload?.receipt}
-                    progress={uploading && !upload?.receipt && !upload?.error ? upload?.percent : undefined}
                     onFile={(file) => onFile(slot.key, slot.title, file)}
                     onRemove={() => onRemove(slot.key)}
                     onPreview={(file) => onPreview(file, slot.title)}
@@ -1625,6 +1644,18 @@ function DocumentsStep({
         ))}
       </div>
       <div className="mt-6 flex flex-col gap-4">
+        {missingTitles.length > 0 && (
+          <p id="missing-business-documents" role="alert" className="rounded-lg bg-danger-bg px-4 py-3 text-sm text-danger-dark">
+            Please upload the required documents: {missingNames}. Use PDF, JPG or PNG files (max {documentSizeMb} MB each).
+          </p>
+        )}
+        {[...documentErrors.values()].some(Boolean) && (
+          <ul role="alert" className="space-y-2 rounded-lg bg-danger-bg px-4 py-3 text-sm text-danger-dark">
+            {[...documentErrors].map(([key, message]) => message && (
+              <li key={key} id={`business-document-error-${key}`}>{message}</li>
+            ))}
+          </ul>
+        )}
         <InfoNote>
           These documents will be included in your application summary on the
           final step. Review by our team begins only after you submit your

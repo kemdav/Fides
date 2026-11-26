@@ -97,6 +97,8 @@ Controls that exist are listed in [SECURITY](SECURITY.md). Still open:
 | F6 | `book-settings` icon is a Solar notebook plus gear composed by hand (no single Solar icon). `shield` is only partly Solar. | `admin/icon-data.ts` | P3 | S |
 | F7 | `loading.tsx` exists only for the merchant dashboard and admin. Other data pages, including storefront pages, have none. | `src/app/**` | P3 | S |
 | F8 | Accessibility pass not done: keyboard order in dialogs with nested dropdowns, screen reader labels on icon-only buttons, colour contrast on `subtle` text over tinted cards. | whole app | P2 | M |
+| F10 | Admin approval surfaces missing industry licenses on pending applications. Applicants who submitted while those documents were deferred still need a way to add them to an existing application. | `src/lib/applications/service.ts` | P2 | M |
+| F9 | Add Business Verification under Website / Account Settings. Group deferred documents under Invoicing & BIR Tax Exports (ATP/PTU, service invoices, registered books), Public Storefront & Online Payouts (address proof, barangay clearance, community tax certificate, zoning clearance, fire safety certificate), and Staff Health & Regulated Services (LGU health cards, pathogen and sterilization training). Apply each group's requirements when enabling the associated capability. | `src/lib/registration/document-requirements.ts` | P2 | L |
 
 ## 7. Documentation and process
 

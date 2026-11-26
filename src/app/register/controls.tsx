@@ -132,9 +132,8 @@ export function DocumentCard({
   title,
   hint,
   file,
-  error,
+  errorId,
   uploaded,
-  progress,
   onFile,
   onRemove,
   onPreview,
@@ -142,27 +141,22 @@ export function DocumentCard({
   title: string;
   hint: string;
   file: File | null;
-  error?: string;
+  errorId?: string;
   uploaded: boolean;
-  progress?: number;
-  /** Called with a validated file; returns an error message when it is rejected. */
-  onFile: (file: File) => string | null;
+  onFile: (file: File) => void;
   onRemove: () => void;
   onPreview: (file: File) => void;
 }) {
-  const [localError, setLocalError] = useState<string | null>(null);
-  const message = localError ?? error;
-  const picker = useFileInput((picked) => setLocalError(onFile(picked)));
-  const errorId = useId();
+  const picker = useFileInput(onFile);
 
-  const added = !!file && !message;
+  const added = !!file && !errorId;
   const fileAction = "grid size-11 shrink-0 place-items-center rounded-md text-muted hover:bg-white focus-visible:outline-2 focus-visible:outline-burnt";
 
   return (
     <div
       className={cn(
         "group flex min-w-0 flex-col gap-4 rounded-[20px] border-2 bg-white p-5 transition-colors motion-reduce:transition-none",
-        message ? "border-danger" : added ? "border-success" : "border-line hover:border-burnt/50",
+        errorId ? "border-danger" : added ? "border-success" : "border-line hover:border-burnt/50",
       )}
     >
       <div className="flex items-center gap-3">
@@ -194,14 +188,11 @@ export function DocumentCard({
               </span>
             </span>
           </button>
-          <button type="button" onClick={picker.open} aria-label={`Replace ${title}`} title="Replace file" className={fileAction}>
+          <button type="button" onClick={picker.open} aria-label={`Replace ${title}`} aria-describedby={errorId} title="Replace file" className={fileAction}>
             <Icon name="upload" className="size-4" />
           </button>
           <button type="button" aria-label={`Remove ${title}`} title="Remove file"
-            onClick={() => {
-              setLocalError(null);
-              onRemove();
-            }}
+            onClick={onRemove}
             className={cn(fileAction, "hover:text-danger")}>
             <Icon name="trash" className="size-4" />
           </button>
@@ -210,27 +201,15 @@ export function DocumentCard({
         <button
           type="button"
           onClick={picker.open}
-          aria-describedby={message ? errorId : undefined}
-          data-invalid={message ? "true" : undefined}
-          className={cn(
-            "mt-auto flex h-14 w-full shrink-0 items-center justify-center gap-2 rounded-lg border bg-white text-base font-semibold transition-colors group-hover:border-burnt group-hover:bg-burnt group-hover:text-white focus-visible:border-burnt focus-visible:bg-burnt focus-visible:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40",
-            message ? "border-danger text-danger" : "border-outline/50 text-muted",
-          )}
+          aria-describedby={errorId}
+          data-invalid={errorId ? "true" : undefined}
+          className="mt-auto flex h-14 w-full shrink-0 items-center justify-center gap-2 rounded-lg border border-outline/50 bg-white text-base font-semibold text-muted transition-colors group-hover:border-burnt group-hover:bg-burnt group-hover:text-white focus-visible:border-burnt focus-visible:bg-burnt focus-visible:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
         >
           <Icon name="upload" className="size-5" />
           Upload File
         </button>
       )}
 
-      {progress !== undefined && (
-        <progress aria-label={`${title} upload progress`} value={progress} max={100} className="h-2 w-full accent-burnt" />
-      )}
-
-      {message ? (
-        <p id={errorId} role="alert" className="text-sm text-danger">
-          {message}
-        </p>
-      ) : null}
     </div>
   );
 }

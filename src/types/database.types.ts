@@ -1958,6 +1958,10 @@ type DatabaseCore = {
       [_ in never]: never;
     };
     Functions: {
+      missing_required_documents: {
+        Args: { _application_id: string }
+        Returns: { code: string; label: string }[]
+      }
       renew_staff_invitation: {
         Args: { p_expected_expiry: string; p_invitation_id: string; p_tenant_id: string; p_token_hash: string }
         Returns: boolean

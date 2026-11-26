@@ -7,7 +7,7 @@ const labels = {
   occupancy_inspection: ["Occupancy and Building / Electrical Inspection", "Combine the applicable certificates in one PDF."],
   fire_safety: ["Fire Safety Inspection Certificate", "Upload the certificate from the Bureau of Fire Protection."],
   mayors_permit: ["Mayor’s / Business Permit", "Upload your current city or municipal business permit."],
-  bir_registration: ["BIR Certificate of Registration", "Upload BIR Form 2303."],
+  bir_registration: ["BIR Certificate of Registration (Form 2303)", "Upload BIR Form 2303."],
   authority_to_print: ["Authority to Print or Permit to Use", "Upload ATP or PTU for your invoicing or accounting system."],
   service_invoices: ["Service Invoices", "Upload a sample service invoice or a converted official receipt stamped as a service invoice."],
   books_of_accounts: ["Registered Books of Accounts", "Upload proof of registration for your manual, loose-leaf, or computerized books."],
@@ -58,41 +58,33 @@ const labels = {
 export type BusinessDocumentKey = keyof typeof labels;
 export type BusinessDocument = { key: BusinessDocumentKey; title: string; hint: string; required: boolean };
 
-const foundational = [
-  "dti_sec_registration", "barangay_clearance", "proof_of_address", "community_tax", "zoning_clearance",
-  "fire_safety", "mayors_permit", "bir_registration", "authority_to_print", "service_invoices", "books_of_accounts",
-] as const satisfies readonly BusinessDocumentKey[];
+const coreRegistrationKeys = ["dti_sec_registration", "mayors_permit", "bir_registration"] as const satisfies readonly BusinessDocumentKey[];
 
-const health = ["sanitary_permit", "health_cards"] as const;
-const professional = ["professional_licenses", "professional_tax"] as const;
-const clinic = ["doh_clinic_license", ...professional, "hazardous_waste", "waste_transport", ...health] as const;
+const industryKeys = new Map<string, readonly BusinessDocumentKey[]>(Object.entries({
+  "Tattoo & Body Piercing": ["sanitary_permit"],
+  "Aesthetic, Dermatology & Laser Clinic": ["doh_clinic_license", "professional_licenses"],
+  "Medical & Diagnostic Clinic": ["doh_clinic_license", "professional_licenses"],
+  "Dental Clinic": ["doh_clinic_license", "professional_licenses"],
+  "Specialist Consultation": ["professional_licenses"],
+  "Private Security Agency": ["security_license"],
+  "Travel Agency & Tour Operator": ["tourism_accreditation"],
+  "Repair, Maintenance & HVAC": ["repair_accreditation"],
+  "Construction & Engineering Contractor": ["pcab_license"],
+} satisfies Record<string, readonly BusinessDocumentKey[]>).map(([type, keys]) => [type.toLowerCase(), keys]));
 
-const byType: Partial<Record<string, readonly BusinessDocumentKey[]>> = {
-  "Salon & Spa": health,
-  Barbershop: health,
-  "Beauty & Aesthetics": health,
-  "Massage & Day Spa": [...health, "massage_certificates"],
-  "Tattoo & Body Piercing": [...health, "pathogen_training"],
-  "Aesthetic, Dermatology & Laser Clinic": clinic,
-  "Dental Clinic": clinic,
-  "Medical & Diagnostic Clinic": clinic,
-  "Specialist Consultation": professional,
-  "Professional & Corporate Consulting": [...professional, "professional_standing"],
-  "Manpower, Staffing & Cleaning": ["dole_contractor", "capital_evidence", "service_agreements"],
-  "Private Security Agency": ["security_license", "security_guard_licenses", "security_insurance", "security_clearances"],
-  "Travel Agency & Tour Operator": ["tourism_accreditation", "capital_evidence"],
-  "Catering Services": [...health, "water_potability"],
-  "Repair, Maintenance & HVAC": ["repair_accreditation", "technician_certificates"],
-  "Construction & Engineering Contractor": ["pcab_license", "construction_safety"],
-};
+export function hasIndustryDocumentRequirements(businessType: string): boolean {
+  return industryKeys.has(businessType.trim().toLowerCase());
+}
 
 export const BUSINESS_DOCUMENTS: BusinessDocument[] = (Object.keys(labels) as BusinessDocumentKey[]).map((key) => {
   const [title, hint] = labels[key];
   return { key, title, hint, required: true };
 });
 
-export function businessDocumentsFor(businessType: string) {
-  const industry = Object.hasOwn(byType, businessType) ? byType[businessType] ?? [] : [];
-  const keys = new Set<BusinessDocumentKey>([...foundational, ...industry]);
+export function businessDocumentsFor(businessType: string): BusinessDocument[] {
+  const keys = new Set<BusinessDocumentKey>([
+    ...coreRegistrationKeys,
+    ...(industryKeys.get(businessType.trim().toLowerCase()) ?? []),
+  ]);
   return BUSINESS_DOCUMENTS.filter(({ key }) => keys.has(key));
 }

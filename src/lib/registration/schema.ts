@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { BUSINESS_TYPES, BUSINESS_TYPE_MAX_LENGTH, ID_TYPES, OTHER_BUSINESS_TYPE, PLAN_OPTIONS } from "./options";
 import { slugSchema } from "@/lib/registration/slug";
+import { hasIndustryDocumentRequirements } from "./document-requirements";
 
 export type PasswordChecks = {
   length: boolean;
@@ -148,6 +149,13 @@ const businessTypeDetailsError = {
   message: "Enter your business type.",
   path: ["customBusinessType"],
 };
+const usesListedType = (data: { businessType: string; customBusinessType?: string }): boolean =>
+  data.businessType !== OTHER_BUSINESS_TYPE ||
+  !hasIndustryDocumentRequirements(data.customBusinessType ?? "");
+const listedTypeError = {
+  message: "Choose this business type from the list to see its required documents.",
+  path: ["customBusinessType"],
+};
 
 export const businessStepSchema = base.pick({
   businessName: true,
@@ -160,11 +168,11 @@ export const businessStepSchema = base.pick({
   city: true,
   province: true,
   zipCode: true,
-}).refine(hasBusinessTypeDetails, businessTypeDetailsError);
+}).refine(hasBusinessTypeDetails, businessTypeDetailsError).refine(usesListedType, listedTypeError);
 
 export const planStepSchema = base.pick({ planCode: true });
 
-export const registrationSchema = base.refine(hasBusinessTypeDetails, businessTypeDetailsError).refine((data) => data.password === data.confirmPassword, {
+export const registrationSchema = base.refine(hasBusinessTypeDetails, businessTypeDetailsError).refine(usesListedType, listedTypeError).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match.",
   path: ["confirmPassword"],
 });

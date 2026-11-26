@@ -6,6 +6,7 @@ import { nextBillingDate } from "@/lib/billing";
 import { isMailConfigured } from "@/lib/mail/mailer";
 import { sendApprovalEmail, sendBillingReminderEmail, sendRejectionEmail, sendSubmissionEmail } from "@/lib/mail/emails";
 import { formatRegistrationStreetAddress } from "@/lib/registration/address";
+import { readMissingApprovalDocuments } from "./document-queries";
 import { createAdminClient, type AdminClient } from "@/lib/supabase/admin";
 import {
   ALL_DOCUMENTS,
@@ -397,19 +398,20 @@ function mimeLabel(mime: string | null): string {
   return "File";
 }
 
-/** One entry per required document, in display order, flagged as uploaded or missing. */
-function buildDocumentList(rows: ApplicationDocumentRow[]): SubmissionDocument[] {
+/** Show the current requirements alongside any files received on earlier checklists. */
+function buildDocumentList(rows: ApplicationDocumentRow[], businessType: string): SubmissionDocument[] {
   const byType = new Map(rows.map((row) => [row.document_type, row]));
-  const legacyKeys: readonly DocumentKey[] = ["government_id", "dti_sec_registration", "mayors_permit", "bir_registration", "barangay_clearance", "proof_of_address", "other_permit"];
-  const legacy = !byType.has("community_tax");
-  const list: SubmissionDocument[] = ALL_DOCUMENTS.filter(({ key }) => byType.has(key) || (legacy && legacyKeys.includes(key))).map((doc) => {
+  const requiredKeys = new Set(applicationDocumentsFor(businessType)
+    .filter(({ key }) => key !== "government_id_back" || byType.has(key))
+    .map(({ key }) => key));
+  const list: SubmissionDocument[] = ALL_DOCUMENTS.filter(({ key }) => byType.has(key) || requiredKeys.has(key)).map((doc) => {
     const row = byType.get(doc.key);
     const uploaded = !!row?.storage_path;
     return {
       id: row?.id ?? null,
       key: doc.key,
       label: doc.title,
-      required: doc.required,
+      required: requiredKeys.has(doc.key),
       status: uploaded ? "uploaded" : "missing",
       fileName: row?.file_name ?? null,
       mimeType: row?.mime_type ?? null,
@@ -488,7 +490,7 @@ export async function loadAdminSnapshot(): Promise<AdminSnapshot> {
     reviewedAt: app.reviewed_at,
     status: app.status,
     idType: ID_TYPES.find(({ value }) => value === identity?.id_type || ID_TYPE_STORAGE_VALUES[value] === identity?.id_type)?.label ?? identity?.id_type ?? "—",
-    documents: buildDocumentList(documentsByApplication.get(app.id) ?? []),
+    documents: buildDocumentList(documentsByApplication.get(app.id) ?? [], business?.business_type ?? ""),
     note: app.review_notes ? [app.review_notes] : undefined,
     decidedAt: app.status === "pending" ? null : (app.decided_at ?? app.approved_at ?? app.reviewed_at),
     previousRejections: rejectionsByEmail.get(app.email.toLowerCase()),
@@ -618,6 +620,12 @@ export async function approveApplication(id: string): Promise<DecisionResult> {
   const { app, business } = await getJoined(admin, id);
   if (app.status !== "pending") throw new ServiceError("Only pending applications can be approved.", 409);
   if (!business) throw new ServiceError("This application has no business details.", 409);
+
+  const missing = await readMissingApprovalDocuments(admin, id);
+  if (!missing) throw new ServiceError("Could not verify the application documents.", 503);
+  if (missing.length) {
+    throw new ServiceError(`The application is missing required documents: ${missing.map(({ label }) => label).join(", ")}.`, 409);
+  }
 
   const slug = business.requested_slug ?? await uniqueSlug(admin, business.business_name);
   const { data: tenant, error: tenantError } = await admin
