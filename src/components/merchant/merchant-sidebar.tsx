@@ -62,7 +62,12 @@ const manageItems: NavigationItem[] = [
     suffix: "/availability",
     access: "operations",
   },
-  { label: "Payments", icon: "card", access: "operations" },
+  {
+    label: "Payments",
+    icon: "card",
+    suffix: "/payments",
+    access: "operations",
+  },
   { label: "Reports", icon: "document", access: "management" },
 ];
 
