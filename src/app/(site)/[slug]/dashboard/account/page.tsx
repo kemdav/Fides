@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
+import { Button } from "@/components/ui/button";
 import { notFound, redirect } from "next/navigation";
 import { logout } from "@/app/actions/auth";
-import { AdminButton } from "@/components/admin/admin-button";
 import { PageContent, PageHeading, Surface } from "@/components/admin/primitives";
 import { MerchantSidebar } from "@/components/merchant/merchant-sidebar";
 import { staffRoleLabels } from "@/lib/merchant/staff-profile";
@@ -57,7 +57,7 @@ export default async function MerchantAccountPage({ params }: { params: Promise<
             <form action={logout} className="flex flex-wrap items-center justify-between gap-3 border-t border-hairline pt-5">
               <input type="hidden" name="workspace" value={tenant.slug} />
               <p className="text-sm text-muted">Log out to let someone else sign in on this device.</p>
-              <AdminButton type="submit" variant="outline-accent" size="xs">Log out</AdminButton>
+              <Button variant="brand-outline" size="xs" type="submit">Log out</Button>
             </form>
           </Surface>
         </PageContent>

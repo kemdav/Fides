@@ -3,10 +3,9 @@ export type Tier = {
   eyebrow: string;
   name: string;
   price: number;
-  staffLimit: number | null;
-  locationLimit: number | null;
+  staffLimit: number;
+  locationLimit: number;
   features: string[];
-  subscribed: number;
 };
 
 export type TierDraft = {
@@ -18,14 +17,44 @@ export type TierDraft = {
 
 export type TierErrors = Partial<Record<keyof TierDraft, string>>;
 
+export const defaultTiers: Tier[] = [
+  {
+    id: "basic",
+    eyebrow: "ESSENTIALS",
+    name: "Basic",
+    price: 29,
+    staffLimit: 3,
+    locationLimit: 1,
+    features: ["Online booking", "Client management", "Email reminders"],
+  },
+  {
+    id: "business",
+    eyebrow: "GROWING TEAMS",
+    name: "Business",
+    price: 79,
+    staffLimit: 15,
+    locationLimit: 3,
+    features: ["Everything in Basic", "Advanced reporting", "Automated reminders"],
+  },
+  {
+    id: "enterprise",
+    eyebrow: "AT SCALE",
+    name: "Enterprise",
+    price: 199,
+    staffLimit: 50,
+    locationLimit: 10,
+    features: ["Everything in Business", "Multi-location controls", "Priority support"],
+  },
+];
+
 export const emptyDraft: TierDraft = { name: "", price: "", staffLimit: "", locationLimit: "" };
 
 export function draftFromTier(tier: Tier): TierDraft {
   return {
     name: tier.name,
     price: String(tier.price),
-    staffLimit: tier.staffLimit === null ? "" : String(tier.staffLimit),
-    locationLimit: tier.locationLimit === null ? "" : String(tier.locationLimit),
+    staffLimit: String(tier.staffLimit),
+    locationLimit: String(tier.locationLimit),
   };
 }
 
@@ -41,12 +70,23 @@ export function validateTier(draft: TierDraft, tiers: Tier[], editingId?: string
   if (!draft.price.trim() || !Number.isFinite(price) || price <= 0) errors.price = "Enter a monthly price above zero.";
 
   for (const key of ["staffLimit", "locationLimit"] as const) {
-    const raw = draft[key].trim();
-    if (!raw) continue;
-    const value = Number(raw);
-    if (!Number.isInteger(value) || value < 1) errors[key] = "Enter a whole number of 1 or more, or leave blank.";
+    const value = Number(draft[key]);
+    if (!draft[key].trim() || !Number.isInteger(value) || value < 1) errors[key] = "Enter a whole number of 1 or more.";
   }
   return errors;
+}
+
+export function tierFromDraft(draft: TierDraft, base?: Tier): Tier {
+  const name = draft.name.trim();
+  return {
+    id: base?.id ?? `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now().toString(36)}`,
+    eyebrow: base?.eyebrow ?? "CUSTOM",
+    name,
+    price: Number(draft.price),
+    staffLimit: Number(draft.staffLimit),
+    locationLimit: Number(draft.locationLimit),
+    features: base?.features ?? ["Online booking"],
+  };
 }
 
 export function subscribedLabel(count: number): string {

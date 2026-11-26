@@ -13,10 +13,15 @@ import {
   type DocumentKey,
 } from "@/lib/registration/options";
 import { registrationSchema, type RegistrationInput } from "@/lib/registration/schema";
-import type { ActivityEvent } from "@/lib/admin/activity";
-import type { PlanSummary, Tenant } from "@/lib/admin/tenants";
-import type { Tier } from "@/lib/admin/tiers";
-import type { Submission, SubmissionDocument, SubmissionStatus } from "@/lib/admin/verification";
+import type {
+  ActivityEvent,
+  PlanSummary,
+  Submission,
+  SubmissionDocument,
+  SubmissionStatus,
+  Tenant,
+  Tier,
+} from "./admin-types";
 import type {
   AccountApplicationRow,
   ActivityCategory,
@@ -425,7 +430,7 @@ export async function loadAdminSnapshot(): Promise<AdminSnapshot> {
     plan: planMap.get(app.plan_code)?.name ?? app.plan_code,
     submittedAt: app.submitted_at,
     reviewedAt: app.reviewed_at,
-    status: app.status as SubmissionStatus,
+    status: app.status,
     idType: ID_TYPES.find((item) => item.value === identity?.id_type)?.label ?? identity?.id_type ?? "—",
     documents: buildDocumentList(documentsByApplication.get(app.id) ?? []),
     note: app.review_notes ? [app.review_notes] : undefined,
@@ -792,7 +797,7 @@ export async function listAccountDirectory(): Promise<AccountDirectoryEntry[]> {
       email: app.email,
       business: business?.business_name ?? "Unnamed business",
       owner: identity?.owner_legal_name ?? app.full_name,
-      status: app.status as SubmissionStatus,
+      status: app.status,
     }))
     .sort((a, b) => a.email.localeCompare(b.email));
 }

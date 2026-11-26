@@ -1,46 +1,69 @@
 import "server-only";
-import { timingSafeEqual } from "node:crypto";
+import { scryptSync, timingSafeEqual } from "node:crypto";
 
 /**
  * ADMIN ACCOUNTS (local, NOT in Supabase)
  * ---------------------------------------
- * This is the single place where administrator credentials live.
- * To add, remove or change an admin, edit the list below and restart the server.
+ * Accounts come from the ADMIN_ACCOUNTS environment variable, a JSON array:
+ *   [{"id":"admin-1","username":"you@example.com","displayName":"Your Name","passwordHash":"scrypt:..."}]
+ * Create each passwordHash with: node scripts/hash-admin-password.mjs "<password>"
+ * Passwords are never stored in the repo. Restart the server after changing the variable.
  *
- * The login page (/login) checks these first; a match opens the Admin page,
- * anything else continues through the normal Supabase business-owner login.
+ * Only the admin login page (/admin/login) checks these; a match opens the Admin page.
+ * The general login (/login) never accepts them.
  */
 export type AdminAccount = {
   id: string;
   /** What the admin types in the email/username field (compared case-insensitively). */
   username: string;
-  password: string;
   displayName: string;
 };
 
-export const ADMIN_ACCOUNTS: readonly AdminAccount[] = [
-  { id: "admin-1", username: "Fides.adminacc1.com", password: "123QWEasd", displayName: "Fides Admin 1" },
-  { id: "admin-2", username: "Fides.adminacc2.com", password: "123QWEasd", displayName: "Fides Admin 2" },
-];
+type StoredAccount = AdminAccount & { passwordHash: string };
 
-function safeEqual(a: string, b: string): boolean {
-  const left = Buffer.from(a);
-  const right = Buffer.from(b);
-  return left.length === right.length && timingSafeEqual(left, right);
+function loadAccounts(): StoredAccount[] {
+  const raw = process.env.ADMIN_ACCOUNTS;
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (item): item is StoredAccount =>
+        !!item &&
+        typeof item.id === "string" &&
+        typeof item.username === "string" &&
+        typeof item.displayName === "string" &&
+        typeof item.passwordHash === "string" &&
+        item.passwordHash.split(":").length === 3
+    );
+  } catch {
+    return [];
+  }
+}
+
+function hashMatches(password: string, stored: string): boolean {
+  const [, saltHex, hashHex] = stored.split(":");
+  const expected = Buffer.from(hashHex, "hex");
+  const actual = scryptSync(password, Buffer.from(saltHex, "hex"), expected.length);
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
+}
+
+const DUMMY_HASH = `scrypt:${"00".repeat(16)}:${"00".repeat(64)}`;
+
+function toPublic({ id, username, displayName }: StoredAccount): AdminAccount {
+  return { id, username, displayName };
 }
 
 export function verifyAdminCredentials(username: string, password: string): AdminAccount | null {
   const name = username.trim().toLowerCase();
-  let match: AdminAccount | null = null;
-  for (const account of ADMIN_ACCOUNTS) {
-    // Check every account so timing does not reveal which username exists.
-    const nameOk = safeEqual(account.username.toLowerCase(), name);
-    const passOk = safeEqual(account.password, password);
-    if (nameOk && passOk) match = account;
-  }
-  return match;
+  const account = loadAccounts().find((item) => item.username.toLowerCase() === name);
+  // Always run one hash so timing does not reveal whether the username exists.
+  const ok = hashMatches(password, account?.passwordHash ?? DUMMY_HASH);
+  return account && ok ? toPublic(account) : null;
 }
 
 export function findAdminAccount(id: string): AdminAccount | null {
-  return ADMIN_ACCOUNTS.find((account) => account.id === id) ?? null;
+  const account = loadAccounts().find((item) => item.id === id);
+  return account ? toPublic(account) : null;
 }
+

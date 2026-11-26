@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { CheckIcon, AlertCircleIcon } from "./icons";
+import { Modal } from "@/components/ui/modal";
+import { Icon } from "@/components/admin/icon";
 
 interface ShareWebsiteModalProps {
   isOpen: boolean;
@@ -19,31 +20,24 @@ export function ShareWebsiteModal({
   const displayUrl = url.replace(/^https?:\/\//, "");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
-      <div
-        className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-neutral-200"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="share-website-title"
-      >
+    <Modal open onClose={onClose} labelledBy="share-website-title" unstyled className="w-[calc(100%-1rem)] max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-hairline overflow-visible text-ink">
         <div className="mb-4">
           <h3
             id="share-website-title"
-            className="text-lg font-semibold text-neutral-900"
+            className="text-base font-semibold text-ink"
           >
             Share your website
           </h3>
-          <p className="mt-1 text-xs text-neutral-500 leading-relaxed">
-            Use this website address in your social media bio, messages, and
-            promotional materials.
+          <p className="mt-1 text-xs text-subtle leading-relaxed">
+            Use this website address in your social media bio, messages, and promotional materials.
           </p>
         </div>
 
-        <div className="mt-4 rounded-lg bg-neutral-50/80 border border-neutral-200 p-3.5 space-y-1.5">
-          <span className="inline-block text-[10px] font-semibold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-md">
+        <div className="mt-4 rounded-xl bg-mist/80 border border-hairline p-3.5 space-y-1.5">
+          <span className="inline-block text-xs font-semibold text-success-deep bg-success/80 px-2 py-0.5 rounded-full">
             Website link
           </span>
-          <div className="font-mono text-xs font-semibold text-neutral-900">
+          <div className="font-mono text-xs font-semibold text-ink">
             {displayUrl}
           </div>
         </div>
@@ -52,13 +46,12 @@ export function ShareWebsiteModal({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex items-center justify-center h-10 px-4 text-sm font-medium text-neutral-800 bg-white border border-neutral-400/80 hover:bg-neutral-50 rounded-lg transition cursor-pointer"
+            className="px-4 py-2 text-xs font-medium text-body bg-white border border-line hover:bg-mist rounded-xl shadow-2xs transition"
           >
             Close
           </button>
         </div>
-      </div>
-    </div>
+      </Modal>
   );
 }
 
@@ -84,59 +77,53 @@ export function PublishReviewModal({
   const cleanAddress = siteAddress.replace(/^https?:\/\//, "");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
-      <div
-        className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-neutral-200"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="publish-review-title"
-      >
+    <Modal open onClose={onClose} labelledBy="publish-review-title" unstyled className="w-[calc(100%-1rem)] max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-hairline overflow-visible text-ink">
         {/* Centered Blue Icon */}
-        <div className="w-11 h-11 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-3.5">
-          <AlertCircleIcon className="w-6 h-6" />
+        <div className="w-10 h-10 rounded-full bg-info-bg text-info flex items-center justify-center mx-auto mb-3">
+          <Icon name="alert" className="w-6 h-6" />
         </div>
 
         <div className="text-center mb-4">
           <h3
             id="publish-review-title"
-            className="text-lg font-semibold text-neutral-900"
+            className="text-base font-semibold text-ink"
           >
             Ready to go live?
           </h3>
-          <p className="mt-1 text-xs text-neutral-500 leading-relaxed">
+          <p className="mt-1 text-xs text-subtle leading-relaxed">
             Publish your saved website settings to{" "}
-            <span className="font-medium text-neutral-800">{cleanAddress}</span>
-            . Review your details before making them visible to customers.
+            <span className="font-medium text-ink">{cleanAddress}</span>.
+            Review your details before making them visible to customers.
           </p>
         </div>
 
-        <div className="rounded-lg border border-neutral-200 bg-neutral-50/70 p-3.5 space-y-2.5">
-          <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+        <div className="rounded-xl border border-hairline bg-mist/70 p-3.5 space-y-2.5">
+          <h4 className="text-xs font-bold text-glyph uppercase tracking-wider">
             YOUR WEBSITE UPDATES
           </h4>
-          <ul className="space-y-1.5 text-xs text-neutral-800 font-medium">
+          <ul className="space-y-1.5 text-xs text-ink font-medium">
             <li className="flex items-center gap-2">
-              <CheckIcon className="w-3.5 h-3.5 text-emerald-600 shrink-0 stroke-3" />
+              <Icon name="check" weight="bold" className="w-3.5 h-3.5 text-success shrink-0 stroke-3" />
               <span>Branding and homepage content</span>
             </li>
             <li className="flex items-center gap-2">
-              <CheckIcon className="w-3.5 h-3.5 text-emerald-600 shrink-0 stroke-3" />
+              <Icon name="check" weight="bold" className="w-3.5 h-3.5 text-success shrink-0 stroke-3" />
               <span>Public business and contact information</span>
             </li>
             <li className="flex items-center gap-2">
-              <CheckIcon className="w-3.5 h-3.5 text-emerald-600 shrink-0 stroke-3" />
+              <Icon name="check" weight="bold" className="w-3.5 h-3.5 text-success shrink-0 stroke-3" />
               <span>Search listing and social sharing previews</span>
             </li>
           </ul>
         </div>
 
         {errorMessage && (
-          <div className="mt-3 p-2.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs text-center font-medium">
+          <div className="mt-3 p-2.5 rounded-xl bg-danger-bg border border-danger/30 text-danger-dark text-xs text-center font-medium">
             {errorMessage}
           </div>
         )}
 
-        <p className="mt-3 text-[11px] text-neutral-400 text-center">
+        <p className="mt-3 text-xs text-glyph text-center">
           Appointments, services, and customer accounts are unaffected.
         </p>
 
@@ -144,7 +131,7 @@ export function PublishReviewModal({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex items-center justify-center h-10 px-4 text-sm font-medium text-neutral-800 bg-white border border-neutral-400/80 hover:bg-neutral-50 rounded-lg transition cursor-pointer"
+            className="px-4 py-2 text-xs font-medium text-body bg-white border border-line hover:bg-mist rounded-xl transition shadow-2xs"
           >
             Keep editing
           </button>
@@ -152,13 +139,12 @@ export function PublishReviewModal({
             type="button"
             disabled={isPublishing}
             onClick={() => onPublish()}
-            className="inline-flex items-center justify-center h-10 px-5 text-sm font-semibold text-white bg-burnt hover:opacity-90 disabled:opacity-60 rounded-lg transition cursor-pointer"
+            className="px-4 py-2 text-xs font-semibold text-on-burnt bg-burnt hover:bg-burnt-dark disabled:opacity-60 rounded-xl shadow-xs transition"
           >
             {isPublishing ? "Publishing..." : "Publish website"}
           </button>
         </div>
-      </div>
-    </div>
+      </Modal>
   );
 }
 
@@ -178,34 +164,27 @@ export function PublishedModal({
   const cleanAddress = siteAddress.replace(/^https?:\/\//, "");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
-      <div
-        className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-neutral-200 text-center"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="published-modal-title"
-      >
-        {/* Centered Green Checkmark Ring */}
-        <div className="w-12 h-12 rounded-full border-2 border-emerald-600 text-emerald-600 flex items-center justify-center mx-auto mb-3.5">
-          <CheckIcon className="w-6 h-6 stroke-3" />
+    <Modal open onClose={onClose} labelledBy="published-modal-title" unstyled className="w-[calc(100%-1rem)] max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-hairline text-center overflow-visible text-ink">
+        {/* Centered Green Checkmark Icon */}
+        <div className="w-10 h-10 rounded-full bg-success/15 text-success flex items-center justify-center mx-auto mb-3">
+          <Icon name="check" weight="bold" className="w-6 h-6 stroke-3" />
         </div>
 
         <h3
           id="published-modal-title"
-          className="text-lg font-semibold text-neutral-900"
+          className="text-base font-semibold text-ink"
         >
           Your website is up to date
         </h3>
-        <p className="mt-1 text-sm text-neutral-500 leading-relaxed">
-          Your latest website settings have been published. Customers can now
-          see your updates.
+        <p className="mt-1 text-xs text-subtle leading-relaxed">
+          Your latest website settings have been published. Customers can now see your updates.
         </p>
 
-        <div className="mt-4 rounded-lg bg-neutral-50/80 border border-neutral-200 p-3.5 space-y-1.5">
-          <span className="inline-block text-[10px] font-semibold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-md">
+        <div className="mt-4 rounded-xl bg-mist/80 border border-hairline p-3.5 space-y-1.5">
+          <span className="inline-block text-xs font-semibold text-success-deep bg-success/80 px-2 py-0.5 rounded-full">
             Website published
           </span>
-          <div className="font-mono text-xs font-semibold text-neutral-900">
+          <div className="font-mono text-xs font-semibold text-ink">
             {cleanAddress}
           </div>
         </div>
@@ -214,13 +193,12 @@ export function PublishedModal({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex items-center justify-center h-10 min-w-[132px] px-6 text-sm font-semibold text-white bg-burnt hover:opacity-90 rounded-lg transition cursor-pointer"
+            className="px-6 py-2 text-xs font-semibold text-on-burnt bg-burnt hover:bg-burnt-dark rounded-xl shadow-xs transition"
           >
             Close
           </button>
         </div>
-      </div>
-    </div>
+      </Modal>
   );
 }
 
@@ -233,34 +211,27 @@ export function DraftSavedModal({ isOpen, onClose }: DraftSavedModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
-      <div
-        className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-neutral-200 text-center"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="draft-saved-title"
-      >
-        {/* Centered Green Checkmark Ring */}
-        <div className="w-12 h-12 rounded-full border-2 border-emerald-600 text-emerald-600 flex items-center justify-center mx-auto mb-3.5">
-          <CheckIcon className="w-6 h-6 stroke-3" />
+    <Modal open onClose={onClose} labelledBy="draft-saved-title" unstyled className="w-[calc(100%-1rem)] max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-hairline text-center overflow-visible text-ink">
+        {/* Centered Green Checkmark Icon */}
+        <div className="w-10 h-10 rounded-full bg-success/15 text-success flex items-center justify-center mx-auto mb-3">
+          <Icon name="check" weight="bold" className="w-6 h-6 stroke-3" />
         </div>
 
         <h3
           id="draft-saved-title"
-          className="text-lg font-semibold text-neutral-900"
+          className="text-base font-semibold text-ink"
         >
           Draft saved
         </h3>
-        <p className="mt-1 text-sm text-neutral-500 leading-relaxed">
-          Your settings have been saved as a draft. Your published website
-          remains unchanged.
+        <p className="mt-1 text-xs text-subtle leading-relaxed">
+          Your settings have been saved as a draft. Your published website remains unchanged.
         </p>
 
-        <div className="mt-4 rounded-lg bg-neutral-50/80 border border-neutral-200 p-3.5 space-y-1 text-left">
-          <span className="block text-xs font-semibold text-neutral-900">
+        <div className="mt-4 rounded-xl bg-mist/80 border border-hairline p-3.5 space-y-1 text-left">
+          <span className="block text-xs font-semibold text-ink">
             Ready when you are
           </span>
-          <p className="text-xs text-neutral-500 leading-relaxed">
+          <p className="text-xs text-subtle leading-relaxed">
             Return to any settings tab to review your updates before publishing.
           </p>
         </div>
@@ -269,13 +240,12 @@ export function DraftSavedModal({ isOpen, onClose }: DraftSavedModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex items-center justify-center h-10 min-w-[132px] px-6 text-sm font-semibold text-white bg-burnt hover:opacity-90 rounded-lg transition cursor-pointer"
+            className="px-6 py-2 text-xs font-semibold text-on-burnt bg-burnt hover:bg-burnt-dark rounded-xl shadow-xs transition"
           >
             Close
           </button>
         </div>
-      </div>
-    </div>
+      </Modal>
   );
 }
 
@@ -293,34 +263,27 @@ export function DiscardModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
-      <div
-        className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-neutral-200 text-center"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="discard-modal-title"
-      >
+    <Modal open onClose={onClose} labelledBy="discard-modal-title" unstyled className="w-[calc(100%-1rem)] max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-hairline text-center overflow-visible text-ink">
         {/* Centered Red Icon */}
-        <div className="w-12 h-12 rounded-full bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-3.5">
-          <AlertCircleIcon className="w-6 h-6" />
+        <div className="w-10 h-10 rounded-full bg-danger-bg text-danger flex items-center justify-center mx-auto mb-3">
+          <Icon name="alert" className="w-6 h-6" />
         </div>
 
         <h3
           id="discard-modal-title"
-          className="text-lg font-semibold text-neutral-900"
+          className="text-base font-semibold text-ink"
         >
           Discard unpublished changes?
         </h3>
-        <p className="mt-1.5 text-sm text-neutral-500 leading-relaxed">
-          This returns you to the saved settings. Your currently published
-          website is unaffected.
+        <p className="mt-1 text-xs text-subtle leading-relaxed">
+          This returns you to the saved settings. Your currently published website is unaffected.
         </p>
 
         <div className="mt-6 flex items-center justify-center gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex items-center justify-center h-10 px-4 text-sm font-medium text-neutral-800 bg-white border border-neutral-400/80 hover:bg-neutral-50 rounded-lg transition cursor-pointer"
+            className="px-4 py-2 text-xs font-medium text-body bg-white border border-line hover:bg-mist rounded-xl transition shadow-2xs"
           >
             Close
           </button>
@@ -330,12 +293,11 @@ export function DiscardModal({
               onDiscard();
               onClose();
             }}
-            className="inline-flex items-center justify-center h-10 px-5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition cursor-pointer"
+            className="px-4 py-2 text-xs font-semibold text-white bg-danger hover:bg-danger-dark rounded-xl shadow-xs transition"
           >
             Discard changes
           </button>
         </div>
-      </div>
-    </div>
+      </Modal>
   );
 }

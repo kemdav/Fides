@@ -1,7 +1,9 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
 import * as React from "react";
-import { AdminButton } from "@/components/admin/admin-button";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 import { CheckboxDropdown } from "@/components/admin/checkbox-dropdown";
 import { fieldOutlineClasses } from "@/components/admin/fields";
 import { Icon } from "@/components/admin/icon";
@@ -43,14 +45,13 @@ function CatalogFormDialog({
   const descriptionId = React.useId();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-2 backdrop-blur-xs sm:p-4">
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={descriptionId}
-        className="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-[14px] border border-line bg-white text-ink shadow-2xl"
-      >
+    <Modal
+      open
+      onClose={onClose}
+      unstyled
+      labelledBy={titleId}
+      className="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-[14px] border border-line bg-white text-ink shadow-2xl"
+    >
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-hairline px-4 pb-4 pt-5 sm:px-6 sm:pb-5 sm:pt-6">
           <div className="min-w-0">
             <h2 id={titleId} className="font-display text-[26px] leading-[34px] text-ink">{title}</h2>
@@ -68,20 +69,19 @@ function CatalogFormDialog({
           </div>
           <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-hairline px-4 py-4 sm:px-6">
             {onDelete && (
-              <AdminButton variant="danger" size="sm" className="order-last w-full sm:order-none sm:mr-auto sm:w-auto" disabled={isLoading} onClick={onDelete}>
+              <Button variant="danger" size="form" className="order-last w-full sm:order-none sm:mr-auto sm:w-auto" disabled={isLoading} onClick={onDelete}>
                 Delete
-              </AdminButton>
+              </Button>
             )}
-            <AdminButton variant="outline" size="sm" disabled={isLoading} onClick={onClose}>
+            <Button variant="secondary" size="form" disabled={isLoading} onClick={onClose}>
               Cancel
-            </AdminButton>
-            <AdminButton variant="primary" size="sm" type="submit" disabled={isLoading}>
+            </Button>
+            <Button variant="brand" size="form" type="submit" disabled={isLoading}>
               {isLoading ? "Saving..." : submitLabel}
-            </AdminButton>
+            </Button>
           </footer>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -115,7 +115,6 @@ export function ServiceFormModal({
   isOpen,
   onClose,
   onSubmit,
-  onArchive,
   onDelete,
   initialService,
   categories,
@@ -134,7 +133,7 @@ export function ServiceFormModal({
   const [active, setActive] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
+  useSyncOnChange([initialService, isOpen, categories, staff], () => {
     if (initialService) {
       setName(initialService.name);
       setDescription(initialService.description || "");
@@ -155,7 +154,7 @@ export function ServiceFormModal({
       setActive(true);
     }
     setError(null);
-  }, [initialService, isOpen, categories, staff]);
+  });
 
   if (!isOpen) return null;
 
@@ -335,7 +334,7 @@ export function ServiceFormModal({
           aria-checked={active}
           onClick={() => setActive(!active)}
           className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${
-            active ? "bg-burnt" : "bg-neutral-200"
+            active ? "bg-burnt" : "bg-line"
           }`}
         >
           <span
@@ -376,7 +375,6 @@ export function PackageFormModal({
   isOpen,
   onClose,
   onSubmit,
-  onArchive,
   onDelete,
   initialPackage,
   availableServices,
@@ -392,7 +390,7 @@ export function PackageFormModal({
   const [active, setActive] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
+  useSyncOnChange([initialPackage, isOpen, availableServices], () => {
     if (initialPackage) {
       setName(initialPackage.name);
       setDescription(initialPackage.description || "");
@@ -413,7 +411,7 @@ export function PackageFormModal({
       setActive(true);
     }
     setError(null);
-  }, [initialPackage, isOpen, availableServices]);
+  });
 
   if (!isOpen) return null;
 
@@ -608,7 +606,7 @@ export function PackageFormModal({
           aria-checked={active}
           onClick={() => setActive(!active)}
           className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${
-            active ? "bg-burnt" : "bg-neutral-200"
+            active ? "bg-burnt" : "bg-line"
           }`}
         >
           <span
@@ -649,7 +647,6 @@ export function AddonFormModal({
   isOpen,
   onClose,
   onSubmit,
-  onArchive,
   onDelete,
   initialAddon,
   availableServices,
@@ -666,7 +663,7 @@ export function AddonFormModal({
   const [active, setActive] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
+  useSyncOnChange([initialAddon, isOpen], () => {
     if (initialAddon) {
       setName(initialAddon.name);
       setDescription(initialAddon.description || "");
@@ -690,7 +687,7 @@ export function AddonFormModal({
       setActive(true);
     }
     setError(null);
-  }, [initialAddon, isOpen]);
+  });
 
   if (!isOpen) return null;
 
@@ -866,7 +863,7 @@ export function AddonFormModal({
           aria-checked={active}
           onClick={() => setActive(!active)}
           className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${
-            active ? "bg-burnt" : "bg-neutral-200"
+            active ? "bg-burnt" : "bg-line"
           }`}
         >
           <span

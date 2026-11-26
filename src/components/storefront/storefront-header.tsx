@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { buttonClasses } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { MobileMenu } from "@/components/landing/mobile-menu";
 
 export type StorefrontNav = { label: string; href: string };
 
@@ -62,16 +63,11 @@ export function StorefrontHeader({
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 bg-powder transition-shadow duration-300",
-        scrolled && "shadow-[0_2px_12px_rgb(0_0_0/0.08)]"
+        "sticky top-0 z-50 h-16 bg-powder transition-shadow duration-300 lg:h-[88px]",
+        scrolled && "shadow-header"
       )}
     >
-      <div
-        className={cn(
-          "relative mx-auto flex max-w-[1440px] items-center justify-between px-5 transition-[height] duration-300 sm:px-8 lg:px-14",
-          scrolled ? "h-15 lg:h-[68px]" : "h-[68px] lg:h-[84px]"
-        )}
-      >
+      <div className="relative mx-auto flex h-full max-w-[1440px] items-center justify-between px-5 sm:px-8 lg:px-14">
         {/* Logo */}
         <Link
           href={homeHref}
@@ -94,7 +90,7 @@ export function StorefrontHeader({
                   href={link.href}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "flex flex-col items-center px-5 pb-1 pt-2 text-sm2 font-semibold transition-colors",
+                    "relative px-4 py-2 text-base/6 font-semibold transition-colors",
                     isActive
                       ? "text-burnt-dark"
                       : "text-muted hover:text-burnt-dark"
@@ -103,16 +99,11 @@ export function StorefrontHeader({
                   {link.label}
                   <span
                     aria-hidden
-                    className="relative mx-[-6px] mt-1.5 h-[3px] w-[calc(100%+12px)]"
-                  >
-                    <span className="absolute inset-x-0 bottom-0 h-px bg-line" />
-                    <span
-                      className={cn(
-                        "absolute inset-x-0 bottom-0 h-0.5 origin-center rounded-sm bg-burnt-dark transition-transform duration-300 ease-out",
-                        isActive ? "scale-x-100" : "scale-x-0"
-                      )}
-                    />
-                  </span>
+                    className={cn(
+                      "absolute inset-x-4 -bottom-0.5 h-[3px] origin-center rounded-sm bg-burnt-dark transition-transform duration-300 ease-out",
+                      isActive ? "scale-x-100" : "scale-x-0"
+                    )}
+                  />
                 </Link>
               );
             })}
@@ -167,49 +158,18 @@ export function StorefrontHeader({
         </button>
       </div>
 
-      {/* Mobile menu */}
       {open && (
-        <div
+        <MobileMenu
           id="storefront-mobile-menu"
-          className="absolute inset-x-0 top-full rounded-b-2xl border border-burnt/30 bg-powder px-5 pb-6 pt-2 shadow-[0_8px_16px_-8px_rgb(0_0_0/0.15)] sm:px-8 lg:hidden"
-        >
-          <nav aria-label="Mobile" className="flex flex-col">
-            {navLinks.map((link) => (
-              <Link
-                key={link.label}
-                href={link.href}
-                onClick={() => setOpen(false)}
-                className={cn(
-                  "py-3 text-base/6 font-semibold hover:text-burnt-dark",
-                  activeHref === link.href
-                    ? "text-burnt-dark"
-                    : "text-muted"
-                )}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-          <div className="mt-4 flex gap-3">
-            <Link
-              href={contactHref}
-              onClick={() => setOpen(false)}
-              className={buttonClasses({
-                variant: "brand-outline",
-                size: "md",
-              })}
-            >
-              Contact Us
-            </Link>
-            <Link
-              href={bookHref}
-              onClick={() => setOpen(false)}
-              className={buttonClasses({ variant: "brand", size: "md" })}
-            >
-              Book Now
-            </Link>
-          </div>
-        </div>
+          brand={businessName}
+          homeHref={homeHref}
+          links={navLinks.map((link) => ({ label: link.label, href: link.href, active: activeHref === link.href }))}
+          actions={[
+            { label: "Contact Us", href: contactHref, variant: "brand-outline" },
+            { label: "Book Now", href: bookHref, variant: "brand" },
+          ]}
+          onClose={() => setOpen(false)}
+        />
       )}
     </header>
   );

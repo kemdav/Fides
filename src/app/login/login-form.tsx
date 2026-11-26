@@ -4,17 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { useActionState, useRef, useState } from "react";
 import { login, type LoginState } from "@/app/actions/auth";
-import { buttonClasses, PasswordInput } from "@/components/ui";
+import { buttonClasses, inputClasses, PasswordInput } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { ForgotPasswordFlow } from "./forgot-password-flow";
+import { Icon } from "@/components/admin/icon";
 
 const initialState: LoginState = { error: null, email: "" };
-
-const fieldClass = (invalid: boolean) =>
-  cn(
-    "h-11 w-full rounded-md border bg-white px-3.5 text-sm text-ink placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 disabled:opacity-60",
-    invalid ? "border-danger focus-visible:ring-danger/30" : "border-outline/60 hover:border-outline focus-visible:border-burnt focus-visible:ring-burnt/30"
-  );
 
 export function LoginForm({
   submitted,
@@ -47,11 +42,11 @@ export function LoginForm({
           href="/"
           className="inline-flex w-fit items-center gap-1.5 rounded-md py-1 pr-2 text-sm font-semibold text-burnt hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
         >
-          <span aria-hidden>←</span> Back to home
+          <Icon name="arrow-left" weight="medium" className="size-4" /> Back to home
         </Link>
 
         <div className="grid w-full overflow-hidden rounded-3xl bg-white shadow-[0_12px_40px_-12px_rgb(44_58_75/0.25)] md:grid-cols-[1fr_1.05fr]">
-          <aside className="relative flex flex-col items-center justify-between gap-4 bg-[#faecd3] px-6 pb-8 pt-8 text-center md:px-10 md:pb-12 md:pt-12 md:text-left">
+          <aside className="relative flex flex-col items-center justify-between gap-4 bg-sand px-6 pb-8 pt-8 text-center md:px-10 md:pb-12 md:pt-12 md:text-left">
             <div className="flex w-full flex-col gap-1 md:items-start">
               <Link href="/" className="font-display text-4xl text-burnt md:text-[40px]">
                 Fides
@@ -112,7 +107,7 @@ export function LoginForm({
                   placeholder="maria@bellavita.ph"
                   aria-invalid={!!emailError}
                   aria-describedby={emailError ? "email-error" : undefined}
-                  className={fieldClass(!!emailError)}
+                  className={inputClasses(!!emailError)}
                 />
                 {emailError ? (
                   <p id="email-error" role="alert" className="text-xs text-danger">
@@ -143,7 +138,7 @@ export function LoginForm({
                   placeholder="Enter your password"
                   aria-invalid={!!passwordError}
                   aria-describedby={passwordError ? "password-error" : undefined}
-                  inputClassName={fieldClass(!!passwordError)}
+                  inputClassName={inputClasses(!!passwordError)}
                 />
                 {passwordError ? (
                   <p id="password-error" role="alert" className="text-xs text-danger">

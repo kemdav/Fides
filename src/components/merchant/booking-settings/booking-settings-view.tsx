@@ -15,6 +15,8 @@ import {
   ConfirmDiscardModal,
 } from "./booking-settings-modals";
 import { cn } from "@/lib/utils";
+import { Icon } from "@/components/admin/icon";
+import { inputClasses, NumberSelectField } from "@/components/ui";
 
 interface SelectOption {
   value: number;
@@ -118,38 +120,11 @@ function formatLastSavedDate(iso: string | null): string | null {
 function CheckBadgeIcon() {
   return (
     <span
-      className="inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-on-burnt text-burnt"
+      className="inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-white text-burnt"
       aria-hidden="true"
     >
-      <svg
-        viewBox="0 0 16 16"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="size-2.5"
-      >
-        <path d="M3.5 8.2L6.5 11.2L12.5 5" />
-      </svg>
+      <Icon name="check" weight="bold" className="size-2.5" />
     </span>
-  );
-}
-
-function ChevronDownSvg() {
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[#475569]"
-      aria-hidden="true"
-    >
-      <path d="M5.5 7.5L10 12L14.5 7.5" />
-    </svg>
   );
 }
 
@@ -379,7 +354,7 @@ export function BookingSettingsView({
   const formattedSavedDate = formatLastSavedDate(lastSavedAt);
 
   return (
-    <div className="flex min-h-dvh flex-col bg-powder text-[#1E293B] lg:flex-row">
+    <div className="flex min-h-dvh flex-col bg-mist text-ink lg:flex-row">
       <MerchantSidebar
         businessName={meta.businessName}
         userName={meta.userName}
@@ -392,21 +367,21 @@ export function BookingSettingsView({
         <main className="flex w-full min-w-0 flex-1 flex-col gap-5 p-4 sm:p-6 lg:p-8">
           {/* Page Header */}
           <header className="flex flex-col gap-1">
-            <h1 className="font-display text-[28px] leading-[36px] text-[#1E293B] sm:text-[32px] sm:leading-[40px]">
-              Booking Settings
+            <h1 className="font-display text-[28px] leading-[36px] text-ink sm:text-[32px] sm:leading-[40px]">
+              Booking settings
             </h1>
-            <p className="text-sm leading-relaxed text-[#64748B]">
+            <p className="text-sm leading-relaxed text-subtle">
               Set the rules that shape your customer booking experience.
             </p>
           </header>
 
           {/* Timezone Info Banner */}
-          <div className="flex flex-col justify-between gap-3 rounded-xl border border-[#E7E9EE] bg-on-burnt px-4 py-3.5 sm:flex-row sm:items-center sm:px-5">
+          <div className="flex flex-col justify-between gap-3 rounded-xl border border-hairline bg-mist px-4 py-3.5 sm:flex-row sm:items-center sm:px-5">
             <div className="space-y-0.5">
-              <p className="text-sm font-semibold text-powder">
+              <p className="text-sm font-semibold text-ink">
                 Business timezone: {meta.timeZone}
               </p>
-              <p className="text-xs leading-relaxed text-powder">
+              <p className="text-xs leading-relaxed text-subtle">
                 Booking slots and cancellation/rescheduling cutoffs use this
                 timezone. Buffer times are durations.
               </p>
@@ -416,13 +391,13 @@ export function BookingSettingsView({
               className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-burnt transition-colors hover:text-burnt-dark"
             >
               <span>Go to Website Settings</span>
-              <span aria-hidden="true">&rarr;</span>
+              <Icon name="arrow-right" weight="medium" className="size-3.5" />
             </Link>
           </div>
 
           {/* Read-only banner for non-owners */}
           {!canEdit && (
-            <div className="rounded-xl border border-[#F3D5B5] bg-[#FFF8F1] px-4 py-3 text-sm text-[#8A3B00]">
+            <div className="rounded-xl border border-burnt/20 bg-burnt/10 px-4 py-3 text-sm text-burnt-dark">
               You have view-only access to booking rules. Only the business
               owner can modify and save changes.
             </div>
@@ -432,7 +407,7 @@ export function BookingSettingsView({
           {errorBanner && (
             <div
               role="alert"
-              className="rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm font-medium text-[#B91C1C]"
+              className="rounded-xl border border-danger/30 bg-danger-bg px-4 py-3 text-sm font-medium text-danger-dark"
             >
               {errorBanner}
             </div>
@@ -443,16 +418,16 @@ export function BookingSettingsView({
             {/* LEFT COLUMN */}
             <div className="flex flex-col gap-5">
               {/* Card 1: Workflow & Approvals */}
-              <Surface className="rounded-xl border border-[#ECEAE0] bg-white p-5 sm:p-6">
-                <h2 className="text-base font-semibold text-[#1E293B]">
-                  Workflow &amp; Approvals
+              <Surface className="rounded-xl border border-hairline bg-white p-5 sm:p-6">
+                <h2 className="text-base font-semibold text-ink">
+                  Workflow &amp; approvals
                 </h2>
-                <p className="mt-1 text-xs leading-relaxed text-[#64748B]">
+                <p className="mt-1 text-xs leading-relaxed text-subtle">
                   Choose how new booking requests are confirmed.
                 </p>
 
                 <div className="mt-4">
-                  <span className="block text-xs font-semibold text-[#1E293B]">
+                  <span className="block text-xs font-semibold text-ink">
                     Approval mode
                   </span>
                   <div
@@ -470,7 +445,7 @@ export function BookingSettingsView({
                         "flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-60",
                         form.autoConfirm
                           ? "bg-burnt text-on-burnt shadow-xs"
-                          : "bg-[#949BA3] text-white hover:bg-[#7F8790]",
+                          : "bg-glyph text-white hover:bg-glyph",
                       )}
                     >
                       {form.autoConfirm && <CheckBadgeIcon />}
@@ -487,7 +462,7 @@ export function BookingSettingsView({
                         "flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-60",
                         !form.autoConfirm
                           ? "bg-burnt text-on-burnt shadow-xs"
-                          : "bg-[#949BA3] text-white hover:bg-[#7F8790]",
+                          : "bg-glyph text-white hover:bg-glyph",
                       )}
                     >
                       {!form.autoConfirm && <CheckBadgeIcon />}
@@ -495,7 +470,7 @@ export function BookingSettingsView({
                     </button>
                   </div>
 
-                  <p className="mt-3 text-xs leading-relaxed text-[#64748B]">
+                  <p className="mt-3 text-xs leading-relaxed text-subtle">
                     Automatic confirms immediately. Manual approval waits for
                     the owner or receptionist to confirm.
                   </p>
@@ -503,17 +478,17 @@ export function BookingSettingsView({
               </Surface>
 
               {/* Card 2: Staff & Capacity */}
-              <Surface className="rounded-xl border border-[#ECEAE0] bg-white p-5 sm:p-6">
-                <h2 className="text-base font-semibold text-[#1E293B]">
-                  Staff &amp; Capacity
+              <Surface className="rounded-xl border border-hairline bg-white p-5 sm:p-6">
+                <h2 className="text-base font-semibold text-ink">
+                  Staff &amp; capacity
                 </h2>
-                <p className="mt-1 text-xs leading-relaxed text-[#64748B]">
+                <p className="mt-1 text-xs leading-relaxed text-subtle">
                   Choose how staff are assigned and reserve preparation time.
                 </p>
 
                 {/* Staff assignment toggle */}
                 <div className="mt-4">
-                  <span className="block text-xs font-semibold text-[#1E293B]">
+                  <span className="block text-xs font-semibold text-ink">
                     Staff assignment
                   </span>
                   <div
@@ -535,7 +510,7 @@ export function BookingSettingsView({
                         "flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-60",
                         form.staffAssignmentMode === "specific_staff"
                           ? "bg-burnt text-on-burnt shadow-xs"
-                          : "bg-[#949BA3] text-white hover:bg-[#7F8790]",
+                          : "bg-glyph text-white hover:bg-glyph",
                       )}
                     >
                       {form.staffAssignmentMode === "specific_staff" && (
@@ -558,7 +533,7 @@ export function BookingSettingsView({
                         "flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-60",
                         form.staffAssignmentMode === "any_available"
                           ? "bg-burnt text-on-burnt shadow-xs"
-                          : "bg-[#949BA3] text-white hover:bg-[#7F8790]",
+                          : "bg-glyph text-white hover:bg-glyph",
                       )}
                     >
                       {form.staffAssignmentMode === "any_available" && (
@@ -568,7 +543,7 @@ export function BookingSettingsView({
                     </button>
                   </div>
 
-                  <p className="mt-2.5 text-xs leading-relaxed text-[#64748B]">
+                  <p className="mt-2.5 text-xs leading-relaxed text-subtle">
                     {form.staffAssignmentMode === "specific_staff"
                       ? "Customers choose their preferred staff member during booking."
                       : "The system automatically assigns an eligible available staff member."}
@@ -579,44 +554,33 @@ export function BookingSettingsView({
                 <div className="mt-5">
                   <label
                     htmlFor="default-buffer-minutes"
-                    className="block text-xs font-semibold text-[#1E293B]"
+                    className="block text-xs font-semibold text-ink"
                   >
                     Business Default Buffer
                   </label>
-                  <div className="relative mt-2">
-                    <select
-                      id="default-buffer-minutes"
-                      disabled={!canEdit}
-                      value={form.defaultBufferMinutes}
-                      onChange={(e) =>
-                        updateField(
-                          "defaultBufferMinutes",
-                          Number(e.target.value),
-                        )
-                      }
-                      className="h-10 w-full appearance-none rounded-lg border border-[#D9DDE3] bg-white pl-3.5 pr-9 text-sm text-[#1E293B] transition-colors focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20 disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
-                    >
-                      {bufferOptions.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDownSvg />
-                  </div>
+                  <NumberSelectField
+                    id="default-buffer-minutes"
+                    className="mt-2"
+                    disabled={!canEdit}
+                    value={form.defaultBufferMinutes}
+                    options={bufferOptions}
+                    onChange={(next) =>
+                      updateField("defaultBufferMinutes", next)
+                    }
+                  />
                   {fieldErrors.defaultBufferMinutes && (
-                    <p className="mt-1.5 text-xs font-medium text-[#DC2626]">
+                    <p className="mt-1.5 text-xs font-medium text-danger">
                       {fieldErrors.defaultBufferMinutes}
                     </p>
                   )}
-                  <p className="mt-2 text-xs leading-relaxed text-[#64748B]">
+                  <p className="mt-2 text-xs leading-relaxed text-subtle">
                     Reserved for cleanup and preparation between appointments.
                   </p>
 
-                  <div className="mt-3 rounded-lg bg-[#F1F3F5] px-3.5 py-2.5 text-xs leading-relaxed text-[#475569]">
+                  <div className="mt-3 rounded-lg bg-mist px-3.5 py-2.5 text-xs leading-relaxed text-muted">
                     A service buffer replaces the business default; the values
-                    are never added. Effective buffer: service value &rarr;
-                    business default &rarr; 0.
+                    are never added. Effective buffer: the service value, then
+                    the business default, then 0.
                   </div>
                 </div>
               </Surface>
@@ -625,8 +589,8 @@ export function BookingSettingsView({
             {/* RIGHT COLUMN */}
             <div className="flex flex-col gap-5">
               {/* Card 3: Booking Windows & Cancellations */}
-              <Surface className="rounded-xl border border-[#ECEAE0] bg-white p-5 sm:p-6">
-                <h2 className="text-base font-semibold text-[#1E293B]">
+              <Surface className="rounded-xl border border-hairline bg-white p-5 sm:p-6">
+                <h2 className="text-base font-semibold text-ink">
                   Booking Windows &amp; Cancellations
                 </h2>
 
@@ -635,33 +599,22 @@ export function BookingSettingsView({
                   <div>
                     <label
                       htmlFor="min-advance-notice"
-                      className="block text-xs font-semibold text-[#1E293B]"
+                      className="block text-xs font-semibold text-ink"
                     >
                       Minimum advance notice
                     </label>
-                    <div className="relative mt-2">
-                      <select
-                        id="min-advance-notice"
-                        disabled={!canEdit}
-                        value={form.bookingLeadTimeMinutes}
-                        onChange={(e) =>
-                          updateField(
-                            "bookingLeadTimeMinutes",
-                            Number(e.target.value),
-                          )
-                        }
-                        className="h-10 w-full appearance-none rounded-lg border border-[#D9DDE3] bg-white pl-3.5 pr-9 text-sm text-[#1E293B] transition-colors focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20 disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
-                      >
-                        {leadTimeOptions.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDownSvg />
-                    </div>
+                    <NumberSelectField
+                      id="min-advance-notice"
+                      className="mt-2"
+                      disabled={!canEdit}
+                      value={form.bookingLeadTimeMinutes}
+                      options={leadTimeOptions}
+                      onChange={(next) =>
+                        updateField("bookingLeadTimeMinutes", next)
+                      }
+                    />
                     {fieldErrors.bookingLeadTimeMinutes && (
-                      <p className="mt-1.5 text-xs font-medium text-[#DC2626]">
+                      <p className="mt-1.5 text-xs font-medium text-danger">
                         {fieldErrors.bookingLeadTimeMinutes}
                       </p>
                     )}
@@ -671,30 +624,20 @@ export function BookingSettingsView({
                   <div>
                     <label
                       htmlFor="max-advance-booking"
-                      className="block text-xs font-semibold text-[#1E293B]"
+                      className="block text-xs font-semibold text-ink"
                     >
                       Maximum advance booking
                     </label>
-                    <div className="relative mt-2">
-                      <select
-                        id="max-advance-booking"
-                        disabled={!canEdit}
-                        value={form.maxAdvanceDays}
-                        onChange={(e) =>
-                          updateField("maxAdvanceDays", Number(e.target.value))
-                        }
-                        className="h-10 w-full appearance-none rounded-lg border border-[#D9DDE3] bg-white pl-3.5 pr-9 text-sm text-[#1E293B] transition-colors focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20 disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
-                      >
-                        {maxAdvanceOptions.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDownSvg />
-                    </div>
+                    <NumberSelectField
+                      id="max-advance-booking"
+                      className="mt-2"
+                      disabled={!canEdit}
+                      value={form.maxAdvanceDays}
+                      options={maxAdvanceOptions}
+                      onChange={(next) => updateField("maxAdvanceDays", next)}
+                    />
                     {fieldErrors.maxAdvanceDays && (
-                      <p className="mt-1.5 text-xs font-medium text-[#DC2626]">
+                      <p className="mt-1.5 text-xs font-medium text-danger">
                         {fieldErrors.maxAdvanceDays}
                       </p>
                     )}
@@ -705,33 +648,22 @@ export function BookingSettingsView({
                 <div className="mt-4">
                   <label
                     htmlFor="cancellation-deadline"
-                    className="block text-xs font-semibold text-[#1E293B]"
+                    className="block text-xs font-semibold text-ink"
                   >
                     Cancellation deadline
                   </label>
-                  <div className="relative mt-2">
-                    <select
-                      id="cancellation-deadline"
-                      disabled={!canEdit}
-                      value={form.cancellationWindowHours}
-                      onChange={(e) =>
-                        updateField(
-                          "cancellationWindowHours",
-                          Number(e.target.value),
-                        )
-                      }
-                      className="h-10 w-full appearance-none rounded-lg border border-[#D9DDE3] bg-white pl-3.5 pr-9 text-sm text-[#1E293B] transition-colors focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20 disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
-                    >
-                      {cancellationOptions.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDownSvg />
-                  </div>
+                  <NumberSelectField
+                    id="cancellation-deadline"
+                    className="mt-2"
+                    disabled={!canEdit}
+                    value={form.cancellationWindowHours}
+                    options={cancellationOptions}
+                    onChange={(next) =>
+                      updateField("cancellationWindowHours", next)
+                    }
+                  />
                   {fieldErrors.cancellationWindowHours && (
-                    <p className="mt-1.5 text-xs font-medium text-[#DC2626]">
+                    <p className="mt-1.5 text-xs font-medium text-danger">
                       {fieldErrors.cancellationWindowHours}
                     </p>
                   )}
@@ -741,33 +673,22 @@ export function BookingSettingsView({
                 <div className="mt-4">
                   <label
                     htmlFor="reschedule-deadline"
-                    className="block text-xs font-semibold text-[#1E293B]"
+                    className="block text-xs font-semibold text-ink"
                   >
                     Rescheduling deadline
                   </label>
-                  <div className="relative mt-2">
-                    <select
-                      id="reschedule-deadline"
-                      disabled={!canEdit}
-                      value={form.rescheduleWindowHours}
-                      onChange={(e) =>
-                        updateField(
-                          "rescheduleWindowHours",
-                          Number(e.target.value),
-                        )
-                      }
-                      className="h-10 w-full appearance-none rounded-lg border border-[#D9DDE3] bg-white pl-3.5 pr-9 text-sm text-[#1E293B] transition-colors focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20 disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
-                    >
-                      {rescheduleOptions.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDownSvg />
-                  </div>
+                  <NumberSelectField
+                    id="reschedule-deadline"
+                    className="mt-2"
+                    disabled={!canEdit}
+                    value={form.rescheduleWindowHours}
+                    options={rescheduleOptions}
+                    onChange={(next) =>
+                      updateField("rescheduleWindowHours", next)
+                    }
+                  />
                   {fieldErrors.rescheduleWindowHours && (
-                    <p className="mt-1.5 text-xs font-medium text-[#DC2626]">
+                    <p className="mt-1.5 text-xs font-medium text-danger">
                       {fieldErrors.rescheduleWindowHours}
                     </p>
                   )}
@@ -778,11 +699,11 @@ export function BookingSettingsView({
                   <div className="flex items-center justify-between">
                     <label
                       htmlFor="cancellation-policy-notes"
-                      className="block text-xs font-semibold text-[#1E293B]"
+                      className="block text-xs font-semibold text-ink"
                     >
                       Cancellation policy rules
                     </label>
-                    <span className="text-[11px] text-[#94A3B8]">
+                    <span className="text-xs text-glyph">
                       {form.cancellationPolicyNotes.length}/500
                     </span>
                   </div>
@@ -796,64 +717,51 @@ export function BookingSettingsView({
                       updateField("cancellationPolicyNotes", e.target.value)
                     }
                     placeholder="Optional rules shown to customers (e.g., Late cancellations within 24 hours may require rebooking approval)."
-                    className="mt-2 w-full resize-none rounded-lg border border-[#D9DDE3] bg-white px-3.5 py-2.5 text-sm text-[#1E293B] placeholder:text-[#94A3B8] transition-colors focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20 disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+                    className={cn(inputClasses(false, true), "mt-2")}
                   />
                   {fieldErrors.cancellationPolicyNotes && (
-                    <p className="mt-1.5 text-xs font-medium text-[#DC2626]">
+                    <p className="mt-1.5 text-xs font-medium text-danger">
                       {fieldErrors.cancellationPolicyNotes}
                     </p>
                   )}
                 </div>
 
-                <p className="mt-3 text-xs leading-relaxed text-[#64748B]">
+                <p className="mt-3 text-xs leading-relaxed text-subtle">
                   Changes apply to new bookings. Existing confirmed appointments
                   keep their original schedule.
                 </p>
               </Surface>
 
               {/* Card 4: Scheduling */}
-              <Surface className="rounded-xl border border-[#ECEAE0] bg-white p-5 sm:p-6">
-                <h2 className="text-base font-semibold text-[#1E293B]">
-                  Scheduling
-                </h2>
-                <p className="mt-1 text-xs leading-relaxed text-[#64748B]">
+              <Surface className="rounded-xl border border-hairline bg-white p-5 sm:p-6">
+                <h2 className="text-base font-semibold text-ink">Scheduling</h2>
+                <p className="mt-1 text-xs leading-relaxed text-subtle">
                   Choose the spacing of available start times.
                 </p>
 
                 <div className="mt-4">
                   <label
                     htmlFor="slot-interval-minutes"
-                    className="block text-xs font-semibold text-[#1E293B]"
+                    className="block text-xs font-semibold text-ink"
                   >
                     Slot Interval
                   </label>
-                  <div className="relative mt-2">
-                    <select
-                      id="slot-interval-minutes"
-                      disabled={!canEdit}
-                      value={form.slotIntervalMinutes}
-                      onChange={(e) =>
-                        updateField(
-                          "slotIntervalMinutes",
-                          Number(e.target.value),
-                        )
-                      }
-                      className="h-10 w-full appearance-none rounded-lg border border-[#D9DDE3] bg-white pl-3.5 pr-9 text-sm text-[#1E293B] transition-colors focus:border-burnt focus:outline-none focus:ring-2 focus:ring-burnt/20 disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
-                    >
-                      {slotIntervalOptions.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDownSvg />
-                  </div>
+                  <NumberSelectField
+                    id="slot-interval-minutes"
+                    className="mt-2"
+                    disabled={!canEdit}
+                    value={form.slotIntervalMinutes}
+                    options={slotIntervalOptions}
+                    onChange={(next) =>
+                      updateField("slotIntervalMinutes", next)
+                    }
+                  />
                   {fieldErrors.slotIntervalMinutes && (
-                    <p className="mt-1.5 text-xs font-medium text-[#DC2626]">
+                    <p className="mt-1.5 text-xs font-medium text-danger">
                       {fieldErrors.slotIntervalMinutes}
                     </p>
                   )}
-                  <p className="mt-2 text-xs leading-relaxed text-[#64748B]">
+                  <p className="mt-2 text-xs leading-relaxed text-subtle">
                     Controls how frequently start times appear on your booking
                     calendar (for example, every 15 minutes: 9:00, 9:15, 9:30).
                   </p>
@@ -864,9 +772,9 @@ export function BookingSettingsView({
         </main>
 
         {/* Sticky Footer Save Bar */}
-        <footer className="sticky bottom-0 z-20 border-t border-[#E7E5DC] bg-white/95 backdrop-blur-xs">
+        <footer className="sticky bottom-0 z-20 border-t border-hairline bg-white/95 backdrop-blur-xs">
           <div className="flex w-full flex-col gap-3 px-4 py-3.5 sm:px-6 lg:px-8">
-            <div className="rounded-lg bg-[#F1F3F5] px-3.5 py-2 text-xs text-[#475569]">
+            <div className="rounded-lg bg-mist px-3.5 py-2 text-xs text-muted">
               Changes apply to new bookings after saving. Existing confirmed
               appointments keep their original schedule.
             </div>
@@ -876,12 +784,12 @@ export function BookingSettingsView({
                 <p
                   className={cn(
                     "text-xs font-semibold",
-                    isDirty ? "text-burnt" : "text-[#334155]",
+                    isDirty ? "text-burnt" : "text-body",
                   )}
                 >
                   {isDirty ? "Unsaved changes" : "All changes saved"}
                 </p>
-                <p className="text-xs text-[#64748B]">
+                <p className="text-xs text-subtle">
                   {formattedSavedDate
                     ? `Last saved${lastSavedByName ? ` by ${lastSavedByName}` : ""} · ${formattedSavedDate}`
                     : "Using default booking configuration"}
@@ -893,7 +801,7 @@ export function BookingSettingsView({
                   type="button"
                   disabled={!canEdit || !isDirty || isSaving}
                   onClick={() => setShowDiscardModal(true)}
-                  className="h-10 rounded-lg border border-[#D9DDE3] bg-white px-4 text-xs font-semibold text-[#334155] transition-colors hover:bg-[#F8FAFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-45"
+                  className="h-10 rounded-lg border border-line bg-white px-4 text-xs font-semibold text-body transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   Discard changes
                 </button>

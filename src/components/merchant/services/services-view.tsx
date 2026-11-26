@@ -1,10 +1,11 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import * as React from "react";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 import { createPortal } from "react-dom";
 import { MerchantSidebar } from "@/components/merchant/merchant-sidebar";
 import { Icon } from "@/components/admin/icon";
-import { AdminButton } from "@/components/admin/admin-button";
 import { MetricCard } from "@/components/admin/metric-card";
 import { PageContent, PageHeading, StatusPill, Surface } from "@/components/admin/primitives";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -202,10 +203,7 @@ function ActionMenuPortal({ items, anchorRect, onClose }: ActionMenuPortalProps)
   });
 
   // Accurately refine coordinates once the menu node is measured in the DOM
-  const useIsomorphicLayoutEffect =
-    typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
-
-  useIsomorphicLayoutEffect(() => {
+  React.useLayoutEffect(() => {
     if (!menuRef.current) return;
     const menuEl = menuRef.current;
     const menuWidth = menuEl.offsetWidth || 176;
@@ -324,22 +322,15 @@ export function ServicesView({
   const [addons, setAddons] = React.useState<AddonDTO[]>(initialAddons);
 
   // Sync state if props change (e.g. from server revalidation)
-  React.useEffect(() => {
-    setServices(initialServices);
-  }, [initialServices]);
+  useSyncOnChange([initialServices], () => setServices(initialServices));
+  useSyncOnChange([initialPackages], () => setPackages(initialPackages));
+  useSyncOnChange([initialAddons], () => setAddons(initialAddons));
 
-  React.useEffect(() => {
-    setPackages(initialPackages);
-  }, [initialPackages]);
-
-  React.useEffect(() => {
-    setAddons(initialAddons);
-  }, [initialAddons]);
-
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = React.useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
   const [activeTab, setActiveTab] = React.useState<TabKey>("services");
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -377,7 +368,7 @@ export function ServicesView({
       const target = e.target as Element | null;
       if (
         filterDropdownRef.current &&
-        !filterDropdownRef.current.contains(target as Node)
+        !filterDropdownRef.current.contains(target)
       ) {
         setFilterOpen(false);
       }
@@ -419,7 +410,7 @@ export function ServicesView({
   } | null>(null);
 
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [togglingIds, setTogglingIds] = React.useState<Record<string, boolean>>({});
+  const [, setTogglingIds] = React.useState<Record<string, boolean>>({});
 
   // Local Toast notifications
   const [toasts, setToasts] = React.useState<ToastState[]>([]);
@@ -1251,36 +1242,30 @@ export function ServicesView({
             description="Build your service menu, bundles, and optional add-ons."
             actions={
               <div className="flex flex-wrap items-center gap-2">
-                <AdminButton
-                  variant="primary"
-                  size="sm"
+                <Button variant="brand" size="form"
                   onClick={() => {
                     setEditingService(null);
                     setServiceModalOpen(true);
                   }}
                 >
                   + Add Service
-                </AdminButton>
-                <AdminButton
-                  variant="primary"
-                  size="sm"
+                </Button>
+                <Button variant="brand" size="form"
                   onClick={() => {
                     setEditingAddon(null);
                     setAddonModalOpen(true);
                   }}
                 >
                   + Add Add-on
-                </AdminButton>
-                <AdminButton
-                  variant="outline"
-                  size="sm"
+                </Button>
+                <Button variant="secondary" size="form"
                   onClick={() => {
                     setEditingPackage(null);
                     setPackageModalOpen(true);
                   }}
                 >
                   + Create Package
-                </AdminButton>
+                </Button>
               </div>
             }
           />
@@ -1396,9 +1381,7 @@ export function ServicesView({
                         filterOpen || hasActiveFilter ? "border-burnt" : "border-hairline"
                       }`}
                     >
-                      <svg aria-hidden="true" className="size-3.5 text-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-                      </svg>
+                      <Icon name="filter" className="size-3.5 text-glyph" />
                       <span>Filter</span>
                       {hasActiveFilter && (
                         <span className="size-1.5 rounded-full bg-burnt" role="img" aria-label="Filters applied" />
@@ -1459,28 +1442,26 @@ export function ServicesView({
                         }
                       />
                       {searchQuery || statusFilter !== "all" || categoryFilter !== "all" ? (
-                        <AdminButton
+                        <Button variant="brand" size="xs"
                           type="button"
                           onClick={() => {
                             setSearchQuery("");
                             setStatusFilter("all");
                             setCategoryFilter("all");
                           }}
-                          variant="primary" size="xs"
                         >
                           Reset filters
-                        </AdminButton>
+                        </Button>
                       ) : (
-                        <AdminButton
+                        <Button variant="brand" size="xs"
                           type="button"
                           onClick={() => {
                             setEditingService(null);
                             setServiceModalOpen(true);
                           }}
-                          variant="primary" size="xs"
                         >
                           + Add Service
-                        </AdminButton>
+                        </Button>
                       )}
                     </div>
                   ) : (
@@ -1609,27 +1590,25 @@ export function ServicesView({
                         }
                       />
                       {searchQuery || statusFilter !== "all" ? (
-                        <AdminButton
+                        <Button variant="brand" size="xs"
                           type="button"
                           onClick={() => {
                             setSearchQuery("");
                             setStatusFilter("all");
                           }}
-                          variant="primary" size="xs"
                         >
                           Reset filters
-                        </AdminButton>
+                        </Button>
                       ) : (
-                        <AdminButton
+                        <Button variant="brand" size="xs"
                           type="button"
                           onClick={() => {
                             setEditingPackage(null);
                             setPackageModalOpen(true);
                           }}
-                          variant="primary" size="xs"
                         >
                           + Create Package
-                        </AdminButton>
+                        </Button>
                       )}
                     </div>
                   ) : (
@@ -1747,27 +1726,25 @@ export function ServicesView({
                         }
                       />
                       {searchQuery || statusFilter !== "all" ? (
-                        <AdminButton
+                        <Button variant="brand" size="xs"
                           type="button"
                           onClick={() => {
                             setSearchQuery("");
                             setStatusFilter("all");
                           }}
-                          variant="primary" size="xs"
                         >
                           Reset filters
-                        </AdminButton>
+                        </Button>
                       ) : (
-                        <AdminButton
+                        <Button variant="brand" size="xs"
                           type="button"
                           onClick={() => {
                             setEditingAddon(null);
                             setAddonModalOpen(true);
                           }}
-                          variant="primary" size="xs"
                         >
                           + Add Add-on
-                        </AdminButton>
+                        </Button>
                       )}
                     </div>
                   ) : (
@@ -2138,10 +2115,10 @@ export function ServicesView({
               key={t.id}
               className={`flex items-start gap-3 rounded-lg border p-3.5 text-xs font-medium shadow-lg ${
                 t.type === "error"
-                  ? "bg-red-950/90 border-red-800 text-red-100"
+                  ? "bg-danger-dark/90 border-danger-dark text-white"
                   : t.type === "success"
-                  ? "bg-neutral-900/90 border-neutral-700 text-white"
-                  : "bg-neutral-900/90 border-neutral-700 text-neutral-100"
+                  ? "bg-ink/90 border-body text-white"
+                  : "bg-ink/90 border-body text-mist"
               }`}
             >
               <div className="flex-1">{t.message}</div>

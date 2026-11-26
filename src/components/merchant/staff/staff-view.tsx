@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import * as React from "react";
 import Link from "next/link";
 import { ManageStaffModal, type ManagedStaff } from "./manage-staff-modal";
@@ -7,7 +8,6 @@ import { useRouter } from "next/navigation";
 import type { WorkspaceRole } from "@/lib/merchant/workspace-roles";
 import { MerchantSidebar } from "../merchant-sidebar";
 import { Icon } from "@/components/admin/icon";
-import { AdminButton } from "@/components/admin/admin-button";
 import { MetricCard } from "@/components/admin/metric-card";
 import { PageContent, PageHeading, StatusPill, Surface } from "@/components/admin/primitives";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -272,12 +272,12 @@ export function StaffView({
             description="Manage team access, service eligibility, invitations, and commission rules."
             actions={
               <div className="flex flex-wrap items-center gap-2">
-                <AdminButton variant="primary" size="sm" onClick={() => setIsInviteOpen(true)}>
+                <Button variant="brand" size="form" onClick={() => setIsInviteOpen(true)}>
                   + Invite Staff
-                </AdminButton>
-                <AdminButton variant="outline-accent" size="sm" aria-haspopup="dialog" onClick={() => setIsRoleAccessOpen(true)}>
+                </Button>
+                <Button variant="brand-outline" size="form" aria-haspopup="dialog" onClick={() => setIsRoleAccessOpen(true)}>
                   Role &amp; Access
-                </AdminButton>
+                </Button>
               </div>
             }
           />
@@ -350,18 +350,14 @@ export function StaffView({
                     onClick={() => setIsFilterOpen(!isFilterOpen)}
                     className={`h-11 rounded-lg border px-3 text-sm font-semibold text-ink hover:bg-mist flex items-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${isFilterOpen ? "border-burnt bg-white" : "border-hairline bg-white"}`}
                   >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="size-3.5 text-glyph" aria-hidden>
-                      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-                    </svg>
+                    <Icon name="filter" className="size-3.5 text-glyph" />
                     <span className="relative">
                       Filter
                       {(hasActiveFilter || sortBy !== "Public Display order") && (
                         <span className="absolute -right-1.5 top-0 size-1.5 rounded-full bg-burnt" aria-label="Filter settings applied" />
                       )}
                     </span>
-                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} className={`size-3.5 text-glyph transition-transform ${isFilterOpen ? "rotate-180" : ""}`} aria-hidden>
-                      <path d="M4 6l4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+                    <Icon name="chevron-down" className={`size-3.5 text-glyph transition-transform ${isFilterOpen ? "rotate-180" : ""}`} />
                   </button>
 
                   {/* Filter dropdown panel */}
@@ -589,20 +585,20 @@ export function StaffView({
                           )}
                           {!row.invitationStatus && <div className="flex flex-wrap gap-2 border-t border-hairline pt-3">
                             {canViewProfiles && (
-                              <AdminButton size="xs" variant="outline" disabled={Boolean(loadingEditId)} onClick={() => openEditor(row.id)}>
+                              <Button variant="secondary" size="xs" disabled={Boolean(loadingEditId)} onClick={() => openEditor(row.id)}>
                                 {loadingEditId === row.id ? "Loading…" : "Edit details"}
-                              </AdminButton>
+                              </Button>
                             )}
-                            <AdminButton size="xs" variant="outline" aria-haspopup="dialog" onClick={() => openStatusDialog(row)}>
+                            <Button variant="secondary" size="xs" aria-haspopup="dialog" onClick={() => openStatusDialog(row)}>
                               {row.active ? "Deactivate" : "Activate"}
-                            </AdminButton>
-                            <AdminButton size="xs" variant="danger" onClick={() => setDeleteTarget(row)}>Remove</AdminButton>
+                            </Button>
+                            <Button variant="danger" size="xs" onClick={() => setDeleteTarget(row)}>Remove</Button>
                           </div>}
                           {row.invitationStatus && (
                             <div className="flex flex-wrap gap-2">
-                              {row.invitationStatus !== "cancelled" && <AdminButton size="xs" variant="outline-accent" aria-haspopup="dialog" onClick={() => openInvitationAction(row, "resend")}>Resend email</AdminButton>}
-                              {row.invitationStatus === "pending" ? <AdminButton size="xs" variant="outline" aria-haspopup="dialog" onClick={() => openInvitationAction(row, "cancel")}>Cancel invitation</AdminButton> :
-                                <AdminButton size="xs" variant="danger" aria-haspopup="dialog" onClick={() => openInvitationAction(row, "remove")}>Remove invitation</AdminButton>}
+                              {row.invitationStatus !== "cancelled" && <Button variant="brand-outline" size="xs" aria-haspopup="dialog" onClick={() => openInvitationAction(row, "resend")}>Resend email</Button>}
+                              {row.invitationStatus === "pending" ? <Button variant="secondary" size="xs" aria-haspopup="dialog" onClick={() => openInvitationAction(row, "cancel")}>Cancel invitation</Button> :
+                                <Button variant="danger" size="xs" aria-haspopup="dialog" onClick={() => openInvitationAction(row, "remove")}>Remove invitation</Button>}
                             </div>
                           )}
                         </div>
@@ -677,13 +673,13 @@ export function StaffView({
         <StaffConfirmationDialog title={`${invitationActions[inviteAction.type].label}?`}
           tone={inviteAction.type === "resend" ? undefined : "warning"} busy={runningInviteAction}
           error={inviteActionError} onClose={() => setInviteAction(null)} description={inviteActionDescription}>
-          <AdminButton size="xs" variant="outline" disabled={runningInviteAction} onClick={() => setInviteAction(null)}>
+          <Button variant="secondary" size="xs" disabled={runningInviteAction} onClick={() => setInviteAction(null)}>
             {inviteAction.type === "resend" ? "Cancel" : "Keep invitation"}
-          </AdminButton>
-          <AdminButton size="xs" variant={inviteAction.type === "resend" ? "primary" : "danger"}
+          </Button>
+          <Button size="xs" variant={inviteAction.type === "resend" ? "brand" : "danger"}
             disabled={runningInviteAction} onClick={confirmInvitationAction}>
             {runningInviteAction ? "Please wait…" : invitationActions[inviteAction.type].label}
-          </AdminButton>
+          </Button>
         </StaffConfirmationDialog>
       )}
 
@@ -707,8 +703,8 @@ export function StaffView({
               {deleteTarget.title ? ` (${deleteTarget.title})` : ""}? This action cannot be undone.
             </p>
             <div className="mt-5 flex items-center justify-end gap-2.5">
-              <AdminButton variant="outline" size="xs" onClick={() => setDeleteTarget(null)}>Keep</AdminButton>
-              <AdminButton variant="danger" size="xs" onClick={handleConfirmDelete}>Confirm Remove</AdminButton>
+              <Button variant="secondary" size="xs" onClick={() => setDeleteTarget(null)}>Keep</Button>
+              <Button variant="danger" size="xs" onClick={handleConfirmDelete}>Confirm Remove</Button>
             </div>
           </div>
         </div>

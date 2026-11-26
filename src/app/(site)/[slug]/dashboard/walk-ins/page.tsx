@@ -27,7 +27,7 @@ export default async function TenantWalkInsPage({
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-powder text-ink lg:flex-row">
+    <div className="flex min-h-dvh flex-col bg-powder lg:flex-row">
       <MerchantSidebar basePath={`/${slug}`} businessName={tenant.name} userName={membership?.profiles?.full_name ?? undefined}
         userEmail={user.email} userRole={membership?.role} />
       <div className="min-w-0 flex-1">

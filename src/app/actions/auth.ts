@@ -3,10 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { createAdminSession, clearAdminSession } from "@/lib/admin/session";
-import { verifyAdminCredentials } from "@/lib/admin/local-accounts";
+import { clearAdminSession } from "@/lib/admin/session";
 import { getAccountAccess } from "@/lib/applications/service";
 import { AUTH_ERROR_MESSAGES, mapAuthError } from "@/lib/auth/error-handler";
+import { limitByClient, MINUTES } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loginFieldErrors, loginSchema, safeRedirect, type LoginFieldErrors } from "@/lib/validations/auth";
@@ -16,12 +16,8 @@ export type LoginState = { error: string | null; email: string; fieldErrors?: Lo
 export async function login(_previous: LoginState, formData: FormData): Promise<LoginState> {
   const email = String(formData.get("email") ?? "");
 
-  // Local admin accounts (see lib/admin/local-accounts.ts) bypass Supabase and go to the Admin page.
-  const adminAccount = verifyAdminCredentials(email, String(formData.get("password") ?? ""));
-  if (adminAccount) {
-    await createAdminSession(adminAccount);
-    revalidatePath("/", "layout");
-    redirect("/admin");
+  if (await limitByClient("login", { limit: 10, windowMs: 15 * MINUTES }, email)) {
+    return { error: "Too many login attempts. Please wait a few minutes and try again.", email };
   }
 
   const parsed = loginSchema.safeParse({ email, password: formData.get("password") });
@@ -60,6 +56,7 @@ export async function login(_previous: LoginState, formData: FormData): Promise<
   }
 
   const requestedRedirect = safeRedirect(formData.get("redirect"));
+  const onboardingRedirect = requestedRedirect.match(/^\/(?:([a-z0-9-]+)\/)?dashboard\/onboarding(?:\?.*)?$/);
   let target = requestedRedirect;
 
   let tenantSlug: string | null = null;
@@ -72,7 +69,7 @@ export async function login(_previous: LoginState, formData: FormData): Promise<
     tenantSlug = tenant?.slug ?? null;
   }
 
-  if (!tenantSlug && !requestedRedirect.match(/^\/[a-z0-9-]+\/dashboard(?:\/appointments)?$/)) {
+  if (!tenantSlug && !onboardingRedirect && !requestedRedirect.match(/^\/[a-z0-9-]+\/dashboard(?:\/appointments)?$/)) {
     await supabase.auth.signOut();
     return { error: AUTH_ERROR_MESSAGES.NO_ACCOUNT, email };
   }
@@ -80,7 +77,14 @@ export async function login(_previous: LoginState, formData: FormData): Promise<
   if (tenantSlug) {
     const canonicalOverview = `/${tenantSlug}/dashboard`;
     const canonicalAppointments = `/${tenantSlug}/dashboard/appointments`;
-    if (
+    if (onboardingRedirect) {
+      const requestedTenant = onboardingRedirect[1];
+      if (!requestedTenant) {
+        target = `/${tenantSlug}${requestedRedirect}`;
+      } else if (requestedTenant !== tenantSlug) {
+        target = canonicalOverview;
+      }
+    } else if (
       requestedRedirect === "/dashboard" ||
       requestedRedirect.startsWith("/dashboard/") ||
       requestedRedirect === "/tenant-dashboard" ||

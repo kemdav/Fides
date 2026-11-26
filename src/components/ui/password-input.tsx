@@ -2,15 +2,10 @@
 
 import { useState, type InputHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
+import { Icon } from "@/components/admin/icon";
 
 function EyeIcon({ off }: { off: boolean }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="size-5">
-      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" />
-      <circle cx="12" cy="12" r="3" />
-      {off ? <path d="M4 4l16 16" /> : null}
-    </svg>
-  );
+  return <Icon name={off ? "eye-closed" : "eye"} className="size-5" />;
 }
 
 export type PasswordInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & {

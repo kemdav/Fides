@@ -14,18 +14,18 @@ export type ModalProps = {
   description?: React.ReactNode;
   children?: React.ReactNode;
   className?: string;
+  style?: React.CSSProperties;
   unstyled?: boolean;
-  dismissOnBackdrop?: boolean;
   labelledBy?: string;
-  describedBy?: string;
+  /** Close when the dimmed backdrop is clicked. Leave off for dialogs that hold unsaved input. */
+  closeOnBackdrop?: boolean;
 };
 
 /**
- * Headless modal built on the native `<dialog>` element, which provides focus
- * trapping, backdrop rendering, and Esc handling for free.
- *
- * This is a structural shell only; the Figma design system supplies the final
- * overlay, surface, and motion treatments.
+ * Modal built on the native `<dialog>` element, which provides focus trapping,
+ * backdrop rendering and Esc handling. Use this for every dialog instead of
+ * hand-rolling a fixed overlay. `unstyled` drops the default surface so the
+ * caller can style the panel through `className` (it is centred automatically).
  */
 export function Modal({
   open,
@@ -34,14 +34,16 @@ export function Modal({
   description,
   children,
   className,
+  style,
   unstyled = false,
-  dismissOnBackdrop = false,
   labelledBy,
-  describedBy,
+  closeOnBackdrop = false,
 }: ModalProps) {
   const dialogRef = React.useRef<HTMLDialogElement>(null);
+  const openRef = React.useRef(open);
 
   React.useEffect(() => {
+    openRef.current = open;
     const dialog = dialogRef.current;
     if (!dialog) return;
 
@@ -66,30 +68,29 @@ export function Modal({
     <dialog
       ref={dialogRef}
       aria-labelledby={labelledBy}
-      aria-describedby={describedBy}
-      onClose={onClose}
-      onClick={(event) => {
-        if (dismissOnBackdrop && event.target === event.currentTarget) onClose();
+      style={style}
+      onClose={() => {
+        // the dialog also fires "close" after we close it ourselves; only report real dismissals
+        if (openRef.current) onClose();
       }}
       onCancel={(event) => {
         event.preventDefault();
         onClose();
       }}
+      onClick={(event) => {
+        if (closeOnBackdrop && event.target === event.currentTarget) onClose();
+      }}
       className={cn(
-        !unstyled &&
-          "w-[min(32rem,calc(100vw-2rem))] rounded-lg border border-neutral-200 bg-white p-6 text-neutral-900 shadow-lg",
-        "backdrop:bg-black/40",
+        "m-auto",
+        !unstyled && "w-[min(32rem,calc(100vw-2rem))] rounded-lg border border-hairline bg-white p-6 text-ink shadow-lg",
+        "backdrop:bg-black/40 backdrop:backdrop-blur-xs",
         className
       )}
     >
       {(title || description) && (
         <header className="mb-4 flex flex-col gap-1.5">
-          {title ? (
-            <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-          ) : null}
-          {description ? (
-            <p className="text-sm text-neutral-500">{description}</p>
-          ) : null}
+          {title ? <h2 className="text-lg font-semibold tracking-tight">{title}</h2> : null}
+          {description ? <p className="text-sm text-subtle">{description}</p> : null}
         </header>
       )}
 
