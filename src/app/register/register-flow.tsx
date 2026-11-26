@@ -278,7 +278,8 @@ export function RegisterFlow({
         const valid = fallback === null ? value === null || typeof value === "string" : typeof value === typeof fallback;
         return valid ? [[key, value]] : [];
       })) as Partial<Values>;
-      setValues({ ...initialValues, ...restored });
+      const restoredValues = { ...initialValues, ...restored };
+      setValues(restoredValues);
       setErrors({});
       setDocErrors({});
       Object.values(docs).forEach(releaseObjectUrl);
@@ -296,6 +297,15 @@ export function RegisterFlow({
       setDraftError("This draft could not be restored. You can continue with a new application.");
     }
   }
+
+  useEffect(() => {
+    try {
+      // clear files saved by the former document-draft feature
+      window.indexedDB?.deleteDatabase("fides-registration");
+    } catch {
+      // storage can be unavailable in restricted browsing contexts
+    }
+  }, []);
 
   useEffect(() => {
     if (previousStep.current === step) return;
@@ -854,7 +864,7 @@ export function RegisterFlow({
       {draftSaved && (
         <StaffSuccessDialog
           title="Draft saved"
-          description="Re-enter your password and attach your files again when you return."
+          description="Resume in this browser. When you return, re-enter your password and attach your files again."
           onClose={() => setDraftSaved(false)}
         />
       )}
@@ -1508,6 +1518,21 @@ function BusinessStep({
   );
 }
 
+const documentSections: { title: string; keys: readonly BusinessDocumentKey[] }[] = [
+  { title: "Core Registration", keys: ["dti_sec_registration", "community_tax", "bir_registration", "authority_to_print", "service_invoices", "books_of_accounts", "gpp_registration"] },
+  { title: "Premises & Permits", keys: ["barangay_clearance", "proof_of_address", "zoning_clearance", "occupancy_inspection", "fire_safety", "mayors_permit", "sanitary_permit"] },
+  { title: "Staff Health & Safety", keys: ["health_cards", "massage_certificates", "pathogen_training", "hazardous_waste", "waste_transport", "water_potability", "construction_safety", "sss_employer", "philhealth_employer", "pagibig_employer"] },
+];
+
+const groupedDocumentKeys = new Set(documentSections.flatMap(({ keys }) => keys));
+
+function groupBusinessDocuments(documents: ReturnType<typeof businessDocumentsFor>) {
+  return [
+    ...documentSections.map(({ title, keys }) => ({ title, documents: documents.filter(({ key }) => keys.includes(key)) })),
+    { title: "Industry Requirements", documents: documents.filter(({ key }) => !groupedDocumentKeys.has(key)) },
+  ].filter((section) => section.documents.length > 0);
+}
+
 function DocumentsStep({
   businessType,
   businessTypeName,
@@ -1539,6 +1564,10 @@ function DocumentsStep({
   onBack: () => void;
   onNext: () => void;
 }) {
+  const documents = businessDocumentsFor(businessType);
+  const added = documents.filter(({ key }) => docs[key]).length;
+  const uploaded = documents.filter(({ key }) => uploads[key]?.file === docs[key] && uploads[key]?.receipt).length;
+  const sections = groupBusinessDocuments(documents);
   return (
     <form
       noValidate
@@ -1553,6 +1582,13 @@ function DocumentsStep({
           ? `All documents listed below are required for your selected business type (${businessTypeName}).`
           : "Select a business type in Step 3 to see the full list of required documents."}
       />
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-white p-4">
+        <div role="status" className="min-w-0">
+          <p className="text-base font-semibold text-ink">{added} of {documents.length} documents added</p>
+          <p className="text-sm text-muted">{uploaded} uploaded. Files are sent when you select Continue.</p>
+        </div>
+        <progress aria-label="Business documents added" value={added} max={documents.length} className="h-2.5 w-full appearance-none overflow-hidden rounded-full bg-mist [&::-webkit-progress-bar]:rounded-full [&::-webkit-progress-bar]:bg-mist [&::-webkit-progress-value]:rounded-full [&::-webkit-progress-value]:bg-burnt [&::-moz-progress-bar]:rounded-full [&::-moz-progress-bar]:bg-burnt" />
+      </div>
       {summaryError ? (
         <p
           role="alert"
@@ -1561,26 +1597,33 @@ function DocumentsStep({
           {summaryError}
         </p>
       ) : null}
-      <fieldset disabled={uploading} className="grid gap-5 md:grid-cols-2">
-        {businessDocumentsFor(businessType).map((slot) => {
-          const file = docs[slot.key] ?? null;
-          const upload = uploads[slot.key]?.file === file ? uploads[slot.key] : undefined;
-          return (
-            <DocumentCard
-              key={slot.key}
-              title={slot.title}
-              hint={slot.hint}
-              file={file}
-              error={docErrors[slot.key] ?? upload?.error}
-              uploaded={!!upload?.receipt}
-              progress={uploading && !upload?.receipt && !upload?.error ? upload?.percent : undefined}
-              onFile={(file) => onFile(slot.key, slot.title, file)}
-              onRemove={() => onRemove(slot.key)}
-              onPreview={(file) => onPreview(file, slot.title)}
-            />
-          );
-        })}
-      </fieldset>
+      <div className="space-y-6">
+        {sections.map((section) => (
+          <fieldset key={section.title} disabled={uploading} className="min-w-0">
+            <legend className="mb-3 text-base font-semibold text-ink">{section.title}</legend>
+            <div className="grid gap-4 md:grid-cols-2">
+              {section.documents.map((slot) => {
+                const file = docs[slot.key] ?? null;
+                const upload = uploads[slot.key]?.file === file ? uploads[slot.key] : undefined;
+                return (
+                  <DocumentCard
+                    key={slot.key}
+                    title={slot.title}
+                    hint={slot.hint}
+                    file={file}
+                    error={docErrors[slot.key] ?? upload?.error}
+                    uploaded={!!upload?.receipt}
+                    progress={uploading && !upload?.receipt && !upload?.error ? upload?.percent : undefined}
+                    onFile={(file) => onFile(slot.key, slot.title, file)}
+                    onRemove={() => onRemove(slot.key)}
+                    onPreview={(file) => onPreview(file, slot.title)}
+                  />
+                );
+              })}
+            </div>
+          </fieldset>
+        ))}
+      </div>
       <div className="mt-6 flex flex-col gap-4">
         <InfoNote>
           These documents will be included in your application summary on the
@@ -1844,16 +1887,23 @@ function SummaryStep({
               {missingDocuments} {missingDocuments === 1 ? "document is" : "documents are"} missing. Select Edit to upload them.
             </p>
           )}
-          <ul className="grid gap-2 md:grid-cols-2">
-            {businessDocuments.map(({ key, title }) => {
-              const file = docs[key];
-              return (
-                <li key={key} className="min-w-0">
-                  <FileRow label={title} file={file} onPreview={() => file && onPreview(file, title)} />
-                </li>
-              );
-            })}
-          </ul>
+          <div className="space-y-5">
+            {groupBusinessDocuments(businessDocuments).map((section) => (
+              <section key={section.title}>
+                <h3 className="mb-2 text-sm font-semibold text-ink">{section.title}</h3>
+                <ul className="grid gap-2 md:grid-cols-2">
+                  {section.documents.map(({ key, title }) => {
+                    const file = docs[key];
+                    return (
+                      <li key={key} className="min-w-0">
+                        <FileRow label={title} file={file} onPreview={() => file && onPreview(file, title)} />
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
+          </div>
         </SummaryCard>
       </div>
 

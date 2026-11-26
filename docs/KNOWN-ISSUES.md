@@ -93,7 +93,7 @@ Controls that exist are listed in [SECURITY](SECURITY.md). Still open:
 | F2 | `ui/CheckIcon` (two-colour disc and tick) has no single-colour Solar equivalent. | `components/ui/check-icon.tsx` | P3 | S |
 | F3 | Literal colours that are intentional or art: email HTML, `themeColor`, OpenGraph image, tenant brand defaults, colour-picker and preview colours, fox and laptop SVGs. 17 one-off `shadow-[...rgb()]` values. | various | P3 | S |
 | F4 | 9 to 11px text remains in admin charts and the Figma-spec "Go to fides.app" link. | `admin/overview/*`, `auth/admin-auth-shell.tsx` | P3 | S |
-| F5 | The register flow still owns its step layout. The custom business type uses the shared registration input and validation, but the larger step layout is still a candidate for extraction. | `src/app/register/**` | P3 | L |
+| F5 | The register flow still owns its step layout. The upload and summary steps share document categories. Browser drafts save form details only. The larger step layout is still a candidate for extraction. | `src/app/register/**` | P3 | L |
 | F6 | `book-settings` icon is a Solar notebook plus gear composed by hand (no single Solar icon). `shield` is only partly Solar. | `admin/icon-data.ts` | P3 | S |
 | F7 | `loading.tsx` exists only for the merchant dashboard and admin. Other data pages, including storefront pages, have none. | `src/app/**` | P3 | S |
 | F8 | Accessibility pass not done: keyboard order in dialogs with nested dropdowns, screen reader labels on icon-only buttons, colour contrast on `subtle` text over tinted cards. | whole app | P2 | M |
