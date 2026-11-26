@@ -30,26 +30,24 @@ Requires Node 20+, Docker (Supabase and Redis run in containers) and the Supabas
 ```bash
 npm install
 cp .env.example .env.local        # then fill in real values (see docs/ENVIRONMENT.md)
-npm run setup:admin               # adds ADMIN_SESSION_SECRET and a local admin login to .env.local
 
 docker compose up -d redis        # local Redis for rate limiting (host port 6380)
 supabase start                    # local Supabase stack
 supabase db reset                 # apply all migrations + seed data
+                                  # extra or hosted admins: npm run admin:create -- --email you@example.com --name "Your Name"
 
 npm run dev
 ```
 
-Things your `.env.local` needs beyond the Supabase and mail keys:
+Admin accounts (no environment variables):
 
-1. `ADMIN_SESSION_SECRET`: a random string of 32+ characters.
-2. `ADMIN_ACCOUNTS`: the admin logins, as JSON with hashed passwords. Create each hash with
-   `node scripts/hash-admin-password.mjs "<password of 12+ characters>"`.
-3. `REDIS_URL=redis://localhost:6380`: optional locally (limits fall back to memory), required in production.
+1. `supabase db reset` seeds `admin@fides.app` for local use (password in `supabase/seed.sql`).
+2. On a hosted project, create admins with `npm run admin:create` (see `docs/ENVIRONMENT.md`).
 
 Admins sign in at `/admin/login`. The normal `/login` is for business owners only and never accepts admin accounts.
 
 The app still boots with missing values (integrations report misconfiguration at request time), but admin login
-needs `ADMIN_ACCOUNTS` and every protected rate-limited form works best with Redis running.
+needs a platform admin account and every protected rate-limited form works best with Redis running.
 
 ## Scripts
 
@@ -63,7 +61,7 @@ needs `ADMIN_ACCOUNTS` and every protected rate-limited form works best with Red
 | `npm test`          | Unit tests (`src/lib/__tests__`) |
 | `npm run test:db` | Database access checks against the local Supabase stack |
 | `npm run email:test` / `email:check` | Send a test email / verify mail setup |
-| `node scripts/hash-admin-password.mjs "<pw>"` | Hash an admin password for `ADMIN_ACCOUNTS` |
+| `npm run admin:create -- --email <email> --name "<name>"` | Create a platform admin (`--disable` turns one off) |
 
 ## Project structure
 
@@ -89,7 +87,7 @@ src/
     tenant/                Wildcard subdomain -> tenant resolution
     ai/                    Gemini concierge wrapper
     mail/                  SMTP transactional mailer
-    admin/                 Admin accounts (env based), signed session cookie
+    admin/                 Platform admin guard and identity (Supabase Auth + `platform_admins`)
     merchant/access.ts     resolveTenantAccess: checks a user may act on a tenant
     rate-limit.ts          Redis-backed rate limiter (in-memory fallback)
     env.ts                 Validated environment access

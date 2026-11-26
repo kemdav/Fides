@@ -42,7 +42,7 @@ Full target in [ARCHITECTURE](ARCHITECTURE.md). Open items:
 | --- | --- | --- | --- | --- |
 | A1 | Actions mix input parsing, tenant checks, rules and Supabase queries. 35 exported actions in 5 large files. | `customers.ts` 1,305 lines, `website-settings.ts` 609, `walk-ins.ts` 498, `appointments.ts` 465, `booking-settings.ts` 331 | P2 | L (per feature) |
 | A2 | The same tenant check exists 4 times: shared `lib/merchant/access.ts` (appointments, walk-ins) plus inline copies in `customers.ts` (`resolveOperationalAccess`), `booking-settings.ts` (`resolveTenantAccess`) and `website-settings.ts` (`authenticateOwner`). | See left | P1 | M |
-| A3 | Three result conventions: `{ success }` (~89 uses), `{ ok }` (password reset), custom state objects (login, contact, admin login). | `actions/*` | P2 | M |
+| A3 | Three result conventions (admin now uses `lib/result.ts`, the target shape): `{ success }` (~89 uses), `{ ok }` (password reset), custom state objects (login, contact, admin login). | `actions/*` | P2 | M |
 | A4 | Validation missing for appointments and walk-ins actions (zod exists for auth, registration, customers, booking settings, website settings). | `actions/appointments.ts`, `actions/walk-ins.ts` | P1 | M |
 | A5 | Pages and one client component talk to Supabase directly: 11 `page.tsx` files, and `walk-ins-view.tsx` creates the browser client. | `(site)/[slug]/dashboard/**`, legacy `/dashboard/**`, `tenant-dashboard` | P2 | M |
 | A6 | Feature code is spread across `lib/merchant`, `lib/storefront`, `lib/admin`, `lib/applications`, `lib/validations` and `components/*`. | `src/lib/**` | P3 | L |
@@ -58,12 +58,14 @@ Controls that exist are listed in [SECURITY](SECURITY.md). Still open:
 | ID | Issue | Sev | Effort | Notes |
 | --- | --- | --- | --- | --- |
 | S1 | The old Gmail app password is still in git history. | P1 | S | Revoke it in the Google account (history rewrite is optional). |
-| S2 | Admin accounts have no password reset and no MFA. "Forgot password" on `/admin/login` is design only, and the Figma MFA and "unauthorized role" states are not wired. | P2 | M | Needs a product decision (email reset for local accounts vs moving admins to Supabase auth). |
-| S3 | RLS and RPC guards are not covered by automated tests. | P1 | M | Add SQL or script tests: tenant A cannot read/write tenant B; `anon` cannot execute the guarded RPCs. |
+| S8 | **Apply `close_client_write_holes` to the hosted database.** Until then, on hosted: signed-in users can change their own role and tenant, and the public key can read and edit registration applications and the admin log. Also check hosted data for unexpected admin profiles, tenant moves and edited applications. | P1 | S | Migration `20261126140000_close_client_write_holes.sql` applies on its own. |
+| S9 | An owner can still set any amount on a reactivation invoice they create. | P2 | S | Generate invoices only on the server (ADMIN-BACKEND step 4). |
+| S2 | Admin accounts have no password reset screen and no MFA. "Forgot password" on `/admin/login` is design only, and the Figma MFA and "unauthorized role" states are not wired. | P2 | M | Both are available now that admins use Supabase Auth. Planned in [ADMIN-BACKEND](ADMIN-BACKEND.md) step 7. |
+| S3 | RLS and grant checks cover admin access and the main client write paths (`npm run test:db`). Tenant A versus tenant B reads and the walk-in RPC guards are still untested. | P2 | M | Extend `scripts/tests/`. |
 | S4 | The in-memory rate-limit fallback is per process. | P2 | S | Production must set `REDIS_URL`. Add a startup warning check in the deploy checklist. |
 | S5 | `GET /api/tenant/website-settings` and the storefront services route use the service-role client for public reads. Intentional, but each should be reviewed for exactly the columns returned. | P3 | S | |
 | S6 | Contact forms (global and storefront) send mail or insert rows with no spam challenge beyond the honeypot and rate limit. | P3 | S | Consider a captcha if abuse appears. |
-| S7 | `ADMIN_SESSION_SECRET` and `ADMIN_ACCOUNTS` must be set per environment. Missing `ADMIN_ACCOUNTS` silently disables admin login. | P2 | S | Fail loudly on startup in production. |
+| S7 | The admin screens still show sample data, and nothing calls the approval service, so new applications cannot be approved. | P1 | L | Tracked step by step in [ADMIN-BACKEND](ADMIN-BACKEND.md). |
 
 ## 4. Testing
 
@@ -120,7 +122,7 @@ Controls that exist are listed in [SECURITY](SECURITY.md). Still open:
 ## 9. Fixed recently (for context)
 
 Unauthenticated account-request API removed; tenant checks added to walk-in and appointment-status actions; walk-in RPC guard
-(`assert_tenant_operator`, migration `rpc_tenant_guard`); rate limiting with Redis; admin accounts moved to hashed env config; patched `next`, `zod`,
+(`assert_tenant_operator`, migration `rpc_tenant_guard`); rate limiting with Redis; admin accounts moved to Supabase Auth with a `platform_admins` table; patched `next`, `zod`,
 `nodemailer`; shared `Modal`, `Button`, field and icon components; token-based colours and shadows; 404, error and loading pages;
 all lint warnings; type-aware lint rules and three extra compiler flags enabled.
 

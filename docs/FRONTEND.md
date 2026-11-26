@@ -68,6 +68,6 @@ Buttons never move on hover (colour change only) and always show a hand cursor a
 | `/` , `/contact`, `/register` | Public |
 | `/login` | Business owners |
 | `/admin/login` | Fides admins (separate design) |
-| `/admin/...` | Admin portal (needs an admin session) |
+| `/admin/...` | Admin portal (needs a platform admin) |
 | `/[slug]/dashboard/...` | Merchant dashboard |
 | `/[slug]/...` | Tenant storefront |

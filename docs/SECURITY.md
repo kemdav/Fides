@@ -7,10 +7,10 @@ How the layers fit together (entry, DTO, guard, service, queries, database) is i
 
 | Layer | Where | Notes |
 | --- | --- | --- |
-| Row Level Security | every table in `public` | Always on. Tables only the server uses (`account_applications`, `application_identities`, `application_businesses`, `admin_activity_log`, `subscription_plans`) have no client grants, apart from an applicant looking up their own application id. |
+| Row Level Security | every table in `public` | Always on. Tables only the server uses (`account_applications`, `application_identities`, `application_businesses`, `admin_activity_log`, `subscription_plans`, `password_reset_codes`, `rejected_accounts`) have no client grants, apart from an applicant looking up their own application id. |
 | Tenant access checks | `src/lib/merchant/access.ts` (`resolveTenantAccess`) | Server actions must call this instead of trusting a `tenantId` sent by the browser. It only accepts a tenant the signed-in user is an owner/admin/receptionist/staff member of. |
 | Walk-in RPC guard | `public.assert_tenant_operator` (migration `rpc_tenant_guard`) | `create_walkin_appointment_safe` and `convert_waitlist_entry_to_appointment` call it first. It lets in the service role, platform admins and operators of that tenant, and rejects everyone else including requests with no session. |
-| Admin portal | `src/lib/admin/*`, `requireAdminPortal()` | Local accounts from `ADMIN_ACCOUNTS`, scrypt hashed, signed HttpOnly session cookie (8 hours). |
+| Admin portal | `src/lib/admin/access.ts`, `requireAdminPortal()` / `assertAdminAction()` | Supabase Auth session plus an active row in `platform_admins`, checked on every request. `is_platform_admin()` reads the same table, so RLS agrees with the app. |
 | Rate limiting | `src/lib/rate-limit.ts` | See `docs/ENVIRONMENT.md` for Redis. |
 
 ## Rules for new code
@@ -34,7 +34,7 @@ Applying the access hotfix to a hosted project: [SECURITY-HOTFIX](SECURITY-HOTFI
 
 ## Before going to production
 
-- [ ] Set `ADMIN_SESSION_SECRET` (32+ random characters) and `ADMIN_ACCOUNTS` with unique 12+ character passwords.
+- [ ] Create each admin with `npm run admin:create` and have them store the password in a password manager.
 - [ ] Set `REDIS_URL` to a managed Redis.
 - [ ] Apply all migrations (through `20261123094809_rpc_tenant_guard.sql`) to the hosted database.
 - [ ] Rotate any credential that was ever committed (the old Gmail app password is still in git history).
@@ -46,6 +46,6 @@ Applying the access hotfix to a hosted project: [SECURITY-HOTFIX](SECURITY-HOTFI
 The full, tracked list is in [KNOWN-ISSUES](KNOWN-ISSUES.md) (section 3). Highlights:
 
 - The in-memory fallback limiter is per process. Redis fixes that.
-- Admin accounts have no password reset or MFA yet. The "Forgot password?" screen on `/admin/login` is only the design,
+- Admin accounts have no password reset screen or MFA yet. The "Forgot password?" screen on `/admin/login` is only the design,
   it does not send anything. The MFA and "unauthorized role" cards from the Figma are not wired up.
 - Dev-only `npm audit` findings remain in `typescript-eslint` (moderate, not shipped).

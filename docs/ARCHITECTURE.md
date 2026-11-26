@@ -312,7 +312,7 @@ Audit snapshot (honest, so we can measure progress):
 | Feature code location | Spread over `lib/merchant`, `lib/storefront`, `lib/admin`, `lib/applications`, `lib/validations` and `components/*` | `features/<name>` |
 | Legacy routes | `/dashboard/*` and `/tenant-dashboard` are redirect stubs next to `/[slug]/dashboard/*` | Remove once nothing links to them |
 | Database | RLS on every table, guarded walk-in RPCs, `assert_tenant_operator`, 24 migrations, edge function for email | Good. Add RLS tests and an index review |
-| Security controls | Rate limiter (Redis), admin accounts via hashed env, no unauthenticated legacy APIs, 0 audit findings | Keep; add request ids and structured logs |
+| Security controls | Rate limiter (Redis), admins on Supabase Auth (`platform_admins`), no unauthenticated legacy APIs, 0 audit findings | Keep; add request ids and structured logs |
 | Tests | 21 unit tests (date utils only) | No service, RLS or e2e tests |
 | Type safety and code standards | See the compliance snapshot below. Most rules are now enforced by the compiler and ESLint | Remaining gaps are listed in KNOWN-ISSUES |
 | Observability | `console.*` in a few places, `/api/health` | Structured logging, error tracking, uptime checks |

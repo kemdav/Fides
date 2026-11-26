@@ -37,7 +37,7 @@ Local database: `docker compose up -d redis`, `supabase start`, `supabase db res
 3. **Database is the boundary.** New table: RLS and policies in the same migration. New `SECURITY DEFINER` function: set `search_path`, call `assert_tenant_operator`, revoke `anon`.
    Migrations are forward-only; never edit an applied one; never change production outside migrations.
 4. **Public inputs are rate limited** (`limitByClient` in `lib/rate-limit.ts`) and validated.
-5. **No secrets in the repo.** Placeholders only in `.env.example`. Admin accounts come from hashed `ADMIN_ACCOUNTS`.
+5. **No secrets in the repo.** Placeholders only in `.env.example`. Platform admins are Supabase Auth accounts listed in `platform_admins`.
 6. **UI reuse.** Use `buttonClasses` / `Button`, `inputClasses`, `Modal`, `Icon` (Solar set), `MetricCard` and the colour/shadow tokens from `src/app/globals.css`.
    No hex colours, default Tailwind palette colours, hand-rolled modal overlays or inline SVG icons. Sizes follow Figma (see `docs/FRONTEND.md`).
 7. **Responsive and accessible.** Check new screens at 390px: no horizontal scroll, labels visible, focus visible, text not smaller than 12px.

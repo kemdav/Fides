@@ -12,8 +12,6 @@ Restart `npm run dev` after any change.
 | `NEXT_PUBLIC_SUPABASE_URL` | yes | Supabase API URL. `http://127.0.0.1:55321` for the local stack (see `supabase/config.toml`). |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | yes | Supabase anon/publishable key. |
 | `SUPABASE_SECRET_KEY` | yes (server) | Service-role key. Server only, never expose it to the browser. |
-| `ADMIN_SESSION_SECRET` | production | Random string of 32+ characters that signs the admin session cookie. Without it (dev only) a throwaway key is used and admin sessions end on restart. |
-| `ADMIN_ACCOUNTS` | for admin login | JSON array of admins with hashed passwords (below). |
 | `REDIS_URL` | production | Redis connection for rate limiting (below). |
 | `MAIL_TRANSPORT`, `SMTP_*`, `MAIL_FROM_*` | for email | Transactional email. See the email section in the README. |
 | `RESEND_API_KEY` | optional | Only if you switch the mailer to Resend. |
@@ -21,20 +19,17 @@ Restart `npm run dev` after any change.
 
 ## Admin accounts
 
-Admin logins are not in Supabase and not in the repo. They come from `ADMIN_ACCOUNTS`, a single-quoted JSON array:
+Platform admins are ordinary Supabase Auth accounts that also have an active row in `public.platform_admins`.
+Only the server can write that table. There are no admin environment variables.
 
-```env
-ADMIN_ACCOUNTS='[{"id":"admin-1","username":"admin@example.com","displayName":"Admin","passwordHash":"scrypt:<salt>:<hash>"}]'
-```
+- **Local:** `supabase db reset` seeds `admin@fides.app`; the password is the seed password in `supabase/seed.sql`.
+- **Hosted:** apply the migrations, point `.env.local` at that project, then run
+  `npm run admin:create -- --email you@example.com --name "Your Name"`. It prints a one-time password.
+- **Turn one off:** `npm run admin:create -- --email you@example.com --disable`. It takes effect on their next request.
+- The script refuses to promote an existing account, so a merchant login can never become an admin by accident.
 
-1. Pick a unique password of 12+ characters for each admin.
-2. Run `node scripts/hash-admin-password.mjs "<password>"` and paste the output as `passwordHash`.
-3. Give every admin a different `id` and password. Restart the server.
-
-Quick local setup: run `npm run setup:admin`. It adds `ADMIN_SESSION_SECRET` and one admin (`admin@fides.local`, random password printed once) to `.env.local` when they are missing, and skips them if they exist. Use `-- --username you@example.com` to pick the username.
-
-Admins sign in at `/admin/login`. The first time you pull the branch that introduced this, add `ADMIN_ACCOUNTS`
-to your own `.env.local` or admin login will say the credentials are wrong.
+Admins sign in at `/admin/login`. `/login` rejects them. A browser holds one Supabase session at a time, so
+signing in as an admin signs that browser out of a merchant account.
 
 ## Redis (rate limiting)
 
