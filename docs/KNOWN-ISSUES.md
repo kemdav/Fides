@@ -119,7 +119,9 @@ Controls that exist are listed in [SECURITY](SECURITY.md). Still open:
 
 ## 9. Fixed recently (for context)
 
-The tenant QR check-in placeholder moved from the sidebar to the booking toolbar on Overview and Appointments. Confirmed appointments show a check-in code in Appointment Details.
+The tenant QR check-in placeholder moved from the sidebar to the booking toolbar on Overview and Appointments. The camera starts automatically and manual entry is available below the preview. Confirmed appointments show a check-in code in Appointment Details.
+
+Accent-filled controls and featured KPI cards on tenant pages use the main website color for foregrounds when configured.
 
 Unauthenticated account-request API removed; tenant checks added to walk-in and appointment-status actions; walk-in RPC guard
 (`assert_tenant_operator`, migration `rpc_tenant_guard`); rate limiting with Redis; admin accounts moved to hashed env config; patched `next`, `zod`,

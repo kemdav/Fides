@@ -7,7 +7,7 @@ const SCAN_MAX_WIDTH = 640;
 
 export function QrCamera({ onScan }: { onScan: (code: string) => void }): ReactElement {
   const preview = useRef<HTMLVideoElement>(null);
-  const [status, setStatus] = useState<"opening" | "ready" | "unavailable">("opening");
+  const [status, setStatus] = useState<"opening" | "ready" | "blocked" | "unavailable">("opening");
 
   useEffect(() => {
     const video = preview.current;
@@ -55,13 +55,14 @@ export function QrCamera({ onScan }: { onScan: (code: string) => void }): ReactE
           const frame = context.getImageData(0, 0, width, height);
           const qr = decode(frame.data, width, height);
           if (qr) {
-            window.clearInterval(timer);
             onScan(qr.data);
           }
         }, SCAN_INTERVAL_MS);
-      } catch {
+      } catch (error) {
         stream?.getTracks().forEach((track) => track.stop());
-        if (active) setStatus("unavailable");
+        if (active) {
+          setStatus(error instanceof DOMException && error.name === "NotAllowedError" ? "blocked" : "unavailable");
+        }
       }
     }
 
@@ -80,7 +81,9 @@ export function QrCamera({ onScan }: { onScan: (code: string) => void }): ReactE
       {status !== "ready" && (
         <div role="status" className="space-y-2 p-3 text-center text-sm text-muted">
           <Icon name="qr-code" className="mx-auto size-8" />
-          <p>{status === "opening" ? "Opening camera…" : "Camera unavailable. Enter the code below."}</p>
+          {status === "opening" && <p>Opening camera…</p>}
+          {status === "blocked" && <p>Camera access is blocked. Allow camera access in your browser’s site settings or enter the code below.</p>}
+          {status === "unavailable" && <p>A camera could not be opened. Enter the code below.</p>}
         </div>
       )}
     </div>

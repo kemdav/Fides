@@ -56,7 +56,7 @@ export function MetricCard({
             weight={iconWeight ?? (featured ? "fill" : "regular")}
             className={cn(
               "size-5 shrink-0",
-              featured ? "text-white" : "text-glyph",
+              !featured && "text-glyph",
             )}
           />
         ) : null}
@@ -108,7 +108,7 @@ export function MetricCard({
           <p
             className={cn(
               "min-w-0 flex-1 text-xs leading-[13px] sm:text-[13px] sm:leading-[14px]",
-              featured ? "text-white" : "text-muted",
+              !featured && "text-muted",
             )}
           >
             {caption}
@@ -126,7 +126,7 @@ export function MetricCard({
           <p
             className={cn(
               "break-words text-[13px] leading-[18px]",
-              featured ? "text-white" : "text-muted",
+              !featured && "text-muted",
             )}
           >
             {caption}
@@ -140,7 +140,10 @@ export function MetricCard({
           </p>
           {progress !== undefined && (
             <div
-              className="mt-auto flex h-[5px] overflow-hidden rounded-[3px] bg-mist"
+              className={cn(
+                "mt-auto flex h-[5px] overflow-hidden rounded-[3px]",
+                featured ? "bg-on-burnt/20" : "bg-mist",
+              )}
               aria-hidden
             >
               <div

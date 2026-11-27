@@ -103,8 +103,10 @@ export default async function TenantLayout({
       ? {
           "--color-burnt": accentColor,
           "--color-burnt-dark": accentColor,
-          "--color-on-burnt": readableForeground(accentColor, "#ffffff"),
         }
+      : {}),
+    ...(mainColor || accentColor
+      ? { "--color-on-burnt": mainColor || readableForeground(accentColor, "#ffffff") }
       : {}),
   } as CSSProperties;
 
