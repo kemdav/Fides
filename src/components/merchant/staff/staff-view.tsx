@@ -586,7 +586,7 @@ export function StaffView({
                           {!row.invitationStatus && <div className="flex flex-wrap gap-2 border-t border-hairline pt-3">
                             {canViewProfiles && (
                               <Button variant="secondary" size="xs" disabled={Boolean(loadingEditId)} onClick={() => openEditor(row.id)}>
-                                {loadingEditId === row.id ? "Loading…" : "Edit details"}
+                                Edit details
                               </Button>
                             )}
                             <Button variant="secondary" size="xs" aria-haspopup="dialog" onClick={() => openStatusDialog(row)}>
@@ -678,7 +678,7 @@ export function StaffView({
           </Button>
           <Button size="xs" variant={inviteAction.type === "resend" ? "brand" : "danger"}
             disabled={runningInviteAction} onClick={confirmInvitationAction}>
-            {runningInviteAction ? "Please wait…" : invitationActions[inviteAction.type].label}
+            {invitationActions[inviteAction.type].label}
           </Button>
         </StaffConfirmationDialog>
       )}

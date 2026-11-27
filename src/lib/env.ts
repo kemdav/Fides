@@ -110,8 +110,7 @@ const serverEnvSchema = z
     MAIL_TRANSPORT: z.enum(["resend", "edge", "smtp"]).optional(),
     FIDES_EMAIL_FUNCTION_SECRET: z.string().min(16).optional(),
     PASSWORD_RESET_SECRET: z.string().min(16).optional(),
-    // Optional Redis for shared rate limiting, e.g. redis://localhost:6379. Without it limits are per server process.
-    REDIS_URL: z.string().min(1).optional(),
+    REDIS_URL: z.url({ protocol: /^rediss?$/ }).optional(),
     SMTP_HOST: z.string().min(1).optional(),
     SMTP_PORT: z.string().optional(),
     SMTP_SECURE: z.string().optional(),

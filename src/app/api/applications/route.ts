@@ -62,8 +62,7 @@ export async function POST(request: Request) {
     if (error instanceof ServiceError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    console.error("[POST /api/applications]", error);
-    const detail = process.env.NODE_ENV !== "production" && error instanceof Error ? ` (${error.message})` : "";
-    return NextResponse.json({ error: `We could not submit your application. Please try again.${detail}` }, { status: 500 });
+    console.error("[applications] submission could not be completed");
+    return NextResponse.json({ error: "We could not submit your application. Please try again." }, { status: 500 });
   }
 }

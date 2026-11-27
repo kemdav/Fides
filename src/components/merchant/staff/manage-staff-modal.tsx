@@ -251,7 +251,7 @@ export function ManageStaffModal({ staff, tenantId, basePath, onClose, onSaved }
           <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2.5 border-t border-hairline bg-mist px-4 py-4 sm:px-6">
             {error && <p role="alert" className="w-full rounded-lg bg-danger-bg px-3 py-2 text-sm text-danger-dark">{error}</p>}
             <Button variant="secondary" size="xs" onClick={onClose} disabled={saving}>Cancel</Button>
-            <Button variant="brand" size="xs" type="submit" disabled={saving}>{saving ? "Saving…" : "Save changes"}</Button>
+            <Button variant="brand" size="xs" type="submit" disabled={saving}>Save changes</Button>
           </footer>
         </form>
       </Modal>

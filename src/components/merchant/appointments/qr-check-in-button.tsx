@@ -101,6 +101,7 @@ export function QrCheckInButton({ tenantId }: { tenantId: string }): ReactElemen
             <form className="space-y-4" aria-busy={pending} onSubmit={(event) => { event.preventDefault(); if (!pending) void submit(); }}>
               {cameraMode === "scanning" && <QrCamera onScan={handleScan} />}
               {scanned && <p role="status" className="rounded-lg bg-success/10 p-3 text-sm text-ink">QR code scanned. Select Check In to confirm.</p>}
+              {cameraMode === "scanning" && <hr className="border-hairline" />}
               <div className="space-y-2">
                 <label htmlFor={codeId} className="block text-sm font-semibold">Appointment check-in code</label>
                 <input
@@ -124,7 +125,7 @@ export function QrCheckInButton({ tenantId }: { tenantId: string }): ReactElemen
               </div>
               {error && <p role="alert" className="text-sm text-danger-dark">{error}</p>}
               <Button type="submit" variant="brand" size="form" disabled={pending || !code.trim()}>
-                {pending ? "Checking in…" : "Check In"}
+                Check In
               </Button>
             </form>
           )}

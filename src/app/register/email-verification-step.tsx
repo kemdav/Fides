@@ -123,7 +123,7 @@ export function EmailVerificationStep({ email, retryAt, onResend, onResent, onVe
 
       <div className="mx-auto mt-8 flex max-w-[368px] flex-col gap-3">
         <Button type="submit" size="formLg" variant="brand" disabled={pending !== null || code.length !== DIGITS}>
-          {pending === "confirm" ? "Checking code…" : "Confirm"}
+          Confirm
         </Button>
         <div className="flex flex-wrap justify-between gap-x-3">
           <button type="button" onClick={onEdit} disabled={pending !== null} className="min-h-11 rounded-md text-sm font-semibold text-burnt hover:underline focus-visible:outline-2 focus-visible:outline-burnt disabled:opacity-50">

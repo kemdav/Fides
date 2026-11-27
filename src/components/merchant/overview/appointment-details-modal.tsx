@@ -204,7 +204,7 @@ export function AppointmentDetailsModal({ tenantId, appointmentId, onClose, onUp
           )}
           {mode !== "details" && <Button variant="secondary" size="xs" disabled={busy} onClick={() => changeMode("details")}>Back</Button>}
           {mode === "cancel" && <Button variant="danger" size="xs" disabled={busy} onClick={() => void submit("Cancelled")}>Confirm cancellation</Button>}
-          {mode === "reschedule" && <Button variant="brand" size="xs" type="submit" disabled={busy}>{busy ? "Saving…" : "Save schedule"}</Button>}
+          {mode === "reschedule" && <Button variant="brand" size="xs" type="submit" disabled={busy}>Save schedule</Button>}
         </footer>
       </form>
     </Modal>

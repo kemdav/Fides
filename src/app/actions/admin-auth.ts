@@ -21,7 +21,10 @@ export async function adminLogin(_previous: AdminLoginState, formData: FormData)
   if (!password) fieldErrors.password = "Enter your password.";
   if (fieldErrors.email || fieldErrors.password) return { status: "field-error", email, fieldErrors };
 
-  if (await limitByClient("admin-login", { limit: 6, windowMs: MINUTES }, email)) return { status: "rate-limited", email };
+  if (
+    await limitByClient("admin-login-ip", { limit: 12, windowMs: MINUTES }) ||
+    await limitByClient("admin-login", { limit: 6, windowMs: MINUTES }, email)
+  ) return { status: "rate-limited", email };
 
   const account = verifyAdminCredentials(email, password);
   if (!account) return { status: "invalid", email };

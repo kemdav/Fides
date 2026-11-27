@@ -104,7 +104,7 @@ export function StaffAccessForm({ token, workspace, invitedEmail }: {
         )}
         {error && <p role="alert" className="rounded-lg bg-danger-bg p-3 text-sm text-danger-dark">{error}</p>}
         <Button variant="brand" size="form" type="submit" className="w-full" disabled={busy}>
-          {busy ? (create ? "Creating account…" : "Signing in…") : submitLabel}
+          {submitLabel}
         </Button>
       </form>
     </section>

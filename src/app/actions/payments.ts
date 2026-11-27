@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { canManageBookings, workspaceRoleFromLabel, type WorkspaceRole } from "@/lib/merchant/workspace-roles";
+import { resolveTenantAccess } from "@/lib/merchant/access";
+import { canManageBookings, workspaceRoleFromLabel } from "@/lib/merchant/workspace-roles";
 import {
   calculateChangeAndApplied,
   calculateVatSplit,
@@ -14,26 +15,18 @@ import {
 } from "@/lib/payments";
 import {
   formatTimeManila,
-  getManilaDateKey,
-  getManilaTodayKey,
   resolveCustomerName,
   resolveServiceName,
   resolveStaffName,
 } from "@/lib/date-utils";
 import type {
   AppointmentBalanceStatus,
-  DailyCollectionPointDTO,
-  MethodBreakdownItemDTO,
   PaymentActionResult,
-  PaymentKpiSummaryDTO,
   PaymentMethod,
   PaymentRecordDTO,
-  PaymentRecordStatus,
-  PaymentsDashboardDTO,
   RecordPaymentInput,
   RecordPaymentSuccessData,
   RefundPaymentInput,
-  UnsettledAppointmentDTO,
   VoidPaymentInput,
 } from "@/types/payments";
 
@@ -65,38 +58,18 @@ async function revalidatePaymentsPaths(slug: string) {
 
 async function getVerifiedMerchantUser(tenantId: string) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { ok: false as const, error: "Authentication required to perform this action." };
-  }
-
-  const { data: membership } = await supabase
-    .from("tenant_memberships")
-    .select("role, profiles(full_name)")
-    .eq("tenant_id", tenantId)
-    .eq("profile_id", user.id)
-    .maybeSingle();
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, role, tenant_id")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  const role: WorkspaceRole | undefined =
-    membership?.role ?? (profile?.tenant_id === tenantId ? workspaceRoleFromLabel(profile.role) : undefined);
-
-  if (!role) {
+  const access = await resolveTenantAccess(supabase, tenantId);
+  const role = workspaceRoleFromLabel(access?.role);
+  if (!access || !role) {
     return { ok: false as const, error: "Access denied. You are not an authorized member of this workspace." };
   }
 
-  const userName =
-    membership?.profiles?.full_name?.trim() || profile?.full_name?.trim() || user.email?.split("@")[0] || "Staff Member";
-
-  return { ok: true as const, user, role, userName, supabase };
+  const [profile, tenant] = await Promise.all([
+    supabase.from("profiles").select("full_name, email").eq("id", access.userId).maybeSingle(),
+    supabase.from("tenants").select("slug").eq("id", access.tenantId).maybeSingle(),
+  ]);
+  const userName = profile.data?.full_name?.trim() || profile.data?.email?.split("@")[0] || "Staff Member";
+  return { ok: true as const, userId: access.userId, role, userName, slug: tenant.data?.slug ?? "", supabase };
 }
 
 /* ----------------------------------------------------------- Record Payment */
@@ -222,8 +195,8 @@ export async function recordPaymentAction(
       reference_number: refNum,
       notes: input.notes?.trim() || null,
       paid_at: nowIso,
-      created_by: auth.user.id,
-      recorded_by: auth.user.id,
+      created_by: auth.userId,
+      recorded_by: auth.userId,
       net_cents: netCents,
       vat_cents: vatCents,
     })
@@ -231,7 +204,7 @@ export async function recordPaymentAction(
     .single();
 
   if (insertError || !insertedPayment) {
-    console.error("[payments/record] insert payment failed:", insertError);
+    console.error("[payments] could not record payment");
     return { ok: false, error: insertError?.message || "Failed to save the payment record to the database." };
   }
 
@@ -246,7 +219,7 @@ export async function recordPaymentAction(
     .eq("id", input.appointmentId)
     .eq("tenant_id", input.tenantId);
 
-  await revalidatePaymentsPaths(input.slug);
+  await revalidatePaymentsPaths(auth.slug);
 
   const customerName = resolveCustomerName(appointment.customers, appointment.notes);
   const createdPayment: PaymentRecordDTO = {
@@ -346,7 +319,7 @@ export async function voidPaymentAction(rawInput: VoidPaymentInput): Promise<Pay
       status: "voided",
       void_reason: input.reason,
       voided_at: nowIso,
-      voided_by: auth.user.id,
+      voided_by: auth.userId,
       updated_at: nowIso,
     })
     .eq("id", input.paymentId)
@@ -386,7 +359,7 @@ export async function voidPaymentAction(rawInput: VoidPaymentInput): Promise<Pay
     }
   }
 
-  await revalidatePaymentsPaths(input.slug);
+  await revalidatePaymentsPaths(auth.slug);
   return { ok: true, data: { paymentId: input.paymentId } };
 }
 
@@ -453,7 +426,7 @@ export async function refundPaymentAction(rawInput: RefundPaymentInput): Promise
       status: "refunded",
       refund_reason: input.reason,
       refunded_at: nowIso,
-      refunded_by: auth.user.id,
+      refunded_by: auth.userId,
       updated_at: nowIso,
     })
     .eq("id", input.paymentId)
@@ -492,368 +465,6 @@ export async function refundPaymentAction(rawInput: RefundPaymentInput): Promise
     }
   }
 
-  await revalidatePaymentsPaths(input.slug);
+  await revalidatePaymentsPaths(auth.slug);
   return { ok: true, data: { paymentId: input.paymentId } };
-}
-
-/* --------------------------------------------------- Dashboard Data Query */
-
-export async function fetchPaymentsDashboardData(
-  tenantId: string
-): Promise<PaymentsDashboardDTO> {
-  const supabase = await createClient();
-
-  // 1. Fetch tenant VAT setting
-  const { data: tenantSettings } = await supabase
-    .from("tenant_settings")
-    .select("vat_rate_percent")
-    .eq("tenant_id", tenantId)
-    .maybeSingle();
-
-  const vatRatePercent = Number(tenantSettings?.vat_rate_percent ?? 12);
-
-  // 2. Fetch all payment records for this tenant with ONLY flat scalar columns (zero nested joins)
-  const { data: rawPayments, error: paymentsError } = await supabase
-    .from("payments")
-    .select(
-      "id, tenant_id, appointment_id, customer_id, amount_cents, currency, method, status, reference, reference_number, notes, paid_at, created_by, created_at, updated_at, recorded_by, void_reason, voided_at, voided_by, refund_reason, refunded_at, refunded_by, net_cents, vat_cents"
-    )
-    .eq("tenant_id", tenantId)
-    .order("paid_at", { ascending: false, nullsFirst: false })
-    .order("created_at", { ascending: false });
-
-  if (paymentsError) {
-    console.error("[payments/page] payments query failed:", {
-      code: paymentsError.code,
-      message: paymentsError.message,
-      details: paymentsError.details,
-      hint: paymentsError.hint,
-    });
-  }
-
-  // 3. Fetch all active non-cancelled appointments for this tenant to compute balances & unsettled list
-  const { data: appointmentsRaw, error: appointmentsError } = await supabase
-    .from("appointments")
-    .select(`
-      id,
-      starts_at,
-      status,
-      total_cents,
-      paid_cents,
-      payment_status,
-      notes,
-      customer_id,
-      customers (full_name),
-      staff_members (full_name),
-      appointment_services (services (name)),
-      payments (id, amount_cents, status)
-    `)
-    .eq("tenant_id", tenantId)
-    .neq("status", "cancelled")
-    .order("starts_at", { ascending: false });
-
-  if (appointmentsError) {
-    console.error("[payments/page] appointments query failed:", {
-      code: appointmentsError.code,
-      message: appointmentsError.message,
-      details: appointmentsError.details,
-      hint: appointmentsError.hint,
-    });
-  }
-
-  const appointmentsList = appointmentsRaw || [];
-  const paymentsList = rawPayments || [];
-
-  // Build Map<appointmentId, appointment> for fast, reliable O(1) in-memory stitching
-  const appointmentMap = new Map<string, (typeof appointmentsList)[number]>();
-  for (const apt of appointmentsList) {
-    appointmentMap.set(apt.id, apt);
-  }
-
-  // Batch-load customer names for standalone customer_ids on payments
-  const customerIds = Array.from(
-    new Set(
-      paymentsList
-        .map((p) => p.customer_id)
-        .filter((id): id is string => Boolean(id))
-    )
-  );
-
-  const customerMap = new Map<string, string>();
-  if (customerIds.length > 0) {
-    const { data: customersData, error: customersError } = await supabase
-      .from("customers")
-      .select("id, full_name")
-      .in("id", customerIds);
-
-    if (customersError) {
-      console.error("[payments/page] customers batch query failed:", {
-        code: customersError.code,
-        message: customersError.message,
-        details: customersError.details,
-        hint: customersError.hint,
-      });
-    } else if (customersData) {
-      for (const c of customersData) {
-        if (c.full_name) {
-          customerMap.set(c.id, c.full_name.trim());
-        }
-      }
-    }
-  }
-
-  // Batch-load profile names for recorder IDs without fragile ambiguous joins
-  const recorderIds = Array.from(
-    new Set(
-      paymentsList
-        .flatMap((p) => [p.recorded_by, p.created_by, p.voided_by, p.refunded_by])
-        .filter((id): id is string => Boolean(id))
-    )
-  );
-
-  const profileMap = new Map<string, string>();
-  if (recorderIds.length > 0) {
-    const { data: profiles, error: profilesError } = await supabase
-      .from("profiles")
-      .select("id, full_name")
-      .in("id", recorderIds);
-
-    if (profilesError) {
-      console.error("[payments/page] profiles batch query failed:", {
-        code: profilesError.code,
-        message: profilesError.message,
-        details: profilesError.details,
-        hint: profilesError.hint,
-      });
-    } else if (profiles) {
-      for (const pr of profiles) {
-        if (pr.full_name) {
-          profileMap.set(pr.id, pr.full_name.trim());
-        }
-      }
-    }
-  }
-
-  // Map Unsettled Appointments
-  const unsettledAppointments: UnsettledAppointmentDTO[] = [];
-  let totalOutstandingCents = 0;
-  let outstandingAppointmentsCount = 0;
-
-  for (const apt of appointmentsList) {
-    const validPayments = (apt.payments || []).filter(
-      (p) => p.status === "paid" || p.status === "pending"
-    );
-    const calculatedPaidCents = validPayments.reduce((sum, p) => sum + p.amount_cents, 0);
-    const balanceCents = Math.max(0, apt.total_cents - calculatedPaidCents);
-
-    if (balanceCents > 0) {
-      totalOutstandingCents += balanceCents;
-      outstandingAppointmentsCount++;
-
-      unsettledAppointments.push({
-        appointmentId: apt.id,
-        startsAt: apt.starts_at,
-        formattedDate: formatDateManila(apt.starts_at),
-        formattedTime: formatTimeManila(apt.starts_at),
-        customerId: apt.customer_id,
-        customerName: resolveCustomerName(apt.customers, apt.notes),
-        serviceSummary: resolveServiceName(apt.appointment_services),
-        staffName: resolveStaffName(apt.staff_members),
-        appointmentStatus: apt.status,
-        totalCents: apt.total_cents,
-        paidCents: calculatedPaidCents,
-        balanceCents,
-        paymentStatus: calculatedPaidCents > 0 ? "partial" : "unpaid",
-      });
-    }
-  }
-
-  // Map Payment Records using in-memory Map lookups
-  const paymentHistory: PaymentRecordDTO[] = paymentsList.map((p) => {
-    const apt = p.appointment_id ? appointmentMap.get(p.appointment_id) : undefined;
-    const aptTotalCents = apt?.total_cents || p.amount_cents;
-    const aptValidPayments = ((apt?.payments as Array<{ amount_cents: number; status: string }>) || []).filter(
-      (sub: { amount_cents: number; status: string }) => sub.status === "paid" || sub.status === "pending"
-    );
-    const aptPaidCents =
-      aptValidPayments.length > 0
-        ? aptValidPayments.reduce((sum: number, sub: { amount_cents: number }) => sum + sub.amount_cents, 0)
-        : p.amount_cents;
-    const aptBalanceCents = Math.max(0, aptTotalCents - aptPaidCents);
-
-    const directCustomerName = p.customer_id ? customerMap.get(p.customer_id) : undefined;
-    const aptCustomerName = apt ? resolveCustomerName(apt.customers, apt.notes) : undefined;
-    const customerName = directCustomerName || aptCustomerName || "Walk-in Customer";
-
-    const serviceSummary = apt ? resolveServiceName(apt.appointment_services) : "General Service";
-    const staffName = apt ? resolveStaffName(apt.staff_members) : "Staff Member";
-    const recorderId = p.recorded_by || p.created_by;
-    const recordedByName = (recorderId ? profileMap.get(recorderId) : null) || "Staff Member";
-
-    const normalizedMethod = normalizePaymentMethod(p.method);
-    const rawStatus = (p.status || "paid").toLowerCase();
-    const status: PaymentRecordStatus =
-      rawStatus === "voided"
-        ? "voided"
-        : rawStatus === "refunded"
-        ? "refunded"
-        : aptBalanceCents > 0
-        ? "partial"
-        : "paid";
-
-    const { netCents, vatCents } =
-      p.net_cents && p.vat_cents
-        ? { netCents: p.net_cents, vatCents: p.vat_cents }
-        : calculateVatSplit(p.amount_cents, vatRatePercent);
-
-    const paidAt = p.paid_at || p.created_at || new Date().toISOString();
-
-    return {
-      id: p.id,
-      appointmentId: p.appointment_id,
-      customerId: p.customer_id,
-      customerName,
-      serviceSummary,
-      staffName,
-      method: normalizedMethod,
-      methodLabel: resolvePaymentMethodLabel(p.method),
-      referenceNumber: p.reference_number || p.reference || null,
-      amountCents: p.amount_cents,
-      netCents,
-      vatCents,
-      appointmentTotalCents: aptTotalCents,
-      appointmentPaidCents: aptPaidCents,
-      appointmentBalanceCents: aptBalanceCents,
-      status,
-      recordedByName,
-      notes: p.notes,
-      voidReason: p.void_reason,
-      voidedAt: p.voided_at,
-      refundReason: p.refund_reason,
-      refundedAt: p.refunded_at,
-      paidAt,
-      formattedDate: formatDateManila(paidAt),
-      formattedTime: formatTimeManila(paidAt),
-    };
-  });
-
-  paymentHistory.sort((a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime());
-
-  // Today's collections in Manila timezone
-  const manilaTodayKey = getManilaTodayKey();
-  const todayPaidRecords = paymentHistory.filter(
-    (p) =>
-      p.status !== "voided" &&
-      p.status !== "refunded" &&
-      getManilaDateKey(p.paidAt) === manilaTodayKey
-  );
-
-  const collectedTodayCents = todayPaidRecords.reduce((sum, p) => sum + p.amountCents, 0);
-  const collectedTodayCount = todayPaidRecords.length;
-
-  const allActivePaidRecords = paymentHistory.filter(
-    (p) => p.status !== "voided" && p.status !== "refunded"
-  );
-  const averagePaymentCents =
-    allActivePaidRecords.length > 0
-      ? Math.round(
-          allActivePaidRecords.reduce((sum, p) => sum + p.amountCents, 0) /
-            allActivePaidRecords.length
-        )
-      : 0;
-
-  const kpis: PaymentKpiSummaryDTO = {
-    collectedTodayCents,
-    collectedTodayCount,
-    outstandingBalanceCents: totalOutstandingCents,
-    outstandingAppointmentsCount,
-    unsettledAppointmentsCount: unsettledAppointments.length,
-    averagePaymentCents,
-  };
-
-  // Helper for generating daily series
-  const buildDailySeries = (daysCount: number): DailyCollectionPointDTO[] => {
-    const points: DailyCollectionPointDTO[] = [];
-    const now = new Date();
-
-    for (let i = daysCount - 1; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - i);
-      const dateKey = getManilaDateKey(d);
-      const label = new Intl.DateTimeFormat("en-US", {
-        timeZone: "Asia/Manila",
-        month: "short",
-        day: "numeric",
-      }).format(d);
-
-      const matchingRecords = paymentHistory.filter(
-        (p) =>
-          p.status !== "voided" &&
-          p.status !== "refunded" &&
-          getManilaDateKey(p.paidAt) === dateKey
-      );
-
-      const grossCents = matchingRecords.reduce((sum, p) => sum + p.amountCents, 0);
-      const netCents = matchingRecords.reduce((sum, p) => sum + p.netCents, 0);
-
-      points.push({
-        dateKey,
-        label,
-        grossCents,
-        netCents,
-        count: matchingRecords.length,
-      });
-    }
-
-    return points;
-  };
-
-  // Method Breakdown
-  const methodMap: Record<PaymentMethod, { amountCents: number; count: number; label: string }> = {
-    cash: { amountCents: 0, count: 0, label: "Cash" },
-    ewallet: { amountCents: 0, count: 0, label: "E-wallet (GCash / Maya)" },
-    card: { amountCents: 0, count: 0, label: "Card" },
-  };
-
-  for (const p of allActivePaidRecords) {
-    if (methodMap[p.method]) {
-      methodMap[p.method].amountCents += p.amountCents;
-      methodMap[p.method].count += 1;
-    }
-  }
-
-  const totalMethodAmountCents = Object.values(methodMap).reduce(
-    (sum, m) => sum + m.amountCents,
-    0
-  );
-
-  const methodBreakdown: MethodBreakdownItemDTO[] = (
-    ["cash", "ewallet", "card"] as PaymentMethod[]
-  ).map((method) => {
-    const item = methodMap[method];
-    const percentage =
-      totalMethodAmountCents > 0
-        ? Math.round((item.amountCents / totalMethodAmountCents) * 1000) / 10
-        : 0;
-    return {
-      method,
-      label: item.label,
-      amountCents: item.amountCents,
-      percentage,
-      count: item.count,
-    };
-  });
-
-  return {
-    kpis,
-    dailyCollections: {
-      sevenDays: buildDailySeries(7),
-      fourteenDays: buildDailySeries(14),
-      thirtyDays: buildDailySeries(30),
-    },
-    methodBreakdown,
-    unsettledAppointments,
-    paymentHistory,
-    vatRatePercent,
-  };
 }

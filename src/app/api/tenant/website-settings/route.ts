@@ -2,15 +2,22 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { TENANT_HEADER } from "@/lib/tenant/constants";
+import { limitByClient, MINUTES } from "@/lib/rate-limit";
+import { z } from "zod";
 
 export async function GET(request: NextRequest) {
+  // public endpoint for published storefront settings
+  if (await limitByClient("published-website-settings", { limit: 120, windowMs: MINUTES })) {
+    return NextResponse.json({ error: "Too many requests. Try again shortly." }, { status: 429 });
+  }
   try {
     const slug =
       request.nextUrl.searchParams.get("slug") ||
       request.nextUrl.searchParams.get("tenant") ||
       request.headers.get(TENANT_HEADER);
 
-    if (!slug) {
+    const parsedSlug = z.string().trim().toLowerCase().min(1).max(63).regex(/^[a-z0-9-]+$/).safeParse(slug);
+    if (!parsedSlug.success) {
       return NextResponse.json(
         { error: "Tenant slug or identifier is required" },
         { status: 400 }
@@ -28,7 +35,7 @@ export async function GET(request: NextRequest) {
     const { data: tenant, error: tenantError } = await admin
       .from("tenants")
       .select("id, name, slug, logo_url, brand_color, secondary_color, accent_color, status")
-      .eq("slug", slug.toLowerCase().trim())
+      .eq("slug", parsedSlug.data)
       .single();
 
     if (tenantError || !tenant) {
@@ -65,8 +72,7 @@ export async function GET(request: NextRequest) {
       },
       settings: settings || null,
     });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Internal server error";
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Could not load website settings." }, { status: 500 });
   }
 }

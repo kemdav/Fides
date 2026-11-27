@@ -1,5 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { limitByClient, MINUTES } from "@/lib/rate-limit";
+import { z } from "zod";
 import {
   getStorefrontServicesData,
 } from "@/lib/storefront/queries";
@@ -21,17 +23,21 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  if (await limitByClient("storefront-services", { limit: 120, windowMs: MINUTES })) {
+    return NextResponse.json({ error: "Too many requests. Try again shortly." }, { status: 429 });
+  }
   try {
-    const { slug } = await params;
+    const slug = z.string().min(1).max(63).regex(/^[a-z0-9-]+$/i).safeParse((await params).slug);
+    const category = z.string().max(100).nullable().safeParse(request.nextUrl.searchParams.get("category"));
 
-    if (!slug || typeof slug !== "string") {
+    if (!slug.success || !category.success) {
       return NextResponse.json(
         { error: "A valid tenant slug is required." },
         { status: 400 }
       );
     }
 
-    const data = await getStorefrontServicesData(slug);
+    const data = await getStorefrontServicesData(slug.data);
 
     if (!data) {
       return NextResponse.json(
@@ -41,7 +47,7 @@ export async function GET(
     }
 
     // Optional category filter
-    const categorySlug = request.nextUrl.searchParams.get("category");
+    const categorySlug = category.data;
     let { services } = data;
 
     if (categorySlug && categorySlug !== "all") {
@@ -63,10 +69,7 @@ export async function GET(
         },
       }
     );
-  } catch (err: unknown) {
-    const message =
-      err instanceof Error ? err.message : "Internal server error";
-    console.error("[API] GET /api/storefront/[slug]/services:", message);
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Could not load storefront services." }, { status: 500 });
   }
 }

@@ -187,8 +187,19 @@ export function InviteStaffModal({ onClose, onSent, tenantId, canInviteAdmins, s
           {error && <p role="alert" className="w-full rounded-lg bg-danger-bg p-2 text-sm text-danger-dark">{error}</p>}
           <p className="mr-auto text-xs text-muted">{atCapacity ? "No staff seats are available." : "The invitation link expires in 7 days."}</p>
           <Button variant="secondary" size="xs" onClick={onClose} disabled={sending}>Cancel</Button>
-          <Button variant="brand" size="xs" type="submit" disabled={sending || atCapacity}>{sending ? "Sending…" : "Send invitation"}</Button>
+          <Button variant="brand" size="xs" type="submit" disabled={sending || atCapacity}>Send invitation</Button>
         </footer>
+        {sending && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[14px] bg-white/80 backdrop-blur-xs">
+            <div role="status" className="flex items-center gap-3 text-sm font-semibold text-muted">
+              <svg viewBox="0 0 24 24" aria-hidden fill="none" className="size-5 animate-spin text-burnt">
+                <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.25" strokeWidth="3" />
+                <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+              </svg>
+              Sending invitation…
+            </div>
+          </div>
+        )}
       </form>
     </Modal>
   );

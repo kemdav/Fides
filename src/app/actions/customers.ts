@@ -1,5 +1,7 @@
 "use server";
 
+import { limitByClient, MINUTES } from "@/lib/rate-limit";
+
 import crypto from "node:crypto";
 import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -1077,6 +1079,9 @@ export async function cancelCustomerInviteAction(
 export async function previewCustomerInviteAction(
   rawToken: string
 ): Promise<CustomerInvitePreview> {
+  if (await limitByClient("customer-invite-preview", { limit: 30, windowMs: MINUTES })) {
+    return { valid: false, reason: "invalid" };
+  }
   const admin = getAdminClient();
   if (!admin || !rawToken.trim()) {
     return { valid: false, reason: "invalid" };
@@ -1149,6 +1154,9 @@ export async function acceptCustomerInviteAction(
   password: string,
   confirmPassword: string
 ): Promise<CustomerActionResult<{ tenantSlug: string; businessName: string }>> {
+  if (await limitByClient("customer-invite-accept", { limit: 10, windowMs: 15 * MINUTES })) {
+    return { success: false, error: "Too many attempts. Please try again later." };
+  }
   const parsed = acceptCustomerInviteSchema.safeParse({
     password,
     confirmPassword,

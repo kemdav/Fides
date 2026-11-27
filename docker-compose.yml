@@ -5,5 +5,5 @@ services:
     container_name: fides-redis
     restart: unless-stopped
     ports:
-      - "6380:6379"
+      - "127.0.0.1:6380:6379"
     command: ["redis-server", "--save", "", "--appendonly", "no"]
