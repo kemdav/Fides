@@ -101,7 +101,13 @@ export function QrCheckInButton({ tenantId }: { tenantId: string }): ReactElemen
             <form className="space-y-4" aria-busy={pending} onSubmit={(event) => { event.preventDefault(); if (!pending) void submit(); }}>
               {cameraMode === "scanning" && <QrCamera onScan={handleScan} />}
               {scanned && <p role="status" className="rounded-lg bg-success/10 p-3 text-sm text-ink">QR code scanned. Select Check In to confirm.</p>}
-              {cameraMode === "scanning" && <hr className="border-hairline" />}
+              {cameraMode === "scanning" && (
+                <div className="flex items-center gap-3">
+                  <span className="h-px flex-1 bg-hairline" />
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted">or enter manually</span>
+                  <span className="h-px flex-1 bg-hairline" />
+                </div>
+              )}
               <div className="space-y-2">
                 <label htmlFor={codeId} className="block text-sm font-semibold">Appointment check-in code</label>
                 <input
@@ -124,9 +130,11 @@ export function QrCheckInButton({ tenantId }: { tenantId: string }): ReactElemen
                 <p id={hintId} className="text-sm text-muted">You can find the full code in Appointment Details.</p>
               </div>
               {error && <p role="alert" className="text-sm text-danger-dark">{error}</p>}
-              <Button type="submit" variant="brand" size="form" disabled={pending || !code.trim()}>
-                Check In
-              </Button>
+              <div className="flex justify-end">
+                <Button type="submit" variant="brand" size="form" disabled={pending || !code.trim()}>
+                  Check In
+                </Button>
+              </div>
             </form>
           )}
         </Modal>
