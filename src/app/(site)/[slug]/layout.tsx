@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { notFound } from "next/navigation";
-import { normalizeBrandColor, readableForeground } from "@/lib/brand-colors";
+import { tenantColorStyle } from "@/lib/brand-colors";
 import { getTenantBySlug } from "@/lib/supabase/queries";
 import { getStorefrontHomeData } from "@/lib/storefront";
 import {
@@ -87,9 +87,6 @@ export default async function TenantLayout({
 
   const theme = storefrontData?.tenant;
   const fonts = getTypographyFonts(theme?.typography);
-  const mainColor = normalizeBrandColor(tenant.brand_color || theme?.brandColor || null, "");
-  const secondaryColor = normalizeBrandColor(tenant.secondary_color, "");
-  const accentColor = normalizeBrandColor(tenant.accent_color || theme?.accentColor || null, "");
 
   const themeStyle = {
     "--font-display": fonts.display,
@@ -97,17 +94,11 @@ export default async function TenantLayout({
     "--font-sans": fonts.body,
     "--font-mulish": fonts.body,
     fontFamily: fonts.body,
-    ...(mainColor ? { "--color-powder": mainColor } : {}),
-    ...(secondaryColor ? { "--color-sky": secondaryColor } : {}),
-    ...(accentColor
-      ? {
-          "--color-burnt": accentColor,
-          "--color-burnt-dark": accentColor,
-        }
-      : {}),
-    ...(mainColor || accentColor
-      ? { "--color-on-burnt": mainColor || readableForeground(accentColor, "#ffffff") }
-      : {}),
+    ...tenantColorStyle(
+      tenant.brand_color || theme?.brandColor || null,
+      tenant.secondary_color,
+      tenant.accent_color || theme?.accentColor || null,
+    ),
   } as CSSProperties;
 
   return (

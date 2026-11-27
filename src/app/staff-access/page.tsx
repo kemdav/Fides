@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { FoxCtaMascot } from "@/components/landing/fox-cta-mascot";
+import { tenantColorStyle } from "@/lib/brand-colors";
+import { getTenantBySlug } from "@/lib/supabase/queries";
 import { staffRoleLabels } from "@/lib/merchant/staff-profile";
 import { getStaffInvitation } from "@/lib/merchant/staff-invitations";
 import { StaffAccessForm } from "./staff-access-form";
@@ -50,9 +52,14 @@ export default async function StaffAccessPage({ searchParams }: {
   }
 
   const expiration = invitation && formatInvitationExpiration(invitation.expires_at, invitation.tenants.timezone);
+  const workspaceTenant = !invitation && /^[a-z0-9-]{1,80}$/.test(workspace)
+    ? await getTenantBySlug(workspace).catch(() => null)
+    : null;
+  const tenant = invitation?.tenants ?? (workspaceTenant?.status === "active" ? workspaceTenant : null);
+  const theme = tenant ? tenantColorStyle(tenant.brand_color, tenant.secondary_color, tenant.accent_color) : undefined;
 
   return (
-    <main className="grid min-h-dvh place-items-center bg-powder px-4 py-6 text-ink sm:py-10">
+    <main style={theme} className="grid min-h-dvh place-items-center bg-powder px-4 py-6 text-ink sm:py-10">
       <section className="grid w-full max-w-5xl overflow-hidden rounded-3xl border border-line bg-white shadow-[0_16px_48px_-22px_rgb(44_58_75/0.35)] md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
         <aside className="relative flex min-w-0 flex-col justify-between gap-5 border-b border-burnt/15 bg-burnt/8 px-6 py-5 sm:px-8 md:border-r md:border-b-0 md:p-9">
           <div>

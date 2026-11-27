@@ -11,7 +11,7 @@ export function StaffAccessForm({ token, workspace, invitedEmail }: {
 }) {
   const [create, setCreate] = useState(Boolean(invitedEmail));
   const [workspaceSlug, setWorkspaceSlug] = useState(workspace);
-  const [email, setEmail] = useState(invitedEmail ?? "");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [busy, setBusy] = useState(false);
@@ -77,8 +77,15 @@ export function StaffAccessForm({ token, workspace, invitedEmail }: {
           <TextField name="workspace" label="Workspace slug" autoComplete="off" placeholder="bella-vita"
             value={workspaceSlug} onChange={setWorkspaceSlug} required disabled={busy} />
         )}
-        <TextField label={invitedEmail ? "Invited email address" : "Email address"} type="email" name="email"
-          autoComplete="username" value={email} onChange={setEmail} readOnly={Boolean(invitedEmail)} required disabled={busy} />
+        {invitedEmail ? (
+          <dl className="space-y-2">
+            <dt className="text-sm font-semibold">Invited email address</dt>
+            <dd className="break-all rounded-lg bg-mist px-3 py-3 text-sm text-ink">{invitedEmail}</dd>
+          </dl>
+        ) : (
+          <TextField label="Email address" type="email" name="email"
+            autoComplete="username" value={email} onChange={setEmail} required disabled={busy} />
+        )}
         <div className="space-y-2">
           <label htmlFor="staff-password" className="block text-sm font-semibold">{create ? "Create password" : "Password"}</label>
           <PasswordInput key={create ? "create" : "sign-in"} id="staff-password" name="password"

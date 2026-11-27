@@ -119,6 +119,8 @@ Controls that exist are listed in [SECURITY](SECURITY.md). Still open:
 
 ## 9. Fixed recently (for context)
 
+Staff invitation screens display the invited email as text and use the tenant’s website palette. Workspace sign-in uses the palette when the workspace is included in the link.
+
 The tenant QR check-in placeholder moved from the sidebar to the booking toolbar on Overview and Appointments. The camera starts automatically and manual entry is available below the preview. Confirmed appointments show a check-in code in Appointment Details.
 
 Accent-filled controls and featured KPI cards on tenant pages use the main website color for foregrounds when configured.
