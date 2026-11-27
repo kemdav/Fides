@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { loadAppointmentDetailsAction, rescheduleAppointmentAction, updateAppointmentStatusAction } from "@/app/actions/appointments";
 import { Icon } from "@/components/admin/icon";
+import { AppointmentCheckInCode } from "@/components/merchant/appointments/appointment-check-in-code";
 import { StatusPill } from "@/components/admin/primitives";
 import { StaffSuccessDialog, type StaffSuccessDetails } from "@/components/merchant/staff/staff-confirmation-dialog";
 import { DatePicker, SelectField, type SelectOption } from "@/components/ui";
@@ -168,6 +169,9 @@ export function AppointmentDetailsModal({ tenantId, appointmentId, onClose, onUp
                   </div>
                 ))}
               </dl>
+              {status === "confirmed" && mode === "details" && (
+                <AppointmentCheckInCode code={details.id} />
+              )}
               {mode === "cancel" && <p className="rounded-lg bg-danger-bg p-3 text-sm text-danger-dark">Cancel this appointment for {details.customerName}?</p>}
               {mode === "reschedule" && (
                 <div className="space-y-2">

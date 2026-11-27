@@ -37,7 +37,6 @@ const manageItems: NavigationItem[] = [
     suffix: "/walk-ins",
     access: "operations",
   },
-  { label: "QR check-in", icon: "qr-code", access: "operations" },
   {
     label: "Customers",
     icon: "users",

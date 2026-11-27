@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { QrCheckInButton } from "@/components/merchant/appointments/qr-check-in-button";
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -396,6 +397,7 @@ export function OverviewView({
                   }}
                 />
                 {canManage && <>
+                {tenantId && <QrCheckInButton tenantId={tenantId} />}
                 <Button variant="brand" size="form"
                   onClick={() => setIsNewBookingOpen(true)}
                 >

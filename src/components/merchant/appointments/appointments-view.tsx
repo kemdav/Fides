@@ -25,6 +25,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { AppointmentStatusPill } from "@/components/merchant/appointment-status-pill";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
+import { QrCheckInButton } from "@/components/merchant/appointments/qr-check-in-button";
 import type { AppointmentServiceOption, AppointmentStaffOption } from "@/types/appointments";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
@@ -399,6 +400,7 @@ export function AppointmentsView({
             description="Manage bookings, approvals, and appointment outcomes in one place."
             actions={canManage && (
               <div className="flex flex-wrap items-center gap-2">
+                {tenantId && <QrCheckInButton tenantId={tenantId} />}
                 <Button
                   variant="brand"
                   size="form"
