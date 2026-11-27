@@ -11,7 +11,10 @@ import {
   StorefrontFooter,
   StorefrontHeader,
 } from "@/components/storefront";
-import { getStorefrontNav } from "@/components/storefront/storefront-data";
+import {
+  BOOKING_ADDONS,
+  getStorefrontNav,
+} from "@/components/storefront/storefront-data";
 import { useTenant } from "@/providers/tenant-provider";
 
 export type BookingServiceOption = {
@@ -23,6 +26,20 @@ export type BookingServiceOption = {
   price: string;
 };
 
+type BookingAddonOption = (typeof BOOKING_ADDONS)[number];
+
+function parseNumber(value: string) {
+  const parsed = Number(value.replace(/[^0-9.]/g, ""));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function toBookedItem(service: BookingServiceOption) {
+  return {
+    durationMinutes: parseNumber(service.duration),
+    priceCents: Math.round(parseNumber(service.price) * 100),
+  };
+}
+
 export type BookingStaffOption = {
   id: string;
   fullName: string;
@@ -31,6 +48,71 @@ export type BookingStaffOption = {
 
 const BOOKING_STEPS = ["Service", "Staff", "Date & time", "Review"];
 const TIME_OPTIONS = ["9:00 AM", "10:30 AM", "1:00 PM", "2:30 PM", "4:00 PM"];
+
+function formatPrice(priceCents: number) {
+  return `₱${Math.round(priceCents / 100).toLocaleString("en-PH")}`;
+}
+
+function formatDuration(minutes: number) {
+  return `${minutes} min`;
+}
+
+function toggleId(ids: string[], id: string) {
+  return ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id];
+}
+
+function SelectableOption({
+  selected,
+  onToggle,
+  eyebrow,
+  title,
+  description,
+  meta,
+}: {
+  selected: boolean;
+  onToggle: () => void;
+  eyebrow?: string;
+  title: string;
+  description?: string | null;
+  meta: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={selected}
+      onClick={onToggle}
+      className={`flex w-full items-start gap-3 rounded-xl border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${
+        selected
+          ? "border-burnt bg-burnt/5"
+          : "border-line bg-white hover:border-burnt/50"
+      }`}
+    >
+      {selected ? (
+        <CheckIcon tone="success" className="mt-0.5 size-5" />
+      ) : (
+        <span
+          aria-hidden
+          className="mt-0.5 size-5 shrink-0 rounded-full border border-outline bg-white"
+        />
+      )}
+      <span className="min-w-0 flex-1">
+        {eyebrow ? (
+          <span className="block text-xs font-bold uppercase tracking-wide text-burnt">
+            {eyebrow}
+          </span>
+        ) : null}
+        <span className="block font-semibold text-ink">{title}</span>
+        {description ? (
+          <span className="mt-1 block text-sm/6 text-muted">{description}</span>
+        ) : null}
+        <span className="mt-2 block text-sm font-semibold text-ink">
+          {meta}
+        </span>
+      </span>
+    </button>
+  );
+}
 
 function getDateKey(date: Date) {
   const year = date.getUTCFullYear();
@@ -124,6 +206,8 @@ export function StorefrontServicePage({
       ? initialServiceId
       : ""
   );
+  const [extraServiceIds, setExtraServiceIds] = useState<string[]>([]);
+  const [addonIds, setAddonIds] = useState<string[]>([]);
   const [selectedStaffId, setSelectedStaffId] = useState("any");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
@@ -133,6 +217,39 @@ export function StorefrontServicePage({
   const selectedService = services.find(
     (service) => service.id === selectedServiceId
   );
+  const otherServices = services.filter(
+    (service) => service.id !== selectedServiceId
+  );
+  const extraServices = otherServices.filter((service) =>
+    extraServiceIds.includes(service.id)
+  );
+  const bookedServiceIds = selectedService
+    ? [selectedService.id, ...extraServices.map((service) => service.id)]
+    : [];
+  // Add-ons are offered for any booked service; an add-on with no links
+  // applies to every service.
+  const availableAddons: BookingAddonOption[] = BOOKING_ADDONS.filter(
+    (addon) =>
+      addon.linkedServiceIds.length === 0 ||
+      addon.linkedServiceIds.some((id) => bookedServiceIds.includes(id))
+  );
+  const selectedAddons = availableAddons.filter((addon) =>
+    addonIds.includes(addon.id)
+  );
+  const bookedItems = [
+    ...(selectedService ? [toBookedItem(selectedService)] : []),
+    ...extraServices.map(toBookedItem),
+    ...selectedAddons,
+  ];
+  const totalMinutes = bookedItems.reduce(
+    (sum, item) => sum + item.durationMinutes,
+    0
+  );
+  const totalCents = bookedItems.reduce(
+    (sum, item) => sum + item.priceCents,
+    0
+  );
+  const hasExtras = extraServices.length > 0 || selectedAddons.length > 0;
   const selectedStaff =
     selectedStaffId === "any"
       ? null
@@ -286,6 +403,77 @@ export function StorefrontServicePage({
                 >
                   {selectedService ? "Change service" : "Browse services"}
                 </Link>
+
+                {selectedService && availableAddons.length > 0 ? (
+                  <div className="mt-8">
+                    <h3 className="text-base font-semibold text-ink">
+                      Add-ons{" "}
+                      <span className="text-sm font-normal text-muted">
+                        (optional)
+                      </span>
+                    </h3>
+                    <p className="mt-1 text-sm text-muted">
+                      Enhance your appointment with extras.
+                    </p>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      {availableAddons.map((addon) => (
+                        <SelectableOption
+                          key={addon.id}
+                          selected={addonIds.includes(addon.id)}
+                          onToggle={() =>
+                            setAddonIds((ids) => toggleId(ids, addon.id))
+                          }
+                          title={addon.name}
+                          description={addon.description}
+                          meta={`+${formatDuration(addon.durationMinutes)} · +${formatPrice(addon.priceCents)}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {selectedService && otherServices.length > 0 ? (
+                  <div className="mt-8">
+                    <h3 className="text-base font-semibold text-ink">
+                      Additional services{" "}
+                      <span className="text-sm font-normal text-muted">
+                        (optional)
+                      </span>
+                    </h3>
+                    <p className="mt-1 text-sm text-muted">
+                      Book more than one service in the same visit.
+                    </p>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      {otherServices.map((service) => (
+                        <SelectableOption
+                          key={service.id}
+                          selected={extraServiceIds.includes(service.id)}
+                          onToggle={() =>
+                            setExtraServiceIds((ids) =>
+                              toggleId(ids, service.id)
+                            )
+                          }
+                          eyebrow={service.category}
+                          title={service.name}
+                          description={service.description}
+                          meta={`${service.duration} · ${service.price}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {selectedService && hasExtras ? (
+                  <div className="mt-6 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-wash px-4 py-3 text-sm">
+                    <span className="text-muted">
+                      {bookedItems.length} items selected
+                    </span>
+                    <span className="font-semibold text-ink">
+                      Estimated total: {formatDuration(totalMinutes)} ·{" "}
+                      {formatPrice(totalCents)}
+                    </span>
+                  </div>
+                ) : null}
               </div>
             ) : null}
 
@@ -436,11 +624,44 @@ export function StorefrontServicePage({
                       {selectedService?.name ?? "Choose a service"}
                       {selectedService ? (
                         <span className="ml-2 font-normal text-muted">
-                          {selectedService.duration} · {selectedService.price}
+                          {selectedService.duration} ·{" "}
+                          {selectedService.price}
                         </span>
                       ) : null}
                     </dd>
                   </div>
+                  {extraServices.length > 0 ? (
+                    <div className="flex flex-col gap-1 py-4 sm:flex-row sm:justify-between">
+                      <dt className="text-sm text-muted">Additional services</dt>
+                      <dd className="space-y-1 text-sm font-semibold text-ink sm:text-right">
+                        {extraServices.map((service) => (
+                          <span key={service.id} className="block">
+                            {service.name}
+                            <span className="ml-2 font-normal text-muted">
+                              {service.duration} ·{" "}
+                              {service.price}
+                            </span>
+                          </span>
+                        ))}
+                      </dd>
+                    </div>
+                  ) : null}
+                  {selectedAddons.length > 0 ? (
+                    <div className="flex flex-col gap-1 py-4 sm:flex-row sm:justify-between">
+                      <dt className="text-sm text-muted">Add-ons</dt>
+                      <dd className="space-y-1 text-sm font-semibold text-ink sm:text-right">
+                        {selectedAddons.map((addon) => (
+                          <span key={addon.id} className="block">
+                            {addon.name}
+                            <span className="ml-2 font-normal text-muted">
+                              +{formatDuration(addon.durationMinutes)} · +
+                              {formatPrice(addon.priceCents)}
+                            </span>
+                          </span>
+                        ))}
+                      </dd>
+                    </div>
+                  ) : null}
                   <div className="flex flex-col gap-1 py-4 sm:flex-row sm:justify-between">
                     <dt className="text-sm text-muted">Staff</dt>
                     <dd className="text-sm font-semibold text-ink">
@@ -459,6 +680,17 @@ export function StorefrontServicePage({
                       {selectedTime || "Not selected"}
                     </dd>
                   </div>
+                  {selectedService ? (
+                    <div className="flex flex-col gap-1 py-4 sm:flex-row sm:justify-between">
+                      <dt className="text-sm font-semibold text-ink">
+                        Estimated total
+                      </dt>
+                      <dd className="text-sm font-semibold text-ink">
+                        {formatDuration(totalMinutes)} ·{" "}
+                        {formatPrice(totalCents)}
+                      </dd>
+                    </div>
+                  ) : null}
                 </dl>
                 <p className="mt-4 rounded-lg bg-wash px-4 py-3 text-sm/6 text-muted">
                   This storefront preview does not submit or confirm
