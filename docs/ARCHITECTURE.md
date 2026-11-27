@@ -203,7 +203,7 @@ Three independent layers, all required:
 2. **RLS policies**: tenant-scoped on every table, deny by default. Tables with no policy are service-role only.
 3. **Guarded RPCs**: anything that must be atomic or cross tables calls `assert_tenant_operator(tenant_id)` first and revokes `anon` execute.
 
-Role model: platform admin (local accounts, `/admin`), tenant `owner | admin | receptionist | staff`, anonymous visitors (storefront, public forms).
+Role model: platform admin (Supabase Auth account listed in `platform_admins`, signs in at `/admin/login`), tenant `owner | admin | receptionist | staff`, anonymous visitors (storefront, public forms).
 
 ### 6.3 Validation, rate limiting, logging
 
@@ -256,6 +256,13 @@ Types are part of the architecture: a layer boundary is only real if the types a
   `no-restricted-imports` (the import boundaries from section 5.1), `eqeqeq`, `no-console` (warn, allow `warn`/`error` in the logger only),
   plus `max-lines` (warn at 300).
 - CI gate: `tsc --noEmit`, ESLint with zero warnings, tests, `npm audit --omit=dev`.
+
+### 6.6 Platform and billing decisions
+
+- One plan catalog, `subscription_tiers` (Basic ₱499, Business ₱1,499, Enterprise ₱2,999 per month).
+- Approval does not publish the business website. The owner publishes it.
+- Billing is manual bank transfer verified by an admin, with generated invoices and reminders. No payment gateway.
+- Admin decisions that change several tables are one database function each.
 
 ## 7. Data layer rules
 

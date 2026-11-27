@@ -7,7 +7,7 @@ How to read this:
 
 - **Severity:** `P1` fix before launch · `P2` fix soon, risk or friction grows · `P3` cleanup, do when you touch the area.
 - **Effort:** `S` under half a day · `M` one to two days · `L` several days or one per feature.
-- Counts were measured on the `CPG-134-restore-admin-frontend` branch. Re-measure with the commands in [section 12](#12-how-to-re-measure).
+- Counts were measured on the `CPG-134-restore-admin-frontend` branch. Re-measure with the commands in [section 11](#11-how-to-re-measure).
 
 ## Status at a glance
 
@@ -15,7 +15,7 @@ How to read this:
 | --- | --- |
 | `npm run typecheck` | Clean (with `noImplicitReturns`, `noFallthroughCasesInSwitch`, `noImplicitOverride` on) |
 | `npm run lint` | 0 errors, 0 warnings, and now type-aware: no floating or misused promises, no unnecessary assertions, no non-null `!`, no `any`, no `@ts-ignore`, `import type` enforced |
-| `npm test` | 21 passing (all in `date-utils`) |
+| `npm test` | 58 passing. `npm run test:db`: 24 passing against the local database |
 | `npm audit --omit=dev` | 0 vulnerabilities |
 | `npm run typecheck:strict` (adds `noUncheckedIndexedAccess`) | 130 errors, tracked in issue T1 |
 
@@ -58,20 +58,22 @@ Controls that exist are listed in [SECURITY](SECURITY.md). Still open:
 | ID | Issue | Sev | Effort | Notes |
 | --- | --- | --- | --- | --- |
 | S1 | The old Gmail app password is still in git history. | P1 | S | Revoke it in the Google account (history rewrite is optional). |
-| S8 | **Apply `close_client_write_holes` to the hosted database.** Until then, on hosted: signed-in users can change their own role and tenant, and the public key can read and edit registration applications and the admin log. Also check hosted data for unexpected admin profiles, tenant moves and edited applications. | P1 | S | Migration `20261126140000_close_client_write_holes.sql` applies on its own. |
-| S9 | An owner can still set any amount on a reactivation invoice they create. | P2 | S | Generate invoices only on the server (ADMIN-BACKEND step 4). |
-| S2 | Admin accounts have no password reset screen and no MFA. "Forgot password" on `/admin/login` is design only, and the Figma MFA and "unauthorized role" states are not wired. | P2 | M | Both are available now that admins use Supabase Auth. Planned in [ADMIN-BACKEND](ADMIN-BACKEND.md) step 7. |
+| S8 | **The hosted database does not have the access hotfix or the admin migrations yet.** Until then signed-in users there can change their own role and tenant, and the public key can read and edit registration applications and the admin log. | P1 | S | Release steps in [SECURITY](SECURITY.md). Afterwards check for unexpected admin profiles, tenant moves and edited applications. |
+| S9 | An owner can still set any amount on a reactivation invoice they create. | P2 | S | Generate invoices only on the server (AD4). |
+| S10 | A test account script with an email and password was committed under `supabase/snippets/`. It is untracked now but stays in git history. Change that password anywhere the account exists. | P1 | S | |
+| S11 | A suspended owner gets a not-found page for the whole dashboard, so they cannot reach billing to pay or ask for reactivation. | P2 | M | Show a suspended notice and keep the subscription page open. AD2. |
+| S2 | Admin accounts have no password reset screen and no MFA. "Forgot password" on `/admin/login` is design only, and the Figma MFA and "unauthorized role" states are not wired. | P2 | M | Both are available now that admins use Supabase Auth. AD7. |
 | S3 | RLS and grant checks cover admin access and the main client write paths (`npm run test:db`). Tenant A versus tenant B reads and the walk-in RPC guards are still untested. | P2 | M | Extend `scripts/tests/`. |
 | S4 | The in-memory rate-limit fallback is per process. | P2 | S | Production must set `REDIS_URL`. Add a startup warning check in the deploy checklist. |
 | S5 | `GET /api/tenant/website-settings` and the storefront services route use the service-role client for public reads. Intentional, but each should be reviewed for exactly the columns returned. | P3 | S | |
 | S6 | Contact forms (global and storefront) send mail or insert rows with no spam challenge beyond the honeypot and rate limit. | P3 | S | Consider a captcha if abuse appears. |
-| S7 | The admin screens still show sample data, and nothing calls the approval service, so new applications cannot be approved. | P1 | L | Tracked step by step in [ADMIN-BACKEND](ADMIN-BACKEND.md). |
+| S7 | The admin screens still show sample data, and nothing calls the approval service, so new applications cannot be approved. | P1 | L | AD1. |
 
 ## 4. Testing
 
 | ID | Issue | Sev | Effort |
 | --- | --- | --- | --- |
-| Q1 | Only `date-utils` has tests (21). No tests for services, schemas, guards or actions. | P1 | L (grows with the migration) |
+| Q1 | Few unit tests: dates, admin action guard and plan catalog. Most services, schemas and merchant actions have none. | P1 | L (grows with the migration) |
 | Q2 | No end-to-end tests. Smoke checks (logins, dialogs, 390px overflow) were run by hand with throwaway scripts that are not in the repo. | P2 | M (Playwright against a preview build, commit the scripts) |
 | Q3 | These flows were not exercised by automation and need a manual or e2e check: admin "Approve" verification dialog, assign-slot modal (needs a waiting-list entry), appointment cancel dialog on a phone, registration steps 3 to 6, password reset end to end. | P2 | M |
 
@@ -111,20 +113,27 @@ Controls that exist are listed in [SECURITY](SECURITY.md). Still open:
 | D3 | No `CONTRIBUTING.md` (branching, commit style, PR checklist). `AGENTS.md` has the rules for agents. | P2 | S |
 | D4 | No architecture decision records (ADRs). Start with "single Next.js app on Supabase, no separate backend". | P3 | S |
 
-## 8. Suggested order of work
+## 8. Admin portal still to build
+
+The foundations are in place (admin sign-in, guard, one plan catalog, transactional decisions). Order of work:
+
+| ID | Still to build | Sev | Effort |
+| --- | --- | --- | --- |
+| AD1 | Verification: real review queue (search, sort, waiting time, overdue), private short-lived document viewer, approve, reject with reason, resend email, earlier rejections, "request changes" and resubmission (needs a new status). | P1 | L |
+| AD2 | Tenants: real list with filters and pages, detail page (owner, plan, usage, invoices, history), suspend and reactivate single and bulk, change plan. | P1 | L |
+| AD3 | Tiers: create, edit and archive tiers and features; merchant billing accepts more than the three built-in codes; enforce tier limits on the merchant side. Do not add a fourth tier before this. | P2 | L |
+| AD4 | Billing: payment proof review, renewal and overdue invoices, scheduled plan changes, cancellations, trial expiry. | P1 | L |
+| AD5 | Scheduler, admin notification bell, merchant email for every decision with retry. | P2 | M |
+| AD6 | Overview metrics and activity log with filters and CSV export. | P2 | M |
+| AD7 | Admin profile, password reset and MFA, support inbox, global search. | P2 | M |
+
+## 9. Suggested order of work
 
 1. **Safety net first (P1):** O1 CI, Q1/S3 tests around the tenant guard and RLS, S1 revoke the old secret, O3 error tracking.
 2. **Pilot migration:** `appointments` and `walk-ins` into `features/` with T5/A4 schemas, A2 the single guard, A3 one result type ([ARCHITECTURE section 9](ARCHITECTURE.md)).
 3. **Type root cause:** T3 regenerate database types, then T2/T4 remove casts feature by feature.
 4. **Next features:** customers, booking settings, website settings (A1, A5, A9).
 5. **Hardening:** T1 `noUncheckedIndexedAccess`, S2 admin reset/MFA, Q2 e2e, F8 accessibility.
-
-## 9. Fixed recently (for context)
-
-Unauthenticated account-request API removed; tenant checks added to walk-in and appointment-status actions; walk-in RPC guard
-(`assert_tenant_operator`, migration `rpc_tenant_guard`); rate limiting with Redis; admin accounts moved to Supabase Auth with a `platform_admins` table; patched `next`, `zod`,
-`nodemailer`; shared `Modal`, `Button`, field and icon components; token-based colours and shadows; 404, error and loading pages;
-all lint warnings; type-aware lint rules and three extra compiler flags enabled.
 
 ## 10. Rules for working through this list
 
@@ -133,11 +142,7 @@ all lint warnings; type-aware lint rules and three extra compiler flags enabled.
 - Update this file in the same PR (remove the row or change its numbers).
 - Do not add new `any`, casts or direct Supabase calls while you are in there. The linter blocks most of it.
 
-## 11. Owners
-
-Assign an owner per row in the project board, not in this file, so it does not go stale.
-
-## 12. How to re-measure
+## 11. How to re-measure
 
 ```bash
 npm run typecheck          # compiler (strict + the 3 extra flags)
@@ -152,3 +157,7 @@ grep -rn "eslint-disable" src                                            # T8
 grep -rlE "\.from\(" src/app --include=page.tsx                          # A5
 find src -name "*.ts" -o -name "*.tsx" | xargs wc -l | sort -nr | head   # A9
 ```
+
+## 12. Owners
+
+Assign an owner per row in the project board, not in this file, so it does not go stale.
