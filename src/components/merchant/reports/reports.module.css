@@ -1,0 +1,145 @@
+.table :is(th, td) {
+  padding-inline: 0.625rem;
+}
+
+.table thead {
+  border-bottom: 1px solid var(--color-hairline);
+  background: var(--color-mist);
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+}
+
+.table thead th {
+  padding-block: 0.75rem;
+  font-weight: 600;
+}
+
+.table :is(tbody, tfoot) :is(th, td) {
+  padding-block: 0.875rem;
+}
+
+.table tbody tr + tr,
+.table tfoot {
+  border-top: 1px solid var(--color-hairline);
+}
+
+.table tfoot {
+  font-weight: 700;
+}
+
+@media (min-width: 80rem) {
+  .table :is(th, td) {
+    padding-inline: 1.25rem;
+  }
+}
+
+@media screen and (width < 54rem) {
+  .stack {
+    display: block;
+  }
+
+  .stack thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .stack :is(tbody, tfoot) {
+    display: block;
+  }
+
+  .stack :is(tbody, tfoot) tr {
+    display: block;
+    padding-block: 0.625rem;
+  }
+
+  .stack tr[data-page-hidden],
+  .stack td[data-action]:empty {
+    display: none;
+  }
+
+  .stack :is(tbody, tfoot) :is(th, td) {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.3rem 0.625rem;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  .stack :is(tbody, tfoot) :is(th, td)[data-label]::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    color: var(--color-muted);
+    font-size: 0.75rem;
+    text-align: left;
+  }
+
+  .stack :is(tbody, tfoot) :is(th, td):not([data-label]) {
+    justify-content: start;
+    text-align: left;
+  }
+}
+
+@page bir-ledger {
+  size: landscape;
+  margin: 12mm;
+}
+
+@media print {
+  .ledgerPrint {
+    page: bir-ledger;
+  }
+
+  .workspace,
+  .content {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: var(--color-white) !important;
+  }
+
+  .content main {
+    padding: 0;
+  }
+
+  .content :is(section, div) {
+    box-shadow: none !important;
+  }
+
+  .table thead {
+    display: table-header-group;
+  }
+
+  .table tfoot {
+    display: table-row-group;
+  }
+
+  .table tr {
+    break-inside: avoid;
+  }
+
+  .table :is(th, td) {
+    padding: 0.25rem 0.35rem !important;
+    white-space: normal;
+  }
+
+  .table thead button,
+  .table tbody button {
+    display: inline !important;
+    height: auto;
+    padding: 0;
+    text-align: inherit;
+  }
+
+  .table [data-action],
+  .summaryOnly [data-detail] {
+    display: none !important;
+  }
+}

@@ -58,7 +58,7 @@ const manageItems: NavigationItem[] = [
   },
   { label: "Availability", icon: "clock", access: "operations" },
   { label: "Payments", icon: "card", suffix: "/payments", access: "operations" },
-  { label: "Reports", icon: "document", access: "management" },
+  { label: "Reports", icon: "document", suffix: "/reports", access: "management" },
 ];
 
 export function MerchantSidebar({
