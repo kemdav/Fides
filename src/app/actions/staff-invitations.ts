@@ -9,6 +9,7 @@ import { staffInvitationMessage } from "@/lib/mail/emails";
 import { isSmtpMailConfigured, sendSmtpMail } from "@/lib/mail/mailer";
 import { getStaffInvitation, hashStaffInvitation } from "@/lib/merchant/staff-invitations";
 import { getAdminClient } from "@/lib/supabase/admin";
+import { isTenantOpen, SUSPENDED_MESSAGE } from "@/lib/merchant/tenant-status";
 import { createClient } from "@/lib/supabase/server";
 
 const emailSchema = z.string().trim().toLowerCase().max(254).pipe(z.email());
@@ -60,6 +61,7 @@ export async function sendStaffInvitationAction(input: z.input<typeof inviteSche
   const { data: tenant } = await supabase.from("tenants")
     .select(emailTenantColumns).eq("id", fields.tenantId).maybeSingle();
   if (!tenant) return { error: "This workspace is unavailable." };
+  if (!(await isTenantOpen(supabase, fields.tenantId))) return { error: SUSPENDED_MESSAGE };
 
   const token = randomBytes(32).toString("base64url");
   const message = invitationEmail(tenant, fields.name, token);
@@ -110,6 +112,7 @@ async function getInvitationManager(tenantId: string, invitationId: string) {
   if (!membership?.tenants || (membership.role !== "owner" && membership.role !== "admin")) {
     return { error: "You do not have permission to manage invitations." };
   }
+  if (!(await isTenantOpen(supabase, tenantId))) return { error: SUSPENDED_MESSAGE };
   return { admin, tenant: membership.tenants };
 }
 

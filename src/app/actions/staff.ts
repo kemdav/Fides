@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { isTenantOpen, SUSPENDED_MESSAGE } from "@/lib/merchant/tenant-status";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { getStaffProfile, isLastActiveStaffOwner } from "@/lib/merchant/staff-profile";
 import { z } from "zod";
@@ -60,6 +61,7 @@ export async function saveStaffProfileAction(form: FormData): Promise<StaffActio
   if (membership?.role !== "owner" && membership?.role !== "admin") {
     return { success: false, error: "You do not have permission to manage staff." };
   }
+  if (!(await isTenantOpen(supabase, input.tenantId))) return { success: false, error: SUSPENDED_MESSAGE };
   const admin = getAdminClient();
   if (!admin) return { success: false, error: "Staff management is unavailable." };
 

@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { isTenantOpen, SUSPENDED_MESSAGE } from "@/lib/merchant/tenant-status";
 import { getAdminClient } from "@/lib/supabase/admin";
 import {
   buildCustomerInviteUrl,
@@ -1193,6 +1194,10 @@ export async function acceptCustomerInviteAction(
       success: false,
       error: "This invitation link has expired. Please ask the business to resend it.",
     };
+  }
+
+  if (!(await isTenantOpen(admin, invite.tenant_id))) {
+    return { success: false, error: SUSPENDED_MESSAGE };
   }
 
   const [{ data: customer }, { data: tenant }] = await Promise.all([

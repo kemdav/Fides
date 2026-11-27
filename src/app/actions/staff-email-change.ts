@@ -11,6 +11,7 @@ import { staffEmailVerificationMessage } from "@/lib/mail/emails";
 import { canDeliverVerificationLinks, isSmtpMailConfigured, sendMail, sendSmtpMail } from "@/lib/mail/mailer";
 import { canVerifyStaffEmail, getPendingStaffEmailChange, hashStaffEmailProof, STAFF_EMAIL_CHANGE_COMPLETE_PATH, STAFF_EMAIL_CHANGE_RECEIPT, STAFF_EMAIL_LINK_MINUTES } from "@/lib/merchant/staff-email-change";
 import { getAdminClient } from "@/lib/supabase/admin";
+import { isTenantOpen, SUSPENDED_MESSAGE } from "@/lib/merchant/tenant-status";
 import { createClient } from "@/lib/supabase/server";
 
 const requestSchema = z.object({
@@ -34,6 +35,7 @@ export async function requestStaffEmailChangeAction(input: z.input<typeof reques
   if (membership?.role !== "owner" && membership?.role !== "admin") {
     return { success: false, error: "You do not have permission to manage staff." };
   }
+  if (!(await isTenantOpen(supabase, tenantId))) return { success: false, error: SUSPENDED_MESSAGE };
 
   const admin = getAdminClient();
   const useSmtp = isSmtpMailConfigured();
