@@ -6,13 +6,13 @@ import { interactiveRing } from "./primitives";
 
 type MetricCardProps = {
   label: string;
-  value: number;
+  value: number | string;
   caption: string;
   /** Adds the shared arrow after the caption, for cards that link somewhere. */
   captionArrow?: boolean;
   /** Optional: some pages (outside the admin portal) show cards without an icon. */
   icon?: IconName;
-  progress: number;
+  progress?: number;
   featured?: boolean;
   badge?: ReactNode;
   miniChart?: boolean;
@@ -54,20 +54,42 @@ export function MetricCard({
           <Icon
             name={icon}
             weight={iconWeight ?? (featured ? "fill" : "regular")}
-            className={cn("size-5 shrink-0", featured ? "text-white" : "text-glyph")}
+            className={cn(
+              "size-5 shrink-0",
+              featured ? "text-white" : "text-glyph",
+            )}
           />
         ) : null}
-        <p className="min-w-0 break-words text-sm font-semibold leading-5">{label}</p>
+        <p className="min-w-0 break-words text-sm font-semibold leading-5">
+          {label}
+        </p>
       </div>
-      <div className="flex h-9 items-center gap-2">
-        <p className="text-[32px] font-semibold leading-9">
-          {valuePrefix}{value.toLocaleString()}{valueSuffix}
+      <div
+        className={cn(
+          "flex items-center gap-2",
+          typeof value === "number" ? "h-9" : "min-h-9",
+        )}
+      >
+        <p
+          className={cn(
+            "font-semibold",
+            typeof value === "number"
+              ? "text-[32px] leading-9"
+              : "break-all text-xl leading-7 sm:text-2xl 2xl:text-[28px]",
+          )}
+        >
+          {valuePrefix}
+          {value.toLocaleString()}
+          {valueSuffix}
         </p>
         {badge}
       </div>
       {miniChart ? (
         <div className="mt-auto flex min-h-8 items-center gap-2 sm:min-h-10 sm:gap-5">
-          <div className="flex h-8 shrink-0 items-end gap-1 sm:h-10 sm:gap-1.5" aria-hidden>
+          <div
+            className="flex h-8 shrink-0 items-end gap-1 sm:h-10 sm:gap-1.5"
+            aria-hidden
+          >
             {[
               "h-3 sm:h-4",
               "h-5 sm:h-6",
@@ -90,7 +112,13 @@ export function MetricCard({
             )}
           >
             {caption}
-            {captionArrow ? <Icon name="arrow-right" weight="medium" className="ml-1 inline size-4 align-text-bottom" /> : null}
+            {captionArrow ? (
+              <Icon
+                name="arrow-right"
+                weight="medium"
+                className="ml-1 inline size-4 align-text-bottom"
+              />
+            ) : null}
           </p>
         </div>
       ) : (
@@ -102,20 +130,28 @@ export function MetricCard({
             )}
           >
             {caption}
-            {captionArrow ? <Icon name="arrow-right" weight="medium" className="ml-1 inline size-4 align-text-bottom" /> : null}
+            {captionArrow ? (
+              <Icon
+                name="arrow-right"
+                weight="medium"
+                className="ml-1 inline size-4 align-text-bottom"
+              />
+            ) : null}
           </p>
-          <div
-            className="mt-auto flex h-[5px] overflow-hidden rounded-[3px] bg-mist"
-            aria-hidden
-          >
+          {progress !== undefined && (
             <div
-              className={cn(
-                "h-[5px] rounded-[3px]",
-                featured ? "bg-on-burnt" : "bg-burnt",
-              )}
-              style={{ width: `${progress}%` }}
-            />
-          </div>
+              className="mt-auto flex h-[5px] overflow-hidden rounded-[3px] bg-mist"
+              aria-hidden
+            >
+              <div
+                className={cn(
+                  "h-[5px] rounded-[3px]",
+                  featured ? "bg-on-burnt" : "bg-burnt",
+                )}
+                style={{ width: progress + "%" }}
+              />
+            </div>
+          )}
         </>
       )}
     </>
