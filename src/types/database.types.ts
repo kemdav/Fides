@@ -1482,6 +1482,10 @@ type DatabaseCore = {
           billing_interval: string;
           code: string;
           created_at: string;
+          description: string;
+          eyebrow: string;
+          features: string[];
+          updated_at: string;
           id: string;
           name: string;
           price_cents: number;
@@ -1497,6 +1501,10 @@ type DatabaseCore = {
           name: string;
           price_cents?: number;
           sort_order?: number;
+          description?: string;
+          eyebrow?: string;
+          features?: string[];
+          updated_at?: string;
         };
         Update: {
           active?: boolean;
@@ -1507,6 +1515,10 @@ type DatabaseCore = {
           name?: string;
           price_cents?: number;
           sort_order?: number;
+          description?: string;
+          eyebrow?: string;
+          features?: string[];
+          updated_at?: string;
         };
         Relationships: [];
       };
@@ -2072,6 +2084,7 @@ type DatabaseCore = {
       };
       get_my_tenant_id: { Args: Record<PropertyKey, never>; Returns: string };
       is_platform_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
+      tenant_staff_seat_limit: { Args: { p_tenant_id: string }; Returns: number | null };
       match_services: {
         Args: { match_count: number; p_tenant_id: string; query_embedding: string };
         Returns: {
@@ -2124,21 +2137,6 @@ export type TenantRow = DatabaseCore["public"]["Tables"]["tenants"]["Row"];
 export type ProfileRow = DatabaseCore["public"]["Tables"]["profiles"]["Row"];
 export type TenantMembershipRow = DatabaseCore["public"]["Tables"]["tenant_memberships"]["Row"];
 export type TenantSettingsRow = DatabaseCore["public"]["Tables"]["tenant_settings"]["Row"];
-
-export type SubscriptionPlanRow = {
-  code: string;
-  name: string;
-  eyebrow: string;
-  price_php: number;
-  billing_cycle: string;
-  staff_limit: number | null;
-  location_limit: number | null;
-  features: string[];
-  is_active: boolean;
-  sort_order: number;
-  created_at: string;
-  updated_at: string;
-};
 
 export type AccountApplicationRow = {
   id: string;
@@ -2286,7 +2284,6 @@ type RegistrationEmailCodeRow = {
 };
 
 type AccountTables = {
-  subscription_plans: AccountTable<SubscriptionPlanRow>;
   account_applications: AccountTable<AccountApplicationRow>;
   rejected_accounts: AccountTable<RejectedAccountRow>;
   application_identities: AccountTable<ApplicationIdentityRow>;

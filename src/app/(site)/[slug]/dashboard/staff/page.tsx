@@ -50,7 +50,7 @@ export default async function StaffPage({ params }: StaffPageProps) {
   const today = staffDateKey(now, timezone);
   const todayStart = zonedDateToUtc(today, timezone).toISOString();
   const todayEnd = zonedDateToUtc(today, timezone, true).toISOString();
-  const [rows, memberships, skills, services, shifts, leaves, invitations, application, commission] = await Promise.all([
+  const [rows, memberships, skills, services, shifts, leaves, invitations, seatLimit, commission] = await Promise.all([
     db.from("staff_members").select("id, full_name, title, active, image_url, profile_id, commission_type, commission_value")
       .eq("tenant_id", tenant.id).order("sort_order").order("full_name"),
     db.from("tenant_memberships").select("profile_id, role, profiles(full_name, email)").eq("tenant_id", tenant.id),
@@ -62,22 +62,15 @@ export default async function StaffPage({ params }: StaffPageProps) {
       .lte("starts_on", today).gte("ends_on", today),
     db.from("staff_invitations").select("id, full_name, email, role, title, expires_at, cancelled_at")
       .eq("tenant_id", tenant.id).is("accepted_at", null).order("created_at", { ascending: false }),
-    db.from("account_applications").select("plan_code").eq("tenant_id", tenant.id).eq("status", "approved")
-      .order("approved_at", { ascending: false }).limit(1).maybeSingle(),
+    db.rpc("tenant_staff_seat_limit", { p_tenant_id: tenant.id }),
     getMonthlyStaffCommission(db, tenant.id, timezone, now),
   ]);
-  for (const { error } of [rows, memberships, skills, services, shifts, leaves, application]) {
+  for (const { error } of [rows, memberships, skills, services, shifts, leaves, seatLimit]) {
     if (error) throw error;
   }
   if (invitations.error && !["PGRST205", "42P01"].includes(invitations.error.code)) throw invitations.error;
 
-  let staffLimit: number | null | undefined;
-  if (application.data) {
-    const { data: plan, error } = await db.from("subscription_plans").select("staff_limit")
-      .eq("code", application.data.plan_code).maybeSingle();
-    if (error) throw error;
-    staffLimit = plan?.staff_limit;
-  }
+  const staffLimit = seatLimit.data;
 
   const membershipByProfile = new Map(memberships.data?.map((entry) => [entry.profile_id, entry]));
   const viewerName = membershipByProfile.get(user.id)?.profiles?.full_name;

@@ -37,8 +37,8 @@ import type {
   ApplicationBusinessRow,
   ApplicationDocumentRow,
   ApplicationIdentityRow,
-  SubscriptionPlanRow,
 } from "@/types/database.types";
+import { findTier, listTiers, setTierLimits } from "./tiers";
 
 const LOGO_BUCKET = "business-logos";
 
@@ -182,12 +182,8 @@ export async function submitApplication(
 
   const admin = createAdminClient();
 
-  const { data: plan } = await admin
-    .from("subscription_plans")
-    .select("code, is_active, name, price_php, billing_cycle")
-    .eq("code", data.planCode)
-    .maybeSingle();
-  if (!plan || !plan.is_active) throw new ServiceError("The selected subscription package is not available.", 400);
+  const plan = await findTier(admin, data.planCode);
+  if (!plan?.active) throw new ServiceError("The selected subscription package is not available.", 400);
 
   const { data: existing } = await admin
     .from("account_applications")
@@ -332,8 +328,8 @@ export async function submitApplication(
         zipCode: data.zipCode,
         requestedSlug: data.requestedSlug,
         planName: plan.name,
-        planPrice: Number(plan.price_php),
-        billingCycle: plan.billing_cycle,
+        planPrice: plan.price,
+        billingCycle: plan.billingInterval === "year" ? "yearly" : "monthly",
         referenceCode: application.reference_code,
       });
     } catch (mailError) {
@@ -382,12 +378,6 @@ function initialsOf(name: string): string {
       .join("")
       .toUpperCase() || "?"
   );
-}
-
-async function loadPlans(admin: AdminClient): Promise<SubscriptionPlanRow[]> {
-  const { data, error } = await admin.from("subscription_plans").select("*").order("sort_order").order("price_php");
-  if (error) fail(error, "Could not load subscription plans");
-  return data ?? [];
 }
 
 function formatSize(bytes: number | null): string {
@@ -458,7 +448,7 @@ export async function loadAdminSnapshot(): Promise<AdminSnapshot> {
   const now = new Date();
   const [joined, planRows, activityRes, documentsRes, rejectedRes] = await Promise.all([
     loadJoined(admin),
-    loadPlans(admin),
+    listTiers(admin),
     admin.from("admin_activity_log").select("*").order("created_at", { ascending: false }).limit(500),
     admin.from("application_documents").select("*"),
     admin.from("rejected_accounts").select("*").order("rejected_at", { ascending: false }),
@@ -540,7 +530,7 @@ export async function loadAdminSnapshot(): Promise<AdminSnapshot> {
         nextBilling: next ? next.toISOString() : null,
         planCode: app.plan_code,
         plan: plan?.name ?? app.plan_code,
-        price: Number(plan?.price_php ?? 0),
+        price: plan?.price ?? 0,
         access: app.status === "suspended" ? "suspended" : "active",
       };
     });
@@ -549,14 +539,14 @@ export async function loadAdminSnapshot(): Promise<AdminSnapshot> {
   for (const tenant of tenants) counts.set(tenant.planCode, (counts.get(tenant.planCode) ?? 0) + 1);
 
   const tiers: Tier[] = planRows
-    .filter((plan) => plan.is_active)
+    .filter((plan) => plan.active)
     .map((plan) => ({
       id: plan.code,
       eyebrow: plan.eyebrow,
       name: plan.name,
-      price: Number(plan.price_php),
-      staffLimit: plan.staff_limit,
-      locationLimit: plan.location_limit,
+      price: plan.price,
+      staffLimit: plan.staffLimit,
+      locationLimit: plan.locationLimit,
       features: plan.features,
       subscribed: counts.get(plan.code) ?? 0,
     }));
@@ -719,13 +709,13 @@ export async function approveApplication(id: string, actor: AdminActor): Promise
 async function dispatchApprovalEmail(admin: AdminClient, id: string): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     const { app, identity, business } = await getJoined(admin, id);
-    const { data: plan } = await admin.from("subscription_plans").select("name, price_php").eq("code", app.plan_code).maybeSingle();
+    const plan = await findTier(admin, app.plan_code);
     await sendApprovalEmail({
       to: app.email,
       ownerName: identity?.owner_legal_name ?? app.full_name,
       businessName: business?.business_name ?? "your business",
       planName: plan?.name ?? app.plan_code,
-      planPrice: Number(plan?.price_php ?? 0),
+      planPrice: plan?.price ?? 0,
       referenceCode: app.reference_code,
     });
     return { ok: true };
@@ -891,11 +881,11 @@ export async function loadPendingSummary(): Promise<PendingSummary> {
   const [businesses, identities, plans] = await Promise.all([
     ids.length ? admin.from("application_businesses").select("application_id, business_name").in("application_id", ids) : { data: [] },
     ids.length ? admin.from("application_identities").select("application_id, owner_legal_name").in("application_id", ids) : { data: [] },
-    admin.from("subscription_plans").select("code, name"),
+    listTiers(admin),
   ]);
   const businessMap = new Map((businesses.data ?? []).map((row) => [row.application_id, row.business_name]));
   const identityMap = new Map((identities.data ?? []).map((row) => [row.application_id, row.owner_legal_name]));
-  const planMap = new Map((plans.data ?? []).map((row) => [row.code, row.name]));
+  const planMap = new Map(plans.map((tier) => [tier.code, tier.name]));
   return {
     count: rows.length,
     items: rows.slice(0, 5).map((row) => ({
@@ -960,12 +950,21 @@ export async function setAccess(ids: string[], access: "active" | "suspended", r
 export async function changePlan(id: string, planCode: string, reason: string, actor: AdminActor): Promise<DecisionResult> {
   const admin = createAdminClient();
   const { app, business } = await getJoined(admin, id);
-  const { data: plan } = await admin.from("subscription_plans").select("name, is_active").eq("code", planCode).maybeSingle();
-  if (!plan || !plan.is_active) throw new ServiceError("The selected plan is not available.", 400);
-  const { data: previous } = await admin.from("subscription_plans").select("name").eq("code", app.plan_code).maybeSingle();
+  const tiers = await listTiers(admin);
+  const plan = tiers.find((tier) => tier.code === planCode);
+  if (!plan?.active) throw new ServiceError("The selected plan is not available.", 400);
+  const previous = tiers.find((tier) => tier.code === app.plan_code);
 
   const { error } = await admin.from("account_applications").update({ plan_code: planCode }).eq("id", id);
   if (error) fail(error, "Could not change the plan");
+  if (app.tenant_id) {
+    const { error: subscriptionError } = await admin
+      .from("subscriptions")
+      .update({ tier_id: plan.id })
+      .eq("tenant_id", app.tenant_id)
+      .in("status", ["trialing", "active", "past_due"]);
+    if (subscriptionError) fail(subscriptionError, "Could not move the subscription to the new plan");
+  }
 
   const name = business?.business_name ?? app.full_name;
   await logActivity(admin, {
@@ -989,7 +988,7 @@ export async function sendReminders(ids: string[]): Promise<DecisionResult> {
   for (const id of ids) {
     const { app, identity, business } = await getJoined(admin, id);
     if (app.status !== "approved") continue;
-    const { data: plan } = await admin.from("subscription_plans").select("name, price_php").eq("code", app.plan_code).maybeSingle();
+    const plan = await findTier(admin, app.plan_code);
     const next = nextBillingDate(app.approved_at, now);
     try {
       await sendBillingReminderEmail({
@@ -997,7 +996,7 @@ export async function sendReminders(ids: string[]): Promise<DecisionResult> {
         ownerName: identity?.owner_legal_name ?? app.full_name,
         businessName: business?.business_name ?? "your business",
         planName: plan?.name ?? app.plan_code,
-        planPrice: Number(plan?.price_php ?? 0),
+        planPrice: plan?.price ?? 0,
         billingDate: (next ?? now).toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" }),
       });
       sent += 1;
@@ -1025,20 +1024,21 @@ export async function savePlan(input: PlanInput, actor: AdminActor): Promise<Dec
   const name = input.name.trim();
   if (!name || !(input.price > 0)) throw new ServiceError("Enter a tier name and a price above zero.", 400);
 
+  const priceCents = Math.round(input.price * 100);
+
   if (input.code) {
-    const { data: before } = await admin.from("subscription_plans").select("name, price_php").eq("code", input.code).maybeSingle();
-    const { error } = await admin
-      .from("subscription_plans")
-      .update({ name, price_php: input.price, staff_limit: input.staffLimit, location_limit: input.locationLimit })
-      .eq("code", input.code);
+    const before = await findTier(admin, input.code);
+    if (!before) throw new ServiceError("This tier no longer exists.", 404);
+    const { error } = await admin.from("subscription_tiers").update({ name, price_cents: priceCents }).eq("id", before.id);
     if (error) fail(error, "Could not save the tier");
+    await setTierLimits(admin, before.id, input.staffLimit, input.locationLimit);
     await logActivity(admin, {
       actor,
       applicationId: null,
       business: name,
       action: "Tier updated",
       category: "pricing",
-      before: before ? `${before.name} · ₱${Number(before.price_php)}` : "—",
+      before: `${before.name} · ₱${before.price}`,
       after: `${name} · ₱${input.price}`,
       reason: "Subscription tier pricing or limits were edited.",
     });
@@ -1046,22 +1046,24 @@ export async function savePlan(input: PlanInput, actor: AdminActor): Promise<Dec
   }
 
   const code = slugify(name);
-  const { data: clash } = await admin.from("subscription_plans").select("code").eq("code", code).maybeSingle();
-  if (clash) throw new ServiceError("A tier with this name already exists.", 409);
-  const { data: last } = await admin.from("subscription_plans").select("sort_order").order("sort_order", { ascending: false }).limit(1);
-  const { error } = await admin.from("subscription_plans").insert({
-    code,
-    name,
-    eyebrow: "CUSTOM",
-    price_php: input.price,
-    billing_cycle: "monthly",
-    staff_limit: input.staffLimit,
-    location_limit: input.locationLimit,
-    features: ["Online booking"],
-    is_active: true,
-    sort_order: (last?.[0]?.sort_order ?? 0) + 1,
-  });
-  if (error) fail(error, "Could not create the tier");
+  const tiers = await listTiers(admin);
+  if (tiers.some((tier) => tier.code === code)) throw new ServiceError("A tier with this name already exists.", 409);
+  const { data: created, error } = await admin
+    .from("subscription_tiers")
+    .insert({
+      code,
+      name,
+      eyebrow: "CUSTOM",
+      price_cents: priceCents,
+      billing_interval: "month",
+      features: ["Online booking"],
+      active: true,
+      sort_order: Math.max(0, ...tiers.map((tier) => tier.sortOrder)) + 1,
+    })
+    .select("id")
+    .single();
+  if (error || !created) fail(error, "Could not create the tier");
+  await setTierLimits(admin, created.id, input.staffLimit, input.locationLimit);
   await logActivity(admin, {
     actor,
     applicationId: null,
@@ -1077,9 +1079,9 @@ export async function savePlan(input: PlanInput, actor: AdminActor): Promise<Dec
 
 export async function deactivatePlan(code: string, actor: AdminActor): Promise<DecisionResult> {
   const admin = createAdminClient();
-  const { data: plan } = await admin.from("subscription_plans").select("name").eq("code", code).maybeSingle();
+  const plan = await findTier(admin, code);
   if (!plan) throw new ServiceError("This tier no longer exists.", 404);
-  const { error } = await admin.from("subscription_plans").update({ is_active: false }).eq("code", code);
+  const { error } = await admin.from("subscription_tiers").update({ active: false }).eq("id", plan.id);
   if (error) fail(error, "Could not remove the tier");
   await logActivity(admin, {
     actor,
@@ -1112,9 +1114,9 @@ export async function getDashboardProfile(userId: string) {
   if (!app) return null;
   const [business, plan] = await Promise.all([
     admin.from("application_businesses").select("*").eq("application_id", app.id).maybeSingle(),
-    admin.from("subscription_plans").select("*").eq("code", app.plan_code).maybeSingle(),
+    findTier(admin, app.plan_code),
   ]);
-  return { app, business: business.data, plan: plan.data };
+  return { app, business: business.data, plan };
 }
 
 export type DocumentLink = { url: string; fileName: string; mimeType: string; label: string };

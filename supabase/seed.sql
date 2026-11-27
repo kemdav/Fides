@@ -222,9 +222,7 @@ ON CONFLICT (tenant_id, profile_id) DO UPDATE SET
 role = EXCLUDED.role;
 
 -- 5. Approved Account Application
-INSERT INTO public.subscription_plans (code, name, price_php, staff_limit, is_active)
-VALUES ('staff-qa', 'Staff QA', 1299, 10, FALSE)
-ON CONFLICT (code) DO UPDATE SET staff_limit = EXCLUDED.staff_limit, is_active = EXCLUDED.is_active;
+-- the demo business is on the Business tier
 
 INSERT INTO public.account_applications (
 id,
@@ -252,7 +250,7 @@ VALUES (
 'owner@bellavita.com',
 '+63 917 555 0143',
 'approved',
-'staff-qa',
+'business',
 NOW(),
 NOW(),
 NOW(),
