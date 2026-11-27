@@ -114,6 +114,54 @@ function SelectableOption({
   );
 }
 
+// Roles that don't perform services (front desk, management, admin) are hidden
+// from the staff picker.
+const NON_SERVICE_ROLE_PATTERN =
+  /\b(admin|administrat\w*|manage\w*|owner|front desk|reception\w*|coordinator|cashier|accountant|secretary|assistant manager)\b/i;
+
+function isServiceProvider(member: BookingStaffOption) {
+  return !member.title || !NON_SERVICE_ROLE_PATTERN.test(member.title);
+}
+
+function StaffRadioOption({
+  value,
+  label,
+  description,
+  checked,
+  onSelect,
+}: {
+  value: string;
+  label: string;
+  description?: string;
+  checked: boolean;
+  onSelect: (value: string) => void;
+}) {
+  return (
+    <label
+      className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-burnt/40 ${
+        checked
+          ? "border-burnt bg-burnt/5"
+          : "border-line bg-white hover:border-burnt/50"
+      }`}
+    >
+      <input
+        type="radio"
+        name="staff-member"
+        value={value}
+        checked={checked}
+        onChange={() => onSelect(value)}
+        className="mt-1 size-4 shrink-0 accent-burnt focus-visible:outline-none"
+      />
+      <span className="min-w-0">
+        <span className="block font-semibold text-ink">{label}</span>
+        {description ? (
+          <span className="mt-1 block text-sm text-muted">{description}</span>
+        ) : null}
+      </span>
+    </label>
+  );
+}
+
 function getDateKey(date: Date) {
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
@@ -250,10 +298,11 @@ export function StorefrontServicePage({
     0
   );
   const hasExtras = extraServices.length > 0 || selectedAddons.length > 0;
+  const serviceStaff = staff.filter((member) => isServiceProvider(member));
   const selectedStaff =
     selectedStaffId === "any"
       ? null
-      : staff.find((member) => member.id === selectedStaffId) ?? null;
+      : serviceStaff.find((member) => member.id === selectedStaffId) ?? null;
 
   function continueToNextStep() {
     setError(null);
@@ -486,51 +535,29 @@ export function StorefrontServicePage({
                   Select someone specific or let the team choose who is
                   available.
                 </p>
-                <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                  <button
-                    type="button"
-                    aria-pressed={selectedStaffId === "any"}
-                    onClick={() => setSelectedStaffId("any")}
-                    className={`rounded-xl border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${
-                      selectedStaffId === "any"
-                        ? "border-burnt bg-burnt/5"
-                        : "border-line hover:border-burnt/50"
-                    }`}
-                  >
-                    <span className="block font-semibold text-ink">
-                      Any available staff member
-                    </span>
-                    <span className="mt-1 block text-sm text-muted">
-                      Let the team match you with someone.
-                    </span>
-                  </button>
-                  {staff.map((member) => {
-                    const isSelected = selectedStaffId === member.id;
-                    return (
-                      <button
-                        key={member.id}
-                        type="button"
-                        aria-pressed={isSelected}
-                        onClick={() => setSelectedStaffId(member.id)}
-                        className={`rounded-xl border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${
-                          isSelected
-                            ? "border-burnt bg-burnt/5"
-                            : "border-line hover:border-burnt/50"
-                        }`}
-                      >
-                        <span className="block font-semibold text-ink">
-                          {member.fullName}
-                        </span>
-                        {member.title ? (
-                          <span className="mt-1 block text-sm text-muted">
-                            {member.title}
-                          </span>
-                        ) : null}
-                      </button>
-                    );
-                  })}
+                <div
+                  role="radiogroup"
+                  aria-label="Staff member"
+                  className="mt-6 grid gap-3 sm:grid-cols-2"
+                >
+                  <StaffRadioOption
+                    value="any"
+                    label="Any available staff member"
+                    description="Let the team match you with someone."
+                    checked={selectedStaffId === "any"}
+                    onSelect={setSelectedStaffId}
+                  />
+                  {serviceStaff.map((member) => (
+                    <StaffRadioOption
+                      key={member.id}
+                      value={member.id}
+                      label={member.fullName}
+                      checked={selectedStaffId === member.id}
+                      onSelect={setSelectedStaffId}
+                    />
+                  ))}
                 </div>
-                {staff.length === 0 ? (
+                {serviceStaff.length === 0 ? (
                   <p className="mt-4 text-sm text-muted">
                     No individual staff profiles are listed. You can continue
                     with any available team member.
