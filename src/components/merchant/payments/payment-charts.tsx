@@ -212,7 +212,7 @@ export function DailyCollectionsBarChart({
             style={{ left: "clamp(5.5rem, " + ((hoveredIndex + 0.5) / data.length) * 100 + "%, calc(100% - 5.5rem))" }}
           >
             <p className="font-semibold">{hovered.label}</p>
-            <p className="text-emerald-400">Gross: {formatPeso(hovered.grossCents)}</p>
+            <p className="text-mint">Gross: {formatPeso(hovered.grossCents)}</p>
             <p className="text-neutral-300">Net: {formatPeso(hovered.netCents)}</p>
             <p className="text-[10px] text-neutral-400">
               {hovered.count} transaction{hovered.count === 1 ? "" : "s"}

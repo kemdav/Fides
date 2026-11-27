@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { canManageBookings, workspaceRoleFromLabel, type WorkspaceRole } from "@/lib/merchant/workspace-roles";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveTenantAccess } from "@/lib/merchant/access";
+import { logError } from "@/lib/log";
+import { canManageBookings, workspaceRoleFromLabel } from "@/lib/merchant/workspace-roles";
 import {
   calculateChangeAndApplied,
   calculateVatSplit,
@@ -65,38 +68,22 @@ async function revalidatePaymentsPaths(slug: string) {
 
 async function getVerifiedMerchantUser(tenantId: string) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { ok: false as const, error: "Authentication required to perform this action." };
+  const access = await resolveTenantAccess(supabase, tenantId);
+  if (!access) {
+    return { ok: false as const, error: "You cannot make changes for this business. It may be suspended, or you may not be a member." };
   }
 
-  const { data: membership } = await supabase
-    .from("tenant_memberships")
-    .select("role, profiles(full_name)")
-    .eq("tenant_id", tenantId)
-    .eq("profile_id", user.id)
-    .maybeSingle();
+  const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", access.userId).maybeSingle();
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, role, tenant_id")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  const role: WorkspaceRole | undefined =
-    membership?.role ?? (profile?.tenant_id === tenantId ? workspaceRoleFromLabel(profile.role) : undefined);
-
-  if (!role) {
-    return { ok: false as const, error: "Access denied. You are not an authorized member of this workspace." };
-  }
-
-  const userName =
-    membership?.profiles?.full_name?.trim() || profile?.full_name?.trim() || user.email?.split("@")[0] || "Staff Member";
-
-  return { ok: true as const, user, role, userName, supabase };
+  return {
+    ok: true as const,
+    userId: access.userId,
+    role: workspaceRoleFromLabel(access.role),
+    userName: profile?.full_name?.trim() || "Staff Member",
+    supabase,
+    // clients can only read payments: writes happen here, after the role check
+    ledger: createAdminClient(),
+  };
 }
 
 /* ----------------------------------------------------------- Record Payment */
@@ -208,7 +195,7 @@ export async function recordPaymentAction(
   const dbMethod = mapUiMethodToDb(input.method, `${input.referenceNumber || ""} ${input.notes || ""}`);
 
   // 6. Insert payment row into public.payments
-  const { data: insertedPayment, error: insertError } = await supabase
+  const { data: insertedPayment, error: insertError } = await auth.ledger
     .from("payments")
     .insert({
       tenant_id: input.tenantId,
@@ -222,8 +209,8 @@ export async function recordPaymentAction(
       reference_number: refNum,
       notes: input.notes?.trim() || null,
       paid_at: nowIso,
-      created_by: auth.user.id,
-      recorded_by: auth.user.id,
+      created_by: auth.userId,
+      recorded_by: auth.userId,
       net_cents: netCents,
       vat_cents: vatCents,
     })
@@ -231,20 +218,9 @@ export async function recordPaymentAction(
     .single();
 
   if (insertError || !insertedPayment) {
-    console.error("[payments/record] insert payment failed:", insertError);
-    return { ok: false, error: insertError?.message || "Failed to save the payment record to the database." };
+    logError("payments.record", insertError);
+    return { ok: false, error: "Failed to save the payment record." };
   }
-
-  // 7. Update appointment balance tracking columns
-  await supabase
-    .from("appointments")
-    .update({
-      paid_cents: newTotalPaidCents,
-      payment_status: resultingStatus,
-      updated_at: nowIso,
-    })
-    .eq("id", input.appointmentId)
-    .eq("tenant_id", input.tenantId);
 
   await revalidatePaymentsPaths(input.slug);
 
@@ -340,13 +316,13 @@ export async function voidPaymentAction(rawInput: VoidPaymentInput): Promise<Pay
   const nowIso = new Date().toISOString();
 
   // 2. Soft-void payment record
-  const { error: updateError } = await supabase
+  const { error: updateError } = await auth.ledger
     .from("payments")
     .update({
       status: "voided",
       void_reason: input.reason,
       voided_at: nowIso,
-      voided_by: auth.user.id,
+      voided_by: auth.userId,
       updated_at: nowIso,
     })
     .eq("id", input.paymentId)
@@ -354,36 +330,6 @@ export async function voidPaymentAction(rawInput: VoidPaymentInput): Promise<Pay
 
   if (updateError) {
     return { ok: false, error: "Failed to update payment status." };
-  }
-
-  // 3. Recalculate linked appointment balance if present
-  if (payment.appointment_id) {
-    const { data: appointment } = await supabase
-      .from("appointments")
-      .select("id, total_cents, payments(id, amount_cents, status)")
-      .eq("id", payment.appointment_id)
-      .eq("tenant_id", input.tenantId)
-      .maybeSingle();
-
-    if (appointment) {
-      const remainingPaid = (appointment.payments || [])
-        .filter((p) => p.id !== payment.id && (p.status === "paid" || p.status === "pending"))
-        .reduce((sum, p) => sum + p.amount_cents, 0);
-
-      const totalCents = appointment.total_cents;
-      const newStatus: AppointmentBalanceStatus =
-        remainingPaid <= 0 ? "unpaid" : remainingPaid >= totalCents ? "paid" : "partial";
-
-      await supabase
-        .from("appointments")
-        .update({
-          paid_cents: remainingPaid,
-          payment_status: newStatus,
-          updated_at: nowIso,
-        })
-        .eq("id", payment.appointment_id)
-        .eq("tenant_id", input.tenantId);
-    }
   }
 
   await revalidatePaymentsPaths(input.slug);
@@ -447,13 +393,13 @@ export async function refundPaymentAction(rawInput: RefundPaymentInput): Promise
 
   const nowIso = new Date().toISOString();
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await auth.ledger
     .from("payments")
     .update({
       status: "refunded",
       refund_reason: input.reason,
       refunded_at: nowIso,
-      refunded_by: auth.user.id,
+      refunded_by: auth.userId,
       updated_at: nowIso,
     })
     .eq("id", input.paymentId)
@@ -461,35 +407,6 @@ export async function refundPaymentAction(rawInput: RefundPaymentInput): Promise
 
   if (updateError) {
     return { ok: false, error: "Failed to record refund status." };
-  }
-
-  if (payment.appointment_id) {
-    const { data: appointment } = await supabase
-      .from("appointments")
-      .select("id, total_cents, payments(id, amount_cents, status)")
-      .eq("id", payment.appointment_id)
-      .eq("tenant_id", input.tenantId)
-      .maybeSingle();
-
-    if (appointment) {
-      const remainingPaid = (appointment.payments || [])
-        .filter((p) => p.id !== payment.id && (p.status === "paid" || p.status === "pending"))
-        .reduce((sum, p) => sum + p.amount_cents, 0);
-
-      const totalCents = appointment.total_cents;
-      const newStatus: AppointmentBalanceStatus =
-        remainingPaid <= 0 ? "unpaid" : remainingPaid >= totalCents ? "paid" : "partial";
-
-      await supabase
-        .from("appointments")
-        .update({
-          paid_cents: remainingPaid,
-          payment_status: newStatus,
-          updated_at: nowIso,
-        })
-        .eq("id", payment.appointment_id)
-        .eq("tenant_id", input.tenantId);
-    }
   }
 
   await revalidatePaymentsPaths(input.slug);
