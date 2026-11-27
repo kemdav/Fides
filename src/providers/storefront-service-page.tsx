@@ -163,7 +163,37 @@ function StaffRadioOption({
   );
 }
 
-const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+function ReviewRow({
+  label,
+  onEdit,
+  children,
+}: {
+  label: string;
+  onEdit: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-2 py-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex items-center justify-between gap-3 sm:block">
+        <dt className="text-sm text-muted">{label}</dt>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onEdit}
+          aria-label={`Edit ${label.toLowerCase()}`}
+          className="-ml-3 h-7 px-3 font-semibold text-burnt hover:bg-burnt/10 sm:mt-1"
+        >
+          Edit
+        </Button>
+      </div>
+      <dd className="text-sm font-semibold text-ink sm:text-right">
+        {children}
+      </dd>
+    </div>
+  );
+}
+
+const WEEKDAY_LABELS =["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 /** Local-time YYYY-MM-DD key for a calendar day. */
 function getDateKey(date: Date) {
@@ -354,6 +384,9 @@ export function StorefrontServicePage({
 }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
+  // Furthest step reached, so users can jump back and forth between
+  // steps they've already completed.
+  const [furthestStep, setFurthestStep] = useState(0);
   const [selectedServiceId] = useState(() =>
     services.some((service) => service.id === initialServiceId)
       ? initialServiceId
@@ -429,7 +462,14 @@ export function StorefrontServicePage({
       setError("Choose a date and time to continue.");
       return;
     }
-    setStep((current) => Math.min(current + 1, BOOKING_STEPS.length - 1));
+    const next = Math.min(step + 1, BOOKING_STEPS.length - 1);
+    setStep(next);
+    setFurthestStep((current) => Math.max(current, next));
+  }
+
+  function goToStep(index: number) {
+    setError(null);
+    setStep(index);
   }
 
   function continueToAccount() {
@@ -466,24 +506,31 @@ export function StorefrontServicePage({
             className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4"
           >
             {BOOKING_STEPS.map((label, index) => {
-              const isComplete = index < step;
               const isCurrent = index === step;
+              const isComplete = !isCurrent && index < furthestStep;
+              const isReachable =
+                !isCurrent &&
+                index <= furthestStep &&
+                (index < 3 || (!!selectedDate && !!selectedTime));
               return (
                 <li key={label}>
                   <button
                     type="button"
                     aria-current={isCurrent ? "step" : undefined}
-                    disabled={index >= step}
-                    onClick={() => {
-                      setError(null);
-                      setStep(index);
-                    }}
-                    className={`flex w-full items-center gap-2 rounded-lg border px-3 py-3 text-left text-sm font-semibold transition-colors ${
+                    disabled={!isReachable}
+                    onClick={() => goToStep(index)}
+                    className={`flex w-full items-center gap-2 rounded-lg border px-3 py-3 text-left text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${
                       isCurrent
                         ? "border-burnt bg-white text-burnt"
                         : isComplete
                           ? "border-success/30 bg-white text-ink"
-                          : "border-outline/50 bg-white/60 text-muted"
+                          : isReachable
+                            ? "border-outline/50 bg-white text-ink"
+                            : "border-outline/50 bg-white/60 text-muted"
+                    } ${
+                      isReachable
+                        ? "cursor-pointer hover:border-burnt/50 hover:bg-burnt/5"
+                        : ""
                     }`}
                   >
                     {isComplete ? (
@@ -745,80 +792,70 @@ export function StorefrontServicePage({
                   Check your selections before continuing to account access.
                 </p>
                 <dl className="mt-6 divide-y divide-line rounded-xl border border-line px-4">
-                  <div className="flex flex-col gap-1 py-4 sm:flex-row sm:justify-between">
-                    <dt className="text-sm text-muted">Service</dt>
-                    <dd className="text-sm font-semibold text-ink">
-                      {selectedService?.name ?? "Choose a service"}
-                      {selectedService ? (
-                        <span className="ml-2 font-normal text-muted">
-                          {selectedService.duration} ·{" "}
-                          {selectedService.price}
-                        </span>
-                      ) : null}
-                    </dd>
-                  </div>
-                  {extraServices.length > 0 ? (
-                    <div className="flex flex-col gap-1 py-4 sm:flex-row sm:justify-between">
-                      <dt className="text-sm text-muted">Additional services</dt>
-                      <dd className="space-y-1 text-sm font-semibold text-ink sm:text-right">
-                        {extraServices.map((service) => (
-                          <span key={service.id} className="block">
-                            {service.name}
-                            <span className="ml-2 font-normal text-muted">
-                              {service.duration} ·{" "}
-                              {service.price}
+                  <ReviewRow label="Services" onEdit={() => goToStep(0)}>
+                    {selectedService ? (
+                      <ul className="space-y-1.5">
+                        {[selectedService, ...extraServices].map((service) => (
+                          <li
+                            key={service.id}
+                            className="flex flex-wrap justify-end gap-x-2"
+                          >
+                            <span>{service.name}</span>
+                            <span className="font-normal text-muted">
+                              {service.duration} · {service.price}
                             </span>
-                          </span>
+                          </li>
                         ))}
-                      </dd>
-                    </div>
-                  ) : null}
-                  {selectedAddons.length > 0 ? (
-                    <div className="flex flex-col gap-1 py-4 sm:flex-row sm:justify-between">
-                      <dt className="text-sm text-muted">Add-ons</dt>
-                      <dd className="space-y-1 text-sm font-semibold text-ink sm:text-right">
                         {selectedAddons.map((addon) => (
-                          <span key={addon.id} className="block">
-                            {addon.name}
-                            <span className="ml-2 font-normal text-muted">
+                          <li
+                            key={addon.id}
+                            className="flex flex-wrap justify-end gap-x-2"
+                          >
+                            <span>
+                              <span className="font-normal text-muted">
+                                Add-on:{" "}
+                              </span>
+                              {addon.name}
+                            </span>
+                            <span className="font-normal text-muted">
                               +{formatDuration(addon.durationMinutes)} · +
                               {formatPrice(addon.priceCents)}
                             </span>
-                          </span>
+                          </li>
                         ))}
-                      </dd>
-                    </div>
-                  ) : null}
-                  <div className="flex flex-col gap-1 py-4 sm:flex-row sm:justify-between">
-                    <dt className="text-sm text-muted">Staff</dt>
-                    <dd className="text-sm font-semibold text-ink">
-                      {selectedStaff?.fullName ?? "Any available staff member"}
-                    </dd>
-                  </div>
-                  <div className="flex flex-col gap-1 py-4 sm:flex-row sm:justify-between">
-                    <dt className="text-sm text-muted">Preferred date</dt>
-                    <dd className="text-sm font-semibold text-ink">
-                      {formatSelectedDate(selectedDate)}
-                    </dd>
-                  </div>
-                  <div className="flex flex-col gap-1 py-4 sm:flex-row sm:justify-between">
-                    <dt className="text-sm text-muted">Preferred time</dt>
-                    <dd className="text-sm font-semibold text-ink">
-                      {selectedTime || "Not selected"}
-                    </dd>
-                  </div>
-                  {selectedService ? (
-                    <div className="flex flex-col gap-1 py-4 sm:flex-row sm:justify-between">
-                      <dt className="text-sm font-semibold text-ink">
-                        Estimated total
-                      </dt>
-                      <dd className="text-sm font-semibold text-ink">
-                        {formatDuration(totalMinutes)} ·{" "}
-                        {formatPrice(totalCents)}
-                      </dd>
-                    </div>
-                  ) : null}
+                      </ul>
+                    ) : (
+                      "Choose a service"
+                    )}
+                  </ReviewRow>
+                  <ReviewRow label="Staff" onEdit={() => goToStep(1)}>
+                    {selectedStaff?.fullName ?? "Any available staff member"}
+                  </ReviewRow>
+                  <ReviewRow label="Preferred date" onEdit={() => goToStep(2)}>
+                    {formatSelectedDate(selectedDate)}
+                  </ReviewRow>
+                  <ReviewRow label="Preferred time" onEdit={() => goToStep(2)}>
+                    {selectedTime || "Not selected"}
+                  </ReviewRow>
                 </dl>
+                {selectedService ? (
+                  <div className="mt-3 flex flex-col gap-1 rounded-xl bg-burnt/5 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <span className="text-sm font-semibold text-ink">
+                      Total
+                    </span>
+                    <span className="text-sm text-ink">
+                      <span className="text-muted">
+                        {formatDuration(totalMinutes)}
+                      </span>
+                      <span className="mx-2 text-muted" aria-hidden>
+                        ·
+                      </span>
+                      <span className="text-base font-bold">
+                        {formatPrice(totalCents)}
+                      </span>
+                    </span>
+                  </div>
+                ) : null}
                 <p className="mt-4 rounded-lg bg-wash px-4 py-3 text-sm/6 text-muted">
                   This storefront preview does not submit or confirm
                   appointments. Continue to the customer account screen to
@@ -865,7 +902,7 @@ export function StorefrontServicePage({
                   onClick={continueToAccount}
                   disabled={!selectedService || !selectedDate || !selectedTime}
                 >
-                  Confirm booking
+                  Continue to account
                   <span aria-hidden>→</span>
                 </Button>
               )}
