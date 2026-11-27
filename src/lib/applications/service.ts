@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { publicEnv } from "@/lib/env";
 import { normalizeSlugInput, slugSchema, type SlugValidationResult } from "@/lib/registration/slug";
 import { nextBillingDate } from "@/lib/billing";
+import { logError } from "@/lib/log";
 import { isMailConfigured } from "@/lib/mail/mailer";
 import { sendApprovalEmail, sendBillingReminderEmail, sendRejectionEmail, sendSubmissionEmail } from "@/lib/mail/emails";
 import { formatRegistrationStreetAddress } from "@/lib/registration/address";
@@ -17,6 +18,7 @@ import {
   GOVERNMENT_ID_SLOT,
   ID_TYPES,
   ID_TYPE_STORAGE_VALUES,
+  TRIAL_DAYS,
   applicationDocumentsFor,
   businessTypeLabel,
   type DocumentKey,
@@ -597,17 +599,22 @@ function slugify(value: string): string {
   return base.length >= 3 ? base : `business-${base}`.replace(/-$/, "");
 }
 
-async function uniqueSlug(admin: AdminClient, name: string): Promise<string> {
-  const base = slugify(name);
-  for (let attempt = 0; attempt < 20; attempt++) {
-    const candidate = attempt === 0 ? base : `${base}-${attempt + 1}`;
-    const { data } = await admin.from("tenants").select("id").eq("slug", candidate).maybeSingle();
-    if (!data) return candidate;
-  }
-  return `${base}-${Date.now().toString(36)}`;
-}
-
 export type DecisionResult = { message: string; warning?: string };
+
+/** errors the decision functions raise on purpose */
+const DECISION_ERRORS: Record<string, [message: string, status: number]> = {
+  APPLICATION_NOT_FOUND: ["This application no longer exists.", 404],
+  APPLICATION_NOT_PENDING: ["Only pending applications can be decided.", 409],
+  BUSINESS_MISSING: ["This application has no business details.", 409],
+  PLAN_MISSING: ["The plan on this application no longer exists.", 409],
+  SLUG_TAKEN: ["The requested subdomain is already used by another business.", 409],
+};
+
+function decisionFailed(error: { message: string }, fallback: string): never {
+  const known = DECISION_ERRORS[error.message];
+  if (known) throw new ServiceError(known[0], known[1]);
+  fail(error, fallback);
+}
 
 export async function approveApplication(id: string, actor: AdminActor): Promise<DecisionResult> {
   const admin = createAdminClient();
@@ -621,89 +628,21 @@ export async function approveApplication(id: string, actor: AdminActor): Promise
     throw new ServiceError(`The application is missing required documents: ${missing.map(({ label }) => label).join(", ")}.`, 409);
   }
 
-  const slug = business.requested_slug ?? await uniqueSlug(admin, business.business_name);
-  const { data: tenant, error: tenantError } = await admin
-    .from("tenants")
-    .insert({
-      name: business.business_name,
-      slug,
-      status: "active",
-      logo_url: business.logo_url,
-      address: `${business.street_address}, ${business.city}, ${business.province} ${business.zip_code}`,
-      phone: app.phone,
-      timezone: "Asia/Manila",
-    })
-    .select("id")
-    .single();
-  if (tenantError || !tenant) fail(tenantError, "Could not create the business account");
-
-  const rollback = async () => {
-    await admin.from("tenants").delete().eq("id", tenant.id);
-  };
-
-  const { error: profileError } = await admin.from("profiles").upsert({
-    id: app.user_id,
-    email: app.email,
-    full_name: app.full_name,
-    role: "owner",
-    tenant_id: tenant.id,
+  // account, owner, settings, trial subscription and log entry: all or nothing
+  const { error } = await admin.rpc("approve_application", {
+    p_application_id: id,
+    p_actor_id: actor.id,
+    p_actor_name: actor.displayName,
+    p_slug_base: slugify(business.business_name),
+    p_trial_days: TRIAL_DAYS,
   });
-  if (profileError) {
-    await rollback();
-    fail(profileError, "Could not link the owner profile");
-  }
-
-  const { error: membershipError } = await admin
-    .from("tenant_memberships")
-    .upsert({ tenant_id: tenant.id, profile_id: app.user_id, role: "owner" });
-  if (membershipError) {
-    await rollback();
-    fail(membershipError, "Could not create the owner membership");
-  }
-
-  await admin.from("tenant_settings").upsert({
-    tenant_id: tenant.id,
-    display_name: business.business_name,
-    currency: "PHP",
-    locale: "en-PH",
-  });
-
-  const timestamp = new Date().toISOString();
-  const { error: updateError } = await admin
-    .from("account_applications")
-    .update({
-      status: "approved",
-      approved_at: timestamp,
-      decided_at: timestamp,
-      reviewed_at: timestamp,
-      reviewed_by: actor.displayName,
-      review_notes: null,
-      tenant_id: tenant.id,
-    })
-    .eq("id", id)
-    .eq("status", "pending");
-  if (updateError) {
-    await rollback();
-    fail(updateError, "Could not record the approval");
-  }
-
-  await logActivity(admin, {
-    actor,
-    applicationId: id,
-    business: business.business_name,
-    action: "Verification completed",
-    category: "verification",
-    before: "Pending",
-    after: "Approved",
-    reason: "Application reviewed and approved by the platform administrator.",
-  });
+  if (error) decisionFailed(error, "Could not approve the application");
 
   const message = `${business.business_name} has been approved.`;
   const email = await dispatchApprovalEmail(admin, id);
   return email.ok
     ? { message: `${message} An approval email was sent to ${app.email}.` }
-    : { message, warning: `The approval email could not be sent to ${app.email}: ${email.error}` };
-
+    : { message, warning: `The approval email could not be sent: ${email.error}` };
 }
 
 async function dispatchApprovalEmail(admin: AdminClient, id: string): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -736,68 +675,52 @@ export async function resendApprovalEmail(id: string): Promise<DecisionResult> {
 }
 
 /**
- * Reject a pending application: email the applicant the reason (with a link to register again),
- * then erase the account, documents and images so the same email/details can be submitted afresh.
+ * Reject a pending application: record the decision, email the applicant the reason (with a link
+ * to register again), then erase the account, documents and images so they can apply afresh.
+ * Running it again on a rejected application finishes an interrupted erase.
  */
 export async function rejectApplication(id: string, reason: string, actor: AdminActor): Promise<DecisionResult> {
   const admin = createAdminClient();
   const joined = await getJoined(admin, id);
   const { app, identity, business } = joined;
-  if (app.status !== "pending") throw new ServiceError("Only pending applications can be rejected.", 409);
+
+  const { data: recorded, error } = await admin.rpc("reject_application", {
+    p_application_id: id,
+    p_actor_id: actor.id,
+    p_actor_name: actor.displayName,
+    p_reason: reason,
+  });
+  if (error) decisionFailed(error, "Could not record the rejection");
 
   const name = business?.business_name ?? app.full_name;
   let mailError: string | null = null;
-  try {
-    await sendRejectionEmail({
-      to: app.email,
-      ownerName: identity?.owner_legal_name ?? app.full_name,
-      businessName: name,
-      reason,
-    });
-  } catch (error) {
-    mailError = error instanceof Error ? error.message : "Unknown mail error.";
+  if (recorded) {
+    try {
+      await sendRejectionEmail({
+        to: app.email,
+        ownerName: identity?.owner_legal_name ?? app.full_name,
+        businessName: name,
+        reason,
+      });
+      await admin.from("rejected_accounts").update({ email_sent: true }).eq("application_id", id);
+    } catch (sendError) {
+      mailError = sendError instanceof Error ? sendError.message : "Unknown mail error.";
+    }
   }
 
-  // Permanent record first: if this fails nothing is deleted, so no history is ever lost.
-  const rejectedAt = new Date().toISOString();
-  const { error: recordError } = await admin.from("rejected_accounts").upsert(
-    {
-      application_id: app.id,
-      reference_code: app.reference_code,
-      email: app.email,
-      full_name: app.full_name,
-      owner_legal_name: identity?.owner_legal_name ?? app.full_name,
-      phone: app.phone,
-      business_name: business?.business_name ?? null,
-      business_type: business?.business_type ?? null,
-      location: business ? `${business.city}, ${business.province}` : null,
-      plan_code: app.plan_code,
-      rejection_reason: reason,
-      submitted_at: app.submitted_at,
-      rejected_at: rejectedAt,
-      rejected_by: actor.displayName,
-      email_sent: mailError === null,
-    },
-    { onConflict: "application_id" }
-  );
-  if (recordError) fail(recordError, "Could not save the rejection record. Nothing was deleted");
-
-  await purgeApplication(admin, joined);
-  await logActivity(admin, {
-    actor,
-    applicationId: null,
-    business: name,
-    action: "Application rejected",
-    category: "verification",
-    before: "Pending",
-    after: "Rejected and removed",
-    reason: `${reason} — ${mailError ? "rejection email failed to send" : `rejection email sent to ${app.email}`}; all submitted data was deleted.`,
-  });
+  try {
+    await purgeApplication(admin, joined);
+  } catch (purgeError) {
+    logError("applications.reject.purge", purgeError);
+    return {
+      message: `${name} was rejected.`,
+      warning: "Some submitted data could not be removed yet. Reject this application again to finish removing it.",
+    };
+  }
 
   const message = `${name} was rejected and all submitted data was removed.`;
-  return mailError
-    ? { message, warning: `The rejection email could not be sent to ${app.email}: ${mailError}` }
-    : { message: `${message} A rejection email with a link to register again was sent to ${app.email}.` };
+  if (mailError) return { message, warning: `The rejection email could not be sent: ${mailError}` };
+  return { message: recorded ? `${message} A rejection email with a link to register again was sent to ${app.email}.` : message };
 }
 
 /** Remove every file stored under `<folder>/` in a bucket (handles more than one page of results). */
@@ -921,29 +844,14 @@ export async function deleteApplication(id: string, actor: AdminActor): Promise<
 
 export async function setAccess(ids: string[], access: "active" | "suspended", reason: string, actor: AdminActor): Promise<DecisionResult> {
   const admin = createAdminClient();
-  let changed = 0;
-  for (const id of ids) {
-    const { app, business } = await getJoined(admin, id);
-    const target = access === "suspended" ? "suspended" : "approved";
-    if (app.status === target || (app.status !== "approved" && app.status !== "suspended")) continue;
-
-    const { error } = await admin.from("account_applications").update({ status: target }).eq("id", id);
-    if (error) fail(error, "Could not update account access");
-    if (app.tenant_id) {
-      await admin.from("tenants").update({ status: access === "suspended" ? "suspended" : "active" }).eq("id", app.tenant_id);
-    }
-    await logActivity(admin, {
-      actor,
-      applicationId: id,
-      business: business?.business_name ?? app.full_name,
-      action: access === "suspended" ? "Account suspended" : "Account reactivated",
-      category: "account",
-      before: access === "suspended" ? "Active" : "Suspended",
-      after: access === "suspended" ? "Suspended" : "Active",
-      reason,
-    });
-    changed += 1;
-  }
+  const { data: changed, error } = await admin.rpc("set_account_access", {
+    p_application_ids: ids,
+    p_suspend: access === "suspended",
+    p_actor_id: actor.id,
+    p_actor_name: actor.displayName,
+    p_reason: reason,
+  });
+  if (error) decisionFailed(error, "Could not update account access");
   return { message: `${changed} ${changed === 1 ? "tenant" : "tenants"} ${access === "suspended" ? "suspended" : "reactivated"}.` };
 }
 

@@ -2084,6 +2084,18 @@ type DatabaseCore = {
       };
       get_my_tenant_id: { Args: Record<PropertyKey, never>; Returns: string };
       is_platform_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
+      approve_application: {
+        Args: { p_application_id: string; p_actor_id: string; p_actor_name: string; p_slug_base: string; p_trial_days: number }
+        Returns: string
+      }
+      reject_application: {
+        Args: { p_application_id: string; p_actor_id: string; p_actor_name: string; p_reason: string }
+        Returns: boolean
+      }
+      set_account_access: {
+        Args: { p_application_ids: string[]; p_suspend: boolean; p_actor_id: string; p_actor_name: string; p_reason: string }
+        Returns: number
+      }
       tenant_staff_seat_limit: { Args: { p_tenant_id: string }; Returns: number | null };
       match_services: {
         Args: { match_count: number; p_tenant_id: string; query_embedding: string };

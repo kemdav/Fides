@@ -3,6 +3,7 @@ import { getAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database.types";
+import { isSitePublic } from "./visibility";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -11,6 +12,7 @@ export interface StorefrontTenant {
   name: string;
   slug: string;
   status: string;
+  isPublished: boolean | null;
   logoUrl: string | null;
   brandColor: string | null;
   accentColor: string | null;
@@ -109,6 +111,7 @@ export async function getStorefrontTenant(
       address,
       phone,
       tenant_settings (
+        is_published,
         display_name,
         about,
         headline,
@@ -162,6 +165,7 @@ export async function getStorefrontTenant(
     name: data.name,
     slug: data.slug,
     status: data.status,
+    isPublished: settings?.is_published ?? null,
     logoUrl: data.logo_url ?? null,
     brandColor: data.brand_color ?? null,
     accentColor: data.accent_color ?? null,
@@ -304,7 +308,7 @@ export async function getStorefrontHomeData(
   slug: string
 ): Promise<StorefrontHomeData | null> {
   const tenant = await getStorefrontTenant(slug);
-  if (!tenant || tenant.status !== "active") return null;
+  if (!tenant || !isSitePublic(tenant.status, tenant.isPublished)) return null;
 
   const [services, staff] = await Promise.all([
     getStorefrontServices(tenant.id),
@@ -326,7 +330,7 @@ export async function getStorefrontServicesData(
   slug: string
 ): Promise<StorefrontServicesData | null> {
   const tenant = await getStorefrontTenant(slug);
-  if (!tenant || tenant.status !== "active") return null;
+  if (!tenant || !isSitePublic(tenant.status, tenant.isPublished)) return null;
 
   const [services, categories] = await Promise.all([
     getStorefrontServices(tenant.id),

@@ -7,6 +7,7 @@ import {
 } from "@/components/storefront";
 import { getStorefrontNav } from "@/components/storefront/storefront-data";
 import { getTenantBySlug } from "@/lib/supabase/queries";
+import { isSitePublic } from "@/lib/storefront/visibility";
 
 interface AboutPageProps {
   params: Promise<{ slug: string }>;
@@ -35,7 +36,7 @@ export default async function AboutPage({ params }: AboutPageProps) {
   const { slug } = await params;
   const tenant = await getTenantBySlug(slug);
 
-  if (!tenant || tenant.status !== "active") {
+  if (!tenant || !isSitePublic(tenant.status, tenant.is_published)) {
     notFound();
   }
 

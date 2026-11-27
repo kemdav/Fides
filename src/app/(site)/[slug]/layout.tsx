@@ -2,7 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { normalizeBrandColor, readableForeground } from "@/lib/brand-colors";
 import { getTenantBySlug } from "@/lib/supabase/queries";
-import { getStorefrontHomeData } from "@/lib/storefront";
+import { getStorefrontTenant } from "@/lib/storefront";
 import {
   TenantProvider,
   type TenantContextValue,
@@ -49,9 +49,9 @@ export default async function TenantLayout({
   params,
 }: TenantLayoutProps) {
   const { slug } = await params;
-  const [tenant, storefrontData] = await Promise.all([
+  const [tenant, theme] = await Promise.all([
     getTenantBySlug(slug),
-    getStorefrontHomeData(slug),
+    getStorefrontTenant(slug),
   ]);
 
   // If the tenant does not exist or is not active, trigger 404
@@ -85,7 +85,6 @@ export default async function TenantLayout({
     show_opening_hours: tenant.show_opening_hours,
   };
 
-  const theme = storefrontData?.tenant;
   const fonts = getTypographyFonts(theme?.typography);
   const mainColor = normalizeBrandColor(tenant.brand_color || theme?.brandColor || null, "");
   const secondaryColor = normalizeBrandColor(tenant.secondary_color, "");

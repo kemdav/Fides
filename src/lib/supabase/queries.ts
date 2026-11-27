@@ -7,6 +7,7 @@ export type TenantData = {
   name: string;
   slug: string;
   status: string;
+  is_published: boolean | null;
   logo_url: string | null;
   brand_color: string | null;
   secondary_color: string | null;
@@ -44,6 +45,7 @@ export async function getTenantBySlug(slug: string): Promise<TenantData | null> 
       address,
       phone,
       tenant_settings (
+        is_published,
         display_name,
         about,
         headline,
@@ -84,6 +86,7 @@ export async function getTenantBySlug(slug: string): Promise<TenantData | null> 
     name: data.name,
     slug: data.slug,
     status: data.status,
+    is_published: settings?.is_published ?? null,
     logo_url: data.logo_url ?? null,
     brand_color: data.brand_color ?? null,
     secondary_color: data.secondary_color ?? null,

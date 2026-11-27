@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { isSitePublic } from "@/lib/storefront/visibility";
 import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { TENANT_HEADER } from "@/lib/tenant/constants";
@@ -48,10 +49,14 @@ export async function GET(request: NextRequest) {
     const { data: settings } = await admin
       .from("tenant_settings")
       .select(
-        "typography, headline, supporting_message, cover_photo_name, cover_photo_url, show_featured_services, show_contact_details, business_category, about, business_email, phone_number, instagram, street_address, city_province, postal_code, hours_mon_fri, hours_sat, hours_sun, time_zone, show_opening_hours, custom_domain, custom_domain_status, page_title, meta_description, allow_indexing, social_title, social_description, social_image_url, social_image_name, published_at"
+        "is_published, typography, headline, supporting_message, cover_photo_name, cover_photo_url, show_featured_services, show_contact_details, business_category, about, business_email, phone_number, instagram, street_address, city_province, postal_code, hours_mon_fri, hours_sat, hours_sun, time_zone, show_opening_hours, custom_domain, custom_domain_status, page_title, meta_description, allow_indexing, social_title, social_description, social_image_url, social_image_name, published_at"
       )
       .eq("tenant_id", tenant.id)
       .maybeSingle();
+
+    if (!isSitePublic(tenant.status, settings?.is_published)) {
+      return NextResponse.json({ error: "Tenant is inactive" }, { status: 403 });
+    }
 
     return NextResponse.json({
       tenant: {
