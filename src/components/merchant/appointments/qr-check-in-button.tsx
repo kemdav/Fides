@@ -86,7 +86,7 @@ export function QrCheckInButton({ tenantId }: { tenantId: string }): ReactElemen
           <header className="mb-4 flex items-start justify-between gap-2">
             <div className="min-w-0">
               <h2 id={titleId} className="font-display text-[26px] leading-[34px] text-ink">QR Check In</h2>
-              {!success && <p className="mt-1 text-xs text-muted">Scan the QR code or enter it below.</p>}
+              {!success && <p className="mt-1 text-xs text-muted">Scan the QR code or type the check-in code.</p>}
             </div>
             <Button variant="ghost" size="md" className="shrink-0" disabled={pending} onClick={() => setOpen(false)} aria-label="Close QR check-in">
               <Icon name="close" className="size-5" />

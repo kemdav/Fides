@@ -156,7 +156,6 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
       status,
     });
     if (res.success) {
-      showToast(res.message);
       void refreshData();
     } else {
       showToast(res.error);
@@ -502,7 +501,6 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
         onClose={() => setWalkInOpen(false)}
         onCreated={() => void refreshData()}
         onWaitlistAdded={() => void refreshData()}
-        showToast={showToast}
       />
 
       <AssignSlotModal
@@ -513,12 +511,11 @@ export function WalkInsView({ initialData }: WalkInsViewProps) {
         preselectedStaffId={assignPreselectStaffId}
         onClose={() => setAssigningEntry(null)}
         onConverted={() => void refreshData()}
-        showToast={showToast}
       />
 
       {/* Toast */}
       {toast && (
-        <div className="fixed bottom-5 right-5 z-50 rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-white shadow-lg">
+        <div role="alert" className="fixed bottom-5 right-5 z-50 rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-white shadow-lg">
           {toast}
         </div>
       )}

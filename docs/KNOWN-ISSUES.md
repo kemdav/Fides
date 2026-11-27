@@ -119,6 +119,10 @@ Controls that exist are listed in [SECURITY](SECURITY.md). Still open:
 
 ## 9. Fixed recently (for context)
 
+Removed bottom-right success toasts from catalog, appointment, and walk-in actions. Existing confirmation dialogs and error messages still provide feedback.
+
+Local databases initialized from the legacy numbered migrations can lack the catalog columns needed by Services. The existing `20261122141500_service_management.sql` migration restores the Services, Packages, and Add-ons columns without a database reset.
+
 Staff invitation screens display the invited email as text and use the tenant’s website palette. Workspace sign-in uses the palette when the workspace is included in the link.
 
 The tenant QR check-in placeholder moved from the sidebar to the booking toolbar on Overview and Appointments. The camera starts automatically and manual entry is available below the preview. Confirmed appointments show a check-in code in Appointment Details.

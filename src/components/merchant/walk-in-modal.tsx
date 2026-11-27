@@ -34,7 +34,6 @@ interface WalkInModalProps {
   onClose: () => void;
   onCreated?: (result: WalkInResult) => void;
   onWaitlistAdded?: () => void;
-  showToast: (message: string) => void;
 }
 
 function formatPeso(cents: number): string {
@@ -59,7 +58,6 @@ export function WalkInModal({
   onClose,
   onCreated,
   onWaitlistAdded,
-  showToast,
 }: WalkInModalProps) {
   const [services, setServices] = React.useState<WalkInServiceOption[]>(
     propServices ?? [],
@@ -205,7 +203,6 @@ export function WalkInModal({
         return;
       }
 
-      showToast(`${customer.trim()} added to the waiting list.`);
       onWaitlistAdded?.();
       setConfirmation("waitlist");
     } finally {
@@ -266,7 +263,6 @@ export function WalkInModal({
         status: "Confirmed",
         startsAt: result.data.startsAt,
       });
-      showToast(`Walk-in appointment created for ${result.data.customerName}`);
       setConfirmation("appointment");
     } finally {
       setIsSubmitting(false);

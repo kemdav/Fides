@@ -305,7 +305,6 @@ export function AppointmentsView({
         showToast(res.error || "Failed to update.");
         return;
       }
-      showToast(`Status updated to ${newStatus}`);
       router.refresh();
     } catch (err: unknown) {
       setItems(prevItems);
@@ -330,7 +329,6 @@ export function AppointmentsView({
         showToast(res.error || "Failed to cancel.");
         return;
       }
-      showToast(`Appointment for ${target.customer} cancelled.`);
       router.refresh();
     } catch (err: unknown) {
       setItems(prevItems);
@@ -1398,7 +1396,7 @@ export function AppointmentsView({
 
       {/* Toast */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-ink text-white px-4 py-2.5 rounded-[10px] shadow-xl text-xs font-medium">
+        <div role="alert" className="fixed bottom-6 right-6 z-50 bg-ink text-white px-4 py-2.5 rounded-[10px] shadow-xl text-xs font-medium">
           {toastMessage}
         </div>
       )}
@@ -1457,7 +1455,6 @@ export function AppointmentsView({
             ...prev,
           ]);
         }}
-        showToast={showToast}
       />
       <WalkInModal
         isOpen={isWalkInOpen}
@@ -1478,7 +1475,6 @@ export function AppointmentsView({
             ...prev,
           ]);
         }}
-        showToast={showToast}
       />
     </div>
   );

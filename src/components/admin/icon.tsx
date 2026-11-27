@@ -47,6 +47,7 @@ export type IconName =
   | "trash"
   | "upload"
   | "user"
+  | "user-plus"
   | "users"
   | "verified"
   | "warning";
