@@ -15,6 +15,7 @@ import {
   BOOKING_ADDONS,
   getStorefrontNav,
 } from "@/components/storefront/storefront-data";
+import { Icon } from "@/components/admin/icon";
 import { useTenant } from "@/providers/tenant-provider";
 
 export type BookingServiceOption = {
@@ -162,35 +163,139 @@ function StaffRadioOption({
   );
 }
 
+const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/** Local-time YYYY-MM-DD key for a calendar day. */
 function getDateKey(date: Date) {
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(date.getUTCDate()).padStart(2, "0");
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
-function getDateOptions() {
-  const now = new Date();
-  const today = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 12)
-  );
+function isClosedHours(hours: string | null | undefined) {
+  return !!hours && /closed/i.test(hours);
+}
 
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(today);
-    date.setUTCDate(today.getUTCDate() + index + 1);
-    return {
-      value: getDateKey(date),
-      weekday: new Intl.DateTimeFormat("en", {
-        weekday: "short",
-        timeZone: "UTC",
-      }).format(date),
-      label: new Intl.DateTimeFormat("en", {
-        month: "short",
-        day: "numeric",
-        timeZone: "UTC",
-      }).format(date),
-    };
+/** Minutes since midnight for a label like "2:30 PM". */
+function parseTimeLabel(label: string) {
+  const match = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i.exec(label.trim());
+  if (!match) return 0;
+  const hours = (Number(match[1]) % 12) + (/pm/i.test(match[3]) ? 12 : 0);
+  return hours * 60 + Number(match[2]);
+}
+
+function BookingCalendar({
+  selectedDate,
+  closedWeekdays,
+  onSelect,
+}: {
+  selectedDate: string;
+  closedWeekdays: Set<number>;
+  onSelect: (value: string) => void;
+}) {
+  const [today] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
   });
+  const [visibleMonth, setVisibleMonth] = useState(() => {
+    if (selectedDate) {
+      const [year, month] = selectedDate.split("-").map(Number);
+      return new Date(year, month - 1, 1);
+    }
+    return new Date(today.getFullYear(), today.getMonth(), 1);
+  });
+
+  const year = visibleMonth.getFullYear();
+  const month = visibleMonth.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const leadingBlanks = new Date(year, month, 1).getDay();
+  const isCurrentMonth =
+    year === today.getFullYear() && month === today.getMonth();
+  const monthLabel = new Intl.DateTimeFormat("en", {
+    month: "long",
+    year: "numeric",
+  }).format(visibleMonth);
+
+  function shiftMonth(offset: number) {
+    setVisibleMonth(new Date(year, month + offset, 1));
+  }
+
+  return (
+    <div className="mt-3 rounded-xl border border-line p-4 sm:max-w-md">
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          aria-label="Previous month"
+          disabled={isCurrentMonth}
+          onClick={() => shiftMonth(-1)}
+          className="grid size-9 place-items-center rounded-lg border border-line text-ink transition-colors hover:border-burnt/50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-line focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
+        >
+          <Icon name="chevron-down" weight="bold" className="size-4 rotate-90" />
+        </button>
+        <p aria-live="polite" className="text-sm font-semibold text-ink">
+          {monthLabel}
+        </p>
+        <button
+          type="button"
+          aria-label="Next month"
+          onClick={() => shiftMonth(1)}
+          className="grid size-9 place-items-center rounded-lg border border-line text-ink transition-colors hover:border-burnt/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
+        >
+          <Icon name="chevron-down" weight="bold" className="size-4 -rotate-90" />
+        </button>
+      </div>
+
+      <div className="mt-4 grid grid-cols-7 gap-1 text-center">
+        {WEEKDAY_LABELS.map((label) => (
+          <span key={label} className="py-1 text-xs font-semibold text-muted">
+            {label}
+          </span>
+        ))}
+        {Array.from({ length: leadingBlanks }, (_, index) => (
+          <span key={`blank-${index}`} aria-hidden />
+        ))}
+        {Array.from({ length: daysInMonth }, (_, index) => {
+          const date = new Date(year, month, index + 1);
+          const value = getDateKey(date);
+          const isPast = date < today;
+          const isClosed = closedWeekdays.has(date.getDay());
+          const isDisabled = isPast || isClosed;
+          const isSelected = selectedDate === value;
+          const isToday = date.getTime() === today.getTime();
+          return (
+            <button
+              key={value}
+              type="button"
+              disabled={isDisabled}
+              aria-pressed={isSelected}
+              aria-label={`${formatSelectedDate(value)}${
+                isClosed ? " (closed)" : ""
+              }`}
+              onClick={() => onSelect(value)}
+              className={`aspect-square rounded-lg text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed ${
+                isSelected
+                  ? "bg-burnt text-white"
+                  : isDisabled
+                    ? "text-muted/40 line-through decoration-muted/30"
+                    : `text-ink hover:bg-burnt/10 ${
+                        isToday ? "ring-1 ring-burnt/50" : ""
+                      }`
+              }`}
+            >
+              {index + 1}
+            </button>
+          );
+        })}
+      </div>
+
+      {closedWeekdays.size > 0 ? (
+        <p className="mt-3 text-xs text-muted">
+          Unavailable dates are past days or days the business is closed.
+        </p>
+      ) : null}
+    </div>
+  );
 }
 
 function formatSelectedDate(value: string) {
@@ -260,7 +365,17 @@ export function StorefrontServicePage({
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const dates = useMemo(() => getDateOptions(), []);
+  const tenant = useTenant();
+  const closedWeekdays = useMemo(() => {
+    const closed = new Set<number>();
+    if (isClosedHours(tenant.hours_sun)) closed.add(0);
+    if (isClosedHours(tenant.hours_mon_fri)) [1, 2, 3, 4, 5].forEach((day) => closed.add(day));
+    if (isClosedHours(tenant.hours_sat)) closed.add(6);
+    return closed;
+  }, [tenant.hours_sun, tenant.hours_mon_fri, tenant.hours_sat]);
+  const now = new Date();
+  const isTodaySelected = selectedDate === getDateKey(now);
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
   const selectedService = services.find(
     (service) => service.id === selectedServiceId
@@ -578,33 +693,15 @@ export function StorefrontServicePage({
                 <h3 className="mt-6 text-sm font-semibold text-ink">
                   Date
                 </h3>
-                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
-                  {dates.map((date) => {
-                    const isSelected = selectedDate === date.value;
-                    return (
-                      <button
-                        key={date.value}
-                        type="button"
-                        aria-pressed={isSelected}
-                        onClick={() => {
-                          setSelectedDate(date.value);
-                          setSelectedTime("");
-                          setError(null);
-                        }}
-                        className={`rounded-lg border px-3 py-3 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${
-                          isSelected
-                            ? "border-burnt bg-burnt text-white"
-                            : "border-line bg-white text-ink hover:border-burnt/50"
-                        }`}
-                      >
-                        <span className="block text-xs">{date.weekday}</span>
-                        <span className="mt-1 block text-sm font-semibold">
-                          {date.label}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+                <BookingCalendar
+                  selectedDate={selectedDate}
+                  closedWeekdays={closedWeekdays}
+                  onSelect={(value) => {
+                    setSelectedDate(value);
+                    setSelectedTime("");
+                    setError(null);
+                  }}
+                />
 
                 <h3 className="mt-7 text-sm font-semibold text-ink">
                   Preferred time
@@ -617,7 +714,10 @@ export function StorefrontServicePage({
                         key={time}
                         type="button"
                         aria-pressed={isSelected}
-                        disabled={!selectedDate}
+                        disabled={
+                          !selectedDate ||
+                          (isTodaySelected && parseTimeLabel(time) <= nowMinutes)
+                        }
                         onClick={() => {
                           setSelectedTime(time);
                           setError(null);
