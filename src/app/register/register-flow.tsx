@@ -28,8 +28,8 @@ import {
   TRIAL_DAYS,
   type BusinessDocumentKey,
   type IdentityDocumentKey,
-  type DocumentKey,
-} from "@/lib/registration/options";
+  type DocumentKey } from "@/lib/registration/options";
+import { currentPlanCode, defaultPlanCode, type PublicPlan } from "@/lib/plans/catalog";
 import { businessDocumentsFor } from "@/lib/registration/document-requirements";
 import {
   accountStepSchema,
@@ -55,6 +55,7 @@ import {
 } from "@/lib/registration/address";
 import {
   PlanCardGrid,
+  PlansProvider,
   SelectedPlanSummary,
 } from "./plan-selection";
 import { EmailVerificationStep } from "./email-verification-step";
@@ -132,7 +133,7 @@ const initialValues: Values = {
   city: "",
   province: "",
   zipCode: "",
-  planCode: "professional",
+  planCode: "business",
   confirmAccuracy: false,
 };
 
@@ -180,11 +181,21 @@ function readDraft(key: string) {
   }
 }
 
-export function RegisterFlow({
-  requestAccount = false,
-}: {
+type RegisterFlowProps = {
   requestAccount?: boolean;
-}) {
+  /** active plans, read from the catalog by the page */
+  plans: PublicPlan[];
+};
+
+export function RegisterFlow(props: RegisterFlowProps) {
+  return (
+    <PlansProvider value={props.plans}>
+      <RegisterSteps {...props} />
+    </PlansProvider>
+  );
+}
+
+function RegisterSteps({ requestAccount = false, plans }: RegisterFlowProps) {
   const draftKey = requestAccount
     ? "fides-account-request-draft"
     : "fides-registration-draft";
@@ -192,7 +203,7 @@ export function RegisterFlow({
   const [step, setStep] = useState(0);
   const [furthest, setFurthest] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
-  const [values, setValues] = useState<Values>(initialValues);
+  const [values, setValues] = useState<Values>(() => ({ ...initialValues, planCode: defaultPlanCode(plans) }));
   const [errors, setErrors] = useState<Errors>({});
   const [logo, setLogo] = useState<File | null>(null);
   const [logoError, setLogoError] = useState<string | null>(null);
@@ -279,6 +290,7 @@ export function RegisterFlow({
         return valid ? [[key, value]] : [];
       })) as Partial<Values>;
       const restoredValues = { ...initialValues, ...restored };
+      restoredValues.planCode = currentPlanCode(restoredValues.planCode, plans);
       setValues(restoredValues);
       setErrors({});
       setDocErrors({});
@@ -1700,7 +1712,7 @@ function PlanStep({
       <Heading
         title="Select your subscription package"
         className="mb-10 sm:mb-12"
-        subtitle="The Professional plan is pre-selected. You can change your plan anytime after launch."
+        subtitle="You can change your plan anytime after launch."
       />
       <PlanCardGrid
         selectedCode={values.planCode}

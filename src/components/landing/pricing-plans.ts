@@ -1,9 +1,12 @@
-import { formatPeso, PLAN_OPTIONS, type PlanOptionCode } from "@/lib/registration/options";
+import type { PublicPlan } from "@/lib/plans/catalog";
+import { formatPeso } from "@/lib/registration/options";
 import { landingLinks } from "./links";
 import type { Plan } from "./plan-card";
 
-const appearance = {
-  starter: {
+type Appearance = Pick<Plan, "cta" | "background" | "divider" | "icon" | "filledIcon" | "checkTone" | "featured">;
+
+const appearance: Record<string, Appearance> = {
+  basic: {
     cta: "Get Started",
     background: "/images/landing/plan-starter-bg.svg",
     divider: "/images/landing/plan-divider-starter.svg",
@@ -11,7 +14,7 @@ const appearance = {
     filledIcon: "/images/landing/icon-psychiatry-filled.svg",
     checkTone: "success",
   },
-  professional: {
+  business: {
     cta: "Start Growing",
     background: "/images/landing/plan-pro-bg.svg",
     divider: "/images/landing/plan-divider-pro.svg",
@@ -20,20 +23,36 @@ const appearance = {
     checkTone: "powder",
     featured: true,
   },
-  business: {
+  enterprise: {
     cta: "Scale Your Business",
     background: "/images/landing/plan-business-bg.svg",
     divider: "/images/landing/plan-divider-business.svg",
     icon: "/images/landing/icon-apartment.svg",
     checkTone: "deep",
   },
-} satisfies Record<PlanOptionCode, Pick<Plan, "cta" | "background" | "divider" | "icon" | "filledIcon" | "checkTone" | "featured">>;
+};
 
-export const plans: (Plan & { code: PlanOptionCode })[] = PLAN_OPTIONS.map((plan) => ({
-  ...plan,
-  ...appearance[plan.code],
-  price: formatPeso(plan.price),
-  billed: "Billed monthly",
-  includes: plan.includes ?? undefined,
-  href: landingLinks.signup,
-}));
+/** a tier an administrator adds later borrows the plain look */
+const plain: Appearance = {
+  cta: "Get Started",
+  background: "/images/landing/plan-starter-bg.svg",
+  divider: "/images/landing/plan-divider-starter.svg",
+  icon: "/images/landing/icon-psychiatry.svg",
+  checkTone: "success",
+};
+
+export type PlanCardData = Plan & { code: string };
+
+export function toPlanCards(plans: readonly PublicPlan[]): PlanCardData[] {
+  return plans.map((plan) => ({
+    ...(appearance[plan.code] ?? plain),
+    code: plan.code,
+    name: plan.name,
+    description: plan.description,
+    features: plan.features,
+    price: formatPeso(plan.price),
+    billed: "Billed monthly",
+    includes: plan.includes ?? undefined,
+    href: landingLinks.signup,
+  }));
+}

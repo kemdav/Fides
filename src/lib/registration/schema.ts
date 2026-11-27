@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BUSINESS_TYPES, BUSINESS_TYPE_MAX_LENGTH, ID_TYPES, OTHER_BUSINESS_TYPE, PLAN_OPTIONS } from "./options";
+import { BUSINESS_TYPES, BUSINESS_TYPE_MAX_LENGTH, ID_TYPES, OTHER_BUSINESS_TYPE } from "./options";
 import { slugSchema } from "@/lib/registration/slug";
 import { hasIndustryDocumentRequirements } from "./document-requirements";
 
@@ -121,9 +121,8 @@ const base = z.object({
   province: text("Province / region", 80),
   zipCode: text("ZIP code", 12).regex(/^[0-9]+$/, "Enter a ZIP code using numbers only."),
 
-  planCode: z.enum(PLAN_OPTIONS.map((plan) => plan.code) as [string, ...string[]], {
-    error: "Select a subscription package.",
-  }),
+  // the server checks the code against the live catalog
+  planCode: z.string({ error: "Select a subscription package." }).regex(/^[a-z0-9][a-z0-9_-]{0,59}$/, "Select a subscription package."),
   confirmAccuracy: z.literal(true, { error: "Please confirm that your information is accurate." }),
 });
 

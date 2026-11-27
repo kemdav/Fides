@@ -106,63 +106,6 @@ export function documentByteLimit(key: DocumentKey): number {
     : FILE_LIMITS.documentBytes;
 }
 
-export const PLAN_OPTIONS = [
-  {
-    code: "starter",
-    name: "Starter",
-    price: 499,
-    description:
-      "Get started with essential tools to manage your services and bookings. Ideal for new providers building their business.",
-    includes: null,
-    features: [
-      "Real-Time Booking Calendar",
-      "Custom Service & Pricing Menu",
-      "Staff & Resource Allocation",
-      "Walk-in Registration & Booking",
-      "QR Code Check-in System",
-      "Instant Booking & Status Email Alerts",
-      "Status Tracking & Audit Logs",
-      "Daily Operations Dashboard",
-      "Customer Profile & Visit History",
-      "Basic Sales & Activity Reports",
-      "Annual BIR Tax-Ready Reports",
-    ],
-  },
-  {
-    code: "professional",
-    name: "Professional",
-    price: 1299,
-    description:
-      "Unlock powerful tools to grow your bookings and streamline your daily operations. Ideal for growing providers ready to expand their reach.",
-    includes: "(Includes all Starter features, plus:)",
-    features: [
-      "24/7 AI Booking Assistant",
-      "Automated Email Reminders",
-      "Smart Waiting List Management",
-      "Automated Commission Tracking",
-      "Detailed Sales & Operational Analytics",
-      "Quarterly BIR Tax-Ready Reports",
-    ],
-  },
-  {
-    code: "business",
-    name: "Business",
-    price: 3999,
-    description:
-      "Take your business further with advanced tools for teams, locations, and operations. Ideal for established providers ready to scale.",
-    includes: "(Includes all Professional Tier features, plus:)",
-    features: [
-      "Multi-Branch Management",
-      "Centralized Executive Dashboard & Analytics",
-      "Multi-Branch Inventory Tracking",
-      "Consolidated Multi-Branch BIR Reporting",
-      "Location-Based Role & Access Control",
-    ],
-  },
-] as const;
-
-export type PlanOptionCode = (typeof PLAN_OPTIONS)[number]["code"];
-
 export function formatPeso(value: number): string {
   return `₱${value.toLocaleString("en-PH", { maximumFractionDigits: 2 })}`;
 }

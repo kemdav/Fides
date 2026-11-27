@@ -1,5 +1,6 @@
 import { features } from "@/components/landing/features";
-import { plans } from "@/components/landing/pricing-plans";
+import type { PublicPlan } from "@/lib/plans/catalog";
+import { formatPeso } from "@/lib/registration/options";
 import { siteConfig } from "@/lib/site";
 
 export const landingTitle = "Fides | Booking and Business Management for Service Businesses";
@@ -9,9 +10,7 @@ export const landingDescription =
 
 export const baseUrl = siteConfig.url.replace(/\/$/, "");
 
-const priceOf = (label: string) => Number(label.replace(/[^\d.]/g, ""));
-
-export function buildStructuredData() {
+export function buildStructuredData(plans: readonly PublicPlan[]) {
   const org = `${baseUrl}/#organization`;
   const site = `${baseUrl}/#website`;
   const software = `${baseUrl}/#software`;
@@ -60,12 +59,12 @@ export function buildStructuredData() {
           name: plan.name,
           description: plan.description,
           url: `${baseUrl}/register`,
-          price: priceOf(plan.price),
+          price: plan.price,
           priceCurrency: "PHP",
           availability: "https://schema.org/InStock",
           priceSpecification: {
             "@type": "UnitPriceSpecification",
-            price: priceOf(plan.price),
+            price: plan.price,
             priceCurrency: "PHP",
             unitCode: "MON",
             unitText: "month",
@@ -76,11 +75,11 @@ export function buildStructuredData() {
   };
 }
 
-export function buildLlmsTxt() {
+export function buildLlmsTxt(plans: readonly PublicPlan[]) {
   const featureLines = features.map((feature) => `- ${feature.title}: ${feature.description}`);
   const planLines = plans.map(
     (plan) =>
-      `- ${plan.name} (${plan.price} per month): ${plan.description}${
+      `- ${plan.name} (${formatPeso(plan.price)} per month): ${plan.description}${
         plan.includes ? ` ${plan.includes.replace(/[()]/g, "")}` : ""
       } Includes: ${plan.features.join("; ")}.`
   );

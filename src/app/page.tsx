@@ -9,6 +9,7 @@ import { Hero } from "@/components/landing/hero";
 import { Operations } from "@/components/landing/operations";
 import { Pricing } from "@/components/landing/pricing";
 import { buildStructuredData, landingDescription, landingTitle } from "@/lib/landing-seo";
+import { getPublicPlans } from "@/lib/plans/public";
 
 export const metadata: Metadata = {
   title: { absolute: landingTitle },
@@ -29,8 +30,12 @@ export const metadata: Metadata = {
   },
 };
 
-export default function Home() {
-  const structuredData = JSON.stringify(buildStructuredData()).replace(/</g, "\\u003c");
+// plan prices come from the catalog: refresh every 5 minutes, and at once when an admin saves a tier
+export const revalidate = 300;
+
+export default async function Home() {
+  const plans = await getPublicPlans();
+  const structuredData = JSON.stringify(buildStructuredData(plans)).replace(/</g, "\\u003c");
 
   return (
     <div className="bg-powder">
@@ -45,7 +50,7 @@ export default function Home() {
         <Hero />
         <Operations />
         <Features />
-        <Pricing />
+        <Pricing plans={plans} />
         <Cta />
       </main>
       <Footer />

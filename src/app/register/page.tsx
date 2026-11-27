@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getPublicPlans } from "@/lib/plans/public";
 import { RegisterFlow } from "./register-flow";
 
 export const metadata: Metadata = {
@@ -6,6 +7,8 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
 };
 
-export default function RegisterPage() {
-  return <RegisterFlow />;
+export const revalidate = 300;
+
+export default async function RegisterPage() {
+  return <RegisterFlow plans={await getPublicPlans()} />;
 }

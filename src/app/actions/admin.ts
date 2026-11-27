@@ -33,6 +33,11 @@ import type { ActionResult } from "@/lib/result";
 
 export type DecisionValue = { warning?: string };
 
+/** pages that show plan names and prices */
+function refreshPlanPages(): void {
+  for (const path of ["/", "/register", "/request-account", "/llms.txt"]) revalidatePath(path);
+}
+
 /** a finished decision refreshes every admin screen */
 async function decided(result: Promise<DecisionResult>): Promise<AdminOutcome<DecisionValue>> {
   const { message, warning } = await result;
@@ -77,11 +82,19 @@ export async function sendBillingRemindersAction(input: unknown): Promise<Action
 }
 
 export async function saveTierAction(input: unknown): Promise<ActionResult<DecisionValue>> {
-  return adminAction("save-tier", saveTierInput, input, (tier, admin) => decided(savePlan(tier, admin)));
+  return adminAction("save-tier", saveTierInput, input, async (tier, admin) => {
+    const outcome = await decided(savePlan(tier, admin));
+    refreshPlanPages();
+    return outcome;
+  });
 }
 
 export async function deactivateTierAction(input: unknown): Promise<ActionResult<DecisionValue>> {
-  return adminAction("deactivate-tier", tierInput, input, ({ code }, admin) => decided(deactivatePlan(code, admin)));
+  return adminAction("deactivate-tier", tierInput, input, async ({ code }, admin) => {
+    const outcome = await decided(deactivatePlan(code, admin));
+    refreshPlanPages();
+    return outcome;
+  });
 }
 
 export async function documentLinkAction(input: unknown): Promise<ActionResult<DocumentLink>> {
