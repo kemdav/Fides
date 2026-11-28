@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -16,6 +16,7 @@ import {
   getStorefrontNav,
 } from "@/components/storefront/storefront-data";
 import { Icon } from "@/components/admin/icon";
+import { formatTimeManila, getManilaDateKey } from "@/lib/date-utils";
 import { useTenant } from "@/providers/tenant-provider";
 
 export type BookingServiceOption = {
@@ -49,6 +50,7 @@ export type BookingStaffOption = {
 
 const BOOKING_STEPS = ["Service", "Staff", "Date & time", "Review"];
 const TIME_OPTIONS = ["9:00 AM", "10:30 AM", "1:00 PM", "2:30 PM", "4:00 PM"];
+const BELLA_VITA_PREVIEW_BREAK = { start: 12 * 60, end: 13 * 60 };
 
 function formatPrice(priceCents: number) {
   return `₱${Math.round(priceCents / 100).toLocaleString("en-PH")}`;
@@ -203,56 +205,65 @@ function getDateKey(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-function isClosedHours(hours: string | null | undefined) {
-  return !!hours && /closed/i.test(hours);
+type OpeningHours = { opens: number; closes: number } | "closed" | null;
+
+/** Minutes since midnight for a display time such as "2:30 PM" or "14:30". */
+function parseTimeLabel(label: string) {
+  const match = /^(\d{1,2}):([0-5]\d)\s*(AM|PM)?$/i.exec(label.trim());
+  if (!match) return null;
+  const [, hours, minutes, period] = match;
+  const hour = Number(hours);
+  if (period ? hour < 1 || hour > 12 : hour > 23) return null;
+  const hour24 = period ? (hour % 12) + (/pm/i.test(period) ? 12 : 0) : hour;
+  return hour24 * 60 + Number(minutes);
 }
 
-/** Minutes since midnight for a label like "2:30 PM". */
-function parseTimeLabel(label: string) {
-  const match = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i.exec(label.trim());
-  if (!match) return 0;
-  const hours = (Number(match[1]) % 12) + (/pm/i.test(match[3]) ? 12 : 0);
-  return hours * 60 + Number(match[2]);
+function parseOpeningHours(hours: string | null | undefined): OpeningHours {
+  if (!hours) return null;
+  if (/\bclosed\b/i.test(hours)) return "closed";
+  const parts = hours.split(/\s*[-–—]\s*|\s+to\s+/i);
+  if (parts.length !== 2) return null;
+  const [opens, closes] = parts.map(parseTimeLabel);
+  return opens !== null && closes !== null && opens < closes
+    ? { opens, closes }
+    : null;
 }
 
 function BookingCalendar({
+  today,
   selectedDate,
-  closedWeekdays,
+  weeklyHours,
   onSelect,
 }: {
+  today: string;
   selectedDate: string;
-  closedWeekdays: Set<number>;
+  weeklyHours: readonly OpeningHours[];
   onSelect: (value: string) => void;
 }) {
-  const [today] = useState(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  });
   const [visibleMonth, setVisibleMonth] = useState(() => {
-    if (selectedDate) {
-      const [year, month] = selectedDate.split("-").map(Number);
-      return new Date(year, month - 1, 1);
-    }
-    return new Date(today.getFullYear(), today.getMonth(), 1);
+    const [year, month] = (selectedDate || today).split("-").map(Number);
+    return new Date(year, month - 1, 1);
   });
 
-  const year = visibleMonth.getFullYear();
-  const month = visibleMonth.getMonth();
+  const [currentYear, currentMonth] = today.split("-").map(Number);
+  const firstMonth = new Date(currentYear, currentMonth - 1, 1);
+  const monthToShow = visibleMonth < firstMonth ? firstMonth : visibleMonth;
+  const year = monthToShow.getFullYear();
+  const month = monthToShow.getMonth();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const leadingBlanks = new Date(year, month, 1).getDay();
-  const isCurrentMonth =
-    year === today.getFullYear() && month === today.getMonth();
+  const isCurrentMonth = year === currentYear && month === currentMonth - 1;
   const monthLabel = new Intl.DateTimeFormat("en", {
     month: "long",
     year: "numeric",
-  }).format(visibleMonth);
+  }).format(monthToShow);
 
   function shiftMonth(offset: number) {
     setVisibleMonth(new Date(year, month + offset, 1));
   }
 
   return (
-    <div className="mt-3 rounded-xl border border-line p-4 sm:max-w-md">
+    <div className="mt-3 rounded-xl border border-line p-4">
       <div className="flex items-center justify-between">
         <button
           type="button"
@@ -288,28 +299,29 @@ function BookingCalendar({
         {Array.from({ length: daysInMonth }, (_, index) => {
           const date = new Date(year, month, index + 1);
           const value = getDateKey(date);
-          const isPast = date < today;
-          const isClosed = closedWeekdays.has(date.getDay());
+          const isPast = value < today;
+          const isClosed = weeklyHours[date.getDay()] === "closed";
           const isDisabled = isPast || isClosed;
-          const isSelected = selectedDate === value;
-          const isToday = date.getTime() === today.getTime();
+          const isSelected = !isDisabled && selectedDate === value;
+          const isToday = value === today;
           return (
             <button
               key={value}
               type="button"
               disabled={isDisabled}
               aria-pressed={isSelected}
+              aria-current={isToday ? "date" : undefined}
               aria-label={`${formatSelectedDate(value)}${
                 isClosed ? " (closed)" : ""
               }`}
               onClick={() => onSelect(value)}
-              className={`aspect-square rounded-lg text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed ${
-                isSelected
-                  ? "bg-burnt text-white"
-                  : isDisabled
-                    ? "text-muted/40 line-through decoration-muted/30"
-                    : `text-ink hover:bg-burnt/10 ${
-                        isToday ? "ring-1 ring-burnt/50" : ""
+              className={`aspect-square rounded-lg border text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 disabled:cursor-not-allowed ${
+                isDisabled
+                  ? "border-transparent text-muted/50 line-through"
+                  : isSelected
+                    ? "border-burnt bg-burnt/10 text-ink"
+                    : `border-transparent text-ink hover:border-burnt/50 hover:bg-burnt/5 ${
+                        isToday ? "underline decoration-burnt underline-offset-4" : ""
                       }`
               }`}
             >
@@ -319,11 +331,9 @@ function BookingCalendar({
         })}
       </div>
 
-      {closedWeekdays.size > 0 ? (
-        <p className="mt-3 text-xs text-muted">
-          Unavailable dates are past days or days the business is closed.
-        </p>
-      ) : null}
+      <p className="mt-3 text-xs text-muted">
+        Unavailable dates are past days or days the business is closed.
+      </p>
     </div>
   );
 }
@@ -399,16 +409,23 @@ export function StorefrontServicePage({
   const [selectedTime, setSelectedTime] = useState("");
   const [error, setError] = useState<string | null>(null);
   const tenant = useTenant();
-  const closedWeekdays = useMemo(() => {
-    const closed = new Set<number>();
-    if (isClosedHours(tenant.hours_sun)) closed.add(0);
-    if (isClosedHours(tenant.hours_mon_fri)) [1, 2, 3, 4, 5].forEach((day) => closed.add(day));
-    if (isClosedHours(tenant.hours_sat)) closed.add(6);
-    return closed;
-  }, [tenant.hours_sun, tenant.hours_mon_fri, tenant.hours_sat]);
+  const isBellaVita = tenant.slug === "bella-vita";
+  const weekdayHours =
+    parseOpeningHours(tenant.hours_mon_fri) ??
+    (isBellaVita ? { opens: 9 * 60, closes: 18 * 60 } : null);
+  const saturdayHours =
+    parseOpeningHours(tenant.hours_sat) ??
+    (isBellaVita ? { opens: 10 * 60, closes: 17 * 60 } : null);
+  const sundayHours =
+    parseOpeningHours(tenant.hours_sun) ??
+    (isBellaVita ? "closed" : null);
+  const weeklyHours = [
+    sundayHours,
+    ...Array<OpeningHours>(5).fill(weekdayHours),
+    saturdayHours,
+  ];
   const now = new Date();
-  const isTodaySelected = selectedDate === getDateKey(now);
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const today = getManilaDateKey(now);
 
   const selectedService = services.find(
     (service) => service.id === selectedServiceId
@@ -451,29 +468,78 @@ export function StorefrontServicePage({
     selectedStaffId === "any"
       ? null
       : serviceStaff.find((member) => member.id === selectedStaffId) ?? null;
+  const availableTimes = getAvailableTimes(selectedDate, now, today);
+  const hasDateAndTime = availableTimes.includes(selectedTime);
+
+  function getAvailableTimes(
+    date: string,
+    currentTime: Date,
+    currentDay = getManilaDateKey(currentTime),
+  ) {
+    if (!date || date < currentDay) return [];
+
+    const hours = weeklyHours[new Date(`${date}T00:00:00Z`).getUTCDay()];
+    if (hours === "closed") return [];
+
+    const elapsedMinutes =
+      date === currentDay ? parseTimeLabel(formatTimeManila(currentTime)) ?? -1 : -1;
+
+    return TIME_OPTIONS.filter((time) => {
+      const start = parseTimeLabel(time);
+      if (start === null || start <= elapsedMinutes) return false;
+
+      const end = start + totalMinutes;
+      if (
+        hours &&
+        (start < hours.opens || start >= hours.closes || end > hours.closes)
+      ) {
+        return false;
+      }
+
+      const pause = BELLA_VITA_PREVIEW_BREAK;
+      return !isBellaVita || start >= pause.end || end <= pause.start;
+    });
+  }
 
   function continueToNextStep() {
-    setError(null);
     if (step === 0 && !selectedService) {
       setError("Choose a service to continue.");
       return;
     }
-    if (step === 2 && (!selectedDate || !selectedTime)) {
-      setError("Choose a date and time to continue.");
-      return;
-    }
     const next = Math.min(step + 1, BOOKING_STEPS.length - 1);
-    setStep(next);
-    setFurthestStep((current) => Math.max(current, next));
+    goToStep(next);
   }
 
   function goToStep(index: number) {
+    const currentTime = new Date();
+    if (
+      index === 3 &&
+      !getAvailableTimes(selectedDate, currentTime).includes(selectedTime)
+    ) {
+      setError("Choose an available date and time to continue.");
+      return;
+    }
+
+    if (index === 2 && !selectedDate) {
+      const currentDay = getManilaDateKey(currentTime);
+      const date = new Date(`${currentDay}T00:00:00Z`);
+      for (let offset = 0; offset < 7; offset += 1) {
+        const candidate = date.toISOString().slice(0, 10);
+        if (getAvailableTimes(candidate, currentTime, currentDay).length > 0) {
+          setSelectedDate(candidate);
+          break;
+        }
+        date.setUTCDate(date.getUTCDate() + 1);
+      }
+    }
+
     setError(null);
     setStep(index);
+    setFurthestStep((current) => Math.max(current, index));
   }
 
   function continueToAccount() {
-    if (!selectedService || !selectedDate || !selectedTime) return;
+    if (!selectedService || !hasDateAndTime) return;
     router.push("/login");
   }
 
@@ -511,7 +577,7 @@ export function StorefrontServicePage({
               const isReachable =
                 !isCurrent &&
                 index <= furthestStep &&
-                (index < 3 || (!!selectedDate && !!selectedTime));
+                (index < 3 || hasDateAndTime);
               return (
                 <li key={label}>
                   <button
@@ -737,48 +803,71 @@ export function StorefrontServicePage({
                   These are preferences for the front-end booking preview;
                   availability is not confirmed.
                 </p>
-                <h3 className="mt-6 text-sm font-semibold text-ink">
-                  Date
-                </h3>
-                <BookingCalendar
-                  selectedDate={selectedDate}
-                  closedWeekdays={closedWeekdays}
-                  onSelect={(value) => {
-                    setSelectedDate(value);
-                    setSelectedTime("");
-                    setError(null);
-                  }}
-                />
-
-                <h3 className="mt-7 text-sm font-semibold text-ink">
-                  Preferred time
-                </h3>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {TIME_OPTIONS.map((time) => {
-                    const isSelected = selectedTime === time;
-                    return (
-                      <button
-                        key={time}
-                        type="button"
-                        aria-pressed={isSelected}
-                        disabled={
-                          !selectedDate ||
-                          (isTodaySelected && parseTimeLabel(time) <= nowMinutes)
+                <div className="mt-6 grid grid-cols-1 items-start gap-8 md:grid-cols-[auto_minmax(0,1fr)]">
+                  <div className="w-full max-w-md md:w-sm lg:w-md">
+                    <h3 className="text-sm font-semibold text-ink">Date</h3>
+                    <BookingCalendar
+                      today={today}
+                      selectedDate={selectedDate}
+                      weeklyHours={weeklyHours}
+                      onSelect={(value) => {
+                        if (selectedDate !== value) {
+                          setSelectedDate(value);
+                          setSelectedTime("");
                         }
-                        onClick={() => {
-                          setSelectedTime(time);
-                          setError(null);
-                        }}
-                        className={`rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${
-                          isSelected
-                            ? "border-burnt bg-burnt text-white"
-                            : "border-line bg-white text-ink hover:border-burnt/50"
-                        }`}
-                      >
-                        {time}
-                      </button>
-                    );
-                  })}
+                        setError(null);
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <h3
+                      id="booking-preferred-time"
+                      className="text-sm font-semibold text-ink"
+                    >
+                      Preferred time
+                    </h3>
+                    <div
+                      role="group"
+                      aria-labelledby="booking-preferred-time"
+                      aria-describedby="booking-preferred-time-zone"
+                      className="mt-3 flex flex-wrap gap-3"
+                    >
+                      {TIME_OPTIONS.map((time) => {
+                        const isDisabled = !availableTimes.includes(time);
+                        const isSelected = !isDisabled && selectedTime === time;
+                        return (
+                          <button
+                            key={time}
+                            type="button"
+                            aria-pressed={isSelected}
+                            disabled={isDisabled}
+                            onClick={() => {
+                              setSelectedTime((current) => (current === time ? "" : time));
+                              setError(null);
+                            }}
+                            className={`rounded-lg border px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40 ${
+                              isDisabled
+                                ? "border-line bg-mist text-muted/60"
+                                : isSelected
+                                  ? "border-burnt bg-burnt/15 text-ink"
+                                  : "border-outline bg-white text-ink hover:border-burnt hover:bg-burnt/5"
+                            }`}
+                          >
+                            {time}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {selectedDate && availableTimes.length === 0 ? (
+                      <p className="mt-3 text-sm text-muted">
+                        Choose another date to see more times.
+                      </p>
+                    ) : null}
+                    <p id="booking-preferred-time-zone" className="mt-3 text-xs text-muted">
+                      Times shown in Asia/Manila (UTC+8).
+                    </p>
+                  </div>
                 </div>
               </div>
             ) : null}
@@ -870,15 +959,16 @@ export function StorefrontServicePage({
               </p>
             ) : null}
 
-            <div className="mt-8 flex flex-col-reverse gap-3 border-t border-line pt-5 sm:flex-row sm:justify-between">
+            <div
+              className={`mt-8 flex flex-col-reverse gap-3 border-t border-line sm:flex-row sm:justify-between ${
+                step === 2 ? "pt-6 sm:items-center" : "pt-5"
+              }`}
+            >
               {step > 0 ? (
                 <Button
                   variant="brand-outline"
                   size="md"
-                  onClick={() => {
-                    setError(null);
-                    setStep((current) => Math.max(current - 1, 0));
-                  }}
+                  onClick={() => goToStep(step - 1)}
                 >
                   Back
                 </Button>
@@ -900,7 +990,7 @@ export function StorefrontServicePage({
                   variant="brand"
                   size="lg"
                   onClick={continueToAccount}
-                  disabled={!selectedService || !selectedDate || !selectedTime}
+                  disabled={!selectedService || !hasDateAndTime}
                 >
                   Continue to account
                   <span aria-hidden>→</span>
