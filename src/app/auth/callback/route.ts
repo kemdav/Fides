@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { mapAuthError, AUTH_ERROR_MESSAGES } from "@/lib/auth/error-handler";
+import { limitByClient, MINUTES } from "@/lib/rate-limit";
 
 /**
  * Supabase Auth Callback Route Handler.
@@ -13,6 +14,9 @@ import { mapAuthError, AUTH_ERROR_MESSAGES } from "@/lib/auth/error-handler";
  * a fresh link instead of dropping them into a broken UI state.
  */
 export async function GET(request: NextRequest) {
+  if (await limitByClient("auth-callback", { limit: 30, windowMs: MINUTES })) {
+    return NextResponse.json({ error: "Too many requests. Try again shortly." }, { status: 429 });
+  }
   const { searchParams, origin } = new URL(request.url);
 
   // 1. Check for errors passed directly by Supabase Auth in query params

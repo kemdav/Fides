@@ -16,7 +16,10 @@ export type LoginState = { error: string | null; email: string; fieldErrors?: Lo
 export async function login(_previous: LoginState, formData: FormData): Promise<LoginState> {
   const email = String(formData.get("email") ?? "");
 
-  if (await limitByClient("login", { limit: 10, windowMs: 15 * MINUTES }, email)) {
+  if (
+    await limitByClient("login-ip", { limit: 30, windowMs: 15 * MINUTES }) ||
+    await limitByClient("login", { limit: 10, windowMs: 15 * MINUTES }, email)
+  ) {
     return { error: "Too many login attempts. Please wait a few minutes and try again.", email };
   }
 

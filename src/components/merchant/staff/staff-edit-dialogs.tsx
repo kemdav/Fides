@@ -118,7 +118,7 @@ export function StaffEmailChangeDialog({ name, tenantId, staffId, currentEmail, 
         <div className="flex justify-end gap-2">
           <Button variant="secondary" size="xs" onClick={onClose} disabled={busy}>Cancel</Button>
           <Button variant="brand" size="xs" type="submit" disabled={busy || !currentEmail || !email.trim()}>
-            {busy ? "Sending…" : "Send verification email"}
+            Send verification email
           </Button>
         </div>
       </form>

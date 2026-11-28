@@ -48,6 +48,7 @@ export function DatePicker({
   compact = false,
   disabled = false,
   className,
+  floating: _floating = false,
 }: {
   id: string;
   value: string;
@@ -64,6 +65,7 @@ export function DatePicker({
   compact?: boolean;
   disabled?: boolean;
   className?: string;
+  floating?: boolean;
 }) {
   const now = new Date();
   const today: Parts = { y: now.getFullYear(), m: now.getMonth(), d: now.getDate() };

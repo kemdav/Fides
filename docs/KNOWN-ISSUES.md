@@ -60,7 +60,7 @@ Controls that exist are listed in [SECURITY](SECURITY.md). Still open:
 | S1 | The old Gmail app password is still in git history. | P1 | S | Revoke it in the Google account (history rewrite is optional). |
 | S2 | Admin accounts have no password reset and no MFA. "Forgot password" on `/admin/login` is design only, and the Figma MFA and "unauthorized role" states are not wired. | P2 | M | Needs a product decision (email reset for local accounts vs moving admins to Supabase auth). |
 | S3 | RLS and RPC guards are not covered by automated tests. | P1 | M | Add SQL or script tests: tenant A cannot read/write tenant B; `anon` cannot execute the guarded RPCs. |
-| S4 | The in-memory rate-limit fallback is per process. | P2 | S | Production must set `REDIS_URL`. Add a startup warning check in the deploy checklist. |
+| S4 | The in-memory rate-limit fallback is per process during a Redis outage. | P2 | S | Production startup requires `REDIS_URL`. Monitor Redis availability so an outage does not extend per-process fallback. |
 | S5 | `GET /api/tenant/website-settings` and the storefront services route use the service-role client for public reads. Intentional, but each should be reviewed for exactly the columns returned. | P3 | S | |
 | S6 | Contact forms (global and storefront) send mail or insert rows with no spam challenge beyond the honeypot and rate limit. | P3 | S | Consider a captcha if abuse appears. |
 | S7 | `ADMIN_SESSION_SECRET` and `ADMIN_ACCOUNTS` must be set per environment. Missing `ADMIN_ACCOUNTS` silently disables admin login. | P2 | S | Fail loudly on startup in production. |
@@ -118,6 +118,20 @@ Controls that exist are listed in [SECURITY](SECURITY.md). Still open:
 5. **Hardening:** T1 `noUncheckedIndexedAccess`, S2 admin reset/MFA, Q2 e2e, F8 accessibility.
 
 ## 9. Fixed recently (for context)
+
+The Payments dashboard read now runs through a server-only service and queries after the shared tenant guard. Registration, invitation, and storefront entry points use the shared Redis limiter. Production validates Redis configuration at startup.
+
+Local databases initialized from the legacy numbered migrations can also lack the Payments dashboard columns. Applying the existing `20261124192400_payments_module.sql` migration restores payment details, appointment balances, and the VAT setting.
+
+Removed bottom-right success toasts from catalog, appointment, and walk-in actions. Existing confirmation dialogs and error messages still provide feedback.
+
+Local databases initialized from the legacy numbered migrations can lack the catalog columns needed by Services. The existing `20261122141500_service_management.sql` migration restores the Services, Packages, and Add-ons columns without a database reset.
+
+Staff invitation screens display the invited email as text and use the tenant’s website palette. Workspace sign-in uses the palette when the workspace is included in the link.
+
+The tenant QR check-in placeholder moved from the sidebar to the booking toolbar on Overview and Appointments. The camera starts automatically and manual entry is available below the preview. QR check-in uses the same Appointment Details dialog as the appointment table, with a Back action to return to code entry.
+
+Accent-filled controls and featured KPI cards on tenant pages use the main website color for foregrounds when configured.
 
 Unauthenticated account-request API removed; tenant checks added to walk-in and appointment-status actions; walk-in RPC guard
 (`assert_tenant_operator`, migration `rpc_tenant_guard`); rate limiting with Redis; admin accounts moved to hashed env config; patched `next`, `zod`,

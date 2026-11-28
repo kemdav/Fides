@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+
 export const merchantNameTypography =
   "break-words font-display text-[clamp(24px,3.2vh,32px)] leading-[clamp(29px,4vh,38px)] tracking-tight";
 
@@ -20,4 +22,28 @@ export function readableForeground(background: string, preferred: string): strin
   const fg = colorLuminance(preferred);
   const ratio = (Math.max(bg, fg) + 0.05) / (Math.min(bg, fg) + 0.05);
   return ratio >= 4.5 ? preferred : bg > 0.179 ? "#000000" : "#ffffff";
+}
+
+type TenantColorStyle = CSSProperties & Partial<Record<
+  "--color-powder" | "--color-sky" | "--color-burnt" | "--color-burnt-dark" | "--color-on-burnt",
+  string
+>>;
+
+export function tenantColorStyle(
+  main: string | null,
+  secondary: string | null,
+  accent: string | null,
+): TenantColorStyle {
+  const mainColor = normalizeBrandColor(main, "");
+  const secondaryColor = normalizeBrandColor(secondary, "");
+  const accentColor = normalizeBrandColor(accent, "");
+
+  return {
+    ...(mainColor ? { "--color-powder": mainColor } : {}),
+    ...(secondaryColor ? { "--color-sky": secondaryColor } : {}),
+    ...(accentColor ? { "--color-burnt": accentColor, "--color-burnt-dark": accentColor } : {}),
+    ...(mainColor || accentColor
+      ? { "--color-on-burnt": mainColor || readableForeground(accentColor, "#ffffff") }
+      : {}),
+  };
 }

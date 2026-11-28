@@ -33,11 +33,10 @@ const manageItems: NavigationItem[] = [
   { label: "Appointments", icon: "calendar", suffix: "/appointments" },
   {
     label: "Walk-ins",
-    icon: "users",
+    icon: "user-plus",
     suffix: "/walk-ins",
     access: "operations",
   },
-  { label: "QR check-in", icon: "qr-code", access: "operations" },
   {
     label: "Customers",
     icon: "users",

@@ -107,7 +107,6 @@ function CatalogFilterSection<T extends string>({ title, options, value, onChang
 
 interface ToastState {
   id: string;
-  type: "success" | "error" | "info";
   message: string;
 }
 
@@ -415,10 +414,10 @@ export function ServicesView({
   // Local Toast notifications
   const [toasts, setToasts] = React.useState<ToastState[]>([]);
 
-  const showToast = React.useCallback(
-    (type: "success" | "error" | "info", message: string) => {
+  const showErrorToast = React.useCallback(
+    (message: string) => {
       const id = Math.random().toString(36).substring(2, 9);
-      setToasts((prev) => [...prev, { id, type, message }]);
+      setToasts((prev) => [...prev, { id, message }]);
       setTimeout(() => {
         setToasts((prev) => prev.filter((t) => t.id !== id));
       }, 4000);
@@ -591,18 +590,12 @@ export function ServicesView({
           description: `“${service.name}” is now visible and bookable.`,
         });
       }
-      showToast(
-        "success",
-        nextStatus
-          ? `“${service.name}” is now active on your booking page.`
-          : `“${service.name}” has been deactivated.`
-      );
     } else {
       // Revert optimistic update
       setServices((prev) =>
         prev.map((s) => (s.id === service.id ? { ...s, active: !nextStatus } : s))
       );
-      showToast("error", res.error);
+      showErrorToast(res.error);
     }
   };
 
@@ -662,9 +655,8 @@ export function ServicesView({
           title: "Service Updated",
           description: `Changes to “${data.name}” have been saved.`,
         });
-        showToast("success", "Service updated successfully.");
       } else {
-        showToast("error", res.error);
+        showErrorToast(res.error);
       }
     } else {
       // Create
@@ -682,7 +674,7 @@ export function ServicesView({
       setIsSubmitting(false);
 
       if (!res.success) {
-        showToast("error", res.error);
+        showErrorToast(res.error);
         return;
       }
 
@@ -714,7 +706,6 @@ export function ServicesView({
           title: "Service Created",
           description: `“${data.name}” has been added to your service catalog.`,
         });
-        showToast("success", "Service created successfully.");
       }
     }
   };
@@ -739,15 +730,11 @@ export function ServicesView({
           description: `“${pkg.name}” is now visible and bookable.`,
         });
       }
-      showToast(
-        "success",
-        nextStatus ? `“${pkg.name}” is now active.` : `“${pkg.name}” deactivated.`
-      );
     } else {
       setPackages((prev) =>
         prev.map((p) => (p.id === pkg.id ? { ...p, active: !nextStatus } : p))
       );
-      showToast("error", res.error);
+      showErrorToast(res.error);
     }
   };
 
@@ -806,9 +793,8 @@ export function ServicesView({
           title: "Package Updated",
           description: `Changes to “${data.name}” have been saved.`,
         });
-        showToast("success", "Package updated successfully.");
       } else {
-        showToast("error", res.error);
+        showErrorToast(res.error);
       }
     } else {
       const res = await createPackageAction({
@@ -823,7 +809,7 @@ export function ServicesView({
       setIsSubmitting(false);
 
       if (!res.success) {
-        showToast("error", res.error);
+        showErrorToast(res.error);
         return;
       }
 
@@ -859,7 +845,6 @@ export function ServicesView({
           title: "Package Created",
           description: `“${data.name}” has been created.`,
         });
-        showToast("success", "Package created successfully.");
       }
     }
   };
@@ -884,15 +869,11 @@ export function ServicesView({
           description: `“${addon.name}” is now visible and bookable.`,
         });
       }
-      showToast(
-        "success",
-        nextStatus ? `“${addon.name}” is now active.` : `“${addon.name}” deactivated.`
-      );
     } else {
       setAddons((prev) =>
         prev.map((a) => (a.id === addon.id ? { ...a, active: !nextStatus } : a))
       );
-      showToast("error", res.error);
+      showErrorToast(res.error);
     }
   };
 
@@ -942,9 +923,8 @@ export function ServicesView({
           title: "Add-on Updated",
           description: `Changes to “${data.name}” have been saved.`,
         });
-        showToast("success", "Add-on updated successfully.");
       } else {
-        showToast("error", res.error);
+        showErrorToast(res.error);
       }
     } else {
       const res = await createAddonAction({
@@ -959,7 +939,7 @@ export function ServicesView({
       setIsSubmitting(false);
 
       if (!res.success) {
-        showToast("error", res.error);
+        showErrorToast(res.error);
         return;
       }
 
@@ -985,7 +965,6 @@ export function ServicesView({
           title: "Add-on Created",
           description: `“${data.name}” has been created.`,
         });
-        showToast("success", "Add-on created successfully.");
       }
     }
   };
@@ -1010,9 +989,8 @@ export function ServicesView({
             title: "Service Hidden",
             description: `“${item.name}” is now hidden from your public booking menu.`,
           });
-          showToast("success", `“${item.name}” hidden.`);
         } else {
-          showToast("error", res.error);
+          showErrorToast(res.error);
         }
       } else if (type === "package") {
         const res = await togglePackageStatusAction(item.id, tenantId, false);
@@ -1026,9 +1004,8 @@ export function ServicesView({
             title: "Package Hidden",
             description: `“${item.name}” is now hidden from your public booking menu.`,
           });
-          showToast("success", `“${item.name}” hidden.`);
         } else {
-          showToast("error", res.error);
+          showErrorToast(res.error);
         }
       } else if (type === "add-on") {
         const res = await toggleAddonStatusAction(item.id, tenantId, false);
@@ -1042,9 +1019,8 @@ export function ServicesView({
             title: "Add-on Hidden",
             description: `“${item.name}” is now hidden from your public booking menu.`,
           });
-          showToast("success", `“${item.name}” hidden.`);
         } else {
-          showToast("error", res.error);
+          showErrorToast(res.error);
         }
       }
       return;
@@ -1066,9 +1042,8 @@ export function ServicesView({
           title: "Service Archived",
           description: `“${item.name}” has been hidden and archived.`,
         });
-        showToast("success", `“${item.name}” moved to Archived.`);
       } else {
-        showToast("error", res.error);
+        showErrorToast(res.error);
       }
     } else if (type === "package") {
       const res = await archivePackageAction(item.id, tenantId);
@@ -1086,9 +1061,8 @@ export function ServicesView({
           title: "Package Archived",
           description: `“${item.name}” has been hidden and archived.`,
         });
-        showToast("success", `“${item.name}” moved to Archived.`);
       } else {
-        showToast("error", res.error);
+        showErrorToast(res.error);
       }
     } else if (type === "add-on") {
       const res = await archiveAddonAction(item.id, tenantId);
@@ -1106,9 +1080,8 @@ export function ServicesView({
           title: "Add-on Archived",
           description: `“${item.name}” has been hidden and archived.`,
         });
-        showToast("success", `“${item.name}” moved to Archived.`);
       } else {
-        showToast("error", res.error);
+        showErrorToast(res.error);
       }
     }
   };
@@ -1130,7 +1103,6 @@ export function ServicesView({
           title: "Service Deleted",
           description: `“${item.name}” was permanently deleted.`,
         });
-        showToast("success", `“${item.name}” was permanently deleted.`);
       } else {
         setDeleteTarget(null);
         if (res.isLinkedToAppointments) {
@@ -1139,7 +1111,7 @@ export function ServicesView({
             message: res.error,
           });
         } else {
-          showToast("error", res.error);
+          showErrorToast(res.error);
         }
       }
     } else if (type === "package") {
@@ -1154,9 +1126,8 @@ export function ServicesView({
           title: "Package Deleted",
           description: `“${item.name}” was permanently deleted.`,
         });
-        showToast("success", `“${item.name}” was permanently deleted.`);
       } else {
-        showToast("error", res.error);
+        showErrorToast(res.error);
       }
     } else if (type === "add-on") {
       const res = await deleteAddonAction(item.id, tenantId);
@@ -1170,9 +1141,8 @@ export function ServicesView({
           title: "Add-on Deleted",
           description: `“${item.name}” was permanently deleted.`,
         });
-        showToast("success", `“${item.name}” was permanently deleted.`);
       } else {
-        showToast("error", res.error);
+        showErrorToast(res.error);
       }
     }
   };
@@ -1188,9 +1158,8 @@ export function ServicesView({
           title: "Service Restored",
           description: `“${item.name}” has been restored to your service catalog.`,
         });
-        showToast("success", `“${item.name}” restored to Services catalog.`);
       } else {
-        showToast("error", res.error);
+        showErrorToast(res.error);
       }
     } else if (type === "package") {
       const res = await unarchivePackageAction(item.id, tenantId);
@@ -1202,9 +1171,8 @@ export function ServicesView({
           title: "Package Restored",
           description: `“${item.name}” has been restored to Packages.`,
         });
-        showToast("success", `“${item.name}” restored to Packages.`);
       } else {
-        showToast("error", res.error);
+        showErrorToast(res.error);
       }
     } else if (type === "add-on") {
       const res = await unarchiveAddonAction(item.id, tenantId);
@@ -1216,9 +1184,8 @@ export function ServicesView({
           title: "Add-on Restored",
           description: `“${item.name}” has been restored to Add-ons.`,
         });
-        showToast("success", `“${item.name}” restored to Add-ons.`);
       } else {
-        showToast("error", res.error);
+        showErrorToast(res.error);
       }
     }
   };
@@ -2075,9 +2042,8 @@ export function ServicesView({
               title: "Service Archived",
               description: `“${srv.name}” has been archived instead to keep appointment records safe.`,
             });
-            showToast("success", `“${srv.name}” moved to Archived.`);
           } else {
-            showToast("error", res.error);
+            showErrorToast(res.error);
           }
         }}
         title={blockedDeleteError?.service.name || ""}
@@ -2113,13 +2079,8 @@ export function ServicesView({
           {toasts.map((t) => (
             <div
               key={t.id}
-              className={`flex items-start gap-3 rounded-lg border p-3.5 text-xs font-medium shadow-lg ${
-                t.type === "error"
-                  ? "bg-danger-dark/90 border-danger-dark text-white"
-                  : t.type === "success"
-                  ? "bg-ink/90 border-body text-white"
-                  : "bg-ink/90 border-body text-mist"
-              }`}
+              role="alert"
+              className="flex items-start gap-3 rounded-lg border border-danger-dark bg-danger-dark/90 p-3.5 text-xs font-medium text-white shadow-lg"
             >
               <div className="flex-1">{t.message}</div>
             </div>

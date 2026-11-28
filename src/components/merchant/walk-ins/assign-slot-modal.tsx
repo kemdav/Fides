@@ -23,7 +23,6 @@ interface AssignSlotModalProps {
   preselectedStaffId?: string;
   onClose: () => void;
   onConverted: () => void;
-  showToast: (message: string) => void;
 }
 
 function formatPeso(cents: number): string {
@@ -47,7 +46,6 @@ export function AssignSlotModal({
   preselectedStaffId,
   onClose,
   onConverted,
-  showToast,
 }: AssignSlotModalProps) {
   const [selectedStaffId, setSelectedStaffId] = React.useState("");
   const [date, setDate] = React.useState(getTodayManila);
@@ -164,7 +162,6 @@ export function AssignSlotModal({
         return;
       }
 
-      showToast(`Slot assigned for ${entry.customerName}.`);
       onConverted();
       setAssignedSuccess(true);
     } finally {

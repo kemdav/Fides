@@ -11,7 +11,7 @@ export async function getStaffInvitation(token: string) {
   const admin = getAdminClient();
   if (!admin) return null;
   const { data, error } = await admin.from("staff_invitations")
-    .select("email, full_name, role, expires_at, tenants!inner(slug, name, timezone)")
+    .select("email, full_name, role, expires_at, tenants!inner(slug, name, timezone, brand_color, secondary_color, accent_color)")
     .eq("token_hash", hashStaffInvitation(token)).is("accepted_at", null).is("cancelled_at", null)
     .gt("expires_at", new Date().toISOString()).eq("tenants.status", "active").maybeSingle();
   if (error) throw error;

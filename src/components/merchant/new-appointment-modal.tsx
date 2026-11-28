@@ -155,7 +155,6 @@ interface Props {
   staff?: AppointmentStaffOption[];
   onClose: () => void;
   onCreated: (result: NewAppointmentResult) => void;
-  showToast: (msg: string) => void;
   bookingMode?: "appointment" | "walk-in";
 }
 
@@ -174,7 +173,6 @@ export function NewAppointmentModal({
   staff = [],
   onClose,
   onCreated,
-  showToast,
   bookingMode = "appointment",
 }: Props) {
   const router = useRouter();
@@ -293,7 +291,6 @@ export function NewAppointmentModal({
     setCustomerEmail(customer.email);
     setCustomerPhone(customer.phone);
     setStep1Error(null);
-    showToast(`${customer.name} selected`);
   };
 
   const handleSubmit = async () => {
@@ -335,7 +332,6 @@ export function NewAppointmentModal({
 
       const created = res.data;
       onCreated({ id: created.id, time, customer: created.customerName, service: created.serviceName, staff: created.staffName, source: sourceLabel, status: "Confirmed", startsAt: created.starts_at });
-      showToast(`Appointment booked for ${created.customerName}`);
       router.refresh();
       onClose();
     } catch (err: unknown) {

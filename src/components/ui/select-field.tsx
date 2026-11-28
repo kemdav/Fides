@@ -38,6 +38,7 @@ export function SelectField<T extends string = string>({
   /** where the list opens; "auto" flips above when there is no room below */
   placement?: "auto" | "above" | "below";
   /** Keep the list above scroll containers, such as dialogs. */
+
   floating?: boolean;
   invalid?: boolean;
   placeholder?: string;

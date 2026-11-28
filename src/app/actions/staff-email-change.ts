@@ -6,6 +6,7 @@ import { createClient as createAuthClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { limitByClient, MINUTES } from "@/lib/rate-limit";
 import { publicEnv } from "@/lib/env";
 import { staffEmailVerificationMessage } from "@/lib/mail/emails";
 import { canDeliverVerificationLinks, isSmtpMailConfigured, sendMail, sendSmtpMail } from "@/lib/mail/mailer";
@@ -99,6 +100,9 @@ export async function requestStaffEmailChangeAction(input: z.input<typeof reques
 }
 
 export async function verifyStaffEmailChangeAction(_state: { error: string | null }, form: FormData): Promise<{ error: string | null }> {
+  if (await limitByClient("staff-email-verification", { limit: 10, windowMs: 15 * MINUTES })) {
+    return { error: "Too many attempts. Please try again later." };
+  }
   const token = String(form.get("token") ?? "");
   const password = String(form.get("password") ?? "");
   if (!password || password.length > 1024) return { error: "Enter your current Fides password." };

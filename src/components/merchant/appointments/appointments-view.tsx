@@ -25,6 +25,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { AppointmentStatusPill } from "@/components/merchant/appointment-status-pill";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
+import { QrCheckInButton } from "@/components/merchant/appointments/qr-check-in-button";
 import type { AppointmentServiceOption, AppointmentStaffOption } from "@/types/appointments";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
@@ -304,7 +305,6 @@ export function AppointmentsView({
         showToast(res.error || "Failed to update.");
         return;
       }
-      showToast(`Status updated to ${newStatus}`);
       router.refresh();
     } catch (err: unknown) {
       setItems(prevItems);
@@ -329,7 +329,6 @@ export function AppointmentsView({
         showToast(res.error || "Failed to cancel.");
         return;
       }
-      showToast(`Appointment for ${target.customer} cancelled.`);
       router.refresh();
     } catch (err: unknown) {
       setItems(prevItems);
@@ -399,6 +398,7 @@ export function AppointmentsView({
             description="Manage bookings, approvals, and appointment outcomes in one place."
             actions={canManage && (
               <div className="flex flex-wrap items-center gap-2">
+                {tenantId && <QrCheckInButton tenantId={tenantId} />}
                 <Button
                   variant="brand"
                   size="form"
@@ -1396,7 +1396,7 @@ export function AppointmentsView({
 
       {/* Toast */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-ink text-white px-4 py-2.5 rounded-[10px] shadow-xl text-xs font-medium">
+        <div role="alert" className="fixed bottom-6 right-6 z-50 bg-ink text-white px-4 py-2.5 rounded-[10px] shadow-xl text-xs font-medium">
           {toastMessage}
         </div>
       )}
@@ -1455,7 +1455,6 @@ export function AppointmentsView({
             ...prev,
           ]);
         }}
-        showToast={showToast}
       />
       <WalkInModal
         isOpen={isWalkInOpen}
@@ -1476,7 +1475,6 @@ export function AppointmentsView({
             ...prev,
           ]);
         }}
-        showToast={showToast}
       />
     </div>
   );

@@ -1,5 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { limitByClient, MINUTES } from "@/lib/rate-limit";
+import { z } from "zod";
 import {
   getStorefrontHomeData,
 } from "@/lib/storefront/queries";
@@ -18,17 +20,20 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  if (await limitByClient("storefront-home", { limit: 120, windowMs: MINUTES })) {
+    return NextResponse.json({ error: "Too many requests. Try again shortly." }, { status: 429 });
+  }
   try {
-    const { slug } = await params;
+    const slug = z.string().min(1).max(63).regex(/^[a-z0-9-]+$/i).safeParse((await params).slug);
 
-    if (!slug || typeof slug !== "string") {
+    if (!slug.success) {
       return NextResponse.json(
         { error: "A valid tenant slug is required." },
         { status: 400 }
       );
     }
 
-    const data = await getStorefrontHomeData(slug);
+    const data = await getStorefrontHomeData(slug.data);
 
     if (!data) {
       return NextResponse.json(
@@ -42,10 +47,7 @@ export async function GET(
         "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
       },
     });
-  } catch (err: unknown) {
-    const message =
-      err instanceof Error ? err.message : "Internal server error";
-    console.error("[API] GET /api/storefront/[slug]:", message);
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Could not load the storefront." }, { status: 500 });
   }
 }

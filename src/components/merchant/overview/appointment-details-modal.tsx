@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { loadAppointmentDetailsAction, rescheduleAppointmentAction, updateAppointmentStatusAction } from "@/app/actions/appointments";
 import { Icon } from "@/components/admin/icon";
+import { AppointmentCheckInCode } from "@/components/merchant/appointments/appointment-check-in-code";
 import { StatusPill } from "@/components/admin/primitives";
 import { StaffSuccessDialog, type StaffSuccessDetails } from "@/components/merchant/staff/staff-confirmation-dialog";
 import { DatePicker, SelectField, type SelectOption } from "@/components/ui";
@@ -28,11 +29,12 @@ function timeOptionsFor(current: string): SelectOption[] {
   return current && !quarterHours.some((option) => option.value === current) ? [...quarterHours, { value: current, label: timeLabel(current) }].sort((a, b) => a.value.localeCompare(b.value)) : quarterHours;
 }
 
-export function AppointmentDetailsModal({ tenantId, appointmentId, onClose, onUpdated }: {
+export function AppointmentDetailsModal({ tenantId, appointmentId, onClose, onUpdated, checkInFlow }: {
   tenantId: string;
   appointmentId: string;
   onClose: () => void;
   onUpdated: () => void;
+  checkInFlow?: { onBack: () => void; onCheckedIn: () => void };
 }) {
   const [details, setDetails] = useState<AppointmentDetails | null>();
   const [mode, setMode] = useState<"details" | "cancel" | "reschedule">("details");
@@ -58,6 +60,9 @@ export function AppointmentDetailsModal({ tenantId, appointmentId, onClose, onUp
   const dateLabel = new Intl.DateTimeFormat("en-PH", { timeZone: timezone, month: "short", day: "numeric" });
   const timeLabel = new Intl.DateTimeFormat("en-PH", { timeZone: timezone, hour: "numeric", minute: "2-digit", hour12: true });
   const start = details ? new Date(details.starts_at) : null;
+  const today = dateKey.format(new Date());
+  const scheduleChanged = Boolean(start && (date !== dateKey.format(start) || time !== timeKey.format(start)));
+  const canSaveSchedule = date >= today && Boolean(time) && scheduleChanged;
   const canReschedule = details?.status === "confirmed" || details?.status === "pending_approval";
   const canCancel = canReschedule || details?.status === "checked_in";
   const status = details?.status;
@@ -75,6 +80,11 @@ export function AppointmentDetailsModal({ tenantId, appointmentId, onClose, onUp
         : await rescheduleAppointmentAction({ appointmentId, tenantId, date, time, expectedStart: details.starts_at });
       if (!result.success) {
         setError(result.error);
+        return;
+      }
+      if (nextStatus === "Check In" && checkInFlow) {
+        onUpdated();
+        checkInFlow.onCheckedIn();
         return;
       }
       const confirmation = {
@@ -117,7 +127,7 @@ export function AppointmentDetailsModal({ tenantId, appointmentId, onClose, onUp
   return (
     <Modal open unstyled onClose={() => { if (!busy) onClose(); }} labelledBy="appointment-details-title"
       className="m-auto w-[calc(100%-1rem)] max-w-2xl overflow-hidden rounded-xl border border-hairline bg-white text-ink shadow-2xl sm:w-[calc(100%-2rem)]">
-      <form onSubmit={(event) => { event.preventDefault(); if (mode === "reschedule") void submit(); }}
+      <form onSubmit={(event) => { event.preventDefault(); if (mode === "reschedule" && canSaveSchedule) void submit(); }}
         className="flex max-h-[92dvh] flex-col" aria-busy={busy}>
         <header className="flex shrink-0 items-start justify-between gap-3 px-4 pb-3 pt-5 sm:px-6">
           <div className="min-w-0">
@@ -127,7 +137,8 @@ export function AppointmentDetailsModal({ tenantId, appointmentId, onClose, onUp
               </h2>
               {details && <StatusPill tone={statusTone}>{statusText}</StatusPill>}
             </div>
-            {details && <p className="mt-1 text-sm text-muted">
+            {mode === "reschedule" && <p className="mt-1 text-sm text-muted">Choose a new date or time for this appointment.</p>}
+            {details && mode !== "reschedule" && <p className="mt-1 text-sm text-muted">
               {details.id.slice(0, 8).toUpperCase()} · {details.source === "walk_in" ? "Walk-in booking" : details.source === "phone" ? "Phone booking" : "Online booking"}
             </p>}
           </div>
@@ -152,7 +163,7 @@ export function AppointmentDetailsModal({ tenantId, appointmentId, onClose, onUp
                 </span>
                 <div className="min-w-0">
                   <h3 className="break-words text-base font-semibold">{details.customerName}</h3>
-                  {(details.customers?.phone || details.customers?.email) && (
+                  {mode !== "reschedule" && (details.customers?.phone || details.customers?.email) && (
                     <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted">
                       {details.customers.phone && <a className="break-all underline-offset-2 hover:underline" href={`tel:${details.customers.phone}`}>{details.customers.phone}</a>}
                       {details.customers.email && <a className="break-all underline-offset-2 hover:underline" href={`mailto:${details.customers.email}`}>{details.customers.email}</a>}
@@ -160,28 +171,35 @@ export function AppointmentDetailsModal({ tenantId, appointmentId, onClose, onUp
                   )}
                 </div>
               </div>
-              <dl className="grid grid-cols-2 gap-x-3 gap-y-4 rounded-xl bg-mist p-4 sm:grid-cols-3 sm:gap-x-5">
+              {mode !== "reschedule" && <dl className="grid grid-cols-2 gap-x-3 gap-y-4 rounded-xl bg-mist p-4 sm:grid-cols-3 sm:gap-x-5">
                 {fields.map(([label, value]) => (
                   <div key={label} className="min-w-0">
                     <dt className="text-xs text-muted">{label}</dt>
                     <dd className="mt-1 break-words text-sm font-semibold">{value}</dd>
                   </div>
                 ))}
-              </dl>
+              </dl>}
+              {status === "confirmed" && mode === "details" && !checkInFlow && (
+                <AppointmentCheckInCode code={details.id} />
+              )}
               {mode === "cancel" && <p className="rounded-lg bg-danger-bg p-3 text-sm text-danger-dark">Cancel this appointment for {details.customerName}?</p>}
-              {mode === "reschedule" && (
-                <div className="space-y-2">
-                  <p className="text-sm text-muted">Choose a new date and time in {timezone}.</p>
+              {mode === "reschedule" && start && (
+                <div className="space-y-4">
+                  <dl className="rounded-lg bg-mist px-4 py-3">
+                    <dt className="text-xs text-muted">Current schedule</dt>
+                    <dd className="mt-1 text-sm font-semibold">{dateLabel.format(start)} at {timeLabel.format(start)}</dd>
+                  </dl>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="flex flex-col gap-2">
                       <label htmlFor="reschedule-date" className="text-sm font-semibold text-ink">New date</label>
-                      <DatePicker id="reschedule-date" value={date} min={dateKey.format(new Date())} onChange={setDate} disabled={busy} ariaLabel="Choose new date" />
+                      <DatePicker id="reschedule-date" value={date >= today ? date : ""} min={today} onChange={setDate} disabled={busy} ariaLabel="Choose new date" floating />
                     </div>
                     <div className="flex flex-col gap-2">
                       <label htmlFor="reschedule-time" className="text-sm font-semibold text-ink">New time</label>
-                      <SelectField id="reschedule-time" value={time} options={timeOptionsFor(time)} onChange={setTime} disabled={busy} placeholder="Select a time" />
+                      <SelectField id="reschedule-time" value={time} options={timeOptionsFor(time)} onChange={setTime} disabled={busy} placeholder="Select a time" floating />
                     </div>
                   </div>
+                  <p className="text-xs text-muted">Times are shown in {timezone}.</p>
                 </div>
               )}
               {error && <p role="alert" className="rounded-lg bg-danger-bg p-3 text-sm text-danger-dark">{error}</p>}
@@ -190,17 +208,24 @@ export function AppointmentDetailsModal({ tenantId, appointmentId, onClose, onUp
         </div>
 
         <footer className="mt-2 flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-hairline px-4 py-4 sm:px-6">
+          {checkInFlow && mode === "details" && (
+            <Button variant="secondary" size="xs" disabled={busy} onClick={checkInFlow.onBack}>Back</Button>
+          )}
           {details && mode === "details" && (
             <>
               {canCancel && <Button variant="danger" size="xs" className="order-last w-full sm:order-none sm:mr-auto sm:w-auto" disabled={busy} onClick={() => changeMode("cancel")}>Cancel Appointment</Button>}
               {canReschedule && <Button variant="secondary" size="xs" disabled={busy} onClick={() => changeMode("reschedule")}>Reschedule</Button>}
-              {status === "confirmed" && <Button variant="brand" size="xs" disabled={busy} onClick={() => void submit("Check In")}>Check In</Button>}
+              {status === "confirmed" && (
+                <Button variant="brand" size="xs" disabled={busy} onClick={() => void submit("Check In")}>
+                  {checkInFlow ? "Confirm Check In" : "Check In"}
+                </Button>
+              )}
               {status === "pending_approval" && <Button variant="brand" size="xs" disabled={busy} onClick={() => void submit("Confirmed")}>Confirm</Button>}
             </>
           )}
           {mode !== "details" && <Button variant="secondary" size="xs" disabled={busy} onClick={() => changeMode("details")}>Back</Button>}
           {mode === "cancel" && <Button variant="danger" size="xs" disabled={busy} onClick={() => void submit("Cancelled")}>Confirm cancellation</Button>}
-          {mode === "reschedule" && <Button variant="brand" size="xs" type="submit" disabled={busy}>{busy ? "Saving…" : "Save schedule"}</Button>}
+          {mode === "reschedule" && <Button variant="brand" size="dialog" type="submit" disabled={busy || !canSaveSchedule}>{busy ? "Saving…" : "Save schedule"}</Button>}
         </footer>
       </form>
     </Modal>

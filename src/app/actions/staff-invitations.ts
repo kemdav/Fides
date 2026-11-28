@@ -4,6 +4,7 @@ import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { limitByClient, MINUTES } from "@/lib/rate-limit";
 import { publicEnv } from "@/lib/env";
 import { staffInvitationMessage } from "@/lib/mail/emails";
 import { isSmtpMailConfigured, sendSmtpMail } from "@/lib/mail/mailer";
@@ -181,6 +182,9 @@ export async function resendStaffInvitationAction(tenantId: string, invitationId
 }
 
 export async function accessStaffWorkspaceAction(form: FormData): Promise<{ error: string }> {
+  if (await limitByClient("staff-workspace-access", { limit: 20, windowMs: 15 * MINUTES })) {
+    return { error: "Too many attempts. Please try again later." };
+  }
   const token = String(form.get("invite") ?? "");
   const password = String(form.get("password") ?? "");
   const createAccount = form.get("intent") === "create";

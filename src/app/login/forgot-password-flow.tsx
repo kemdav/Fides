@@ -136,7 +136,7 @@ export function ForgotPasswordFlow({ open, initialEmail, onClose }: { open: bool
                 No, go back
               </button>
               <button type="submit" className={primary} disabled={pending}>
-                {pending ? "Sending…" : "Yes, send me a code"}
+                Yes, send me a code
               </button>
             </div>
           </form>
@@ -183,7 +183,7 @@ export function ForgotPasswordFlow({ open, initialEmail, onClose }: { open: bool
                 Cancel
               </button>
               <button type="submit" className={primary} disabled={pending}>
-                {pending ? "Checking…" : "Verify code"}
+                Verify code
               </button>
             </div>
             <div className="flex items-center justify-between text-sm">
@@ -237,7 +237,7 @@ export function ForgotPasswordFlow({ open, initialEmail, onClose }: { open: bool
             </div>
             {errorBox}
             <button type="submit" className={primary} disabled={pending}>
-              {pending ? "Saving…" : "Save new password"}
+              Save new password
             </button>
           </form>
         ) : null}

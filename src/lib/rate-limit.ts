@@ -1,4 +1,5 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import { headers } from "next/headers";
 import Redis from "ioredis";
 import { getServerEnv } from "@/lib/env";
@@ -41,6 +42,7 @@ function memoryHit(key: string, { windowMs }: RateLimit): number {
 }
 
 let client: Redis | null | undefined;
+let initialConnection: Promise<void> | undefined;
 let warned = false;
 
 function warnOnce(message: string) {
@@ -56,8 +58,15 @@ function redis(): Redis | null {
     if (process.env.NODE_ENV === "production") warnOnce("REDIS_URL is not set: rate limits are per server instance only.");
     return (client = null);
   }
-  client = new Redis(url, { maxRetriesPerRequest: 1, enableOfflineQueue: false, connectTimeout: 2000, lazyConnect: true });
-  client.on("error", (error) => warnOnce(`Redis error, using in-memory limits: ${error.message}`));
+  client = new Redis(url, {
+    commandTimeout: 2000,
+    connectTimeout: 2000,
+    enableOfflineQueue: false,
+    maxRetriesPerRequest: 1,
+    autoResendUnfulfilledCommands: false,
+    lazyConnect: true,
+  });
+  client.on("error", () => warnOnce("Redis unavailable, using in-memory limits."));
   return client;
 }
 
@@ -65,21 +74,24 @@ async function hit(key: string, rule: RateLimit): Promise<number> {
   const store = redis();
   if (store) {
     try {
-      if (store.status === "wait") await store.connect();
+      if (store.status === "wait") {
+        initialConnection = store.connect().finally(() => { initialConnection = undefined; });
+      }
+      await initialConnection;
       return Number(await store.eval(INCREMENT, 1, `fides:rl:${key}`, rule.windowMs));
-    } catch (error) {
-      warnOnce(`Redis unavailable, using in-memory limits: ${error instanceof Error ? error.message : String(error)}`);
+    } catch {
+      warnOnce("Redis unavailable, using in-memory limits.");
     }
   }
   return memoryHit(key, rule);
 }
 
 /** Records one attempt and returns true when the caller is over the limit. */
-export async function isRateLimited(key: string, rule: RateLimit): Promise<boolean> {
+async function isRateLimited(key: string, rule: RateLimit): Promise<boolean> {
   return (await hit(key, rule)) > rule.limit;
 }
 
-export async function clientIp(): Promise<string> {
+async function clientIp(): Promise<string> {
   const store = await headers();
   return store.get("x-forwarded-for")?.split(",")[0]?.trim() || store.get("x-real-ip") || "unknown";
 }
@@ -87,5 +99,6 @@ export async function clientIp(): Promise<string> {
 /** Rate limit by caller IP (and optionally an extra key such as an email). */
 export async function limitByClient(scope: string, rule: RateLimit, extra?: string): Promise<boolean> {
   const ip = await clientIp();
-  return isRateLimited(`${scope}:${ip}${extra ? `:${extra.toLowerCase()}` : ""}`, rule);
+  const identity = createHash("sha256").update(JSON.stringify([ip, extra?.trim().toLowerCase()])).digest("hex");
+  return isRateLimited(`${scope}:${identity}`, rule);
 }

@@ -50,7 +50,7 @@ export function StaffStatusDialog({ tenantId, staff, lastOwnerProtected = false,
           <>
             <Button variant="secondary" size="xs" onClick={onClose} disabled={saving}>Cancel</Button>
             <Button size="xs" variant={staff.active ? "danger" : "brand"} onClick={confirm} disabled={saving}>
-              {saving ? "Saving…" : action}
+              {action}
             </Button>
           </>
         )}

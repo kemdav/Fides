@@ -9,7 +9,7 @@ Restart `npm run dev` after any change.
 | --- | --- | --- |
 | `NEXT_PUBLIC_SITE_URL` | yes | Public URL of the app. Used in emails (login link) and SEO. |
 | `NEXT_PUBLIC_PLATFORM_DOMAIN` | yes | Domain used to resolve tenant subdomains. `localhost:3000` locally. |
-| `NEXT_PUBLIC_SUPABASE_URL` | yes | Supabase API URL. `http://127.0.0.1:55321` for the local stack (see `supabase/config.toml`). |
+| `NEXT_PUBLIC_SUPABASE_URL` | yes | Supabase API URL. `http://127.0.0.1:55421` for the local stack (see `supabase/config.toml`). |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | yes | Supabase anon/publishable key. |
 | `SUPABASE_SECRET_KEY` | yes (server) | Service-role key. Server only, never expose it to the browser. |
 | `ADMIN_SESSION_SECRET` | production | Random string of 32+ characters that signs the admin session cookie. Without it (dev only) a throwaway key is used and admin sessions end on restart. |
@@ -38,16 +38,15 @@ to your own `.env.local` or admin login will say the credentials are wrong.
 
 ## Redis (rate limiting)
 
-Login, admin login, password reset, registration submissions and both contact forms are rate limited
-(`src/lib/rate-limit.ts`).
+Login, admin login, password reset, staff access and email verification, customer invitations, registration codes and submissions, staged uploads, slug checks, storefront APIs, and both contact forms use the shared limiter in `src/lib/rate-limit.ts`. The liveness probe stays independent of Redis.
 
-- **Local:** `docker compose up -d redis` starts Redis on host port **6380** (so it does not clash with another Redis on 6379).
+- **Local:** `docker compose up -d redis` starts Redis on loopback port **6380**.
   Set `REDIS_URL=redis://localhost:6380`.
 - **No `REDIS_URL`:** limits fall back to an in-memory counter. Fine for a single dev server, but it resets on restart
   and is not shared between server instances.
 - **Redis down:** the app logs one warning and falls back to the in-memory counter instead of failing requests.
-- **Production:** use a managed Redis (for example Upstash, Redis Cloud or your host's add-on) and set `REDIS_URL`
-  (use `rediss://` for TLS). Counters are stored under the `fides:rl:` prefix and expire on their own.
+- **Production:** set `REDIS_URL` before starting Next.js. Use a managed Redis and `rediss://` for TLS. The Node.js server validates the setting at startup.
+  Counters use the `fides:rl:` prefix and expire automatically. Redis keys use hashed client identifiers.
 
 ## Local Supabase
 

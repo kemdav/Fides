@@ -140,7 +140,10 @@ export function MetricCard({
           </p>
           {progress !== undefined && (
             <div
-              className="mt-auto flex h-[5px] overflow-hidden rounded-[3px] bg-mist"
+              className={cn(
+                "mt-auto flex h-[5px] overflow-hidden rounded-[3px]",
+                featured ? "bg-on-burnt/20" : "bg-mist",
+              )}
               aria-hidden
             >
               <div

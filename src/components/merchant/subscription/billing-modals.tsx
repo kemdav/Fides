@@ -422,7 +422,7 @@ export function SubscriptionInvoiceModal({
                 : "bg-burnt px-6 text-on-burnt hover:bg-burnt-dark",
             )}
           >
-            {downloading ? "Preparing PDF…" : "Download PDF"}
+            Download PDF
           </button>
           {canSubmitPayment && (
             <button

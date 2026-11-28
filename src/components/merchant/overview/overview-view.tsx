@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { QrCheckInButton } from "@/components/merchant/appointments/qr-check-in-button";
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -166,7 +167,6 @@ export function OverviewView({
   const [selectedAppointmentId, setSelectedAppointmentId] = React.useState<string | null>(null);
   const [isNewBookingOpen, setIsNewBookingOpen] = React.useState(false);
   const [isWalkInOpen, setIsWalkInOpen] = React.useState(false);
-  const [toastMessage, setToastMessage] = React.useState<string | null>(null);
   const [expandedAppointmentId, setExpandedAppointmentId] = React.useState<
     string | null
   >(null);
@@ -191,11 +191,6 @@ export function OverviewView({
     );
   };
   const displayName = userName || userEmail;
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 2500);
-  };
 
   const activeFilterCount = [filterStatus, filterStaff, filterSource].filter(
     Boolean,
@@ -396,6 +391,7 @@ export function OverviewView({
                   }}
                 />
                 {canManage && <>
+                {tenantId && <QrCheckInButton tenantId={tenantId} />}
                 <Button variant="brand" size="form"
                   onClick={() => setIsNewBookingOpen(true)}
                 >
@@ -1311,13 +1307,6 @@ export function OverviewView({
         </PageContent>
       </div>
 
-      {/* Confirmation Toast */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-ink text-white px-4 py-2.5 rounded-[10px] shadow-xl text-xs font-medium">
-          {toastMessage}
-        </div>
-      )}
-
       {/* Cancel Confirmation Modal (QA #3) */}
       {canManage && tenantId && selectedAppointmentId && (
         <AppointmentDetailsModal
@@ -1349,7 +1338,6 @@ export function OverviewView({
           };
           setAppointments((prev) => [newRow, ...prev]);
         }}
-        showToast={showToast}
       />
 
       {/* Walk-in Modal */}
@@ -1370,7 +1358,6 @@ export function OverviewView({
           };
           setAppointments((prev) => [newRow, ...prev]);
         }}
-        showToast={showToast}
       />
     </div>
   );
