@@ -48,7 +48,7 @@ export function DatePicker({
   compact = false,
   disabled = false,
   className,
-  floating = false,
+  floating: _floating = false,
 }: {
   id: string;
   value: string;
