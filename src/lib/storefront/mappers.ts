@@ -18,6 +18,6 @@ export function toStorefrontServiceCard(
     price: formattedPrice,
     imageSrc: "/images/storefront/Salon Service photograph.png",
     imageAlt: `${service.name} service`,
-    href: `/${slug}/services`,
+    href: `/${slug}/book?service=${encodeURIComponent(service.id)}`,
   };
 }

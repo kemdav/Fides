@@ -88,3 +88,34 @@ export const ALL_SERVICES: ServiceCardData[] = [
     href: "#book",
   },
 ];
+
+/**
+ * Optional add-ons offered during booking.
+ * Demo data until add-ons are wired to the storefront data layer.
+ */
+export const BOOKING_ADDONS = [
+  {
+    id: "addon-deep-conditioning",
+    name: "Deep conditioning treatment",
+    description: "Intensive moisture mask to restore softness and shine.",
+    durationMinutes: 15,
+    priceCents: 45000,
+    linkedServiceIds: [] as string[],
+  },
+  {
+    id: "addon-scalp-massage",
+    name: "Scalp massage",
+    description: "Relaxing massage to ease tension and boost circulation.",
+    durationMinutes: 10,
+    priceCents: 30000,
+    linkedServiceIds: [] as string[],
+  },
+  {
+    id: "addon-blowout",
+    name: "Blowout & styling",
+    description: "Finish your visit with a smooth, polished blowout.",
+    durationMinutes: 20,
+    priceCents: 50000,
+    linkedServiceIds: [] as string[],
+  },
+];
