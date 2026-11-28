@@ -129,7 +129,7 @@ Local databases initialized from the legacy numbered migrations can lack the cat
 
 Staff invitation screens display the invited email as text and use the tenant’s website palette. Workspace sign-in uses the palette when the workspace is included in the link.
 
-The tenant QR check-in placeholder moved from the sidebar to the booking toolbar on Overview and Appointments. The camera starts automatically and manual entry is available below the preview. Confirmed appointments show a check-in code in Appointment Details.
+The tenant QR check-in placeholder moved from the sidebar to the booking toolbar on Overview and Appointments. The camera starts automatically and manual entry is available below the preview. QR check-in uses the same Appointment Details dialog as the appointment table, with a Back action to return to code entry.
 
 Accent-filled controls and featured KPI cards on tenant pages use the main website color for foregrounds when configured.
 

@@ -3,58 +3,14 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { ReactElement } from "react";
 import { useRouter } from "next/navigation";
-import {
-  verifyCheckInCodeAction,
-  checkInAppointmentAction,
-  type AppointmentPreview,
-} from "@/app/actions/check-in";
+import { verifyCheckInCodeAction } from "@/app/actions/check-in";
 import { Icon } from "@/components/admin/icon";
+import { AppointmentDetailsModal } from "@/components/merchant/overview/appointment-details-modal";
 import { Button } from "@/components/ui/button";
 import { inputClasses } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
-import { StatusPill } from "@/components/admin/primitives";
 import { checkInCodeSchema } from "@/features/check-in/schema";
-import { getInitials } from "@/lib/utils";
 import { QrCamera } from "./qr-camera";
-
-const pesos = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", minimumFractionDigits: 0 });
-const dateLabel = new Intl.DateTimeFormat("en-PH", { timeZone: "Asia/Manila", month: "short", day: "numeric" });
-const timeLabelFmt = new Intl.DateTimeFormat("en-PH", { timeZone: "Asia/Manila", hour: "numeric", minute: "2-digit", hour12: true });
-
-function formatDateTime(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleString("en-PH", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-}
-
-function formatTimeRange(start: string, end: string): string {
-  const s = new Date(start);
-  const e = new Date(end);
-  const date = s.toLocaleDateString("en-PH", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-  const from = s.toLocaleTimeString("en-PH", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-  const to = e.toLocaleTimeString("en-PH", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-  return `${date} · ${from} – ${to}`;
-}
 
 type Step = "code" | "confirm" | "done";
 
@@ -70,10 +26,9 @@ export function QrCheckInButton({
   const [code, setCode] = useState("");
   const [scanned, setScanned] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [pending, setPending] = useState(false);
   const [step, setStep] = useState<Step>("code");
-  const [preview, setPreview] = useState<AppointmentPreview | null>(null);
+  const [appointmentId, setAppointmentId] = useState<string | null>(null);
   const titleId = useId();
   const codeId = useId();
   const hintId = useId();
@@ -81,8 +36,9 @@ export function QrCheckInButton({
   const router = useRouter();
 
   useEffect(() => {
-    if (open && cameraMode === "manual") codeInput.current?.focus();
-  }, [open, cameraMode]);
+    if (!open) return;
+    if (step === "code" && cameraMode === "manual") codeInput.current?.focus();
+  }, [open, cameraMode, step]);
 
   const handleScan = useCallback((raw: string) => {
     if (codeInput.current?.value.trim()) return;
@@ -105,9 +61,8 @@ export function QrCheckInButton({
     setCode("");
     setScanned(false);
     setError("");
-    setSuccess("");
     setStep("code");
-    setPreview(null);
+    setAppointmentId(null);
   }
 
   // step 1: verify code and fetch appointment details
@@ -126,7 +81,7 @@ export function QrCheckInButton({
         code: parsed.data,
       });
       if (result.success && result.data) {
-        setPreview(result.data);
+        setAppointmentId(result.data.id);
         setStep("confirm");
       } else {
         setError(
@@ -142,34 +97,9 @@ export function QrCheckInButton({
     }
   }
 
-  // step 2: confirm check-in
-  async function confirmCheckIn() {
-    if (!preview) return;
-
-    setPending(true);
-    setError("");
-    try {
-      const result = await checkInAppointmentAction({
-        tenantId,
-        code: preview.id,
-      });
-      if (result.success) {
-        setSuccess(result.message);
-        setStep("done");
-        router.refresh();
-      } else {
-        setError(result.error);
-      }
-    } catch {
-      setError("The appointment could not be checked in. Try again.");
-    } finally {
-      setPending(false);
-    }
-  }
-
   function goBack() {
     setStep("code");
-    setPreview(null);
+    setAppointmentId(null);
     setError("");
   }
 
@@ -187,7 +117,18 @@ export function QrCheckInButton({
         <Icon name="qr-code" className="size-5" />
         QR Check In
       </Button>
-      {open && (
+      {open && step === "confirm" && appointmentId ? (
+        <AppointmentDetailsModal
+          tenantId={tenantId}
+          appointmentId={appointmentId}
+          onClose={() => setOpen(false)}
+          onUpdated={() => router.refresh()}
+          checkInFlow={{
+            onBack: goBack,
+            onCheckedIn: () => setStep("done"),
+          }}
+        />
+      ) : open && (
         <Modal
           open
           onClose={() => {
@@ -207,11 +148,6 @@ export function QrCheckInButton({
               {step === "code" && (
                 <p className="mt-1 text-xs text-muted">
                   Scan the QR code or type the check-in code.
-                </p>
-              )}
-              {step === "confirm" && (
-                <p className="mt-1 text-xs text-muted">
-                  Review the appointment details before checking in.
                 </p>
               )}
             </div>
@@ -301,98 +237,13 @@ export function QrCheckInButton({
             </form>
           )}
 
-          {/* ── Step 2: Confirmation ────────────────────────────────── */}
-          {step === "confirm" && preview && (
-            <div className="space-y-4">
-              <div className="rounded-xl border border-hairline bg-mist p-4 sm:p-5">
-                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-subtle">
-                  Appointment Details
-                </h3>
-                <dl className="grid gap-3 text-sm sm:grid-cols-2">
-                  <div>
-                    <dt className="text-xs font-semibold text-subtle">
-                      Customer Name
-                    </dt>
-                    <dd className="mt-0.5 font-medium text-ink">
-                      {preview.customerName}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs font-semibold text-subtle">
-                      Check-in Code / Ref
-                    </dt>
-                    <dd className="mt-0.5 font-mono text-xs text-ink break-all">
-                      {preview.id}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs font-semibold text-subtle">
-                      Service
-                    </dt>
-                    <dd className="mt-0.5 font-medium text-ink">
-                      {preview.serviceName}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs font-semibold text-subtle">
-                      Assigned Staff
-                    </dt>
-                    <dd className="mt-0.5 font-medium text-ink">
-                      {preview.staffName}
-                    </dd>
-                  </div>
-                  <div className="sm:col-span-2">
-                    <dt className="text-xs font-semibold text-subtle">
-                      Date &amp; Time
-                    </dt>
-                    <dd className="mt-0.5 font-medium text-ink">
-                      {formatTimeRange(preview.startsAt, preview.endsAt)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs font-semibold text-subtle">
-                      Status
-                    </dt>
-                    <dd className="mt-1">
-                      <StatusPill tone="info">Confirmed</StatusPill>
-                    </dd>
-                  </div>
-                </dl>
-              </div>
-              {error && (
-                <p role="alert" className="text-sm text-danger-dark">
-                  {error}
-                </p>
-              )}
-              <div className="flex items-center justify-between gap-3">
-                <Button
-                  variant="secondary"
-                  size="form"
-                  disabled={pending}
-                  onClick={goBack}
-                >
-                  Back
-                </Button>
-                <Button
-                  variant="brand"
-                  size="form"
-                  disabled={pending}
-                  onClick={() => void confirmCheckIn()}
-                >
-                  Confirm Check In
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* ── Done ────────────────────────────────────────────────── */}
           {step === "done" && (
             <div className="space-y-4">
               <p
                 role="status"
                 className="rounded-lg bg-success/10 p-3 text-sm text-success"
               >
-                {success}
+                Appointment checked in successfully.
               </p>
               <Button variant="brand" size="form" onClick={reset}>
                 Check in another appointment

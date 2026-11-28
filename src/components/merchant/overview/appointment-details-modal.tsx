@@ -29,11 +29,12 @@ function timeOptionsFor(current: string): SelectOption[] {
   return current && !quarterHours.some((option) => option.value === current) ? [...quarterHours, { value: current, label: timeLabel(current) }].sort((a, b) => a.value.localeCompare(b.value)) : quarterHours;
 }
 
-export function AppointmentDetailsModal({ tenantId, appointmentId, onClose, onUpdated }: {
+export function AppointmentDetailsModal({ tenantId, appointmentId, onClose, onUpdated, checkInFlow }: {
   tenantId: string;
   appointmentId: string;
   onClose: () => void;
   onUpdated: () => void;
+  checkInFlow?: { onBack: () => void; onCheckedIn: () => void };
 }) {
   const [details, setDetails] = useState<AppointmentDetails | null>();
   const [mode, setMode] = useState<"details" | "cancel" | "reschedule">("details");
@@ -76,6 +77,11 @@ export function AppointmentDetailsModal({ tenantId, appointmentId, onClose, onUp
         : await rescheduleAppointmentAction({ appointmentId, tenantId, date, time, expectedStart: details.starts_at });
       if (!result.success) {
         setError(result.error);
+        return;
+      }
+      if (nextStatus === "Check In" && checkInFlow) {
+        onUpdated();
+        checkInFlow.onCheckedIn();
         return;
       }
       const confirmation = {
@@ -169,7 +175,7 @@ export function AppointmentDetailsModal({ tenantId, appointmentId, onClose, onUp
                   </div>
                 ))}
               </dl>
-              {status === "confirmed" && mode === "details" && (
+              {status === "confirmed" && mode === "details" && !checkInFlow && (
                 <AppointmentCheckInCode code={details.id} />
               )}
               {mode === "cancel" && <p className="rounded-lg bg-danger-bg p-3 text-sm text-danger-dark">Cancel this appointment for {details.customerName}?</p>}
@@ -194,11 +200,18 @@ export function AppointmentDetailsModal({ tenantId, appointmentId, onClose, onUp
         </div>
 
         <footer className="mt-2 flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-hairline px-4 py-4 sm:px-6">
+          {checkInFlow && mode === "details" && (
+            <Button variant="secondary" size="xs" disabled={busy} onClick={checkInFlow.onBack}>Back</Button>
+          )}
           {details && mode === "details" && (
             <>
               {canCancel && <Button variant="danger" size="xs" className="order-last w-full sm:order-none sm:mr-auto sm:w-auto" disabled={busy} onClick={() => changeMode("cancel")}>Cancel Appointment</Button>}
               {canReschedule && <Button variant="secondary" size="xs" disabled={busy} onClick={() => changeMode("reschedule")}>Reschedule</Button>}
-              {status === "confirmed" && <Button variant="brand" size="xs" disabled={busy} onClick={() => void submit("Check In")}>Check In</Button>}
+              {status === "confirmed" && (
+                <Button variant="brand" size="xs" disabled={busy} onClick={() => void submit("Check In")}>
+                  {checkInFlow ? "Confirm Check In" : "Check In"}
+                </Button>
+              )}
               {status === "pending_approval" && <Button variant="brand" size="xs" disabled={busy} onClick={() => void submit("Confirmed")}>Confirm</Button>}
             </>
           )}

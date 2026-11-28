@@ -10,7 +10,6 @@ import {
   calculateVatSplit,
   formatDateManila,
   formatPeso,
-  normalizePaymentMethod,
   resolvePaymentMethodLabel,
 } from "@/lib/payments";
 import {
