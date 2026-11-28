@@ -11,10 +11,15 @@ import { checkInSchema, checkInCodeSchema } from "@/features/check-in/schema";
 export interface AppointmentPreview {
   id: string;
   customerName: string;
+  customerPhone: string;
+  customerEmail: string;
   serviceName: string;
   staffName: string;
   startsAt: string;
   endsAt: string;
+  durationMinutes: number;
+  amountDue: number;
+  source: string;
   status: string;
 }
 
@@ -40,14 +45,7 @@ export async function verifyCheckInCodeAction(input: {
 
   const { data: appointment, error: fetchError } = await supabase
     .from("appointments")
-    .select(`
-      id,
-      status,
-      starts_at,
-      ends_at,
-      customers:customer_id ( full_name ),
-      staff_members:staff_id ( full_name )
-    `)
+    .select("id, status, starts_at, ends_at, total_cents, source, customer_id, staff_id")
     .eq("id", parsed.data)
     .eq("tenant_id", access.tenantId)
     .maybeSingle();
@@ -74,30 +72,46 @@ export async function verifyCheckInCodeAction(input: {
     };
   }
 
-  // fetch service name from appointment_services
-  const { data: svcRows } = await supabase
-    .from("appointment_services")
-    .select("services:service_id ( name )")
-    .eq("appointment_id", appointment.id)
-    .eq("tenant_id", access.tenantId);
+  // fetch related data in parallel
+  const [customerResult, staffResult, svcResult] = await Promise.all([
+    appointment.customer_id
+      ? supabase
+          .from("customers")
+          .select("full_name, phone, email")
+          .eq("id", appointment.customer_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    supabase
+      .from("staff_members")
+      .select("full_name")
+      .eq("id", appointment.staff_id)
+      .maybeSingle(),
+    supabase
+      .from("appointment_services")
+      .select("service_id")
+      .eq("appointment_id", appointment.id)
+      .eq("tenant_id", access.tenantId),
+  ]);
 
-  const serviceNames = (svcRows ?? [])
-    .map((r) => {
-      const svc = r.services;
-      if (Array.isArray(svc)) return svc[0]?.name ?? "";
-      return (svc as { name: string } | null)?.name ?? "";
-    })
-    .filter(Boolean);
+  const customerName = customerResult.data?.full_name ?? "Walk-in";
+  const customerPhone = customerResult.data?.phone ?? "";
+  const customerEmail = customerResult.data?.email ?? "";
+  const staffName = staffResult.data?.full_name ?? "Unassigned";
+  const durationMinutes = Math.round(
+    (Date.parse(appointment.ends_at) - Date.parse(appointment.starts_at)) / 60_000,
+  );
 
-  const customerObj = appointment.customers;
-  const customerName = Array.isArray(customerObj)
-    ? customerObj[0]?.full_name ?? "Walk-in"
-    : (customerObj as { full_name: string } | null)?.full_name ?? "Walk-in";
-
-  const staffObj = appointment.staff_members;
-  const staffName = Array.isArray(staffObj)
-    ? staffObj[0]?.full_name ?? "Unassigned"
-    : (staffObj as { full_name: string } | null)?.full_name ?? "Unassigned";
+  // resolve service names
+  let serviceName = "No service listed";
+  const serviceIds = (svcResult.data ?? []).map((r) => r.service_id);
+  if (serviceIds.length > 0) {
+    const { data: serviceRows } = await supabase
+      .from("services")
+      .select("name")
+      .in("id", serviceIds);
+    const names = (serviceRows ?? []).map((s) => s.name).filter(Boolean);
+    if (names.length > 0) serviceName = names.join(", ");
+  }
 
   return {
     success: true,
@@ -105,10 +119,15 @@ export async function verifyCheckInCodeAction(input: {
     data: {
       id: appointment.id,
       customerName,
-      serviceName: serviceNames.join(", ") || "No service listed",
+      customerPhone,
+      customerEmail,
+      serviceName,
       staffName,
       startsAt: appointment.starts_at,
       endsAt: appointment.ends_at,
+      durationMinutes,
+      amountDue: appointment.total_cents,
+      source: appointment.source,
       status: appointment.status,
     },
   };
