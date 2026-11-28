@@ -58,7 +58,7 @@ Controls that exist are listed in [SECURITY](SECURITY.md). Still open:
 | ID | Issue | Sev | Effort | Notes |
 | --- | --- | --- | --- | --- |
 | S1 | The old Gmail app password is still in git history. | P1 | S | Revoke it in the Google account (history rewrite is optional). |
-| S8 | **The hosted database does not have the access hotfix or the admin migrations yet.** Until then signed-in users there can change their own role and tenant, and the public key can read and edit registration applications and the admin log. | P1 | S | Release steps in [SECURITY](SECURITY.md). Afterwards check for unexpected admin profiles, tenant moves and edited applications. |
+| S8 | **The hosted database does not have the admin migrations yet.** The access hotfix (`20261126140000`) was applied by hand and verified on 2026-11-28, but is not recorded in the hosted migration history, and the data has not been checked for earlier misuse. | P1 | S | Release steps in [SECURITY](SECURITY.md). Before that, run `supabase migration repair --status applied 20261126140000` and look for unexpected admin profiles, tenant moves and edited applications. |
 | S9 | An owner can still set any amount on a reactivation invoice they create. | P2 | S | Generate invoices only on the server (AD4). |
 | S10 | A test account script with an email and password was committed under `supabase/snippets/`. It is untracked now but stays in git history. Change that password anywhere the account exists. | P1 | S | |
 | S11 | A suspended owner gets a not-found page for the whole dashboard, so they cannot reach billing to pay or ask for reactivation. | P2 | M | Show a suspended notice and keep the subscription page open. AD2. |
