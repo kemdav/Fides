@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useLayoutEffect, useRef, useState } from "react";
 import { Icon } from "@/components/admin/icon";
 import { useOutsideClose } from "@/lib/use-outside-close";
 import { cn } from "@/lib/utils";
 import { inputClasses } from "./input";
-import { useFloatingFieldPanel } from "./use-floating-field-panel";
+import { useAnchoredPopover } from "./use-anchored-popover";
 
 export type SelectOption<T extends string = string> = { value: T; label: string; detail?: string; disabled?: boolean };
 
@@ -37,6 +37,8 @@ export function SelectField<T extends string = string>({
   options: readonly SelectOption<T>[];
   /** where the list opens; "auto" flips above when there is no room below */
   placement?: "auto" | "above" | "below";
+  /** Keep the list above scroll containers, such as dialogs. */
+
   floating?: boolean;
   invalid?: boolean;
   placeholder?: string;
@@ -55,26 +57,20 @@ export function SelectField<T extends string = string>({
   const [active, setActive] = useState(Math.max(0, selectedIndex));
   const wrapRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const listRef = useRef<HTMLUListElement>(null);
-  const panelStyle = useFloatingFieldPanel(open && floating, buttonRef, 0, 240);
   const generatedId = useId();
   const listId = `${generatedId}-list`;
+  const listRef = useAnchoredPopover<HTMLUListElement>(open && floating, buttonRef, { maxHeight: 228, preferAbove: placement === "above" });
 
   useOutsideClose(open, () => setOpen(false), wrapRef);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open || !floating) return;
-    const list = listRef.current;
-    const option = list?.children.item(active);
-    if (!list || !(option instanceof HTMLElement)) return;
-    if (option.offsetTop < list.scrollTop) list.scrollTop = option.offsetTop;
-    const bottom = option.offsetTop + option.offsetHeight;
-    if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight;
-  }, [active, floating, open]);
+    document.getElementById(`${listId}-${active}`)?.scrollIntoView({ block: "nearest", behavior: "instant" });
+  }, [active, floating, listId, open]);
 
   function openList() {
     const rect = buttonRef.current?.getBoundingClientRect();
-    if (rect) {
+    if (rect && !floating) {
       const need = Math.min(240, options.length * 38 + 8) + 90;
       const below = window.innerHeight - rect.bottom;
       setFlipUp(below < need && rect.top > below);
@@ -183,14 +179,18 @@ export function SelectField<T extends string = string>({
         <ul
           ref={listRef}
           id={listId}
+          popover={floating ? "manual" : undefined}
           role="listbox"
           aria-label={ariaLabel}
           aria-labelledby={labelledBy ?? id}
           aria-multiselectable={multiple || undefined}
-          style={panelStyle}
-          className={cn("z-30 flex max-h-60 flex-col gap-0.5 overflow-auto rounded-lg border border-hairline bg-white p-1 shadow-popover", floating
-            ? "overscroll-contain"
-            : cn("absolute left-0 w-max min-w-full max-w-[min(20rem,calc(100vw-3rem))]", placement === "above" || (placement === "auto" && flipUp) ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"))}
+          className={cn(
+            "flex-col gap-0.5 overflow-auto rounded-lg border bg-white p-1 shadow-popover",
+            floating
+              ? "fixed inset-auto m-0 overscroll-contain border-outline [&:popover-open]:flex"
+              : cn("absolute left-0 z-30 flex max-h-60 w-max min-w-full max-w-[min(20rem,calc(100vw-3rem))] border-hairline",
+                placement === "above" || (placement === "auto" && flipUp) ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"),
+          )}
         >
           {options.map((option, index) => {
             const selected = isSelected(option.value);
@@ -205,7 +205,8 @@ export function SelectField<T extends string = string>({
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => choose(index)}
                 className={cn(
-                  "flex min-h-9 cursor-pointer items-center justify-between gap-2 rounded-md px-3 py-1.5 text-sm",
+                  "flex cursor-pointer items-center justify-between gap-2 rounded-md px-3 py-1.5 text-sm",
+                  floating ? "min-h-10 shrink-0" : "min-h-9",
                   option.disabled && "cursor-default opacity-60",
                   index === active ? "bg-burnt/10 text-burnt" : "text-body",
                   selected && "font-semibold"

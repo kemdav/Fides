@@ -139,7 +139,7 @@ export async function updateAppointmentStatusAction({
   const { data: updated, error } = await query.select("id").maybeSingle();
 
   if (error) {
-    return { success: false, error: `Failed to update appointment: ${error.message}` };
+    return { success: false, error: "The appointment could not be updated. Please try again." };
   }
   if (!updated) return { success: false, error: expectedStatus ? "This appointment changed. Reopen its details and try again." : "Appointment not found." };
 

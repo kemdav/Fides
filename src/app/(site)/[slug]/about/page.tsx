@@ -50,12 +50,12 @@ export default async function AboutPage({ params }: AboutPageProps) {
         activeHref={`/${slug}/about`}
         contactHref={`/${slug}/contact`}
         homeHref={`/${slug}`}
-        bookHref={`/${slug}/services`}
+        bookHref={`/${slug}/book`}
       />
       <StorefrontAboutPage
         businessName={businessName}
         contactHref={`/${slug}/contact`}
-        bookHref={`/${slug}/services`}
+        bookHref={`/${slug}/book`}
         aboutText={tenant.about}
         address={tenant.address}
         phone={tenant.phone}
@@ -70,7 +70,7 @@ export default async function AboutPage({ params }: AboutPageProps) {
         navLinks={nav}
         activeHref={`/${slug}/about`}
         contactHref={`/${slug}/contact`}
-        bookHref={`/${slug}/services`}
+        bookHref={`/${slug}/book`}
       />
     </>
   );

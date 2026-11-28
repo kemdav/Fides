@@ -5,7 +5,7 @@ import { Icon } from "@/components/admin/icon";
 import { useOutsideClose } from "@/lib/use-outside-close";
 import { cn } from "@/lib/utils";
 import { inputClasses } from "./input";
-import { useFloatingFieldPanel } from "./use-floating-field-panel";
+import { useAnchoredPopover } from "./use-anchored-popover";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
@@ -78,14 +78,13 @@ export function DatePicker({
     return { y: base.y, m: base.m };
   };
   const [open, setOpen] = useState(false);
-  const [flipUp, setFlipUp] = useState(false);
   const [view, setView] = useState<"days" | "years">("days");
   const [cursor, setCursor] = useState<{ y: number; m: number }>(startParts);
   const wrapRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const yearRef = useRef<HTMLButtonElement>(null);
   const panelId = useId();
-  const panelStyle = useFloatingFieldPanel(open && floating, buttonRef, 288, 312);
+  const panelRef = useAnchoredPopover<HTMLDivElement>(open, buttonRef, { width: 288, maxHeight: 360, fitContent: true });
 
   const close = () => {
     setOpen(false);
@@ -94,16 +93,11 @@ export function DatePicker({
   useOutsideClose(open, close, wrapRef);
 
   useEffect(() => {
-    if (open && view === "years") yearRef.current?.scrollIntoView({ block: "center" });
+    if (open && view === "years") yearRef.current?.scrollIntoView({ block: "nearest", behavior: "instant" });
   }, [open, view]);
 
   function toggle() {
     if (open) return close();
-    const rect = buttonRef.current?.getBoundingClientRect();
-    if (rect) {
-      const below = window.innerHeight - rect.bottom;
-      setFlipUp(below < 430 && rect.top > below);
-    }
     setCursor(startParts());
     setView("days");
     setOpen(true);
@@ -170,13 +164,12 @@ export function DatePicker({
 
       {open ? (
         <div
+          ref={panelRef}
           id={panelId}
+          popover="manual"
           role="dialog"
           aria-label={ariaLabel}
-          style={panelStyle}
-          className={cn("z-30 rounded-lg border border-hairline bg-white p-3 shadow-popover", floating
-            ? "overflow-y-auto overscroll-contain"
-            : cn("absolute left-0 w-[288px] max-sm:right-0 max-sm:w-auto", flipUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"))}
+          className="fixed inset-auto m-0 overflow-auto overscroll-contain rounded-lg border border-hairline bg-white p-3 text-ink shadow-popover"
         >
           <div className="mb-2 flex items-center justify-between gap-2">
             <button
@@ -268,12 +261,13 @@ export function DatePicker({
               onClick={() => {
                 onChange("");
                 close();
+                buttonRef.current?.focus();
               }}
               className="rounded px-2 py-1 text-burnt hover:bg-burnt/10"
             >
               Clear
             </button>
-            <button type="button" onClick={close} className="rounded px-2 py-1 text-muted hover:bg-mist">
+            <button type="button" onClick={() => { close(); buttonRef.current?.focus(); }} className="rounded px-2 py-1 text-muted hover:bg-mist">
               Close
             </button>
           </div>

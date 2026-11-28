@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Icon } from "@/components/admin/icon";
+import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 
 interface BookingSettingsSavedModalProps {
@@ -34,13 +35,9 @@ export function BookingSettingsSavedModal({
         </p>
 
         <div className="mt-6 flex justify-center">
-          <button
-            type="button"
-            onClick={onClose}
-            className="min-w-[140px] rounded-lg bg-burnt px-6 py-2.5 text-sm font-semibold text-on-burnt transition-colors hover:bg-burnt-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
-          >
+          <Button variant="brand" onClick={onClose} className="min-w-[140px] rounded-lg">
             Done
-          </button>
+          </Button>
         </div>
       </Modal>
   );
@@ -83,21 +80,13 @@ export function ConfirmDiscardModal({
           {description}
         </p>
 
-        <div className="mt-6 grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={onKeepEditing}
-            className="rounded-lg border border-line bg-white px-4 py-2.5 text-sm font-semibold text-body transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burnt/40"
-          >
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <Button variant="outline" onClick={onKeepEditing} className="rounded-lg">
             Keep editing
-          </button>
-          <button
-            type="button"
-            onClick={onConfirmDiscard}
-            className="rounded-lg bg-danger px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-danger-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/40"
-          >
+          </Button>
+          <Button variant="danger" onClick={onConfirmDiscard} className="rounded-lg">
             Discard changes
-          </button>
+          </Button>
         </div>
       </Modal>
   );

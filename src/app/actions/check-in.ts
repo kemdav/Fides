@@ -65,7 +65,9 @@ export async function verifyCheckInCodeAction(input: {
           ? "already completed"
           : appointment.status === "cancelled"
             ? "cancelled"
-            : appointment.status;
+            : appointment.status === "no_show"
+            ? "marked as no-show"
+            : appointment.status.replaceAll("_", " ");
     return {
       success: false,
       error: `This appointment is ${label}. Only confirmed appointments can be checked in.`,

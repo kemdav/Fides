@@ -51,7 +51,7 @@ export default async function ContactPage({ params }: ContactPageProps) {
         activeHref={contactHref}
         contactHref={contactHref}
         homeHref={`/${slug}`}
-        bookHref={`/${slug}/services`}
+        bookHref={`/${slug}/book`}
       />
       <StorefrontContactPage
         tenantId={tenant.id}
@@ -67,7 +67,7 @@ export default async function ContactPage({ params }: ContactPageProps) {
         navLinks={nav}
         activeHref={contactHref}
         contactHref={contactHref}
-        bookHref={`/${slug}/services`}
+        bookHref={`/${slug}/book`}
         background="white"
       />
     </>
