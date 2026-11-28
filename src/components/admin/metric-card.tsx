@@ -56,7 +56,7 @@ export function MetricCard({
             weight={iconWeight ?? (featured ? "fill" : "regular")}
             className={cn(
               "size-5 shrink-0",
-              featured ? "text-white" : "text-glyph",
+              featured ? "text-on-burnt" : "text-glyph",
             )}
           />
         ) : null}
@@ -108,7 +108,7 @@ export function MetricCard({
           <p
             className={cn(
               "min-w-0 flex-1 text-xs leading-[13px] sm:text-[13px] sm:leading-[14px]",
-              featured ? "text-white" : "text-muted",
+              featured ? "text-on-burnt" : "text-muted",
             )}
           >
             {caption}
@@ -125,8 +125,8 @@ export function MetricCard({
         <>
           <p
             className={cn(
-              "break-words text-[13px] leading-[18px]",
-              featured ? "text-white" : "text-muted",
+              "wrap-anywhere text-[13px] leading-[18px]",
+              featured ? "text-on-burnt" : "text-muted",
             )}
           >
             {caption}
@@ -148,7 +148,7 @@ export function MetricCard({
                   "h-[5px] rounded-[3px]",
                   featured ? "bg-on-burnt" : "bg-burnt",
                 )}
-                style={{ width: progress + "%" }}
+                style={{ width: `${progress}%` }}
               />
             </div>
           )}
