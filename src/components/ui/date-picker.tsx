@@ -5,6 +5,7 @@ import { Icon } from "@/components/admin/icon";
 import { useOutsideClose } from "@/lib/use-outside-close";
 import { cn } from "@/lib/utils";
 import { inputClasses } from "./input";
+import { useFloatingFieldPanel } from "./use-floating-field-panel";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
@@ -47,6 +48,7 @@ export function DatePicker({
   compact = false,
   disabled = false,
   className,
+  floating = false,
 }: {
   id: string;
   value: string;
@@ -63,6 +65,7 @@ export function DatePicker({
   compact?: boolean;
   disabled?: boolean;
   className?: string;
+  floating?: boolean;
 }) {
   const now = new Date();
   const today: Parts = { y: now.getFullYear(), m: now.getMonth(), d: now.getDate() };
@@ -82,6 +85,7 @@ export function DatePicker({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const yearRef = useRef<HTMLButtonElement>(null);
   const panelId = useId();
+  const panelStyle = useFloatingFieldPanel(open && floating, buttonRef, 288, 312);
 
   const close = () => {
     setOpen(false);
@@ -133,6 +137,7 @@ export function DatePicker({
       className={cn("relative", className)}
       onKeyDown={(event) => {
         if (event.key === "Escape" && open) {
+          event.preventDefault();
           event.stopPropagation();
           close();
           buttonRef.current?.focus();
@@ -168,7 +173,10 @@ export function DatePicker({
           id={panelId}
           role="dialog"
           aria-label={ariaLabel}
-          className={cn("absolute left-0 z-30 w-[288px] rounded-lg border border-hairline bg-white p-3 shadow-popover max-sm:right-0 max-sm:w-auto", flipUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]")}
+          style={panelStyle}
+          className={cn("z-30 rounded-lg border border-hairline bg-white p-3 shadow-popover", floating
+            ? "overflow-y-auto overscroll-contain"
+            : cn("absolute left-0 w-[288px] max-sm:right-0 max-sm:w-auto", flipUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"))}
         >
           <div className="mb-2 flex items-center justify-between gap-2">
             <button

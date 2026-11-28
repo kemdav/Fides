@@ -1,10 +1,11 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Icon } from "@/components/admin/icon";
 import { useOutsideClose } from "@/lib/use-outside-close";
 import { cn } from "@/lib/utils";
 import { inputClasses } from "./input";
+import { useFloatingFieldPanel } from "./use-floating-field-panel";
 
 export type SelectOption<T extends string = string> = { value: T; label: string; detail?: string; disabled?: boolean };
 
@@ -29,12 +30,14 @@ export function SelectField<T extends string = string>({
   compact = false,
   disabled = false,
   placement = "auto",
+  floating = false,
   ...valueProps
 }: SelectValueProps<T> & {
   id?: string;
   options: readonly SelectOption<T>[];
   /** where the list opens; "auto" flips above when there is no room below */
   placement?: "auto" | "above" | "below";
+  floating?: boolean;
   invalid?: boolean;
   placeholder?: string;
   className?: string;
@@ -52,10 +55,22 @@ export function SelectField<T extends string = string>({
   const [active, setActive] = useState(Math.max(0, selectedIndex));
   const wrapRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+  const panelStyle = useFloatingFieldPanel(open && floating, buttonRef, 0, 240);
   const generatedId = useId();
   const listId = `${generatedId}-list`;
 
   useOutsideClose(open, () => setOpen(false), wrapRef);
+
+  useEffect(() => {
+    if (!open || !floating) return;
+    const list = listRef.current;
+    const option = list?.children.item(active);
+    if (!list || !(option instanceof HTMLElement)) return;
+    if (option.offsetTop < list.scrollTop) list.scrollTop = option.offsetTop;
+    const bottom = option.offsetTop + option.offsetHeight;
+    if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight;
+  }, [active, floating, open]);
 
   function openList() {
     const rect = buttonRef.current?.getBoundingClientRect();
@@ -166,12 +181,16 @@ export function SelectField<T extends string = string>({
       </button>
       {open ? (
         <ul
+          ref={listRef}
           id={listId}
           role="listbox"
           aria-label={ariaLabel}
           aria-labelledby={labelledBy ?? id}
           aria-multiselectable={multiple || undefined}
-          className={cn("absolute left-0 z-30 w-max min-w-full max-w-[min(20rem,calc(100vw-3rem))] flex max-h-60 flex-col gap-0.5 overflow-auto rounded-lg border border-hairline bg-white p-1 shadow-popover", placement === "above" || (placement === "auto" && flipUp) ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]")}
+          style={panelStyle}
+          className={cn("z-30 flex max-h-60 flex-col gap-0.5 overflow-auto rounded-lg border border-hairline bg-white p-1 shadow-popover", floating
+            ? "overscroll-contain"
+            : cn("absolute left-0 w-max min-w-full max-w-[min(20rem,calc(100vw-3rem))]", placement === "above" || (placement === "auto" && flipUp) ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"))}
         >
           {options.map((option, index) => {
             const selected = isSelected(option.value);

@@ -30,6 +30,7 @@ export function QrCheckInButton({
   const [step, setStep] = useState<Step>("code");
   const [appointmentId, setAppointmentId] = useState<string | null>(null);
   const titleId = useId();
+  const errorTitleId = useId();
   const codeId = useId();
   const hintId = useId();
   const codeInput = useRef<HTMLInputElement>(null);
@@ -37,8 +38,10 @@ export function QrCheckInButton({
 
   useEffect(() => {
     if (!open) return;
-    if (step === "code" && cameraMode === "manual") codeInput.current?.focus();
-  }, [open, cameraMode, step]);
+    if (step === "code" && !error && (cameraMode === "manual" || codeInput.current?.value)) {
+      codeInput.current?.focus();
+    }
+  }, [open, cameraMode, step, error]);
 
   const handleScan = useCallback((raw: string) => {
     if (codeInput.current?.value.trim()) return;
@@ -128,6 +131,19 @@ export function QrCheckInButton({
             onCheckedIn: () => setStep("done"),
           }}
         />
+      ) : open && error ? (
+        <Modal open onClose={() => setError("")} labelledBy={errorTitleId} className="max-w-sm">
+          <div className="space-y-3">
+            <span className="grid size-10 place-items-center rounded-full bg-danger-bg text-danger-dark">
+              <Icon name="alert" className="size-5" />
+            </span>
+            <h2 id={errorTitleId} className="font-display text-2xl text-ink">Couldn’t check in</h2>
+            <p className="text-sm text-muted">{error}</p>
+            <div className="flex justify-end pt-1">
+              <Button variant="brand" size="dialog" onClick={() => setError("")}>Back to Check In</Button>
+            </div>
+          </div>
+        </Modal>
       ) : open && (
         <Modal
           open
@@ -201,8 +217,7 @@ export function QrCheckInButton({
                 <input
                   ref={codeInput}
                   id={codeId}
-                  className={inputClasses(Boolean(error))}
-                  aria-invalid={Boolean(error)}
+                  className={inputClasses()}
                   aria-describedby={hintId}
                   value={code}
                   onChange={(event) => {
@@ -219,11 +234,6 @@ export function QrCheckInButton({
                   You can find the full code in Appointment Details.
                 </p>
               </div>
-              {error && (
-                <p role="alert" className="text-sm text-danger-dark">
-                  {error}
-                </p>
-              )}
               <div className="flex justify-end">
                 <Button
                   type="submit"
